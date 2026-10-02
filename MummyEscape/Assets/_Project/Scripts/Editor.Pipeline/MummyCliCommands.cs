@@ -42,5 +42,12 @@ namespace MummyEscape.EditorTools
             ProjectSetup.Run();
             return "Setup done: " + ProjectSetup.ScenePath;
         }
+
+        [CliCommand("mummy_build_android", "Mummy Escape: build a development APK to Builds/Android/MummyEscape.apk.", Tags = new[] { "mummy" })]
+        public static string BuildAndroid()
+        {
+            BuildScript.AndroidDev();
+            return "APK: " + System.IO.Path.GetFullPath(BuildScript.AndroidPath);
+        }
     }
 }

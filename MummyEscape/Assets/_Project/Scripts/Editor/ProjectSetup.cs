@@ -51,6 +51,7 @@ namespace MummyEscape.EditorTools
             PlayerSettings.SplashScreen.backgroundColor = new Color(0.03f, 0.02f, 0.01f);
             PlayerSettings.statusBarHidden = true;
 
+            AppIconGenerator.Generate();
             AssetDatabase.SaveAssets();
             Debug.Log($"[Setup] Done. Open {ScenePath} and press Play.");
         }

@@ -56,3 +56,4 @@ MummyEscape/Assets/StreamingAssets/aa/*
 tools/**/bin/
 tools/**/obj/
 TestResults/
+.utmp/

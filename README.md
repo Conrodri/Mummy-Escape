@@ -27,6 +27,30 @@ Escape/
 
 Contrôles éditeur : flèches / ZQSD / WASD ; clic sur un piège adjacent visible = désamorcer. Sur mobile : swipe, tap sur un piège pour le désamorcer, maintenir le bouton carte pour dézoomer.
 
+**Tester en format téléphone dans l'éditeur** : dans l'onglet Game, basculer le menu déroulant « Game » sur **Simulator** et choisir un téléphone (la souris simule le toucher : glisser = swipe). Play démarre toujours sur `Main.unity`, quelle que soit la scène ouverte.
+
+## Builds mobiles
+
+Modules installés pour 6000.3.23f1 : Android (SDK 34–37, NDK r27c, OpenJDK 17) et iOS.
+
+| Cible | Menu | Sortie |
+|-------|------|--------|
+| Android (test) | Mummy Escape › Build › Android APK (test) | `MummyEscape/Builds/Android/MummyEscape.apk` |
+| iOS | Mummy Escape › Build › iOS (projet Xcode) | `MummyEscape/Builds/iOS/` (à compiler et signer sur un Mac) |
+
+En ligne de commande :
+```bash
+"C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Unity.exe" -batchmode -quit -projectPath MummyEscape \
+  -buildTarget Android -executeMethod MummyEscape.EditorTools.BuildScript.AndroidDev -logFile -
+```
+
+Installer sur un téléphone Android (options développeur + débogage USB activés) :
+```bash
+ADB="C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb.exe"
+"$ADB" install -r MummyEscape/Builds/Android/MummyEscape.apk
+```
+Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnues »). Les builds Android sont IL2CPP / ARM64, Android 7.1+ (API 25). L'icône est générée par **Mummy Escape › Generate app icon**.
+
 ## Contrat de difficulté
 
 Tout est déterministe : un niveau `acte-index` produit **la même carte pour tout le monde** (graine = hash(version du générateur, niveau), PRNG PCG32 maison). Chaque niveau est validé par un solveur BFS exact (position, boutons, pièges désamorcés, PV, cécité) :
