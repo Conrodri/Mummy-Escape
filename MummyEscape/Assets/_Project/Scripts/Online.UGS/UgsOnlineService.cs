@@ -32,6 +32,13 @@ namespace MummyEscape.Online
 
         public async Task InitializeAsync()
         {
+            if (string.IsNullOrEmpty(Application.cloudProjectId))
+            {
+                // Not linked to a UGS project: initializing would only log errors.
+                Status = "Hors ligne (projet non lié à Unity Gaming Services)";
+                Debug.Log("[Online] Project not linked to UGS (Project Settings > Services), playing offline.");
+                return;
+            }
             try
             {
                 await UnityServices.InitializeAsync();
