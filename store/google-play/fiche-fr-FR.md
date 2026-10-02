@@ -61,5 +61,6 @@ RESPECTUEUX DE TA VIE PRIVÉE
 | Icône | `icone-512.png` | 512 × 512, PNG 32 bits |
 | Bannière (feature graphic) | `banniere-1024x500.png` | 1024 × 500, PNG/JPEG sans transparence |
 | Captures téléphone (2 à 8) | `phone/*.png` (8 captures) | 1080 × 1920 (9:16) |
+| Captures téléphone, fiche anglaise | `phone-en/*.png` (8 captures, jeu en anglais) | 1080 × 1920 (9:16) |
 
 Les captures sont générées dans l'éditeur (`unity command mummy_capture`). À refaire quand les graphismes définitifs remplaceront les placeholders.

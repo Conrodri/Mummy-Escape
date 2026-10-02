@@ -1,6 +1,6 @@
 # Fiche Play Store — anglais (en-US)
 
-À ajouter dans Play Console › Croissance › Présence sur le Play Store › Fiche principale › « Gérer les traductions » › Ajouter la langue anglais (États-Unis), puis coller les textes ci-dessous. Les captures `graphics/phone/` sont en français : en option, refaire des captures avec le jeu en anglais (Paramètres › Langue).
+À ajouter dans Play Console › Croissance › Présence sur le Play Store › Fiche principale › « Gérer les traductions » › Ajouter la langue anglais (États-Unis), puis coller les textes ci-dessous et remplacer les captures téléphone par celles de [`graphics/phone-en/`](graphics/phone-en/) (8 captures 1080 × 1920, jeu en anglais ; mêmes scènes que `graphics/phone/`). Icône et bannière sont communes aux deux langues (sans texte traduit).
 
 ## Nom de l'application (30 caractères max)
 

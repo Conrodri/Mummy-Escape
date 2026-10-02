@@ -70,8 +70,10 @@ namespace MummyEscape
 
         public static string F(string frenchFormat, params object[] args) => string.Format(T(frenchFormat), args);
 
-        /// <summary>Singular or plural form ("1 coup", "3 coups"): pass both French formats.</summary>
-        public static string P(int n, string singular, string plural) => F(n > 1 ? plural : singular, n);
+        /// <summary>Singular or plural form ("1 coup", "3 coups"): pass both French formats.
+        /// French puts 0 and 1 in the singular, English only 1 ("0 moves").</summary>
+        public static string P(int n, string singular, string plural) =>
+            F((Current == Lang.En ? n != 1 : n > 1) ? plural : singular, n);
 
         /// <summary>True when the text has a translation in every language (used by the check command).</summary>
         public static IEnumerable<string> MissingIn(Lang lang, IEnumerable<string> keys)
