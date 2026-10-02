@@ -36,13 +36,13 @@ namespace MummyEscape.UI.Screens
             UIKit.SectionTitle(comfort, "Confort et compte");
             UIKit.Toggle(comfort, "Vibrations", s.Haptics, s.SetHaptics);
             UIKit.Toggle(comfort, "Aperçu du tombeau au départ", s.ShowPreview, s.SetShowPreview);
-            _language = UIKit.Button(comfort, "Langue", () => Router.Open<LanguagePickerScreen>(), 38);
-            UIKit.Size(_language, 110);
+            _language = UIKit.Button(comfort, "Langue", () => Router.Open<LanguagePickerScreen>());
+            UIKit.Size(_language, UIKit.ButtonHeight);
             RefreshLanguage();
 
-            var row = UIKit.Row(comfort, 110, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Mon compte", () => Router.Open<AccountScreen>(), 38), -1, -1, 1);
-            UIKit.Size(UIKit.Button(row.transform, "Confidentialité", () => Router.Open<PrivacyScreen>(), 38), -1, -1, 1);
+            var row = UIKit.Row(comfort, UIKit.ButtonHeight, 20);
+            UIKit.Size(UIKit.Button(row.transform, "Mon compte", () => Router.Open<AccountScreen>()), -1, -1, 1);
+            UIKit.Size(UIKit.Button(row.transform, "Confidentialité", () => Router.Open<PrivacyScreen>()), -1, -1, 1);
 
             var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · " + Loc.F("générateur v{0}", Core.DifficultyTable.GeneratorVersion), 28, UIKit.Dim); // noloc
             UIKit.BottomBand(version.rectTransform, 50, 30);

@@ -28,29 +28,27 @@ namespace MummyEscape.UI.Screens
         protected override void Build()
         {
             var top = UIKit.Rect("TopBar", Root);
-            UIKit.TopBand(top, 230, 10);
-            var bg = UIKit.Image(top, UIKit.Art.White, new Color(0, 0, 0, 0.45f));
+            UIKit.TopBand(top, 200, 16);
+            top.offsetMin = new Vector2(24, top.offsetMin.y);
+            top.offsetMax = new Vector2(-24, top.offsetMax.y);
+            var bg = UIKit.Plate(top, new Color(0.05f, 0.035f, 0.02f, 0.72f), 40, UIKit.Rim);
             UIKit.Stretch(bg.rectTransform);
 
-            var pause = UIKit.Button(top, "II", OnBack, 50);
-            var prt = (RectTransform)pause.transform;
-            prt.anchorMin = prt.anchorMax = new Vector2(0, 0.5f);
-            prt.pivot = new Vector2(0, 0.5f);
-            prt.sizeDelta = new Vector2(120, 120);
-            prt.anchoredPosition = new Vector2(25, 10);
+            var pause = UIKit.IconButton(top, UISprites.Pause, OnBack, 96);
+            UIKit.Place((RectTransform)pause.transform, 0, 0.5f, 96, 96, 22, 0);
 
-            _level = UIKit.Label(top, "", 52, UIKit.Gold, TextAnchor.UpperCenter, FontStyle.Bold);
-            UIKit.Stretch(_level.rectTransform, 170, 22, 170, 120);
-            _moves = UIKit.Label(top, "", 42, UIKit.Sand, TextAnchor.MiddleCenter);
-            UIKit.Stretch(_moves.rectTransform, 170, 95, 170, 70);
-            _floor = UIKit.Label(top, "", 32, UIKit.Dim, TextAnchor.LowerCenter);
-            UIKit.Stretch(_floor.rectTransform, 170, 150, 170, 18);
+            _level = UIKit.Title(top, "", 44);
+            UIKit.Stretch(_level.rectTransform, 150, 22, 150, 110);
+            _moves = UIKit.Label(top, "", 34, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Stretch(_moves.rectTransform, 150, 92, 150, 52);
+            _floor = UIKit.Label(top, "", 26, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Stretch(_floor.rectTransform, 150, 146, 150, 14);
 
             _hearts = UIKit.Rect("Hearts", top);
             _hearts.anchorMin = _hearts.anchorMax = new Vector2(1, 0.5f);
             _hearts.pivot = new Vector2(1, 0.5f);
-            _hearts.sizeDelta = new Vector2(200, 90);
-            _hearts.anchoredPosition = new Vector2(-25, 10);
+            _hearts.sizeDelta = new Vector2(200, 80);
+            _hearts.anchoredPosition = new Vector2(-26, 0);
             var h = _hearts.gameObject.AddComponent<HorizontalLayoutGroup>();
             h.childAlignment = TextAnchor.MiddleRight;
             h.spacing = 8;
@@ -58,56 +56,55 @@ namespace MummyEscape.UI.Screens
             h.childForceExpandWidth = h.childForceExpandHeight = false;
 
             _status = UIKit.Label(Root, "", 40, new Color(0.75f, 0.55f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.TopBand(_status.rectTransform, 60, 250);
+            UIKit.TopBand(_status.rectTransform, 90, 240);
 
             // Bottom: map peek (hold) + hint.
             var bottom = UIKit.Rect("BottomBar", Root);
-            UIKit.BottomBand(bottom, 170, 20);
-            var map = UIKit.Button(bottom, Loc.T("Carte"), null, 40);
-            var mrt = (RectTransform)map.transform;
-            mrt.anchorMin = mrt.anchorMax = new Vector2(1, 0.5f);
-            mrt.pivot = new Vector2(1, 0.5f);
-            mrt.sizeDelta = new Vector2(220, 130);
-            mrt.anchoredPosition = new Vector2(-30, 0);
+            UIKit.BottomBand(bottom, 150, 24);
+            var map = UIKit.Button(bottom, "", null);
+            UIKit.Rounded(map.image, 48);
+            UIKit.Rounded(map.transform.Find("Rim").GetComponent<Image>(), 48);
+            UIKit.Place((RectTransform)map.transform, 1, 0.5f, 230, 96, -30, 0);
+            var mapRow = map.gameObject.AddComponent<HorizontalLayoutGroup>();
+            mapRow.childAlignment = TextAnchor.MiddleCenter;
+            mapRow.spacing = 12;
+            mapRow.childControlWidth = mapRow.childControlHeight = true;
+            mapRow.childForceExpandWidth = mapRow.childForceExpandHeight = false;
+            UIKit.Size(UIKit.Image(map.transform, UISprites.Map, UIKit.Gold), 44, 44);
+            var mapLabel = UIKit.Label(map.transform, "Carte", UIKit.TextSize, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            mapLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+            UIKit.Size(mapLabel, 50);
             var trigger = map.gameObject.AddComponent<EventTrigger>();
             AddTrigger(trigger, EventTriggerType.PointerDown, () => App.Game.SetMapView(true));
             AddTrigger(trigger, EventTriggerType.PointerUp, () => App.Game.SetMapView(false));
 
-            _hint = UIKit.Label(bottom, "", 32, UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Italic);
-            UIKit.Stretch(_hint.rectTransform, 40, 0, 280, 0);
+            _hint = UIKit.Label(bottom, "", 30, UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Italic);
+            UIKit.Stretch(_hint.rectTransform, 44, 0, 290, 0);
             _bottomBar = bottom;
 
             // Start-of-run map preview: countdown + "ready" to start early. Replaces the bottom bar meanwhile.
             var pv = UIKit.Rect("Preview", Root);
-            UIKit.BottomBand(pv, 210, 20);
-            var pbg = UIKit.Image(pv, UIKit.Art.White, new Color(0, 0, 0, 0.62f));
+            UIKit.BottomBand(pv, 180, 24);
+            pv.offsetMin = new Vector2(24, pv.offsetMin.y);
+            pv.offsetMax = new Vector2(-24, pv.offsetMax.y);
+            var pbg = UIKit.Plate(pv, new Color(0.05f, 0.035f, 0.02f, 0.8f), 40, UIKit.Rim);
             UIKit.Stretch(pbg.rectTransform);
-            _previewTitle = UIKit.Label(pv, "", 40, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.Stretch(_previewTitle.rectTransform, 40, 0, 460, 0);
-            _previewCount = UIKit.Label(pv, "", 110, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
-            var crt = _previewCount.rectTransform;
-            crt.anchorMin = crt.anchorMax = new Vector2(1, 0.5f);
-            crt.pivot = new Vector2(1, 0.5f);
-            crt.sizeDelta = new Vector2(150, 190);
-            crt.anchoredPosition = new Vector2(-295, 0);
-            var ready = _ready = UIKit.Button(pv, "Prêt", () => App.Game.SkipPreview(), 42);
-            UIKit.FitText(ready.GetComponentInChildren<Text>(), 26);
-            var rrt = (RectTransform)ready.transform;
-            rrt.anchorMin = rrt.anchorMax = new Vector2(1, 0.5f);
-            rrt.pivot = new Vector2(1, 0.5f);
-            rrt.sizeDelta = new Vector2(250, 130);
-            rrt.anchoredPosition = new Vector2(-30, 0);
+            _previewTitle = UIKit.Label(pv, "", 36, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.Stretch(_previewTitle.rectTransform, 40, 0, 440, 0);
+            _previewCount = UIKit.Label(pv, "", 84, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Place(_previewCount.rectTransform, 1, 0.5f, 130, 150, -290, 0);
+            var ready = _ready = UIKit.Button(pv, "Prêt", () => App.Game.SkipPreview(), 34, ButtonStyle.Primary);
+            UIKit.FitText(ready.GetComponentInChildren<Text>(), 22);
+            UIKit.Place((RectTransform)ready.transform, 1, 0.5f, 250, 104, -28, 0);
             _preview = pv.gameObject.AddComponent<CanvasGroup>();
             SetPreviewVisible(false);
 
             // Level intro card.
             var intro = UIKit.Rect("Intro", Root);
-            intro.anchorMin = new Vector2(0, 0.5f);
-            intro.anchorMax = new Vector2(1, 0.5f);
-            intro.sizeDelta = new Vector2(0, 360);
-            var ibg = UIKit.Image(intro, UIKit.Art.White, new Color(0, 0, 0, 0.7f));
+            UIKit.Place(intro, 0.5f, 0.5f, 900, 300);
+            var ibg = UIKit.Plate(intro, new Color(0.05f, 0.035f, 0.02f, 0.85f), 40, UIKit.Rim);
             UIKit.Stretch(ibg.rectTransform);
-            _introText = UIKit.Label(intro, "", 54, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            _introText = UIKit.Title(intro, "", 54);
             UIKit.Stretch(_introText.rectTransform, 40, 20, 40, 20);
             _intro = intro.gameObject.AddComponent<CanvasGroup>();
             _intro.blocksRaycasts = false;
@@ -210,7 +207,7 @@ namespace MummyEscape.UI.Screens
             while (_ankhs.Count < level.MaxHp)
             {
                 var img = UIKit.Image(_hearts, UIKit.Art.Ankh, Color.white);
-                UIKit.Size(img, 80, 80);
+                UIKit.Size(img, 70, 70);
                 _ankhs.Add(img);
             }
             for (int i = 0; i < _ankhs.Count; i++)

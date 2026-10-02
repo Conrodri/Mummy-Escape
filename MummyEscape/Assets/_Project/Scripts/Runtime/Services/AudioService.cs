@@ -22,12 +22,13 @@ namespace MummyEscape.Services
         SettingsService _settings;
         readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
 
-        /// <summary>Theme 0 = menus, 1..5 = acts.</summary>
-        int _theme = -1;
+        /// <summary>The track playing (or about to, once rendered).</summary>
+        public MusicTrack Current { get; private set; }
+        public event Action TrackChanged;
         float _mix = 1f;
         const float CrossfadeSeconds = 1.8f;
         AudioClip _menuOverride;
-        readonly Dictionary<int, AudioClip> _themes = new Dictionary<int, AudioClip>();
+        readonly Dictionary<string, AudioClip> _loaded = new Dictionary<string, AudioClip>();
         readonly Dictionary<int, Task<float[]>> _rendering = new Dictionary<int, Task<float[]>>();
 
         public void Init(SettingsService settings, AudioClip musicOverride)
@@ -70,33 +71,49 @@ namespace MummyEscape.Services
             if (_mix >= 1f) _musicOut.Stop();
         }
 
+        /// <summary>Menu music (theme 0) or the whole-act music of an act, crossfading; see <see cref="PlayLevelMusic"/>.</summary>
+        public void PlayMusic(int theme) => PlayLevelMusic(theme, 0);
+
         /// <summary>
-        /// Switches to the theme of an act (0 = menus), crossfading. A track placed in <c>Resources/Music/act{n}</c>
-        /// (or <c>menu</c>) — e.g. made with Suno — replaces the coded one; otherwise <see cref="MusicComposer"/>
-        /// renders it on a worker thread the first time (the previous theme keeps playing meanwhile).
+        /// Music for a floor (1-based, 0 = any) of a theme (0 = menus): kept if the track playing already fits,
+        /// otherwise one of the fitting variants of <see cref="MusicCatalog"/> is drawn and crossfaded in.
         /// </summary>
-        public void PlayMusic(int theme)
+        public void PlayLevelMusic(int theme, int floor)
         {
-            if (theme == _theme) return;
-            _theme = theme;
-            var clip = ThemeClip(theme);
-            if (clip != null) { CrossfadeTo(clip); return; }
-            StartCoroutine(RenderThenPlay(theme));
+            var options = MusicCatalog.For(theme, floor);
+            if (options.Count == 0 || options.Contains(Current)) return;
+            PlayTrack(options[UnityEngine.Random.Range(0, options.Count)]);
         }
 
-        /// <summary>Starts rendering a theme in the background so it is ready when needed.</summary>
+        /// <summary>
+        /// Plays one track (the juke-box). A file under <c>Resources/Music</c> — e.g. made with Suno — loads at once;
+        /// a composed theme renders on a worker thread the first time (the previous music keeps playing meanwhile).
+        /// </summary>
+        public void PlayTrack(MusicTrack track)
+        {
+            if (track == null || track == Current) return;
+            Current = track;
+            TrackChanged?.Invoke();
+            var clip = LoadedClip(track);
+            if (clip != null) { CrossfadeTo(clip); return; }
+            StartCoroutine(RenderThenPlay(track));
+        }
+
+        /// <summary>Starts rendering an act's composed theme in the background so it is ready when needed.</summary>
         public void PrefetchMusic(int theme)
         {
-            if (ThemeClip(theme) == null) Render(theme);
+            foreach (var t in MusicCatalog.For(theme, 0))
+                if (t.Composed && LoadedClip(t) == null) Render(theme);
         }
 
-        AudioClip ThemeClip(int theme)
+        AudioClip LoadedClip(MusicTrack track)
         {
-            if (_themes.TryGetValue(theme, out var cached)) return cached;
-            var file = Resources.Load<AudioClip>(theme == 0 ? "Music/menu" : $"Music/act{theme}");
-            if (file == null && theme == 0) file = _menuOverride != null ? _menuOverride : Synth.AmbientLoop();
-            if (file != null) _themes[theme] = file;
-            return file;
+            if (_loaded.TryGetValue(track.Id, out var cached)) return cached;
+            AudioClip clip = null;
+            if (!track.Composed) clip = Resources.Load<AudioClip>("Music/" + track.Resource);
+            else if (track.Theme == 0) clip = _menuOverride != null ? _menuOverride : Synth.AmbientLoop();
+            if (clip != null) _loaded[track.Id] = clip;
+            return clip;
         }
 
         Task<float[]> Render(int theme)
@@ -106,8 +123,9 @@ namespace MummyEscape.Services
             return task;
         }
 
-        IEnumerator RenderThenPlay(int theme)
+        IEnumerator RenderThenPlay(MusicTrack track)
         {
+            int theme = track.Theme;
             var task = Render(theme);
             while (!task.IsCompleted) yield return null;
             _rendering.Remove(theme);
@@ -115,11 +133,11 @@ namespace MummyEscape.Services
             var data = task.Result;
             var clip = AudioClip.Create($"theme_act{theme}", data.Length, 1, MusicComposer.Rate, false);
             clip.SetData(data, 0);
-            // Keep the menu theme and the current act only (each loop is a few MB).
-            foreach (var key in new List<int>(_themes.Keys))
-                if (key != 0 && key != theme && _themes[key].name.StartsWith("theme_")) { Destroy(_themes[key]); _themes.Remove(key); }
-            _themes[theme] = clip;
-            if (_theme == theme) CrossfadeTo(clip);
+            // Keep the menu music and the current track only (each composed loop is a few MB).
+            foreach (var key in new List<string>(_loaded.Keys))
+                if (key != track.Id && _loaded[key].name.StartsWith("theme_")) { Destroy(_loaded[key]); _loaded.Remove(key); }
+            _loaded[track.Id] = clip;
+            if (Current == track) CrossfadeTo(clip);
         }
 
         void CrossfadeTo(AudioClip clip)

@@ -58,16 +58,16 @@ namespace MummyEscape.UI.Screens
 
             // Level picker.
             var picker = UIKit.Row(body, 120, 16);
-            UIKit.Size(UIKit.Button(picker.transform, "◄", () => Move(-1), 52), -1, 120, 0);
+            UIKit.IconButton(picker.transform, UISprites.Back, () => Move(-1), 84);
             var titles = UIKit.Rect("Titles", picker.transform);
             UIKit.Size(titles, -1, -1, 1);
-            _levelLabel = UIKit.Label(titles, "", 52, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            _levelLabel = UIKit.Title(titles, "", 48);
             UIKit.TopBand(_levelLabel.rectTransform, 70, 4);
             _actLabel = UIKit.Label(titles, "", 30, UIKit.Dim, TextAnchor.MiddleCenter);
             UIKit.BottomBand(_actLabel.rectTransform, 40, 4);
-            UIKit.Size(UIKit.Button(picker.transform, "►", () => Move(1), 52), -1, 120, 0);
+            UIKit.IconButton(picker.transform, UISprites.Next, () => Move(1), 84);
 
-            _tabs = new UIKit.Segmented(body, new[] { "Monde", "Pays", "Amis" }, SetScope, 100);
+            _tabs = new UIKit.Segmented(body, new[] { "Monde", "Pays", "Amis" }, SetScope);
             _info = UIKit.Label(body, "", 30, UIKit.Dim);
             UIKit.Size(_info, 46);
 
@@ -90,14 +90,15 @@ namespace MummyEscape.UI.Screens
         {
             UIKit.ListItem(parent, height, null, out var h);
             var v = new RowView { Root = h.gameObject, Background = h.GetComponent<Image>() };
-            v.Rank = UIKit.Label(h.transform, "", 40, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.Size(v.Rank, -1, 120, 0);
-            v.Name = UIKit.Label(h.transform, "", 38, UIKit.Sand, TextAnchor.MiddleLeft);
+            v.Rank = UIKit.Label(h.transform, "", 36, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.Size(v.Rank, -1, 90, 0);
+            v.Name = UIKit.Label(h.transform, "", 34, UIKit.Sand, TextAnchor.MiddleLeft);
             UIKit.FitText(v.Name, 24);
             UIKit.Size(v.Name, -1, -1, 1);
-            v.Country = UIKit.Label(h.transform, "", 30, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
+            v.Country = UIKit.Label(h.transform, "", 26, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.Size(v.Country, -1, 70, 0);
-            v.Score = UIKit.Label(h.transform, "", 36, UIKit.Sand, TextAnchor.MiddleRight, FontStyle.Bold);
+            v.Score = UIKit.Label(h.transform, "", 30, UIKit.Sand, TextAnchor.MiddleRight, FontStyle.Bold);
+            v.Score.lineSpacing = 0.85f;
             UIKit.Size(v.Score, -1, 230, 0);
             return v;
         }
@@ -105,7 +106,7 @@ namespace MummyEscape.UI.Screens
         /// <summary>Gap to the optimal route, with the play time (the tie breaker) underneath.</summary>
         static string ScoreText(LeaderboardRow row) =>
             row.TimeMs > 0
-                ? $"{LevelResult.FormatOverPar(row.OverPar)}\n<size=26><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color></size>"
+                ? $"{LevelResult.FormatOverPar(row.OverPar)}\n<size=22><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color></size>"
                 : LevelResult.FormatOverPar(row.OverPar);
 
         public override void OnShow()

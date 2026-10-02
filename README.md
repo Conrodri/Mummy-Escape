@@ -91,7 +91,9 @@ Courants, dalles et leviers peuvent enfermer la momie : après chaque glissade, 
 4. synthés sur gamme égyptienne : kick, basse carrée, arpège en doubles croches, lead ;
 5. taikos, bourdon saturé, trémolo d'oud, chœur et crépitements (double harmonique).
 
-Pour utiliser de vraies pistes (Suno…), déposer `menu`, `act1` … `act5` (.mp3/.ogg/.wav) dans `Assets/_Project/Resources/Music/` : elles remplacent automatiquement les thèmes codés.
+Pour utiliser de vraies pistes (Suno…), déposer `menu`, `act1` … `act5` (.mp3/.ogg/.wav) dans `Assets/_Project/Resources/Music/` : elles remplacent automatiquement les thèmes codés. `act2_f2` = musique propre à l’étage 2, `act2_b` (tout suffixe) = variante tirée au hasard à chaque partie (`Services/MusicCatalog.cs`). Le **Juke-box** de l’accueil liste toutes les pistes par thème et par étage pour les écouter.
+
+**Interface** (`UI/UIKit.cs`, `UI/UISprites.cs`) : polices Cinzel (titres) et Nunito (texte) sous licence OFL dans `Resources/Fonts`, formes arrondies et icônes dessinées en SDF au démarrage, trois styles de bouton (principal doré, secondaire, discret).
 
 **Anti-capture de la carte** (`Services/ScreenGuard.cs`, `Plugins/iOS/MummyScreenGuard.mm`), active seulement pendant l’aperçu :
 - Android : `FLAG_SECURE` sur la fenêtre (captures et enregistrements noirs) ;

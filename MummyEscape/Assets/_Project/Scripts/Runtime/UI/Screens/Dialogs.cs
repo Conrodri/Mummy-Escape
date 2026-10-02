@@ -34,19 +34,19 @@ namespace MummyEscape.UI.Screens
             panel.GetComponent<Image>().raycastTarget = true; // swallow taps inside the panel
             panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            _title = UIKit.Label(panel, "", 52, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            _title = UIKit.Title(panel, "", 46);
             UIKit.Size(_title, 80);
             _hint = UIKit.Label(panel, "", 34, UIKit.Sand);
             UIKit.Size(_hint, 100);
-            _input = UIKit.Input(panel, "", 44);
-            UIKit.Size(_input, 120);
+            _input = UIKit.Input(panel, "", 40);
+            UIKit.Size(_input, 100);
             _input.onSubmit.AddListener(_ => Confirm());
             _error = UIKit.Label(panel, "", 32, UIKit.Danger);
             UIKit.Size(_error, 50);
 
-            var row = UIKit.Row(panel, 120, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this), 40), -1, -1, 1);
-            _confirm = UIKit.Button(row.transform, "OK", Confirm, 40);
+            var row = UIKit.Row(panel, UIKit.ButtonHeight, 20);
+            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this)), -1, -1, 1);
+            _confirm = UIKit.Button(row.transform, "OK", Confirm, UIKit.TextSize, ButtonStyle.Primary);
             UIKit.Size(_confirm, -1, -1, 1.4f);
         }
 
@@ -112,8 +112,8 @@ namespace MummyEscape.UI.Screens
 
         void Item(string code, string name, string detail, bool selected)
         {
-            UIKit.ListItem(_list, 110, () => Pick(code), out var h, selected);
-            UIKit.Size(UIKit.Label(h.transform, name, 40, selected ? UIKit.Gold : UIKit.Sand, TextAnchor.MiddleLeft, selected ? FontStyle.Bold : FontStyle.Normal), -1, -1, 1);
+            UIKit.ListItem(_list, 96, () => Pick(code), out var h, selected);
+            UIKit.Size(UIKit.Label(h.transform, name, 34, UIKit.Sand, TextAnchor.MiddleLeft, selected ? FontStyle.Bold : FontStyle.Normal), -1, -1, 1);
             UIKit.Size(UIKit.Label(h.transform, detail, 30, UIKit.Dim, TextAnchor.MiddleRight), -1, 320, 0);
         }
 
@@ -152,8 +152,8 @@ namespace MummyEscape.UI.Screens
 
         void Item(string code, string name, string detail, bool selected)
         {
-            UIKit.ListItem(_list, 120, () => Pick(code), out var h, selected);
-            var label = UIKit.Label(h.transform, "", 42, selected ? UIKit.Gold : UIKit.Sand, TextAnchor.MiddleLeft, selected ? FontStyle.Bold : FontStyle.Normal);
+            UIKit.ListItem(_list, 100, () => Pick(code), out var h, selected);
+            var label = UIKit.Label(h.transform, "", 36, UIKit.Sand, TextAnchor.MiddleLeft, selected ? FontStyle.Bold : FontStyle.Normal);
             label.text = name; // native names are never translated
             UIKit.Size(label, -1, -1, 1);
             var d = UIKit.Label(h.transform, "", 30, UIKit.Dim, TextAnchor.MiddleRight);

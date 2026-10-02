@@ -10,19 +10,19 @@ namespace MummyEscape.UI.Screens
         protected override void Build()
         {
             var shade = UIKit.Image(Root, UIKit.Art.White, UIKit.Shade, true);
-            UIKit.Stretch(shade.rectTransform);
+            UIKit.Stretch(shade.rectTransform, -600, -600, -600, -600);
+            shade.gameObject.AddComponent<Button>().onClick.AddListener(Resume); // tap outside = resume
 
-            var panel = UIKit.Panel(Root);
-            var rt = panel.rectTransform;
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(800, 900);
-            UIKit.Column(panel.transform, 28, 60);
+            var panel = UIKit.Card(Root, 44, 18);
+            UIKit.Place(panel, 0.5f, 0.5f, 760, 0);
+            panel.GetComponent<Image>().raycastTarget = true;
+            panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            UIKit.Size(UIKit.Label(panel.transform, "Pause", 72, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold), 120);
-            UIKit.Size(UIKit.Button(panel.transform, "Reprendre", Resume), 130);
-            UIKit.Size(UIKit.Button(panel.transform, "Recommencer", () => { Router.Close(this); App.Game.Restart(); }), 130);
-            UIKit.Size(UIKit.Button(panel.transform, "Paramètres", () => Router.Open<SettingsScreen>()), 130);
-            UIKit.Size(UIKit.Button(panel.transform, "Quitter le niveau", () => { App.Game.Abandon(); Router.Reset<MainMenuScreen>(); }), 130);
+            UIKit.Size(UIKit.Title(panel, "Pause", 68), 100);
+            UIKit.Size(UIKit.Button(panel, "Reprendre", Resume, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
+            UIKit.Size(UIKit.Button(panel, "Recommencer", () => { Router.Close(this); App.Game.Restart(); }), UIKit.ButtonHeight);
+            UIKit.Size(UIKit.Button(panel, "Paramètres", () => Router.Open<SettingsScreen>()), UIKit.ButtonHeight);
+            UIKit.Size(UIKit.Button(panel, "Quitter le niveau", () => { App.Game.Abandon(); Router.Reset<MainMenuScreen>(); }, UIKit.TextSize, ButtonStyle.Ghost), 72);
         }
 
         public override void OnShow() => App.Game.SetPaused(true);

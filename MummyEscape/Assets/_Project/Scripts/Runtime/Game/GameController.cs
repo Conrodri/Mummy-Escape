@@ -265,6 +265,9 @@ namespace MummyEscape.Game
             // The clock runs once the tomb is hidden, never while paused. Scaled delta: Unity caps it after a hitch or
             // when the app comes back from the background, so a phone call does not ruin a run.
             if (Session != null && !Previewing && !_paused) Session.Tick(Time.deltaTime);
+            // A floor may have its own music (Resources/Music/act{n}_f{floor}); no-op while the track playing fits.
+            if (Session != null && Session.Status == SessionStatus.Playing && !Previewing)
+                _app.Audio.PlayLevelMusic(CurrentLevel.Act, Session.Position.Floor + 1);
         }
 
         public void SetPaused(bool paused)

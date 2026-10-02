@@ -32,9 +32,9 @@ namespace MummyEscape.UI.Screens
             }
         }
 
-        public static Button Wide(Transform parent, string label, Action onClick, int size = 38, float height = 105)
+        public static Button Wide(Transform parent, string label, Action onClick, int size = UIKit.TextSize, float height = UIKit.ButtonHeight, ButtonStyle style = ButtonStyle.Secondary)
         {
-            var b = UIKit.Button(parent, label, onClick, size);
+            var b = UIKit.Button(parent, label, onClick, size, style);
             UIKit.Size(b, height);
             return b;
         }
@@ -142,7 +142,7 @@ namespace MummyEscape.UI.Screens
 
         void Intro()
         {
-            UIKit.Size(UIKit.Label(_content, "Avant de jouer", 54, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold), 90);
+            UIKit.Size(UIKit.Title(_content, "Avant de jouer", 46), 90);
             PrivacyUI.Paragraph(_content,
                 "Mummy Escape se joue sans connexion : dans ce mode, rien ne quitte ton téléphone.\n\n" +
                 "Le mode en ligne ajoute les classements, les amis et un compte facultatif pour retrouver ta progression sur un autre appareil. " +
@@ -152,14 +152,14 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(links.transform, "Confidentialité", () => PrivacyUI.OpenLegal(Router, true), 32), -1, -1, 1);
             UIKit.Size(UIKit.Button(links.transform, "Conditions", () => PrivacyUI.OpenLegal(Router, false), 32), -1, -1, 1);
             UIKit.Size(UIKit.Rect("Gap", _content), 20);
-            PrivacyUI.Wide(_content, "Jouer en ligne", () => Go(Step.Age), 48, 140);
-            PrivacyUI.Wide(_content, "Jouer hors ligne", () => Finish(false, null, false), 44, 120);
+            PrivacyUI.Wide(_content, "Jouer en ligne", () => Go(Step.Age), 38, 104, ButtonStyle.Primary);
+            PrivacyUI.Wide(_content, "Jouer hors ligne", () => Finish(false, null, false));
             PrivacyUI.Paragraph(_content, "Tu peux changer d'avis à tout moment dans Paramètres › Confidentialité.", 28, UIKit.Dim);
         }
 
         void Age()
         {
-            UIKit.Size(UIKit.Label(_content, "Ton année de naissance", 50, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold), 90);
+            UIKit.Size(UIKit.Title(_content, "Ton année de naissance", 46), 90);
             PrivacyUI.Paragraph(_content, "Elle sert seulement à savoir si l'accord d'un parent est nécessaire. Elle n'est ni conservée, ni envoyée.", 30, UIKit.Dim);
             var year = YearField("AAAA");
             bool accepted = false;
@@ -169,8 +169,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(links.transform, "Lire la confidentialité", () => PrivacyUI.OpenLegal(Router, true), 30), -1, -1, 1);
             var error = UIKit.Label(_content, "", 32, UIKit.Danger);
             UIKit.Size(error, 60);
-            var row = UIKit.Row(_content, 130, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Retour", OnBack, 40), -1, -1, 1);
+            var row = UIKit.Row(_content, UIKit.ButtonHeight, 20);
+            UIKit.Size(UIKit.Button(row.transform, "Retour", OnBack), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Continuer", () =>
             {
                 if (!ReadYear(year, out int y)) { error.text = Loc.T("Indique une année valide (4 chiffres)."); return; }
@@ -178,42 +178,42 @@ namespace MummyEscape.UI.Screens
                 _isMinor = PrivacyService.IsUnderConsentAge(y, CountryService.Detect());
                 if (_isMinor) Go(Step.Parent);
                 else Finish(true, false, false);
-            }, 40), -1, -1, 1.4f);
+            }, UIKit.TextSize, ButtonStyle.Primary), -1, -1, 1.4f);
         }
 
         void Parent()
         {
-            UIKit.Size(UIKit.Label(_content, "Demande à un parent", 50, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold), 90);
+            UIKit.Size(UIKit.Title(_content, "Demande à un parent", 46), 90);
             PrivacyUI.Paragraph(_content,
                 "Pour jouer en ligne à ton âge, l'accord d'un parent ou d'un tuteur est nécessaire.\n\n" +
                 "À l'attention du parent : le mode en ligne publie un pseudonyme (attribué au hasard, modifiable) et les scores de votre enfant, " +
                 "et lui permet d'ajouter des amis par leur code. Aucune adresse e-mail, aucun nom réel, aucune publicité. " +
                 "Vous pouvez retirer cet accord et supprimer ses données à tout moment dans Paramètres › Confidentialité.");
-            PrivacyUI.Wide(_content, "Lire la politique de confidentialité", () => PrivacyUI.OpenLegal(Router, true), 32, 95);
+            PrivacyUI.Wide(_content, "Lire la politique de confidentialité", () => PrivacyUI.OpenLegal(Router, true), 30, 88);
             PrivacyUI.Paragraph(_content, "Parent ou tuteur : votre année de naissance", 32, UIKit.Gold);
             var year = YearField("AAAA");
             bool confirmed = false;
             UIKit.Toggle(_content, "Je suis son parent ou tuteur et j'autorise", false, v => confirmed = v);
             var error = UIKit.Label(_content, "", 32, UIKit.Danger);
             UIKit.Size(error, 60);
-            var row = UIKit.Row(_content, 130, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Hors ligne", () => Finish(false, true, false), 38), -1, -1, 1);
+            var row = UIKit.Row(_content, UIKit.ButtonHeight, 20);
+            UIKit.Size(UIKit.Button(row.transform, "Hors ligne", () => Finish(false, true, false)), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Autoriser", () =>
             {
                 if (!ReadYear(year, out int y) || DateTime.UtcNow.Year - y < 19) { error.text = Loc.T("L'accord doit venir d'un adulte."); return; }
                 if (!confirmed) { error.text = Loc.T("Cochez la case pour confirmer votre accord."); return; }
                 Finish(true, true, true);
-            }, 40), -1, -1, 1.4f);
+            }, UIKit.TextSize, ButtonStyle.Primary), -1, -1, 1.4f);
         }
 
         InputField YearField(string placeholder)
         {
-            var field = UIKit.Input(_content, placeholder, 48);
+            var field = UIKit.Input(_content, placeholder, 42);
             field.contentType = InputField.ContentType.IntegerNumber;
             field.characterLimit = 4;
             field.textComponent.alignment = TextAnchor.MiddleCenter;
             ((Text)field.placeholder).alignment = TextAnchor.MiddleCenter;
-            UIKit.Size(field, 120);
+            UIKit.Size(field, 104);
             return field;
         }
 
@@ -259,11 +259,11 @@ namespace MummyEscape.UI.Screens
             UIKit.Toggle(online, "Classements, amis, compte", App.Privacy.OnlineAllowed, SetOnline);
             PrivacyUI.Paragraph(online, App.Online.IsAvailable ? Loc.F("État : en ligne ({0})", AccountLabel()) : Loc.F("État : {0}", Loc.T(App.Online.Status)), 28, UIKit.Dim);
             if (p.IsMinor && p.ParentalConsent)
-                PrivacyUI.Wide(online, "Retirer l'autorisation parentale", () => { App.Privacy.SetParentalConsent(false); App.StopOnline(); Rebuild(); }, 32, 95);
+                PrivacyUI.Wide(online, "Retirer l'autorisation parentale", () => { App.Privacy.SetParentalConsent(false); App.StopOnline(); Rebuild(); }, 30, 88);
             UIKit.Toggle(online, "Mes amis voient ma progression", p.ShareProgress, v => { App.Privacy.SetShareProgress(v); _ = App.PublishProgress(); });
             string country = App.Save.Data.Country;
             string countryLabel = string.IsNullOrEmpty(country) ? Loc.T("non affiché") : country == SaveService.AutoCountry ? Loc.T("celui de l'appareil") : CountryService.NameOf(country);
-            PrivacyUI.Wide(online, Loc.F("Pays dans les classements : {0}", countryLabel), () => Router.Open<CountryPickerScreen>(), 32, 95);
+            PrivacyUI.Wide(online, Loc.F("Pays dans les classements : {0}", countryLabel), () => Router.Open<CountryPickerScreen>(), 30, 88);
             PrivacyUI.Wide(online, "Mon compte", () => Router.Open<AccountScreen>(), 36);
 
             var data = UIKit.Card(_content);
@@ -391,7 +391,7 @@ namespace MummyEscape.UI.Screens
                 UIKit.SectionTitle(card, "Tu joues en invité");
                 PrivacyUI.Paragraph(card, "Ta progression n'existe que sur ce téléphone. Crée un compte pour la sauvegarder et la retrouver ailleurs : " +
                     "il suffit d'un identifiant et d'un mot de passe, sans adresse e-mail.");
-                PrivacyUI.Wide(card, "Créer un compte", CreateAccount, 42, 125);
+                PrivacyUI.Wide(card, "Créer un compte", CreateAccount, 36, 100, ButtonStyle.Primary);
             }
             else
             {
@@ -472,16 +472,16 @@ namespace MummyEscape.UI.Screens
             _panel.GetComponent<Image>().raycastTarget = true;
             _panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            _title = UIKit.Label(_panel, "", 50, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            _title = UIKit.Title(_panel, "", 46);
             UIKit.Size(_title, 80);
             _hint = PrivacyUI.Paragraph(_panel, "", 28, UIKit.Dim);
             _fields = UIKit.Rect("Fields", _panel);
             UIKit.Column(_fields, 18);
             _error = UIKit.Label(_panel, "", 30, UIKit.Danger);
             UIKit.Size(_error, 80);
-            var row = UIKit.Row(_panel, 120, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this), 40), -1, -1, 1);
-            _confirm = UIKit.Button(row.transform, "OK", Confirm, 40);
+            var row = UIKit.Row(_panel, UIKit.ButtonHeight, 20);
+            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this)), -1, -1, 1);
+            _confirm = UIKit.Button(row.transform, "OK", Confirm, UIKit.TextSize, ButtonStyle.Primary);
             UIKit.Size(_confirm, -1, -1, 1.4f);
         }
 
@@ -494,12 +494,12 @@ namespace MummyEscape.UI.Screens
             _inputs = new InputField[fields.Length];
             for (int i = 0; i < fields.Length; i++)
             {
-                var f = UIKit.Input(_fields, fields[i].placeholder, 42);
+                var f = UIKit.Input(_fields, fields[i].placeholder, 38);
                 f.characterLimit = AccountRules.PasswordMax;
                 f.contentType = fields[i].secret ? InputField.ContentType.Password : InputField.ContentType.Alphanumeric;
                 if (!fields[i].secret) f.contentType = InputField.ContentType.Standard;
                 f.keyboardType = TouchScreenKeyboardType.ASCIICapable;
-                UIKit.Size(f, 110);
+                UIKit.Size(f, 96);
                 _inputs[i] = f;
             }
             UIKit.SetLabel(_confirm, confirmLabel);
@@ -556,9 +556,9 @@ namespace MummyEscape.UI.Screens
             _text = PrivacyUI.Paragraph(panel, "", 32);
             _error = UIKit.Label(panel, "", 30, UIKit.Danger);
             UIKit.Size(_error, 60);
-            var row = UIKit.Row(panel, 120, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this), 40), -1, -1, 1);
-            _confirm = UIKit.Button(row.transform, "OK", Confirm, 40);
+            var row = UIKit.Row(panel, UIKit.ButtonHeight, 20);
+            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this)), -1, -1, 1);
+            _confirm = UIKit.Button(row.transform, "OK", Confirm, UIKit.TextSize, ButtonStyle.Primary);
             _confirm.GetComponent<Image>().color = new Color(1f, 0.6f, 0.55f);
             UIKit.Size(_confirm, -1, -1, 1);
         }

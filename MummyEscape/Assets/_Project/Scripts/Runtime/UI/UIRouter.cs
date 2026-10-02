@@ -31,15 +31,12 @@ namespace MummyEscape.UI
         protected Text Header(string title, Action onBack = null)
         {
             var bar = UIKit.Rect("Header", Root);
-            UIKit.TopBand(bar, 150, 20);
-            var back = UIKit.Button(bar, "◄", onBack ?? (() => Router.Back()), 56);
-            var brt = (RectTransform)back.transform;
-            brt.anchorMin = brt.anchorMax = new Vector2(0, 0.5f);
-            brt.pivot = new Vector2(0, 0.5f);
-            brt.sizeDelta = new Vector2(130, 120);
-            brt.anchoredPosition = new Vector2(30, 0);
-            var t = UIKit.Label(bar, title, 64, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.Stretch(t.rectTransform, 170, 0, 170, 0);
+            UIKit.TopBand(bar, 140, 20);
+            var back = UIKit.IconButton(bar, UISprites.Back, onBack ?? (() => Router.Back()), 92);
+            UIKit.Place((RectTransform)back.transform, 0, 0.5f, 92, 92, 36, 0);
+            var t = UIKit.Title(bar, title, 54);
+            UIKit.FitText(t, 34);
+            UIKit.Stretch(t.rectTransform, 150, 0, 150, 0);
             return t;
         }
 
@@ -179,8 +176,27 @@ namespace MummyEscape.UI
 
         static void Activate(UIScreen s)
         {
+            bool wasActive = s.gameObject.activeSelf;
             s.gameObject.SetActive(true);
             s.OnShow();
+            if (!wasActive) s.StartCoroutine(FadeIn(s));
+        }
+
+        /// <summary>Screens fade in; modals also settle from a slightly smaller size.</summary>
+        static System.Collections.IEnumerator FadeIn(UIScreen s)
+        {
+            var group = s.GetComponent<CanvasGroup>() ?? s.gameObject.AddComponent<CanvasGroup>();
+            const float duration = 0.18f;
+            for (float t = 0; t < duration; t += Time.unscaledDeltaTime)
+            {
+                float k = t / duration;
+                k = 1f - (1f - k) * (1f - k);
+                group.alpha = k;
+                if (s.IsModal) s.Root.localScale = Vector3.one * Mathf.Lerp(0.96f, 1f, k);
+                yield return null;
+            }
+            group.alpha = 1f;
+            s.Root.localScale = Vector3.one;
         }
 
         static void Deactivate(UIScreen s)

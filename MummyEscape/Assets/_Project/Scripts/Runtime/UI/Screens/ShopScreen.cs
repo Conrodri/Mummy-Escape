@@ -17,9 +17,12 @@ namespace MummyEscape.UI.Screens
             var body = Body(200, 60);
             UIKit.Column(body, 24);
 
-            _coins = UIKit.Label(body, "", 46, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.Size(_coins, 80);
-            UIKit.Size(UIKit.Label(body, "Gagne des scarabées en décrochant de nouvelles étoiles.", 32, UIKit.Dim), 60);
+            var wallet = UIKit.Rect("Wallet", body);
+            UIKit.Size(wallet, 80);
+            _coins = UIKit.Chip(wallet, UIKit.Art.Scarab, "", UIKit.Gold, 76);
+            UIKit.Place((RectTransform)_coins.transform.parent, 0.5f, 0.5f, 0, 76);
+
+            UIKit.Size(UIKit.Label(body, "Gagne des scarabées en décrochant de nouvelles étoiles.", 28, UIKit.Dim), 50);
 
             _grid = UIKit.Rect("Grid", body);
             UIKit.Size(_grid, -1, -1, -1, 1);
@@ -36,7 +39,7 @@ namespace MummyEscape.UI.Screens
         void Refresh()
         {
             var save = App.Save;
-            _coins.text = Loc.F("{0} scarabées", save.Data.Coins);
+            _coins.text = save.Data.Coins.ToString();
             UIKit.ClearChildren(_grid);
             foreach (var skin in SkinCatalog.All)
             {
@@ -44,15 +47,16 @@ namespace MummyEscape.UI.Screens
                 UIKit.Column(card.transform, 10, 30, TextAnchor.MiddleCenter);
                 var preview = UIKit.Image(card.transform, App.Art.MummyPortrait(skin), Color.white);
                 UIKit.Size(preview, 220, 220);
-                UIKit.Size(UIKit.Label(card.transform, skin.Name, 36, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold), 60);
+                UIKit.Size(UIKit.Label(card.transform, skin.Name, 32, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold), 56);
 
                 bool owned = save.Data.OwnedSkins.Contains(skin.Id);
                 bool selected = save.Data.SelectedSkin == skin.Id;
                 string label = selected ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("{0} scarabées", skin.Price);
                 var s = skin;
-                var btn = UIKit.Button(card.transform, label, () => OnSkin(s), 34);
+                bool affordable = !owned && save.Data.Coins >= skin.Price;
+                var btn = UIKit.Button(card.transform, label, () => OnSkin(s), 30, affordable || (owned && !selected) ? ButtonStyle.Primary : ButtonStyle.Secondary);
                 btn.interactable = !selected && (owned || save.Data.Coins >= skin.Price);
-                UIKit.Size(btn, 100);
+                UIKit.Size(btn, UIKit.SmallButtonHeight);
             }
         }
 

@@ -6,7 +6,7 @@ namespace MummyEscape.UI.Screens
 {
     public sealed class MainMenuScreen : UIScreen
     {
-        Text _wallet;
+        Text _stars, _coins;
         Image _mummy, _glow;
         RectTransform _stage;
         Text _online;
@@ -15,28 +15,35 @@ namespace MummyEscape.UI.Screens
         // the title shrinks between its minimum and preferred size, the mummy takes whatever space is left.
         protected override void Build()
         {
-            var column = UIKit.Rect("Column", Root);
-            UIKit.Stretch(column, 0, 30, 0, 110);
-            var layout = UIKit.Column(column, 12);
+            UIKit.Backdrop(Root, new Color(0, 0, 0, 0)).raycastTarget = false;
 
-            // Wallet (stars + scarabs).
-            _wallet = UIKit.Label(column, "", 40, UIKit.Gold, TextAnchor.MiddleRight);
-            UIKit.FitText(_wallet, 26);
-            UIKit.Size(_wallet, 80);
+            var column = UIKit.Rect("Column", Root);
+            UIKit.Stretch(column, 0, 24, 0, 100);
+            var layout = UIKit.Column(column, 14);
             layout.padding = new RectOffset(40, 40, 0, 0);
 
-            var title = UIKit.Label(column, "MUMMY\nESCAPE", 150, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
-            title.lineSpacing = 0.85f;
+            // Top bar: wallet chips on the left, settings on the right.
+            var top = UIKit.Row(column, 96, 14);
+            top.childAlignment = TextAnchor.MiddleLeft;
+            _stars = UIKit.Chip(top.transform, UIKit.Art.Star, "0");
+            _coins = UIKit.Chip(top.transform, UIKit.Art.Scarab, "0");
+            UIKit.Size(UIKit.Rect("Spacer", top.transform), -1, -1, 1);
+            UIKit.IconButton(top.transform, UISprites.Gear, () => Router.Open<SettingsScreen>(), 92);
+
+            var title = UIKit.Title(column, "MUMMY\nESCAPE", 150);
+            var black = Resources.Load<Font>("Fonts/Cinzel-Black");
+            if (black != null) title.font = black;
+            title.lineSpacing = 0.8f;
             UIKit.FitText(title, 64);
-            var tle = UIKit.Size(title, 380);
+            var tle = UIKit.Size(title, 360);
             tle.minHeight = 190;
             var outline = title.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.35f, 0.2f, 0.05f);
-            outline.effectDistance = new Vector2(4, -4);
+            outline.effectColor = new Color(0.22f, 0.12f, 0.03f, 0.9f);
+            outline.effectDistance = new Vector2(3, -3);
 
-            var subtitle = UIKit.Label(column, Loc.T("Échappe-toi du tombeau… à l'aveugle."), 40, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Italic);
-            UIKit.FitText(subtitle, 26);
-            UIKit.Size(subtitle, 60);
+            var subtitle = UIKit.Label(column, Loc.T("Échappe-toi du tombeau… à l'aveugle."), 36, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Italic);
+            UIKit.FitText(subtitle, 24);
+            UIKit.Size(subtitle, 56);
 
             _stage = UIKit.Rect("MummyStage", column);
             // Reserved room for the mummy; extra height goes to it too (flexible), the title shrinks first.
@@ -49,25 +56,26 @@ namespace MummyEscape.UI.Screens
             foreach (var rt in new[] { _glow.rectTransform, _mummy.rectTransform })
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
 
-            var menu = UIKit.Rect("Menu", column);
-            var mcol = UIKit.Column(menu, 26);
-            mcol.childForceExpandWidth = false;
-            mcol.childControlWidth = true;
+            var play = UIKit.Rect("PlayRow", column);
+            UIKit.Size(play, 124);
+            var playBtn = UIKit.Button(play, Loc.T("JOUER"), () => Router.Open<LevelSelectScreen>(), 50, ButtonStyle.Primary);
+            UIKit.Place((RectTransform)playBtn.transform, 0.5f, 0.5f, 620, 124);
+            UIKit.Rounded(playBtn.image, 62);
 
-            void Add(string label, System.Action onClick, int size, float height) =>
-                UIKit.Size(UIKit.Button(menu, label, onClick, size), height, 760);
-            Add(Loc.T("JOUER"), () => Router.Open<LevelSelectScreen>(), 64, 150);
-            Add(Loc.T("Classement"), () => Router.Open<LeaderboardScreen>(), 44, 115);
-            Add(Loc.T("Amis"), () => Router.Open<FriendsScreen>(), 44, 115);
-            Add(Loc.T("Boutique"), () => Router.Open<ShopScreen>(), 44, 115);
-            Add(Loc.T("Paramètres"), () => Router.Open<SettingsScreen>(), 44, 115);
+            // Secondary destinations as captioned icons.
+            UIKit.Size(UIKit.Rect("Gap", column), 18);
+            var actions = UIKit.Row(column, 170, 44);
+            UIKit.IconAction(actions.transform, UISprites.Podium, Loc.T("Classement"), () => Router.Open<LeaderboardScreen>());
+            UIKit.IconAction(actions.transform, UISprites.Friends, Loc.T("Amis"), () => Router.Open<FriendsScreen>());
+            UIKit.IconAction(actions.transform, UISprites.Bag, Loc.T("Boutique"), () => Router.Open<ShopScreen>());
+            UIKit.IconAction(actions.transform, UISprites.Note, Loc.T("Juke-box"), () => Router.Open<JukeboxScreen>());
 #if !UNITY_IOS
             // Apple's guidelines discourage quit buttons; on iOS the home gesture closes the app.
-            Add(Loc.T("Quitter"), Quit, 44, 115);
+            UIKit.Size(UIKit.Button(column, Loc.T("Quitter"), Quit, 28, ButtonStyle.Ghost), 64);
 #endif
 
-            _online = UIKit.Label(Root, "", 26, UIKit.Dim, TextAnchor.MiddleCenter);
-            UIKit.BottomBand(_online.rectTransform, 50, 40);
+            _online = UIKit.Label(Root, "", 24, UIKit.Dim, TextAnchor.MiddleCenter);
+            UIKit.BottomBand(_online.rectTransform, 50, 36);
         }
 
         public override void OnShow()
@@ -75,7 +83,8 @@ namespace MummyEscape.UI.Screens
             App.Lighting.SetMood(false);
             App.Audio.PlayMusic(0);
             FitMummy();
-            _wallet.text = Loc.F("Étoiles : {0}", App.Save.TotalStars) + "    " + Loc.F("Scarabées : {0}", App.Save.Data.Coins);
+            _stars.text = App.Save.TotalStars.ToString();
+            _coins.text = App.Save.Data.Coins.ToString();
             _mummy.sprite = App.Art.MummyPortrait(SkinCatalog.Get(App.Save.Data.SelectedSkin));
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)

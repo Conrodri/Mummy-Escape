@@ -36,25 +36,25 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_portrait, 130, 130);
             var texts = UIKit.Rect("Texts", who.transform);
             UIKit.Size(texts, -1, -1, 1);
-            _name = UIKit.Label(texts, "", 48, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            _name = UIKit.Label(texts, "", 44, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
             UIKit.FitText(_name, 30);
             UIKit.TopBand(_name.rectTransform, 74, 4);
             _code = UIKit.Label(texts, "", 30, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.BottomBand(_code.rectTransform, 46, 4);
 
-            var actions = UIKit.Row(card, 100, 14);
+            var actions = UIKit.Row(card, UIKit.SmallButtonHeight, 14);
             UIKit.Size(UIKit.Button(actions.transform, "Mon nom", EditName, 34), -1, -1, 1);
             _countryButton = UIKit.Button(actions.transform, "Pays", () => Router.Open<CountryPickerScreen>(), 34);
             UIKit.Size(_countryButton, -1, -1, 1);
             UIKit.Size(UIKit.Button(actions.transform, "Partager", ShareCode, 34), -1, -1, 1);
 
-            _tabs = new UIKit.Segmented(body, new[] { "Amis", "Demandes" }, i => { _tab = i; Reload(); }, 100);
+            _tabs = new UIKit.Segmented(body, new[] { "Amis", "Demandes" }, i => { _tab = i; Reload(); });
 
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 12;
 
-            UIKit.Size(UIKit.Button(body, "+  Ajouter un ami", AddFriend, 48), 140);
+            UIKit.Size(UIKit.Button(body, "+  Ajouter un ami", AddFriend, 36, ButtonStyle.Primary), 104);
         }
 
         public override void OnShow()
@@ -207,9 +207,9 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 6;
 
-            _remove = UIKit.Button(body, "Retirer des amis", Remove, 38);
-            _remove.image.color = new Color(1f, 0.55f, 0.5f);
-            UIKit.Size(_remove, 110);
+            _remove = UIKit.Button(body, "Retirer des amis", Remove, UIKit.TextSize, ButtonStyle.Danger);
+
+            UIKit.Size(_remove, UIKit.ButtonHeight);
         }
 
         Text StatTile(Transform parent, string caption)

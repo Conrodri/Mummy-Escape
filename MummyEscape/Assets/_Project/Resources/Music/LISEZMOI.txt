@@ -1,11 +1,14 @@
 Musiques personnalisées (ex. générées avec Suno)
 
-Déposer ici un fichier par thème, il remplace automatiquement la musique codée :
-  menu.mp3   -> menus
-  act1.mp3   -> L'Antichambre
-  act2.mp3   -> Les Galeries inondées
-  act3.mp3   -> Les Ruines effondrées
-  act4.mp3   -> La Cité d'Anubis
-  act5.mp3   -> Le Sanctuaire embrasé
+Déposer ici les fichiers, ils sont détectés par leur nom et remplacent la musique codée :
+  menu.mp3       -> menus
+  act1.mp3       -> L'Antichambre (tout l'acte)
+  act2.mp3       -> Les Galeries inondées
+  act3.mp3       -> Les Ruines effondrées
+  act4.mp3       -> La Cité d'Anubis
+  act5.mp3       -> Le Sanctuaire embrasé
+  act2_f2.mp3    -> musique propre à l'étage 2 de l'acte 2 (sinon celle de l'acte)
+  act2_b.mp3, act2_calme.mp3, act2_f2_b.mp3 ... -> variantes : une est tirée au hasard à chaque partie
+Le Juke-box (accueil) liste tout par thème et par étage pour les écouter.
 (.ogg / .wav aussi.) Conseil : boucle propre (fin qui s'enchaîne au début), 1 à 3 min,
 import Unity "Load Type: Streaming" pour économiser la mémoire.
