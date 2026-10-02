@@ -4,6 +4,8 @@
     "references": [
         "MummyEscape.Core",
         "MummyEscape.Editor",
+        "MummyEscape.Runtime",
+        "UnityEngine.UI",
         "Unity.Pipeline",
         "Unity.Pipeline.Attributes"
     ],

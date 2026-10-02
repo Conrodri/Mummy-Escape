@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace MummyEscape.UI.Screens
 {
-    /// <summary>In-game overlay: level, moves vs par, HP (ankhs), floor, status effects and the map peek button.</summary>
+    /// <summary>In-game overlay: level, moves (the par stays hidden), HP (ankhs), floor, status effects and the map peek button.</summary>
     public sealed class HudScreen : UIScreen, IBackHandler
     {
         Text _level;
@@ -125,7 +125,7 @@ namespace MummyEscape.UI.Screens
         {
             var level = App.Game.Session.Level;
             var act = DifficultyTable.GetAct(level.Id.Act);
-            _introText.text = $"Acte {level.Id.Act} — {act.Name}\nNiveau {level.Id}\n<size=38>Par : {level.Solution.Moves} coups</size>";
+            _introText.text = $"Acte {level.Id.Act} — {act.Name}\nNiveau {level.Id}\n<size=38>{(level.Floors > 1 ? $"{level.Floors} étages · " : "")}Trouve la sortie</size>";
             _intro.alpha = 1f;
             _introTimer = 2.2f;
             Refresh();
@@ -144,7 +144,7 @@ namespace MummyEscape.UI.Screens
             if (s == null) return;
             var level = s.Level;
             _level.text = $"Niveau {level.Id}";
-            _moves.text = $"Coups : {s.Moves}   ·   Par : {level.Solution.Moves}";
+            _moves.text = $"Coups : {s.Moves}";
             _floor.text = level.Floors > 1 ? $"Étage {s.Position.Floor + 1} / {level.Floors}" : "";
 
             while (_ankhs.Count < level.MaxHp)

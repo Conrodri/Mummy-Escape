@@ -41,8 +41,8 @@ namespace MummyEscape.UI.Screens
             _next = UIKit.Button(panel.transform, "Niveau suivant", Next);
             UIKit.Size(_next, 120);
             var row = UIKit.Row(panel.transform, 120);
-            UIKit.Button(row.transform, "Rejouer", Retry, 40);
-            UIKit.Button(row.transform, "Classement", Leaderboard, 40);
+            UIKit.Size(UIKit.Button(row.transform, "Rejouer", Retry, 40), -1, -1, 1);
+            UIKit.Size(UIKit.Button(row.transform, "Classement", Leaderboard, 40), -1, -1, 1);
             UIKit.Size(UIKit.Button(panel.transform, "Menu", Menu), 110);
         }
 
@@ -57,7 +57,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Stretch(stars);
 
             _lines.text = result.Won
-                ? $"Tu as fini en <b>{result.Moves}</b> coups (par {result.Par})\n" +
+                ? $"Tu as fini en <b>{result.Moves}</b> coups\n" +
                   $"<b>{result.Interactions}</b> interaction{(result.Interactions > 1 ? "s" : "")}\n" +
                   $"Il te reste <b>{result.HpLeft}</b> point{(result.HpLeft > 1 ? "s" : "")} de vie sur {result.MaxHp}"
                 : $"Les pièges ont eu raison de toi après {result.Moves} coups.\n{result.Interactions} interaction{(result.Interactions > 1 ? "s" : "")}\nRéessaie : le tombeau ne change pas.";

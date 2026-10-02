@@ -15,6 +15,8 @@ namespace MummyEscape.Services
         public int Coins;
         public List<string> OwnedSkins = new List<string> { SkinCatalog.DefaultSkinId };
         public string SelectedSkin = SkinCatalog.DefaultSkinId;
+        /// <summary>Country shown in the rankings (ISO alpha-2). Empty = detect from the device.</summary>
+        public string Country = "";
     }
 
     public struct RecordOutcome
@@ -100,6 +102,15 @@ namespace MummyEscape.Services
         {
             if (!Data.OwnedSkins.Contains(id)) return;
             Data.SelectedSkin = id;
+            Save();
+        }
+
+        /// <summary>Chosen country, or the device region when the player never picked one.</summary>
+        public string Country => string.IsNullOrEmpty(Data.Country) ? CountryService.Detect() : Data.Country;
+
+        public void SetCountry(string code)
+        {
+            Data.Country = code ?? "";
             Save();
         }
 

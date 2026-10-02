@@ -1,167 +1,290 @@
 using MummyEscape.Core;
+using MummyEscape.Online;
+using MummyEscape.Services;
+using MummyEscape.Visual;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace MummyEscape.UI.Screens
 {
-    /// <summary>Your identity, friend requests, friends list with their progression.</summary>
+    /// <summary>
+    /// Phone-first friends hub: profile card (name, country, share code), Amis / Demandes tabs with large tappable
+    /// cards, and one big "Ajouter un ami" button within thumb reach. Text entry happens in dialogs.
+    /// </summary>
     public sealed class FriendsScreen : UIScreen
     {
-        InputField _name;
-        InputField _add;
-        Text _status;
+        Image _portrait;
+        Text _name, _code;
+        Button _countryButton;
+        UIKit.Segmented _tabs;
         RectTransform _list;
+        ScrollRect _scroll;
+        int _tab;
+        int _reloadId;
 
         protected override void Build()
         {
+            UIKit.Backdrop(Root);
             Header("Amis");
-            var body = Body(200, 60);
-            UIKit.Column(body, 20);
+            var body = Body(190, 40, 40);
+            UIKit.Column(body, 22);
 
-            UIKit.Size(UIKit.Label(body, "Ton nom de momie", 38, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold), 56);
-            var nameRow = UIKit.Row(body, 100);
-            _name = UIKit.Input(nameRow.transform, "Nom (sans espace)");
-            UIKit.Size(_name, -1, -1, 1);
-            UIKit.Size(UIKit.Button(nameRow.transform, "OK", SaveName, 40), -1, 160, 0);
+            // Profile.
+            var card = UIKit.Card(body, 30, 20);
+            var who = UIKit.Row(card, 130, 26);
+            _portrait = UIKit.Image(who.transform, null, Color.white);
+            UIKit.Size(_portrait, 130, 130);
+            var texts = UIKit.Rect("Texts", who.transform);
+            UIKit.Size(texts, -1, -1, 1);
+            _name = UIKit.Label(texts, "", 48, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(_name, 30);
+            UIKit.TopBand(_name.rectTransform, 74, 4);
+            _code = UIKit.Label(texts, "", 30, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.BottomBand(_code.rectTransform, 46, 4);
 
-            UIKit.Size(UIKit.Label(body, "Ajouter un ami (nom complet avec #1234)", 38, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold), 56);
-            var addRow = UIKit.Row(body, 100);
-            _add = UIKit.Input(addRow.transform, "Momie#1234");
-            UIKit.Size(_add, -1, -1, 1);
-            UIKit.Size(UIKit.Button(addRow.transform, "Inviter", SendRequest, 40), -1, 220, 0);
+            var actions = UIKit.Row(card, 100, 14);
+            UIKit.Size(UIKit.Button(actions.transform, "Mon nom", EditName, 34), -1, -1, 1);
+            _countryButton = UIKit.Button(actions.transform, "Pays", () => Router.Open<CountryPickerScreen>(), 34);
+            UIKit.Size(_countryButton, -1, -1, 1);
+            UIKit.Size(UIKit.Button(actions.transform, "Partager", ShareCode, 34), -1, -1, 1);
 
-            _status = UIKit.Label(body, "", 32, UIKit.Dim);
-            UIKit.Size(_status, 80);
+            _tabs = new UIKit.Segmented(body, new[] { "Amis", "Demandes" }, i => { _tab = i; Reload(); }, 100);
 
-            _list = UIKit.Scroll(body, out var scroll);
-            UIKit.Size(scroll, -1, -1, -1, 1);
+            _list = UIKit.Scroll(body, out _scroll);
+            UIKit.Size(_scroll, -1, -1, -1, 1);
+            _list.GetComponent<VerticalLayoutGroup>().spacing = 12;
+
+            UIKit.Size(UIKit.Button(body, "+  Ajouter un ami", AddFriend, 48), 140);
         }
 
         public override void OnShow()
         {
+            _portrait.sprite = App.Art.MummyPortrait(SkinCatalog.Get(App.Save.Data.SelectedSkin));
             _name.text = App.Online.PlayerName;
+            _code.text = App.Online.IsAvailable ? "Ton code ami : donne-le à tes amis"
+                       : App.Online.IsDemo ? "Démo hors ligne (amis fictifs)" : "Hors ligne";
+            string country = App.Save.Country;
+            UIKit.SetLabel(_countryButton, string.IsNullOrEmpty(country) ? "Pays ?" : $"Pays : {country}");
+            _tabs.Select(_tab);
             Reload();
-        }
-
-        async void SaveName()
-        {
-            _status.text = "Enregistrement…";
-            string n = await App.Online.SetPlayerNameAsync(_name.text);
-            _name.text = n;
-            _status.text = App.Online.IsAvailable ? $"Tes amis peuvent t'ajouter avec : {n}" : App.Online.Status;
-        }
-
-        async void SendRequest()
-        {
-            bool ok = await App.Online.SendFriendRequestAsync(_add.text);
-            _status.text = ok ? "Invitation envoyée !" : App.Online.IsAvailable ? "Joueur introuvable." : App.Online.Status;
-            if (ok) _add.text = "";
         }
 
         async void Reload()
         {
+            int id = ++_reloadId;
             UIKit.ClearChildren(_list);
-            if (!App.Online.IsAvailable)
+            _scroll.verticalNormalizedPosition = 1f;
+            var online = App.Online;
+            if (!online.IsAvailable && !online.IsDemo)
             {
-                _status.text = App.Online.Status;
+                Message(online.Status);
                 return;
             }
-            _status.text = $"Tu es : {App.Online.PlayerName}";
 
-            var requests = await App.Online.GetFriendRequestsAsync();
-            foreach (var r in requests)
+            var requests = await online.GetFriendRequestsAsync();
+            var friends = await online.GetFriendsAsync();
+            if (id != _reloadId || this == null) return;
+            _tabs.SetLabel(0, friends.Count > 0 ? $"Amis ({friends.Count})" : "Amis");
+            _tabs.SetLabel(1, requests.Count > 0 ? $"Demandes ({requests.Count})" : "Demandes");
+
+            if (_tab == 0)
             {
-                var row = Row();
-                UIKit.Size(UIKit.Label(row.transform, $"{r.Name} veut être ton ami", 34, UIKit.Sand, TextAnchor.MiddleLeft), -1, -1, 1);
-                string id = r.PlayerId;
-                UIKit.Size(UIKit.Button(row.transform, "Accepter", async () => { await App.Online.AcceptFriendRequestAsync(id); Reload(); }, 34), -1, 230, 0);
+                if (friends.Count == 0) Message("Aucun ami pour l'instant.\nPartage ton code pour qu'on t'ajoute !");
+                foreach (var f in friends) FriendItem(f);
             }
-
-            var friends = await App.Online.GetFriendsAsync();
-            if (friends.Count == 0 && requests.Count == 0)
-                UIKit.Size(UIKit.Label(_list, "Aucun ami pour l'instant. Partage ton nom !", 34, UIKit.Dim), 100);
-
-            foreach (var f in friends)
+            else
             {
-                var row = Row();
-                UIKit.Size(UIKit.Label(row.transform, (f.Online ? "● " : "○ ") + f.Name, 38, f.Online ? UIKit.Turquoise : UIKit.Sand, TextAnchor.MiddleLeft), -1, -1, 1);
-                var progress = UIKit.Label(row.transform, "…", 30, UIKit.Dim, TextAnchor.MiddleRight);
-                UIKit.Size(progress, -1, 260, 0);
-                var friend = f;
-                UIKit.Size(UIKit.Button(row.transform, "Voir", () => Router.Open<FriendDetailScreen>().Show(friend), 34), -1, 160, 0);
-                LoadProgress(friend.PlayerId, progress);
+                if (requests.Count == 0) Message("Aucune demande en attente.");
+                foreach (var r in requests) RequestItem(r);
             }
         }
 
-        async void LoadProgress(string playerId, Text target)
+        void FriendItem(FriendInfo f)
         {
-            var p = await App.Online.GetProgressAsync(playerId);
+            UIKit.ListItem(_list, 150, () => Router.Open<FriendDetailScreen>().Show(f), out var h);
+            var dot = UIKit.Label(h.transform, "●", 40, f.Online ? UIKit.Turquoise : new Color(1, 1, 1, 0.2f));
+            UIKit.Size(dot, -1, 44, 0);
+            var texts = UIKit.Rect("Texts", h.transform);
+            UIKit.Size(texts, -1, -1, 1);
+            var name = UIKit.Label(texts, f.Name, 44, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(name, 28);
+            UIKit.TopBand(name.rectTransform, 70, 10);
+            var progress = UIKit.Label(texts, f.Online ? "En ligne" : "…", 30, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.BottomBand(progress.rectTransform, 46, 10);
+            UIKit.Size(UIKit.Label(h.transform, "►", 40, UIKit.Gold), -1, 50, 0);
+            LoadProgress(f, progress);
+        }
+
+        async void LoadProgress(FriendInfo f, Text target)
+        {
+            var p = await App.Online.GetProgressAsync(f.PlayerId);
             if (target == null) return;
-            target.text = p == null ? "—" : $"{p.FurthestLevel} · {p.TotalStars} étoiles";
+            string status = f.Online ? "En ligne · " : "";
+            target.text = p == null ? status + "progression non partagée" : $"{status}niveau {p.FurthestLevel} · {p.TotalStars} étoiles";
         }
 
-        HorizontalLayoutGroup Row()
+        void RequestItem(FriendRequest r)
         {
-            var row = UIKit.Row(_list, 110, 12);
-            row.padding = new RectOffset(16, 16, 6, 6);
-            var bg = row.gameObject.AddComponent<Image>();
-            bg.color = new Color(1, 1, 1, 0.05f);
-            bg.raycastTarget = false;
-            return row;
+            UIKit.ListItem(_list, 170, null, out var h);
+            h.padding = new RectOffset(28, 20, 22, 22);
+            var texts = UIKit.Rect("Texts", h.transform);
+            UIKit.Size(texts, -1, -1, 1);
+            var name = UIKit.Label(texts, r.Name, 42, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(name, 26);
+            UIKit.TopBand(name.rectTransform, 64, 0);
+            var sub = UIKit.Label(texts, "veut devenir ton ami", 30, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.BottomBand(sub.rectTransform, 44, 0);
+            string id = r.PlayerId;
+            UIKit.Size(UIKit.Button(h.transform, "Refuser", async () => { await App.Online.DeclineFriendRequestAsync(id); Reload(); }, 32), -1, 180, 0);
+            UIKit.Size(UIKit.Button(h.transform, "Accepter", async () => { await App.Online.AcceptFriendRequestAsync(id); Reload(); }, 32), -1, 200, 0);
+        }
+
+        void Message(string text) => UIKit.Size(UIKit.Label(_list, text, 36, UIKit.Dim), 200);
+
+        void EditName() =>
+            Router.Open<PromptDialog>().Configure("Ton nom de momie", "Visible dans les classements.\nLes espaces deviennent des _.",
+                "Nom", StripTag(App.Online.PlayerName), "Enregistrer", async n =>
+                {
+                    if (n.Length < 3) return "3 caractères minimum.";
+                    await App.Online.SetPlayerNameAsync(n);
+                    if (this != null) OnShow();
+                    return null;
+                });
+
+        void AddFriend() =>
+            Router.Open<PromptDialog>().Configure("Ajouter un ami", "Demande-lui son code ami\n(exemple : Nefertari#2041).",
+                "Code ami", "", "Inviter", async code =>
+                {
+                    if (!code.Contains("#")) return "Le code contient un # suivi de 4 chiffres.";
+                    if (!App.Online.IsAvailable && !App.Online.IsDemo) return App.Online.Status;
+                    bool ok = await App.Online.SendFriendRequestAsync(code);
+                    return ok ? null : "Joueur introuvable.";
+                });
+
+        void ShareCode()
+        {
+            string name = App.Online.PlayerName;
+            App.Share.ShareText($"Ajoute-moi sur Mummy Escape ! Mon code ami : {name}\n{ShareService.GameUrl}");
+        }
+
+        static string StripTag(string name)
+        {
+            int hash = name?.IndexOf('#') ?? -1;
+            return hash > 0 ? name.Substring(0, hash) : name;
         }
     }
 
-    /// <summary>A friend's progression and per-level scores, compared with yours.</summary>
+    /// <summary>A friend's progression and per-level scores side by side with yours.</summary>
     public sealed class FriendDetailScreen : UIScreen
     {
         public override bool IsModal => true;
 
         Text _title;
-        Text _summary;
+        Text _furthest, _stars;
         RectTransform _list;
-        Online.FriendInfo _friend;
+        Button _remove;
+        FriendInfo _friend;
+        bool _confirmRemove;
 
         protected override void Build()
         {
-            var shade = UIKit.Image(Root, UIKit.Art.White, new Color(0.04f, 0.03f, 0.02f, 0.97f), true);
-            UIKit.Stretch(shade.rectTransform);
+            UIKit.Backdrop(Root);
             _title = Header("", () => Router.Close(this));
-            var body = Body(200, 60);
+            var body = Body(190, 40, 40);
             UIKit.Column(body, 20);
-            _summary = UIKit.Label(body, "", 38, UIKit.Sand);
-            UIKit.Size(_summary, 120);
-            var head = UIKit.Row(body, 70);
-            UIKit.Label(head.transform, "Niveau", 34, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.Label(head.transform, "Ami", 34, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.Label(head.transform, "Toi", 34, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+
+            var stats = UIKit.Row(body, 190, 20);
+            _furthest = StatTile(stats.transform, "le plus loin");
+            _stars = StatTile(stats.transform, "étoiles");
+
+            var head = UIKit.Row(body, 60, 12);
+            head.padding = new RectOffset(28, 28, 0, 0);
+            UIKit.Size(UIKit.Label(head.transform, "Niveau", 32, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold), -1, 200, 0);
+            UIKit.Size(UIKit.Label(head.transform, "Ami", 32, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold), -1, -1, 1);
+            UIKit.Size(UIKit.Label(head.transform, "Toi", 32, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold), -1, -1, 1);
+
             _list = UIKit.Scroll(body, out var scroll);
             UIKit.Size(scroll, -1, -1, -1, 1);
+            _list.GetComponent<VerticalLayoutGroup>().spacing = 6;
+
+            _remove = UIKit.Button(body, "Retirer des amis", Remove, 38);
+            _remove.image.color = new Color(1f, 0.55f, 0.5f);
+            UIKit.Size(_remove, 110);
         }
 
-        public async void Show(Online.FriendInfo friend)
+        Text StatTile(Transform parent, string caption)
+        {
+            var tile = UIKit.Panel(parent);
+            tile.raycastTarget = false;
+            UIKit.Size(tile, -1, -1, 1);
+            var value = UIKit.Label(tile.transform, "", 64, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Stretch(value.rectTransform, 10, 20, 10, 60);
+            var cap = UIKit.Label(tile.transform, caption, 30, UIKit.Dim);
+            UIKit.BottomBand(cap.rectTransform, 50, 24);
+            return value;
+        }
+
+        public async void Show(FriendInfo friend)
         {
             _friend = friend;
+            _confirmRemove = false;
+            UIKit.SetLabel(_remove, "Retirer des amis");
             _title.text = friend.Name;
-            _summary.text = "Chargement…";
+            _furthest.text = _stars.text = "…";
             UIKit.ClearChildren(_list);
+
             var p = await App.Online.GetProgressAsync(friend.PlayerId);
-            if (_friend != friend) return;
-            if (p == null) { _summary.text = "Progression non partagée pour l'instant."; return; }
-            _summary.text = $"Plus loin : niveau {p.FurthestLevel}\n{p.TotalStars} étoiles (toi : {App.Save.TotalStars})";
+            if (_friend != friend || this == null) return;
+            if (p == null)
+            {
+                _furthest.text = _stars.text = "—";
+                Row("Progression non partagée pour l'instant.", "", "", false, null);
+                return;
+            }
+            _furthest.text = p.FurthestLevel;
+            int mine = App.Save.TotalStars;
+            _stars.text = $"{p.TotalStars} <size=34><color=#9C8B70>/ toi {mine}</color></size>";
 
             foreach (var id in DifficultyTable.AllLevels())
             {
                 var theirs = p.Records.Find(r => r.Key == id.Key);
-                var mine = App.Save.GetRecord(id);
-                if (theirs == null && mine == null) continue;
-                var row = UIKit.Row(_list, 80, 8);
-                UIKit.Label(row.transform, id.ToString(), 34, UIKit.Sand, TextAnchor.MiddleLeft);
-                UIKit.Label(row.transform, Format(theirs), 34, UIKit.Sand);
-                bool better = mine != null && theirs != null && mine.BestMoves > 0 && (theirs.BestMoves == 0 || mine.BestMoves < theirs.BestMoves);
-                UIKit.Label(row.transform, Format(mine), 34, better ? UIKit.Turquoise : UIKit.Sand);
+                var me = App.Save.GetRecord(id);
+                if ((theirs == null || theirs.BestMoves == 0) && (me == null || me.BestMoves == 0)) continue;
+                bool iWin = me != null && me.BestMoves > 0 && (theirs == null || theirs.BestMoves == 0 || me.BestMoves < theirs.BestMoves);
+                var level = id;
+                Row(id.ToString(), Format(theirs), Format(me), iWin, () =>
+                {
+                    Router.Close(this);
+                    var lb = Router.Get<LeaderboardScreen>();
+                    lb.Focus(level, LeaderboardScope.Friends);
+                    Router.Open<LeaderboardScreen>();
+                });
             }
         }
 
-        static string Format(LevelRecord r) => r == null || r.BestMoves == 0 ? "—" : $"{r.BestMoves} ({r.BestStars}/3)";
+        void Row(string level, string theirs, string mine, bool iWin, System.Action onClick)
+        {
+            UIKit.ListItem(_list, 96, onClick, out var h);
+            h.spacing = 12;
+            UIKit.Size(UIKit.Label(h.transform, level, 36, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold), -1, 200, 0);
+            UIKit.Size(UIKit.Label(h.transform, theirs, 34, iWin ? UIKit.Dim : UIKit.Sand), -1, -1, 1);
+            UIKit.Size(UIKit.Label(h.transform, mine, 34, iWin ? UIKit.Turquoise : UIKit.Dim, TextAnchor.MiddleCenter, iWin ? FontStyle.Bold : FontStyle.Normal), -1, -1, 1);
+        }
+
+        static string Format(LevelRecord r) => r == null || r.BestMoves == 0 ? "—" : $"{r.BestMoves} coups";
+
+        async void Remove()
+        {
+            if (!_confirmRemove)
+            {
+                _confirmRemove = true;
+                UIKit.SetLabel(_remove, "Confirmer le retrait ?");
+                return;
+            }
+            await App.Online.RemoveFriendAsync(_friend.PlayerId);
+            if (this == null) return;
+            Router.Close(this);
+            if (Router.Current is FriendsScreen friends) friends.OnShow();
+        }
     }
 }

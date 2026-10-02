@@ -52,7 +52,7 @@ namespace MummyEscape.Visual
             var white = new Px(4, 4); white.Fill(new Color32(255, 255, 255, 255));
             White = ToSprite(white);
             Glow = ToSprite(PaintGlow(64), 64);
-            Panel = ToSprite(PaintPanel(new Color32(30, 26, 22, 240), Gold), Ppu, new Vector4(10, 10, 10, 10));
+            Panel = ToSprite(PaintPanel(new Color32(30, 26, 22, 255), Gold), Ppu, new Vector4(10, 10, 10, 10));
             ButtonSprite = ToSprite(PaintPanel(Lapis, Gold), Ppu, new Vector4(10, 10, 10, 10));
             Ankh = ToSprite(PaintAnkh(Gold, GoldDark), 16);
             AnkhEmpty = ToSprite(PaintAnkh(new Color32(70, 64, 58, 255), new Color32(40, 36, 32, 255)), 16);
@@ -91,7 +91,20 @@ namespace MummyEscape.Visual
             return Floor(variant);
         }
 
+        /// <summary>In-game mummy holding an unlit torch handle; the flame is a separate sprite so it can go out.</summary>
         public Sprite Mummy(SkinDef skin) => Cached("mummy_" + skin.Id, () => PaintMummy(skin));
+
+        /// <summary>Mummy with its torch lit, for menus, shop and icon.</summary>
+        public Sprite MummyPortrait(SkinDef skin) => Cached("portrait_" + skin.Id, () => PaintMummy(skin).Overlay(PaintFlame(skin, 0)));
+
+        public const int TorchFlameFrames = 3;
+        public Sprite TorchFlame(SkinDef skin, int frame) => Cached($"flame_{skin.Id}_{frame}", () => PaintFlame(skin, frame));
+
+        /// <summary>Glowing ember left in the cup when the torch is out.</summary>
+        public Sprite TorchEmber() => Cached("ember", PaintEmber);
+
+        /// <summary>Flame centre relative to the mummy sprite centre, in world units (mirror x when the sprite is flipped).</summary>
+        public static readonly Vector2 TorchFlameOffset = new Vector2(9.5f / Ppu, 9f / Ppu);
 
         /// <summary>Colour of the small light a point of interest emits once discovered.</summary>
         public static Color? GlowColor(Tile t, bool channelActive)
@@ -314,6 +327,48 @@ namespace MummyEscape.Visual
             // Dark eye band + glowing eyes.
             p.Rect(11, 22, 21, 24, new Color32(30, 24, 20, 255));
             p.Rect(12, 23, 14, 23, s.Eyes); p.Rect(18, 23, 20, 23, s.Eyes);
+
+            // Torch held upright in the right hand: wooden handle, bronze cup, bandaged fist over the grip.
+            var wood = new Color32(116, 74, 38, 255);
+            var woodDark = new Color32(78, 48, 24, 255);
+            p.Rect(25, 9, 26, 20, wood);
+            p.Rect(26, 9, 26, 20, woodDark);
+            p.Rect(24, 21, 27, 22, new Color32(186, 128, 52, 255));
+            p.Rect(24, 21, 27, 21, new Color32(120, 78, 32, 255));
+            p.Rect(23, 13, 26, 16, s.Bandage);
+            p.Rect(23, 14, 26, 14, s.Shadow);
+            return p;
+        }
+
+        static Px PaintFlame(SkinDef s, int frame)
+        {
+            var p = new Px(32, 32);
+            p.Fill(Clear);
+            Color tint = s.Torch;
+            Color32 outer = Color.Lerp(tint, new Color(1f, 0.35f, 0.05f), 0.35f);
+            Color32 mid = Color.Lerp(tint, new Color(1f, 0.85f, 0.3f), 0.6f);
+            Color32 core = Color.Lerp(tint, Color.white, 0.8f);
+            // Three hand-placed frames: lean right, upright, lean left (a little shorter).
+            int lean = frame == 0 ? 1 : frame == 1 ? 0 : -1;
+            int height = frame == 2 ? 2 : 3;
+            p.Ellipse(25, 25, 2, height, outer);
+            p.Set(25 + lean, 26 + height, outer);
+            p.Set(25 + lean, 25 + height, mid);
+            p.Ellipse(25, 24, 1, 2, mid);
+            p.Rect(25, 23, 25, 24, core);
+            if (frame != 2) p.Set(26, 24, core);
+            return p;
+        }
+
+        static Px PaintEmber()
+        {
+            var p = new Px(32, 32);
+            p.Fill(Clear);
+            p.Rect(25, 23, 26, 23, new Color32(255, 90, 30, 255));
+            p.Set(24, 23, new Color32(150, 40, 20, 255));
+            p.Set(27, 23, new Color32(150, 40, 20, 255));
+            p.Set(25, 25, new Color32(120, 110, 100, 110)); // wisp of smoke
+            p.Set(26, 27, new Color32(120, 110, 100, 70));
             return p;
         }
 
@@ -424,6 +479,14 @@ namespace MummyEscape.Visual
             public void Set(int x, int y, Color32 c) { if (x >= 0 && y >= 0 && x < W && y < H) C[y * W + x] = c; }
             public Color32 Get(int x, int y) => x >= 0 && y >= 0 && x < W && y < H ? C[y * W + x] : default;
             public void Fill(Color32 c) { for (int i = 0; i < C.Length; i++) C[i] = c; }
+
+            /// <summary>Draws the opaque pixels of another canvas of the same size on top of this one.</summary>
+            public Px Overlay(Px top)
+            {
+                for (int i = 0; i < C.Length && i < top.C.Length; i++)
+                    if (top.C[i].a > 0) C[i] = top.C[i];
+                return this;
+            }
 
             public void Rect(int x0, int y0, int x1, int y1, Color32 c)
             {

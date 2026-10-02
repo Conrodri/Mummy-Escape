@@ -72,8 +72,100 @@ namespace MummyEscape.UI
             img.color = color;
             img.raycastTarget = raycast;
             if (sprite != null && sprite.border != Vector4.zero) img.type = UnityEngine.UI.Image.Type.Sliced;
-            img.preserveAspect = sprite != null && sprite.border == Vector4.zero;
+            // Icons keep their aspect; the plain white sprite is used for colour fills and must stretch.
+            img.preserveAspect = sprite != null && sprite.border == Vector4.zero && sprite != Art.White;
             return img;
+        }
+
+        public static readonly Color BackdropColor = new Color32(20, 14, 9, 255);
+
+        /// <summary>Opaque full-screen background, bleeding under the notch / home bar (behind the safe area).</summary>
+        public static Image Backdrop(Transform screenRoot, Color? color = null)
+        {
+            var img = Image(screenRoot, Art.White, color ?? BackdropColor, true, "Backdrop");
+            Stretch(img.rectTransform, -600, -600, -600, -600);
+            img.transform.SetAsFirstSibling();
+            return img;
+        }
+
+        /// <summary>Framed panel that sizes itself to its vertical content.</summary>
+        public static RectTransform Card(Transform parent, int padding = 36, float spacing = 18)
+        {
+            var img = Panel(parent, "Card");
+            img.raycastTarget = false;
+            Column(img.transform, spacing, padding);
+            return img.rectTransform;
+        }
+
+        public static Text SectionTitle(Transform parent, string text)
+        {
+            var t = Label(parent, text, 44, Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
+            Size(t, 64);
+            return t;
+        }
+
+        /// <summary>Full-width tappable list item (dark plate) with a horizontal layout for its content.</summary>
+        public static Image ListItem(Transform parent, float height, Action onClick, out HorizontalLayoutGroup content, bool highlight = false)
+        {
+            var img = Image(parent, Art.White, highlight ? new Color(0.16f, 0.42f, 0.42f, 0.75f) : new Color(1f, 0.92f, 0.75f, 0.07f), true, "Item");
+            Size(img, height);
+            img.raycastTarget = onClick != null;
+            if (onClick != null)
+            {
+                var btn = img.gameObject.AddComponent<Button>();
+                var colors = btn.colors;
+                colors.pressedColor = new Color(0.7f, 0.65f, 0.55f);
+                colors.highlightedColor = Color.white;
+                btn.colors = colors;
+                btn.onClick.AddListener(() =>
+                {
+                    App.GameApp.I?.Audio.Play(Services.Sfx.Click, 0f);
+                    onClick();
+                });
+            }
+            content = img.gameObject.AddComponent<HorizontalLayoutGroup>();
+            content.padding = new RectOffset(28, 28, 8, 8);
+            content.spacing = 20;
+            content.childAlignment = TextAnchor.MiddleLeft;
+            content.childControlWidth = content.childControlHeight = true;
+            content.childForceExpandWidth = false;
+            content.childForceExpandHeight = true;
+            return img;
+        }
+
+        /// <summary>Row of mutually exclusive tabs.</summary>
+        public sealed class Segmented
+        {
+            readonly Button[] _buttons;
+            readonly Text[] _labels;
+            public int Selected { get; private set; } = -1;
+
+            public Segmented(Transform parent, string[] labels, Action<int> onSelect, float height = 110)
+            {
+                var row = Row(parent, height, 12);
+                _buttons = new Button[labels.Length];
+                _labels = new Text[labels.Length];
+                for (int i = 0; i < labels.Length; i++)
+                {
+                    int index = i;
+                    _buttons[i] = Button(row.transform, labels[i], () => { Select(index); onSelect?.Invoke(index); }, 40);
+                    _labels[i] = _buttons[i].GetComponentInChildren<Text>();
+                    Size(_buttons[i], -1, -1, 1);
+                }
+            }
+
+            public void SetLabel(int i, string text) => _labels[i].text = text;
+
+            public void Select(int index)
+            {
+                Selected = index;
+                for (int i = 0; i < _buttons.Length; i++)
+                {
+                    bool on = i == index;
+                    _buttons[i].image.color = on ? Color.white : new Color(0.38f, 0.34f, 0.3f, 0.9f);
+                    _labels[i].color = on ? Gold : Dim;
+                }
+            }
         }
 
         public static Image Panel(Transform parent, string name = "Panel")
@@ -125,6 +217,17 @@ namespace MummyEscape.UI
             return btn;
         }
 
+        /// <summary>Shrinks the text (down to minSize) so it stays on its line instead of overflowing.</summary>
+        public static Text FitText(Text t, int minSize)
+        {
+            t.resizeTextForBestFit = true;
+            t.resizeTextMinSize = minSize;
+            t.resizeTextMaxSize = t.fontSize;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Truncate;
+            return t;
+        }
+
         public static void SetLabel(Button b, string text)
         {
             var t = b.GetComponentInChildren<Text>();
@@ -134,8 +237,10 @@ namespace MummyEscape.UI
         public static LayoutElement Size(Component c, float height = -1, float width = -1, float flexWidth = -1, float flexHeight = -1)
         {
             var le = c.GetComponent<LayoutElement>() ?? c.gameObject.AddComponent<LayoutElement>();
-            if (height >= 0) { le.preferredHeight = height; le.minHeight = height; }
-            if (width >= 0) { le.preferredWidth = width; le.minWidth = width; }
+            // A fixed size means "don't stretch" unless a flexible size is given explicitly
+            // (otherwise a layout group child such as a Row reports itself as flexible and eats the free space).
+            if (height >= 0) { le.preferredHeight = height; le.minHeight = height; if (flexHeight < 0) le.flexibleHeight = 0; }
+            if (width >= 0) { le.preferredWidth = width; le.minWidth = width; if (flexWidth < 0) le.flexibleWidth = 0; }
             if (flexWidth >= 0) le.flexibleWidth = flexWidth;
             if (flexHeight >= 0) le.flexibleHeight = flexHeight;
             return le;
@@ -162,39 +267,42 @@ namespace MummyEscape.UI
             h.childAlignment = TextAnchor.MiddleCenter;
             h.childControlWidth = true;
             h.childControlHeight = true;
-            h.childForceExpandWidth = true;
+            // Children share the width according to their LayoutElement (flexWidth 1 = fill, fixed width = fixed).
+            h.childForceExpandWidth = false;
             h.childForceExpandHeight = true;
             Size(rt, height);
             return h;
         }
 
-        public static Slider Slider(Transform parent, string label, float value, Action<float> onChange, float min = 0f, float max = 1f)
+        /// <summary>Labelled slider with its value shown on the right. format turns the value into text (default: percent).</summary>
+        public static Slider Slider(Transform parent, string label, float value, Action<float> onChange, float min = 0f, float max = 1f, Func<float, string> format = null)
         {
+            format = format ?? (v => Mathf.RoundToInt((v - min) / (max - min) * 100f) + " %");
             var row = Rect("Slider " + label, parent);
-            Size(row, 130);
-            var title = Label(row, label, 38, Sand, TextAnchor.UpperLeft);
-            TopBand(title.rectTransform, 50);
+            Size(row, 140);
+            var title = Label(row, label, 40, Sand, TextAnchor.MiddleLeft);
+            TopBand(title.rectTransform, 56);
+            var valueText = Label(row, format(value), 36, Gold, TextAnchor.MiddleRight, FontStyle.Bold);
+            TopBand(valueText.rectTransform, 56);
 
             var sliderRt = Rect("Slider", row);
-            sliderRt.anchorMin = new Vector2(0, 0);
-            sliderRt.anchorMax = new Vector2(1, 0);
-            sliderRt.pivot = new Vector2(0.5f, 0);
-            sliderRt.sizeDelta = new Vector2(-40, 50);
-            sliderRt.anchoredPosition = new Vector2(0, 10);
+            BottomBand(sliderRt, 70, 0);
+            sliderRt.offsetMin = new Vector2(10, sliderRt.offsetMin.y);
+            sliderRt.offsetMax = new Vector2(-10, sliderRt.offsetMax.y);
 
-            var bg = Image(sliderRt, Art.White, new Color(0.15f, 0.12f, 0.1f), true, "Background");
-            Stretch(bg.rectTransform, 0, 18, 0, 18);
+            var bg = Image(sliderRt, Art.White, new Color(0f, 0f, 0f, 0.55f), true, "Track");
+            Stretch(bg.rectTransform, 0, 25, 0, 25);
 
             var fillArea = Rect("Fill Area", sliderRt);
-            Stretch(fillArea, 0, 18, 0, 18);
+            Stretch(fillArea, 0, 25, 0, 25);
             var fill = Image(fillArea, Art.White, Gold, false, "Fill");
             fill.rectTransform.sizeDelta = Vector2.zero;
 
             var handleArea = Rect("Handle Slide Area", sliderRt);
-            Stretch(handleArea, 20, 0, 20, 0);
+            Stretch(handleArea, 30, 0, 30, 0);
             var handle = Image(handleArea, Art.ButtonSprite, Color.white, true, "Handle");
             handle.preserveAspect = false;
-            handle.rectTransform.sizeDelta = new Vector2(48, 0);
+            handle.rectTransform.sizeDelta = new Vector2(60, 0);
 
             var s = sliderRt.gameObject.AddComponent<Slider>();
             s.fillRect = fill.rectTransform;
@@ -203,35 +311,52 @@ namespace MummyEscape.UI
             s.minValue = min;
             s.maxValue = max;
             s.value = value;
-            s.onValueChanged.AddListener(v => onChange?.Invoke(v));
+            s.onValueChanged.AddListener(v =>
+            {
+                valueText.text = format(v);
+                onChange?.Invoke(v);
+            });
             return s;
         }
 
+        /// <summary>Labelled on/off switch (whole row is tappable).</summary>
         public static Toggle Toggle(Transform parent, string label, bool value, Action<bool> onChange)
         {
-            var row = Rect("Toggle " + label, parent);
-            Size(row, 90);
-            var text = Label(row, label, 38, Sand, TextAnchor.MiddleLeft);
-            Stretch(text.rectTransform, 0, 0, 140, 0);
+            var row = Image(parent, Art.White, new Color(0, 0, 0, 0), true, "Toggle " + label);
+            Size(row, 100);
+            var text = Label(row.transform, label, 40, Sand, TextAnchor.MiddleLeft);
+            Stretch(text.rectTransform, 0, 0, 190, 0);
 
-            var box = Image(row, Art.Panel, Color.white, true, "Box");
-            box.preserveAspect = false;
-            var boxRt = box.rectTransform;
-            boxRt.anchorMin = boxRt.anchorMax = new Vector2(1, 0.5f);
-            boxRt.pivot = new Vector2(1, 0.5f);
-            boxRt.sizeDelta = new Vector2(120, 70);
-            boxRt.anchoredPosition = new Vector2(-10, 0);
-
-            var check = Image(box.transform, Art.White, Turquoise, false, "Check");
-            Stretch(check.rectTransform, 16, 16, 16, 16);
+            var track = Image(row.transform, Art.White, Color.white, false, "Track");
+            var trt = track.rectTransform;
+            trt.anchorMin = trt.anchorMax = new Vector2(1, 0.5f);
+            trt.pivot = new Vector2(1, 0.5f);
+            trt.sizeDelta = new Vector2(150, 64);
+            trt.anchoredPosition = new Vector2(-10, 0);
+            var knob = Image(track.transform, Art.ButtonSprite, Color.white, false, "Knob");
+            knob.preserveAspect = false;
+            var krt = knob.rectTransform;
+            krt.anchorMin = krt.anchorMax = new Vector2(0, 0.5f);
+            krt.sizeDelta = new Vector2(70, 76);
+            var state = Label(track.transform, "", 26, Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
 
             var t = row.gameObject.AddComponent<Toggle>();
-            t.targetGraphic = box;
-            t.graphic = check;
+            t.targetGraphic = row;
+            t.transition = Selectable.Transition.None;
+            void Paint(bool on)
+            {
+                track.color = on ? new Color(0.13f, 0.62f, 0.56f) : new Color(0.22f, 0.18f, 0.15f);
+                krt.anchoredPosition = new Vector2(on ? 112 : 38, 0);
+                state.text = on ? "ON" : "OFF";
+                var srt = state.rectTransform;
+                Stretch(srt, on ? 8 : 76, 0, on ? 76 : 8, 0);
+            }
             t.isOn = value;
+            Paint(value);
             t.onValueChanged.AddListener(v =>
             {
                 App.GameApp.I?.Audio.Play(Services.Sfx.Click, 0f);
+                Paint(v);
                 onChange?.Invoke(v);
             });
             return t;

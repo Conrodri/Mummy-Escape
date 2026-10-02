@@ -81,9 +81,22 @@ namespace MummyEscape.App
 
         async void InitOnline()
         {
+            Online.Country = Save.Country;
             await Online.InitializeAsync();
+            if (!Online.IsAvailable && !(Online is OfflineOnlineService))
+            {
+                // Backend unreachable or not configured: fall back to the offline service (keeps the reason).
+                Online = new OfflineOnlineService(Online.Status) { Country = Save.Country };
+            }
+            if (Online is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
             if (Online.IsAvailable) await Online.PublishProgressAsync(BuildProgressSnapshot());
             if (UI.Current is MainMenuScreen menu) menu.OnShow();
+        }
+
+        public void SetCountry(string code)
+        {
+            Save.SetCountry(code);
+            Online.Country = Save.Country;
         }
 
         public ProgressSnapshot BuildProgressSnapshot() => new ProgressSnapshot

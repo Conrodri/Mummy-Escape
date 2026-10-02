@@ -29,6 +29,8 @@ namespace MummyEscape.Online
         public string PlayerId => IsAvailable ? AuthenticationService.Instance.PlayerId : "";
         public string PlayerName { get; private set; } = "";
         public string Status { get; private set; } = "Connexion…";
+        public bool IsDemo => false;
+        public string Country { get; set; } = "";
 
         public async Task InitializeAsync()
         {
@@ -69,51 +71,91 @@ namespace MummyEscape.Online
             if (!IsAvailable || !result.Won) return;
             try
             {
-                await LeaderboardsService.Instance.AddPlayerScoreAsync(OnlineServiceFactory.LeaderboardId(result.Level), result.LeaderboardScore);
+                await LeaderboardsService.Instance.AddPlayerScoreAsync(OnlineServiceFactory.LeaderboardId(result.Level), result.LeaderboardScore,
+                    new AddPlayerScoreOptions { Metadata = new ScoreMeta { c = Country ?? "" } });
             }
             catch (Exception e) { Debug.LogWarning("[Online] score not submitted: " + e.Message); }
         }
 
-        public async Task<IReadOnlyList<LeaderboardRow>> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit)
+        /// <summary>Score metadata stored with each entry (kept tiny: it is returned for every row).</summary>
+        [Serializable]
+        sealed class ScoreMeta { public string c; }
+
+        // Country rankings are filtered client-side from the global board (UGS has no per-country boards):
+        // walk the best scores page by page until the top N of the country is found.
+        const int CountryPageSize = 1000;
+        const int CountryMaxPages = 5;
+
+        public async Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit)
         {
-            var rows = new List<LeaderboardRow>();
-            if (!IsAvailable) return rows;
+            var page = new LeaderboardPage();
+            if (!IsAvailable) return page;
             string id = OnlineServiceFactory.LeaderboardId(level);
             try
             {
-                List<Unity.Services.Leaderboards.Models.LeaderboardEntry> entries;
+                var lb = LeaderboardsService.Instance;
                 if (scope == LeaderboardScope.Global)
                 {
-                    var page = await LeaderboardsService.Instance.GetScoresAsync(id, new GetScoresOptions { Limit = limit });
-                    entries = page.Results;
+                    var res = await lb.GetScoresAsync(id, new GetScoresOptions { Limit = limit, IncludeMetadata = true });
+                    foreach (var e in res.Results) page.Rows.Add(ToRow(e, e.Rank + 1));
+                }
+                else if (scope == LeaderboardScope.Country)
+                {
+                    for (int p = 0; p < CountryMaxPages && page.Rows.Count < limit; p++)
+                    {
+                        var res = await lb.GetScoresAsync(id, new GetScoresOptions { Offset = p * CountryPageSize, Limit = CountryPageSize, IncludeMetadata = true });
+                        foreach (var e in res.Results)
+                            if (CountryOf(e) == Country && page.Rows.Count < limit) page.Rows.Add(ToRow(e, page.Rows.Count + 1));
+                        if (res.Results.Count < CountryPageSize) break;
+                    }
                 }
                 else
                 {
                     var ids = new List<string> { PlayerId };
                     foreach (var f in FriendsService.Instance.Friends) ids.Add(f.Member.Id);
-                    var res = await LeaderboardsService.Instance.GetScoresByPlayerIdsAsync(id, ids);
-                    entries = res.Results;
+                    var res = await lb.GetScoresByPlayerIdsAsync(id, ids, new GetScoresByPlayerIdsOptions { IncludeMetadata = true });
+                    var entries = res.Results;
                     entries.Sort((a, b) => a.Score.CompareTo(b.Score));
+                    for (int i = 0; i < entries.Count && i < limit; i++) page.Rows.Add(ToRow(entries[i], i + 1));
                 }
 
-                for (int i = 0; i < entries.Count; i++)
+                page.Me = page.Rows.Find(r => r.IsMe);
+                if (page.Me == null)
                 {
-                    var e = entries[i];
-                    var (moves, hpLost, interactions) = LevelResult.DecodeScore((long)e.Score);
-                    rows.Add(new LeaderboardRow
+                    try
                     {
-                        Rank = scope == LeaderboardScope.Global ? e.Rank + 1 : i + 1,
-                        PlayerId = e.PlayerId,
-                        PlayerName = e.PlayerName,
-                        Moves = moves,
-                        HpLost = hpLost,
-                        Interactions = interactions,
-                        IsMe = e.PlayerId == PlayerId,
-                    });
+                        var mine = await lb.GetPlayerScoreAsync(id, new GetPlayerScoreOptions { IncludeMetadata = true });
+                        // Global rank is exact; in other scopes we only know the player is outside the fetched top.
+                        page.Me = ToRow(mine, scope == LeaderboardScope.Global ? mine.Rank + 1 : 0);
+                    }
+                    catch (Exception) { /* no score on this level yet */ }
                 }
             }
             catch (Exception e) { Debug.LogWarning($"[Online] leaderboard {id}: {e.Message}"); }
-            return rows;
+            return page;
+        }
+
+        LeaderboardRow ToRow(Unity.Services.Leaderboards.Models.LeaderboardEntry e, int rank)
+        {
+            var (moves, hpLost, interactions) = LevelResult.DecodeScore((long)e.Score);
+            return new LeaderboardRow
+            {
+                Rank = rank,
+                PlayerId = e.PlayerId,
+                PlayerName = e.PlayerName,
+                Moves = moves,
+                HpLost = hpLost,
+                Interactions = interactions,
+                IsMe = e.PlayerId == PlayerId,
+                Country = CountryOf(e),
+            };
+        }
+
+        static string CountryOf(Unity.Services.Leaderboards.Models.LeaderboardEntry e)
+        {
+            if (string.IsNullOrEmpty(e.Metadata)) return "";
+            try { return JsonUtility.FromJson<ScoreMeta>(e.Metadata)?.c ?? ""; }
+            catch (Exception) { return ""; }
         }
 
         public Task<IReadOnlyList<FriendInfo>> GetFriendsAsync()
@@ -157,6 +199,11 @@ namespace MummyEscape.Online
         public async Task AcceptFriendRequestAsync(string playerId)
         {
             if (IsAvailable) await FriendsService.Instance.AddFriendAsync(playerId);
+        }
+
+        public async Task DeclineFriendRequestAsync(string playerId)
+        {
+            if (IsAvailable) await FriendsService.Instance.DeleteIncomingFriendRequestAsync(playerId);
         }
 
         public async Task RemoveFriendAsync(string playerId)

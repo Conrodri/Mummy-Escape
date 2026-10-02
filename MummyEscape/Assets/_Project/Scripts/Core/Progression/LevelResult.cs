@@ -38,7 +38,7 @@ namespace MummyEscape.Core
 
         public string ShareText(string gameUrl) =>
             $"🏺 Mummy Escape — Niveau {Level}\n" +
-            $"Évadé en {Moves} coups (par {Par}) {new string('★', Stars)}{new string('☆', 3 - Stars)}\n" +
+            $"Évadé en {Moves} coups {new string('★', Stars)}{new string('☆', 3 - Stars)}\n" +
             $"{Interactions} interactions · {HpLeft}/{MaxHp} PV restants\n" +
             $"Feras-tu mieux ? {gameUrl}";
     }

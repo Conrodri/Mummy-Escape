@@ -1,22 +1,41 @@
 using System.Collections.Generic;
 using MummyEscape.Core;
 using MummyEscape.Online;
+using MummyEscape.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace MummyEscape.UI.Screens
 {
-    /// <summary>Per-level leaderboard (everyone gets the same tomb, so scores are directly comparable).</summary>
+    /// <summary>
+    /// Per-level top 100 (everyone gets the same tomb, so scores compare directly): rank 1 at the top, filters
+    /// Monde / Pays / Amis, and the player's own position pinned at the bottom.
+    /// </summary>
     public sealed class LeaderboardScreen : UIScreen
     {
+        const int Top = 100;
+        static readonly LeaderboardScope[] Scopes = { LeaderboardScope.Global, LeaderboardScope.Country, LeaderboardScope.Friends };
+        static readonly Color Gold1 = new Color32(255, 214, 92, 255);
+        static readonly Color Silver = new Color32(206, 212, 222, 255);
+        static readonly Color Bronze = new Color32(214, 140, 72, 255);
+
         readonly List<LevelId> _levels = new List<LevelId>(DifficultyTable.AllLevels());
+        readonly List<RowView> _rows = new List<RowView>();
         int _index;
-        LeaderboardScope _scope = LeaderboardScope.Global;
-        Text _levelLabel;
-        Text _status;
-        Button _globalTab, _friendsTab;
-        RectTransform _list;
+        int _scope;
+        Text _levelLabel, _actLabel, _info;
+        UIKit.Segmented _tabs;
+        ScrollRect _scroll;
+        RowView _me;
+        Text _meEmpty;
         int _requestId;
+
+        sealed class RowView
+        {
+            public GameObject Root;
+            public Image Background;
+            public Text Rank, Name, Country, Score;
+        }
 
         public void Focus(LevelId id)
         {
@@ -24,30 +43,70 @@ namespace MummyEscape.UI.Screens
             if (i >= 0) _index = i;
         }
 
-        protected override void Build()
+        public void Focus(LevelId id, LeaderboardScope scope)
         {
-            Header("Classement");
-            var body = Body(200, 60);
-            UIKit.Column(body, 24);
-
-            var pager = UIKit.Row(body, 120);
-            UIKit.Size(UIKit.Button(pager.transform, "◄", () => Move(-1), 56), -1, 130, 0);
-            _levelLabel = UIKit.Label(pager.transform, "", 54, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.Size(_levelLabel, -1, -1, 1);
-            UIKit.Size(UIKit.Button(pager.transform, "►", () => Move(1), 56), -1, 130, 0);
-
-            var tabs = UIKit.Row(body, 110);
-            _globalTab = UIKit.Button(tabs.transform, "Mondial", () => SetScope(LeaderboardScope.Global), 40);
-            _friendsTab = UIKit.Button(tabs.transform, "Amis", () => SetScope(LeaderboardScope.Friends), 40);
-
-            _status = UIKit.Label(body, "", 34, UIKit.Dim);
-            UIKit.Size(_status, 60);
-
-            _list = UIKit.Scroll(body, out var scroll);
-            UIKit.Size(scroll, -1, -1, -1, 1);
+            Focus(id);
+            _scope = System.Array.IndexOf(Scopes, scope);
         }
 
-        public override void OnShow() => Reload();
+        protected override void Build()
+        {
+            UIKit.Backdrop(Root);
+            Header("Classement");
+            var body = Body(190, 40, 40);
+            UIKit.Column(body, 18);
+
+            // Level picker.
+            var picker = UIKit.Row(body, 120, 16);
+            UIKit.Size(UIKit.Button(picker.transform, "◄", () => Move(-1), 52), -1, 120, 0);
+            var titles = UIKit.Rect("Titles", picker.transform);
+            UIKit.Size(titles, -1, -1, 1);
+            _levelLabel = UIKit.Label(titles, "", 52, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.TopBand(_levelLabel.rectTransform, 70, 4);
+            _actLabel = UIKit.Label(titles, "", 30, UIKit.Dim, TextAnchor.MiddleCenter);
+            UIKit.BottomBand(_actLabel.rectTransform, 40, 4);
+            UIKit.Size(UIKit.Button(picker.transform, "►", () => Move(1), 52), -1, 120, 0);
+
+            _tabs = new UIKit.Segmented(body, new[] { "Monde", "Pays", "Amis" }, SetScope, 100);
+            _info = UIKit.Label(body, "", 30, UIKit.Dim);
+            UIKit.Size(_info, 46);
+
+            var list = UIKit.Scroll(body, out _scroll);
+            UIKit.Size(_scroll, -1, -1, -1, 1);
+            list.GetComponent<VerticalLayoutGroup>().spacing = 6;
+            for (int i = 0; i < Top; i++) _rows.Add(CreateRow(list, 92));
+
+            // Player's own position, always visible.
+            var meSlot = UIKit.Rect("Me", body);
+            UIKit.Size(meSlot, 112);
+            _me = CreateRow(meSlot, 112);
+            UIKit.Stretch((RectTransform)_me.Root.transform);
+            _me.Background.color = new Color(0.13f, 0.4f, 0.4f, 0.9f);
+            _meEmpty = UIKit.Label(meSlot, "", 34, UIKit.Sand);
+            UIKit.Stretch(_meEmpty.rectTransform, 24, 0, 24, 0);
+        }
+
+        RowView CreateRow(Transform parent, float height)
+        {
+            UIKit.ListItem(parent, height, null, out var h);
+            var v = new RowView { Root = h.gameObject, Background = h.GetComponent<Image>() };
+            v.Rank = UIKit.Label(h.transform, "", 40, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.Size(v.Rank, -1, 120, 0);
+            v.Name = UIKit.Label(h.transform, "", 38, UIKit.Sand, TextAnchor.MiddleLeft);
+            UIKit.FitText(v.Name, 24);
+            UIKit.Size(v.Name, -1, -1, 1);
+            v.Country = UIKit.Label(h.transform, "", 30, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Size(v.Country, -1, 70, 0);
+            v.Score = UIKit.Label(h.transform, "", 36, UIKit.Sand, TextAnchor.MiddleRight, FontStyle.Bold);
+            UIKit.Size(v.Score, -1, 230, 0);
+            return v;
+        }
+
+        public override void OnShow()
+        {
+            _tabs.Select(_scope);
+            Reload();
+        }
 
         void Move(int delta)
         {
@@ -55,7 +114,7 @@ namespace MummyEscape.UI.Screens
             Reload();
         }
 
-        void SetScope(LeaderboardScope scope)
+        void SetScope(int scope)
         {
             _scope = scope;
             Reload();
@@ -64,34 +123,79 @@ namespace MummyEscape.UI.Screens
         async void Reload()
         {
             var id = _levels[_index];
-            var rec = App.Save.GetRecord(id);
+            var scope = Scopes[_scope];
             _levelLabel.text = $"Niveau {id}";
-            _globalTab.interactable = _scope != LeaderboardScope.Global;
-            _friendsTab.interactable = _scope != LeaderboardScope.Friends;
-            _status.text = "Chargement…";
-            UIKit.ClearChildren(_list);
+            _actLabel.text = $"Acte {id.Act} · {DifficultyTable.GetAct(id.Act).Name}";
+            _info.text = "Chargement…";
+            _scroll.verticalNormalizedPosition = 1f;
+            for (int i = 0; i < _rows.Count; i++) Fill(_rows[i], i + 1, null, scope != LeaderboardScope.Friends);
+            ShowMe(null, false);
+
+            string country = App.Online.Country;
+            if (scope == LeaderboardScope.Country && string.IsNullOrEmpty(country))
+            {
+                _info.text = "Choisis ton pays dans Amis › Profil.";
+                return;
+            }
 
             int request = ++_requestId;
-            var rows = await App.Online.GetLeaderboardAsync(id, _scope, 50);
-            if (request != _requestId || this == null) return; // a newer request superseded this one
+            var page = await App.Online.GetLeaderboardAsync(id, scope, Top);
+            if (request != _requestId || this == null) return; // superseded by a newer request
 
-            string mine = rec != null && rec.BestMoves > 0 ? $"Ton record : {rec.BestMoves} coups" : "Pas encore terminé";
-            _status.text = App.Online.IsAvailable ? mine : $"{mine}\n<size=26>{App.Online.Status}</size>";
-            if (rows.Count == 0) AddRow("—", "Aucun score pour l'instant", "", false);
-            foreach (var r in rows)
-                AddRow($"#{r.Rank}", r.PlayerName, $"{r.Moves} coups · -{r.HpLost} PV", r.IsMe);
+            string title = scope == LeaderboardScope.Global ? "Top 100 mondial"
+                         : scope == LeaderboardScope.Country ? $"Top 100 · {CountryService.NameOf(country)}"
+                         : "Toi et tes amis";
+            if (App.Online.IsDemo) title += "  ·  <color=#E8C35A>démo hors ligne</color>";
+            else if (!App.Online.IsAvailable) title += "  ·  hors ligne";
+            _info.text = title;
+
+            for (int i = 0; i < _rows.Count; i++)
+                Fill(_rows[i], i + 1, i < page.Rows.Count ? page.Rows[i] : null, scope != LeaderboardScope.Friends);
+            ShowMe(page.Me, true);
         }
 
-        void AddRow(string rank, string name, string score, bool highlight)
+        void Fill(RowView v, int rank, LeaderboardRow row, bool showEmpty)
         {
-            var row = UIKit.Row(_list, 100, 10);
-            var bg = row.gameObject.AddComponent<Image>();
-            bg.color = highlight ? new Color(0.2f, 0.5f, 0.5f, 0.5f) : new Color(1, 1, 1, 0.05f);
-            bg.raycastTarget = false;
-            row.padding = new RectOffset(20, 20, 0, 0);
-            UIKit.Size(UIKit.Label(row.transform, rank, 40, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold), -1, 140, 0);
-            UIKit.Size(UIKit.Label(row.transform, name, 38, UIKit.Sand, TextAnchor.MiddleLeft), -1, -1, 1);
-            UIKit.Size(UIKit.Label(row.transform, score, 34, UIKit.Sand, TextAnchor.MiddleRight), -1, 320, 0);
+            v.Root.SetActive(row != null || showEmpty);
+            v.Rank.text = rank.ToString();
+            v.Rank.color = rank == 1 ? Gold1 : rank == 2 ? Silver : rank == 3 ? Bronze : UIKit.Dim;
+            v.Rank.fontSize = rank <= 3 ? 46 : 38;
+            if (row == null)
+            {
+                v.Name.text = "—";
+                v.Name.color = new Color(1, 1, 1, 0.2f);
+                v.Country.text = v.Score.text = "";
+                v.Background.color = new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.03f : 0.05f);
+                return;
+            }
+            v.Name.text = row.IsMe ? $"{row.PlayerName}  (toi)" : row.PlayerName;
+            v.Name.color = row.IsMe ? UIKit.Turquoise : UIKit.Sand;
+            v.Country.text = row.Country;
+            v.Score.text = row.HpLost > 0 ? $"{row.Moves} coups <size=26><color=#D65440>-{row.HpLost}♥</color></size>" : $"{row.Moves} coups";
+            v.Background.color = row.IsMe ? new Color(0.13f, 0.4f, 0.4f, 0.65f)
+                               : rank <= 3 ? new Color(1f, 0.85f, 0.4f, 0.12f)
+                               : new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.04f : 0.07f);
+        }
+
+        void ShowMe(LeaderboardRow me, bool loaded)
+        {
+            _me.Root.SetActive(me != null);
+            _meEmpty.gameObject.SetActive(me == null);
+            if (me == null)
+            {
+                var rec = App.Save.GetRecord(_levels[_index]);
+                _meEmpty.text = !loaded ? ""
+                    : rec != null && rec.BestMoves > 0 ? $"Ton record : {rec.BestMoves} coups (pas encore classé)"
+                    : "Termine ce niveau pour entrer au classement";
+                return;
+            }
+            _me.Rank.text = me.Rank > 0 ? me.Rank.ToString() : "100+";
+            _me.Rank.color = UIKit.Gold;
+            _me.Rank.fontSize = 40;
+            _me.Name.text = $"{me.PlayerName}  (toi)";
+            _me.Name.color = UIKit.Sand;
+            _me.Country.text = me.Country;
+            _me.Score.text = $"{me.Moves} coups";
         }
     }
 }

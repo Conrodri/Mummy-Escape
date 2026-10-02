@@ -16,7 +16,7 @@ namespace MummyEscape.EditorTools
         public static void Generate()
         {
             var art = new ArtLibrary();
-            var mummy = ReadSprite(art.Mummy(SkinCatalog.Get("classic")));
+            var mummy = ReadSprite(art.MummyPortrait(SkinCatalog.Get("classic")));
 
             var px = new Color32[Size * Size];
             var c = new Vector2(Size * 0.5f, Size * 0.47f);

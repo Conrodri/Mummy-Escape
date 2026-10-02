@@ -11,6 +11,8 @@ namespace MummyEscape.World
     public sealed class PlayerView : MonoBehaviour
     {
         SpriteRenderer _sprite;
+        SpriteRenderer _flame;
+        SkinDef _skin;
         Transform _body;
         Light2D _torch;
         ParticleSystem _dust;
@@ -19,6 +21,9 @@ namespace MummyEscape.World
         bool _blind;
         float _torchRadius = 2.6f;
         Color _torchColor = new Color(1f, 0.72f, 0.42f);
+
+        /// <summary>The torch in the mummy's hand. Visual state only for now: dust will put it out, wall torches relight it.</summary>
+        public bool TorchLit { get; private set; } = true;
 
         public void Init(ArtLibrary art, Material spriteMaterial, SettingsService settings)
         {
@@ -31,9 +36,14 @@ namespace MummyEscape.World
             if (spriteMaterial != null) _sprite.sharedMaterial = spriteMaterial;
             _sprite.sortingOrder = 10;
 
+            _flame = new GameObject("Flame").AddComponent<SpriteRenderer>();
+            _flame.transform.SetParent(_body, false);
+            if (spriteMaterial != null) _flame.sharedMaterial = spriteMaterial;
+            _flame.sortingOrder = 11;
+
             var torchGo = new GameObject("Torch");
-            torchGo.transform.SetParent(transform, false);
-            torchGo.transform.localPosition = new Vector3(0.2f, 0.3f, 0f);
+            torchGo.transform.SetParent(_body, false);
+            torchGo.transform.localPosition = ArtLibrary.TorchFlameOffset;
             _torch = torchGo.AddComponent<Light2D>();
             _torch.lightType = Light2D.LightType.Point;
             _torch.pointLightInnerRadius = 0.3f;
@@ -48,12 +58,19 @@ namespace MummyEscape.World
 
         public void SetSkin(SkinDef skin)
         {
+            _skin = skin;
             _sprite.sprite = _art.Mummy(skin);
             _torchColor = skin.Torch;
             _torch.color = _torchColor;
         }
 
         public void SetBlind(bool blind) => _blind = blind;
+
+        public void SetTorchLit(bool lit)
+        {
+            TorchLit = lit;
+            if (!lit) _flame.sprite = _art.TorchEmber();
+        }
 
         public void Place(Cell c)
         {
@@ -152,6 +169,7 @@ namespace MummyEscape.World
             _body.localPosition = Vector3.zero;
             _sprite.color = Color.white;
             _torch.intensity = 1.35f;
+            TorchLit = true;
         }
 
         void ApplySettings()
@@ -166,13 +184,25 @@ namespace MummyEscape.World
             if (_body.localPosition == Vector3.zero)
                 _body.localScale = new Vector3(_body.localScale.x, Mathf.Lerp(_body.localScale.y, 1f + Mathf.Sin(Time.time * 3f) * 0.025f, 0.5f), 1f);
 
-            float targetRadius = _blind ? 0.85f : _torchRadius;
+            UpdateFlame();
+            float targetRadius = _blind || !TorchLit ? 0.85f : _torchRadius;
             _torch.pointLightOuterRadius = Mathf.Lerp(_torch.pointLightOuterRadius, targetRadius, Time.deltaTime * 6f);
             if (_settings.AdvancedLighting && _torch.intensity > 0.01f)
             {
                 float flicker = Mathf.PerlinNoise(Time.time * 7f, 0.3f) * 0.25f + Mathf.PerlinNoise(Time.time * 19f, 0.9f) * 0.1f;
                 _torch.intensity = Mathf.Lerp(_torch.intensity, 1.2f + flicker, Time.deltaTime * 10f);
             }
+        }
+
+        void UpdateFlame()
+        {
+            // Mirror with the body and fade with it (vanish, teleport, death).
+            _flame.flipX = _sprite.flipX;
+            _flame.color = new Color(1f, 1f, 1f, _sprite.color.a);
+            var offset = ArtLibrary.TorchFlameOffset;
+            _torch.transform.localPosition = new Vector3(_sprite.flipX ? -offset.x : offset.x, offset.y, 0f);
+            if (TorchLit && _skin != null)
+                _flame.sprite = _art.TorchFlame(_skin, (int)(Time.time * 9f) % ArtLibrary.TorchFlameFrames);
         }
 
         ParticleSystem CreateDust(Material spriteMaterial)

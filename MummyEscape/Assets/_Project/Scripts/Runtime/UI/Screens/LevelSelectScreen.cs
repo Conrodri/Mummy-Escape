@@ -49,7 +49,10 @@ namespace MummyEscape.UI.Screens
             var def = DifficultyTable.GetAct(_act);
             _actTitle.text = $"Acte {_act}\n{def.Name}";
             var first = DifficultyTable.Spec(new LevelId(_act, 1));
-            _actInfo.text = $"Au moins {def.MinMoves} coups pour s'échapper · {first.Floors}–{DifficultyTable.Spec(new LevelId(_act, def.Levels)).Floors} étage(s)";
+            int lastFloors = DifficultyTable.Spec(new LevelId(_act, def.Levels)).Floors;
+            _actInfo.text = first.Floors == lastFloors
+                ? $"{first.Floors} étage{(first.Floors > 1 ? "s" : "")}"
+                : $"{first.Floors} à {lastFloors} étages";
 
             UIKit.ClearChildren(_grid);
             for (int i = 1; i <= def.Levels; i++)

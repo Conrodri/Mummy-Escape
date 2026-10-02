@@ -5,7 +5,7 @@ using MummyEscape.Core;
 
 namespace MummyEscape.Online
 {
-    public enum LeaderboardScope { Global, Friends }
+    public enum LeaderboardScope { Global, Country, Friends }
 
     public sealed class LeaderboardRow
     {
@@ -16,6 +16,16 @@ namespace MummyEscape.Online
         public int HpLost;
         public int Interactions;
         public bool IsMe;
+        /// <summary>ISO 3166 alpha-2 code ("FR"), empty when unknown.</summary>
+        public string Country = "";
+    }
+
+    public sealed class LeaderboardPage
+    {
+        /// <summary>Best first, at most the requested limit.</summary>
+        public List<LeaderboardRow> Rows = new List<LeaderboardRow>();
+        /// <summary>The local player's entry in this scope (Rank 0 = ranked but outside the fetched range), null if no score.</summary>
+        public LeaderboardRow Me;
     }
 
     public sealed class FriendInfo
@@ -51,17 +61,23 @@ namespace MummyEscape.Online
         string PlayerName { get; }
         /// <summary>Human readable reason when unavailable (shown in the UI).</summary>
         string Status { get; }
+        /// <summary>True when the data shown is generated demo content (offline, editor and development builds only).</summary>
+        bool IsDemo { get; }
+        /// <summary>Player country (ISO alpha-2), attached to submitted scores for the per-country ranking.</summary>
+        string Country { get; set; }
 
         Task InitializeAsync();
         Task<string> SetPlayerNameAsync(string name);
 
         Task SubmitScoreAsync(LevelResult result);
-        Task<IReadOnlyList<LeaderboardRow>> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit);
+        /// <summary>Top <paramref name="limit"/> of a level. Country scope uses <see cref="Country"/>.</summary>
+        Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit);
 
         Task<IReadOnlyList<FriendInfo>> GetFriendsAsync();
         Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync();
         Task<bool> SendFriendRequestAsync(string playerName);
         Task AcceptFriendRequestAsync(string playerId);
+        Task DeclineFriendRequestAsync(string playerId);
         Task RemoveFriendAsync(string playerId);
 
         Task PublishProgressAsync(ProgressSnapshot snapshot);

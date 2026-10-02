@@ -42,7 +42,7 @@ namespace MummyEscape.UI.Screens
             {
                 var card = UIKit.Panel(_grid, skin.Id);
                 UIKit.Column(card.transform, 10, 30, TextAnchor.MiddleCenter);
-                var preview = UIKit.Image(card.transform, App.Art.Mummy(skin), Color.white);
+                var preview = UIKit.Image(card.transform, App.Art.MummyPortrait(skin), Color.white);
                 UIKit.Size(preview, 220, 220);
                 UIKit.Size(UIKit.Label(card.transform, skin.Name, 36, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold), 60);
 

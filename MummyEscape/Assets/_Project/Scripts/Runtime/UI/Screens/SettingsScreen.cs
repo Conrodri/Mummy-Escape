@@ -2,33 +2,37 @@ using UnityEngine;
 
 namespace MummyEscape.UI.Screens
 {
+    /// <summary>Sound, image and comfort options, on an opaque background so it reads clearly over the menu or the game.</summary>
     public sealed class SettingsScreen : UIScreen
     {
         public override bool IsModal => true;
 
         protected override void Build()
         {
-            var shade = UIKit.Image(Root, UIKit.Art.White, new Color(0.04f, 0.03f, 0.02f, 0.96f), true);
-            UIKit.Stretch(shade.rectTransform);
+            UIKit.Backdrop(Root);
             Header("Paramètres", () => Router.Close(this));
-            var body = Body(220, 80, 70);
-            UIKit.Column(body, 26);
+            var body = Body(200, 110, 50);
+            UIKit.Column(body, 36);
             var s = App.Settings;
 
-            UIKit.Size(UIKit.Label(body, "Son", 46, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold), 70);
-            UIKit.Slider(body, "Musique", s.MusicVolume, s.SetMusicVolume);
-            UIKit.Slider(body, "Effets sonores", s.SfxVolume, v => s.SetSfxVolume(v));
+            var sound = UIKit.Card(body);
+            UIKit.SectionTitle(sound, "Son");
+            UIKit.Slider(sound, "Musique", s.MusicVolume, s.SetMusicVolume);
+            UIKit.Slider(sound, "Effets sonores", s.SfxVolume, v => s.SetSfxVolume(v));
 
-            UIKit.Size(UIKit.Label(body, "Image", 46, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold), 70);
-            UIKit.Slider(body, "Luminosité", s.Brightness, s.SetBrightness, -1f, 1f);
-            UIKit.Toggle(body, "Effets lumineux avancés (bloom, grain, poussière)", s.AdvancedLighting, s.SetAdvancedLighting);
-            UIKit.Toggle(body, "Tremblements d'écran", s.ScreenShake, s.SetScreenShake);
+            var image = UIKit.Card(body);
+            UIKit.SectionTitle(image, "Image");
+            UIKit.Slider(image, "Luminosité", s.Brightness, s.SetBrightness, -1f, 1f,
+                v => Mathf.Abs(v) < 0.02f ? "normale" : (v > 0 ? "+" : "") + Mathf.RoundToInt(v * 100f) + " %");
+            UIKit.Toggle(image, "Effets lumineux avancés", s.AdvancedLighting, s.SetAdvancedLighting);
+            UIKit.Toggle(image, "Tremblements d'écran", s.ScreenShake, s.SetScreenShake);
 
-            UIKit.Size(UIKit.Label(body, "Confort", 46, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold), 70);
-            UIKit.Toggle(body, "Vibrations", s.Haptics, s.SetHaptics);
+            var comfort = UIKit.Card(body);
+            UIKit.SectionTitle(comfort, "Confort");
+            UIKit.Toggle(comfort, "Vibrations", s.Haptics, s.SetHaptics);
 
-            var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · générateur v{Core.DifficultyTable.GeneratorVersion}", 26, UIKit.Dim);
-            UIKit.BottomBand(version.rectTransform, 50, 20);
+            var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · générateur v{Core.DifficultyTable.GeneratorVersion}", 28, UIKit.Dim);
+            UIKit.BottomBand(version.rectTransform, 50, 30);
         }
     }
 }

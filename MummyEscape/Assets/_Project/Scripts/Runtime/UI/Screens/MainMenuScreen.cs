@@ -65,7 +65,7 @@ namespace MummyEscape.UI.Screens
         {
             App.Lighting.SetMood(false);
             _wallet.text = $"Étoiles : {App.Save.TotalStars}    Scarabées : {App.Save.Data.Coins}";
-            _mummy.sprite = App.Art.Mummy(SkinCatalog.Get(App.Save.Data.SelectedSkin));
+            _mummy.sprite = App.Art.MummyPortrait(SkinCatalog.Get(App.Save.Data.SelectedSkin));
             _online.text = App.Online.IsAvailable ? $"Connecté : {App.Online.PlayerName}" : App.Online.Status;
         }
 
