@@ -107,6 +107,70 @@ namespace MummyEscape.Online
             return Task.CompletedTask;
         }
 
+        // ---- account: simulated in the editor / development builds (to test the screens), unavailable otherwise.
+
+        public AccountState Account { get; private set; } = AccountState.Offline;
+        public string Username { get; private set; } = "";
+        string _demoPassword = "";
+        string _demoCloudSave;
+
+        string Unavailable => IsDemo ? null : "Les comptes nécessitent une connexion à Unity Gaming Services.";
+
+        public Task<string> CreateAccountAsync(string username, string password)
+        {
+            if (Unavailable != null) return Task.FromResult(Unavailable);
+            Account = AccountState.Account;
+            Username = username;
+            _demoPassword = password;
+            return Task.FromResult<string>(null);
+        }
+
+        public Task<string> SignInAsync(string username, string password)
+        {
+            if (Unavailable != null) return Task.FromResult(Unavailable);
+            if (Username != "" && (username != Username || password != _demoPassword)) return Task.FromResult("Identifiant ou mot de passe incorrect.");
+            Account = AccountState.Account;
+            Username = username;
+            _demoPassword = password;
+            return Task.FromResult<string>(null);
+        }
+
+        public Task SignOutAsync()
+        {
+            Account = AccountState.Offline;
+            return Task.CompletedTask;
+        }
+
+        public Task<string> ChangePasswordAsync(string current, string next)
+        {
+            if (Unavailable != null) return Task.FromResult(Unavailable);
+            if (current != _demoPassword) return Task.FromResult("Mot de passe actuel incorrect.");
+            _demoPassword = next;
+            return Task.FromResult<string>(null);
+        }
+
+        public Task<string> DeleteAccountAsync()
+        {
+            Account = AccountState.Offline;
+            Username = _demoPassword = "";
+            _demoCloudSave = null;
+            _best.Clear();
+            return Task.FromResult<string>(null);
+        }
+
+        public Task<string> LoadCloudSaveAsync() => Task.FromResult(_demoCloudSave);
+
+        public Task SaveCloudSaveAsync(string json)
+        {
+            if (Account == AccountState.Account) _demoCloudSave = json;
+            return Task.CompletedTask;
+        }
+
+        public Task ClearPublishedProgressAsync() => Task.CompletedTask;
+
+        public Task<string> ExportOnlineDataAsync() =>
+            Task.FromResult(IsDemo ? "{\"demo\":true,\"note\":\"Données simulées (aucun serveur).\"}" : "{}");
+
         public Task PublishProgressAsync(ProgressSnapshot snapshot) => Task.CompletedTask;
 
         public Task<ProgressSnapshot> GetProgressAsync(string playerId) =>

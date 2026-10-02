@@ -116,6 +116,19 @@ namespace MummyEscape.Core
             BestStars = Math.Max(BestStars, r.Stars);
             return improved;
         }
+
+        /// <summary>Combines the record of the same level from another device (cloud save): best of both.</summary>
+        public void MergeWith(LevelRecord o)
+        {
+            if (o == null || o.Key != Key) return;
+            bool theirsBetter = o.HasBest && (!HasBest || LevelResult.CompareRuns(o.BestOverPar, o.BestTimeMs, BestOverPar, BestTimeMs) < 0);
+            if (theirsBetter) { BestOverPar = o.BestOverPar; BestTimeMs = o.BestTimeMs; BestMoves = o.BestMoves; BestHpLeft = o.BestHpLeft; }
+            BestStars = Math.Max(BestStars, o.BestStars);
+            Completions = Math.Max(Completions, o.Completions);
+            Deaths = Math.Max(Deaths, o.Deaths);
+            // Never replay a maze already drawn on either device.
+            Runs = Math.Max(Runs, o.Runs);
+        }
     }
 
     /// <summary>Unlock rules: level N+1 opens after escaping level N; the next act opens after the act's last level.</summary>

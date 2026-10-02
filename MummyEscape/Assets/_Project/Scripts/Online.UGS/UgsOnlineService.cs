@@ -44,7 +44,9 @@ namespace MummyEscape.Online
             try
             {
                 await UnityServices.InitializeAsync();
+                // Resumes the cached session (guest or account) or creates a guest player.
                 if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                await AuthenticationService.Instance.GetPlayerInfoAsync();
                 PlayerName = await AuthenticationService.Instance.GetPlayerNameAsync();
                 await FriendsService.Instance.InitializeAsync();
                 IsAvailable = true;
@@ -208,6 +210,193 @@ namespace MummyEscape.Online
         public async Task RemoveFriendAsync(string playerId)
         {
             if (IsAvailable) await FriendsService.Instance.DeleteFriendAsync(playerId);
+        }
+
+        // ================================================================== account
+
+        const string SaveKey = "save";
+
+        public AccountState Account
+        {
+            get
+            {
+                if (!IsAvailable || !AuthenticationService.Instance.IsSignedIn) return AccountState.Offline;
+                return string.IsNullOrEmpty(Username) ? AccountState.Guest : AccountState.Account;
+            }
+        }
+
+        public string Username => IsAvailable ? AuthenticationService.Instance.PlayerInfo?.Username ?? "" : "";
+
+        public async Task<string> CreateAccountAsync(string username, string password)
+        {
+            if (!IsAvailable) return Status;
+            try
+            {
+                // Links a username/password to the current (anonymous) player: same id, scores and friends.
+                await AuthenticationService.Instance.AddUsernamePasswordAsync(username, password);
+                await AuthenticationService.Instance.GetPlayerInfoAsync();
+                return null;
+            }
+            catch (AuthenticationException e) when (e.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
+            {
+                return "Ce joueur a déjà un compte.";
+            }
+            catch (RequestFailedException e) { return Explain(e, "Cet identifiant est déjà pris ou invalide."); }
+        }
+
+        public async Task<string> SignInAsync(string username, string password)
+        {
+            if (string.IsNullOrEmpty(Application.cloudProjectId)) return Status;
+            try
+            {
+                if (!IsAvailable) await UnityServices.InitializeAsync();
+                var auth = AuthenticationService.Instance;
+                // Keep the current session token: if the sign-in fails, the previous player resumes.
+                if (auth.IsSignedIn) auth.SignOut(false);
+                try
+                {
+                    await auth.SignInWithUsernamePasswordAsync(username, password);
+                }
+                catch (Exception)
+                {
+                    if (!auth.IsSignedIn && auth.SessionTokenExists) await auth.SignInAnonymouslyAsync();
+                    throw;
+                }
+                await AfterSignIn();
+                return null;
+            }
+            catch (RequestFailedException e) { return Explain(e, "Identifiant ou mot de passe incorrect."); }
+        }
+
+        async Task AfterSignIn()
+        {
+            var auth = AuthenticationService.Instance;
+            await auth.GetPlayerInfoAsync();
+            PlayerName = await auth.GetPlayerNameAsync();
+            await FriendsService.Instance.InitializeAsync();
+            IsAvailable = true;
+            Status = "En ligne";
+        }
+
+        public Task SignOutAsync()
+        {
+            if (UnityServices.State == ServicesInitializationState.Initialized && AuthenticationService.Instance.IsSignedIn)
+                AuthenticationService.Instance.SignOut(true); // forget the session on this device
+            IsAvailable = false;
+            PlayerName = "";
+            Status = "Déconnecté";
+            return Task.CompletedTask;
+        }
+
+        public async Task<string> ChangePasswordAsync(string current, string next)
+        {
+            if (!IsAvailable) return Status;
+            try
+            {
+                await AuthenticationService.Instance.UpdatePasswordAsync(current, next);
+                return null;
+            }
+            catch (RequestFailedException e) { return Explain(e, "Mot de passe actuel incorrect."); }
+        }
+
+        public async Task<string> DeleteAccountAsync()
+        {
+            if (!IsAvailable) return Status;
+            try
+            {
+                // Our own data first (Unity also erases a deleted player's data across its services).
+                await DeleteKey(SaveKey, false);
+                await DeleteKey(ProgressKey, true);
+                foreach (var f in new List<Unity.Services.Friends.Models.Relationship>(FriendsService.Instance.Friends))
+                    try { await FriendsService.Instance.DeleteFriendAsync(f.Member.Id); } catch (Exception) { }
+                await AuthenticationService.Instance.DeleteAccountAsync();
+                AuthenticationService.Instance.SignOut(true);
+                IsAvailable = false;
+                PlayerName = "";
+                Status = "Compte supprimé";
+                return null;
+            }
+            catch (RequestFailedException e) { return Explain(e, "La suppression a échoué, réessaie plus tard."); }
+        }
+
+        static async Task DeleteKey(string key, bool isPublic)
+        {
+            try
+            {
+                if (isPublic)
+                    await CloudSaveService.Instance.Data.Player.DeleteAsync(key, new CloudPlayer.DeleteOptions(new CloudPlayer.PublicWriteAccessClassOptions()));
+                else
+                    await CloudSaveService.Instance.Data.Player.DeleteAsync(key);
+            }
+            catch (Exception e) { Debug.Log($"[Online] delete {key}: {e.Message}"); }
+        }
+
+        public async Task<string> LoadCloudSaveAsync()
+        {
+            if (Account != AccountState.Account) return null;
+            try
+            {
+                var items = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { SaveKey });
+                return items.TryGetValue(SaveKey, out var item) ? item.Value.GetAsString() : null;
+            }
+            catch (Exception e) { Debug.LogWarning("[Online] cloud save not loaded: " + e.Message); return null; }
+        }
+
+        public async Task SaveCloudSaveAsync(string json)
+        {
+            if (Account != AccountState.Account) return; // guests keep everything on the device
+            try { await CloudSaveService.Instance.Data.Player.SaveAsync(new Dictionary<string, object> { { SaveKey, json } }); }
+            catch (Exception e) { Debug.LogWarning("[Online] cloud save not written: " + e.Message); }
+        }
+
+        public Task ClearPublishedProgressAsync() => IsAvailable ? DeleteKey(ProgressKey, true) : Task.CompletedTask;
+
+        [Serializable]
+        sealed class Export
+        {
+            public string exportedAtUtc, playerId, playerName, username, account;
+            public List<string> friends = new List<string>();
+            public List<string> scores = new List<string>();
+            public string cloudSave, publicProgress;
+        }
+
+        public async Task<string> ExportOnlineDataAsync()
+        {
+            var x = new Export { exportedAtUtc = DateTime.UtcNow.ToString("o"), account = Account.ToString() };
+            if (!IsAvailable) return JsonUtility.ToJson(x, true);
+            x.playerId = PlayerId;
+            x.playerName = PlayerName;
+            x.username = Username;
+            foreach (var f in FriendsService.Instance.Friends) x.friends.Add($"{f.Member.Profile?.Name ?? f.Member.Id} ({f.Member.Id})");
+            foreach (var id in DifficultyTable.AllLevels())
+            {
+                try
+                {
+                    var e = await LeaderboardsService.Instance.GetPlayerScoreAsync(OnlineServiceFactory.LeaderboardId(id), new GetPlayerScoreOptions { IncludeMetadata = true });
+                    var (overPar, timeMs) = LevelResult.DecodeScore((long)e.Score);
+                    x.scores.Add($"{id}: +{overPar} coups, {LevelResult.FormatTime(timeMs)}, rang {e.Rank + 1}, pays « {CountryOf(e)} »");
+                }
+                catch (Exception) { /* no score on this level */ }
+            }
+            try
+            {
+                var priv = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { SaveKey });
+                if (priv.TryGetValue(SaveKey, out var s)) x.cloudSave = s.Value.GetAsString();
+                var pub = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { ProgressKey },
+                    new CloudPlayer.LoadOptions(new CloudPlayer.PublicReadAccessClassOptions()));
+                if (pub.TryGetValue(ProgressKey, out var p)) x.publicProgress = p.Value.GetAsString();
+            }
+            catch (Exception e) { Debug.LogWarning("[Online] export: " + e.Message); }
+            return JsonUtility.ToJson(x, true);
+        }
+
+        static string Explain(RequestFailedException e, string fallback)
+        {
+            Debug.LogWarning($"[Online] {e.ErrorCode}: {e.Message}");
+            if (e.ErrorCode == CommonErrorCodes.TransportError || e.ErrorCode == CommonErrorCodes.Timeout || e.ErrorCode == CommonErrorCodes.ServiceUnavailable)
+                return "Connexion impossible. Vérifie ton accès à Internet.";
+            if (e.ErrorCode == CommonErrorCodes.TooManyRequests) return "Trop de tentatives, réessaie dans quelques minutes.";
+            return fallback;
         }
 
         public async Task PublishProgressAsync(ProgressSnapshot snapshot)

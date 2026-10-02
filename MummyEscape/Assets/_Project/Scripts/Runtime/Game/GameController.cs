@@ -551,7 +551,7 @@ namespace MummyEscape.Game
 
             var outcome = _app.Save.Apply(result);
             _ = _app.Online.SubmitScoreAsync(result);
-            if (result.Won) _ = _app.Online.PublishProgressAsync(_app.BuildProgressSnapshot());
+            if (result.Won) _ = _app.PublishProgress();
             _app.UI.Open<RecapScreen>().Show(result, outcome);
         }
 

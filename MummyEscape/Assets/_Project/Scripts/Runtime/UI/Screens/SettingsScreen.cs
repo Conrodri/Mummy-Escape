@@ -28,8 +28,12 @@ namespace MummyEscape.UI.Screens
             UIKit.Toggle(image, "Tremblements d'écran", s.ScreenShake, s.SetScreenShake);
 
             var comfort = UIKit.Card(body);
-            UIKit.SectionTitle(comfort, "Confort");
+            UIKit.SectionTitle(comfort, "Confort et compte");
             UIKit.Toggle(comfort, "Vibrations", s.Haptics, s.SetHaptics);
+
+            var row = UIKit.Row(comfort, 110, 20);
+            UIKit.Size(UIKit.Button(row.transform, "Mon compte", () => Router.Open<AccountScreen>(), 38), -1, -1, 1);
+            UIKit.Size(UIKit.Button(row.transform, "Confidentialité", () => Router.Open<PrivacyScreen>(), 38), -1, -1, 1);
 
             var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · générateur v{Core.DifficultyTable.GeneratorVersion}", 28, UIKit.Dim);
             UIKit.BottomBand(version.rectTransform, 50, 30);

@@ -77,7 +77,7 @@ namespace MummyEscape.UI.Screens
             var online = App.Online;
             if (!online.IsAvailable && !online.IsDemo)
             {
-                Message(online.Status);
+                Message(online.Status + "\n\nLes amis font partie du mode en ligne : Paramètres › Confidentialité.");
                 return;
             }
 
@@ -142,7 +142,7 @@ namespace MummyEscape.UI.Screens
         void Message(string text) => UIKit.Size(UIKit.Label(_list, text, 36, UIKit.Dim), 200);
 
         void EditName() =>
-            Router.Open<PromptDialog>().Configure("Ton nom de momie", "Visible dans les classements.\nLes espaces deviennent des _.",
+            Router.Open<PromptDialog>().Configure("Ton nom de momie", "Visible dans les classements.\nN'utilise pas ton vrai nom.",
                 "Nom", StripTag(App.Online.PlayerName), "Enregistrer", async n =>
                 {
                     if (n.Length < 3) return "3 caractères minimum.";

@@ -143,10 +143,38 @@ unity command mummy_autoplay --steps 40 --until torch_out   # (en Play) saute l'
 
 Sans configuration, le jeu tourne **hors ligne** (sauvegarde locale, classement/amis désactivés proprement). Pour activer :
 1. Lier le projet : Edit › Project Settings › Services (organisation + projet UGS).
-2. Activer Authentication (anonyme), Leaderboards, Friends, Cloud Save dans le dashboard.
+2. Activer Authentication (anonyme + Username & Password), Leaderboards, Friends, Cloud Save dans le dashboard.
 3. Menu **Mummy Escape › Online › Export leaderboard configs** → déployer `Assets/_Project/Online` via Services › Deployment (ou `ugs deploy`).
 
 Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = meilleur) : on trie d'abord sur l'écart au chemin optimal (« parfait », « +3 coups »), puis sur le **temps** (chronomètre lancé à la fin de l'aperçu, arrêté en pause). Chaque partie tirant un labyrinthe différent, le nombre brut de coups ne serait pas comparable. Les ids de leaderboard incluent la version du générateur et du format de score (`v2s2_1-1`). La progression des amis est publiée dans Cloud Save (clé publique `progress`).
+
+## Comptes et RGPD
+
+**Fonctionnement d'un compte sur mobile.** Au premier lancement en ligne, Unity Authentication crée une session **anonyme** (identifiant aléatoire, jeton gardé sur le téléphone) : c'est le mode « invité », sans aucune saisie. Le joueur peut ensuite **créer un compte** (identifiant + mot de passe, *Username & Password* d'UGS) rattaché à ce même profil. Il pourra s'y reconnecter sur un autre appareil, avec sa progression sauvegardée dans Cloud Save (clé privée `save`, fusionnée avec la progression locale à chaque connexion). Il n'y a volontairement **pas d'e-mail** (minimisation des données). La contrepartie est qu'un mot de passe oublié ne se récupère pas, ce que le jeu indique. Plus tard, on pourra ajouter « Se connecter avec Apple / Google » (UGS les gère). Apple l'exige seulement si un autre login social est proposé.
+
+**Conformité intégrée (RGPD, ePrivacy, art. 8 et 25) :**
+- **Rien ne part en ligne avant un choix éclairé.** L'écran d'accueil (`WelcomeScreen`) explique les modes hors ligne et en ligne et donne accès à la politique et aux CGU. Le mode hors ligne est complet.
+- **Âge.** L'année de naissance n'est demandée que pour jouer en ligne (contrôle neutre). Elle n'est ni conservée ni envoyée ; seul le booléen « mineur » est gardé. Le seuil est l'âge du consentement numérique du pays (15 ans en France, 13 à 16 ans selon le pays de l'UE ; 16 ans si le pays est inconnu). En dessous, l'accord d'un parent est demandé (année de naissance d'un adulte + case à cocher) et il est révocable.
+- **Confidentialité par défaut.** Le partage de progression avec les amis est désactivé et le pays n'est pas affiché dans les classements par défaut. Le pseudonyme est aléatoire, avec le rappel de ne pas utiliser son vrai nom.
+- **Droits exercés dans le jeu** (Paramètres › Confidentialité) :
+  - export JSON de tout ce que savent le téléphone et le serveur (art. 15 et 20) ;
+  - **suppression des données en ligne et du compte** (art. 17, obligatoire aussi sur Google Play et l'App Store) ;
+  - effacement des données du téléphone ;
+  - retrait des choix à tout moment.
+- **Preuve du choix.** Le choix est horodaté avec la version de la politique (`PrivacyService.PolicyVersion`). Incrémenter cette version redemande l'accord à tous les joueurs.
+- **Ni publicité, ni analytics, ni traceur** (Unity Analytics désactivé). Ne pas en ajouter sans revoir la politique, le manifeste iOS et un éventuel bandeau de consentement.
+
+**À faire avant publication :**
+1. Remplir `Runtime/UI/Legal/LegalTexts.cs` : éditeur (nom, adresse), e-mail de contact et médiateur de la consommation. Mettre à jour la date.
+2. Menu **Mummy Escape › Legal › Export privacy policy and terms to docs/**, puis publier `docs/` avec GitHub Pages (Settings › Pages › `main` / `docs`). Ces URLs publiques sont demandées par les stores.
+3. Dashboard UGS : activer **Username & Password** dans Authentication. Mettre en place la purge des profils inactifs depuis 3 ans (promise dans la politique), par exemple avec un script Cloud Code planifié ou l'Admin API.
+4. **Google Play, section Sécurité des données :**
+   - données collectées : identifiants utilisateur (ID), activité dans l'appli (contenu de jeu) et nom (pseudonyme) ;
+   - finalité : fonctionnement de l'appli ; aucune donnée partagée avec des tiers ;
+   - chiffrement en transit : oui ; suppression possible dans l'appli : oui (fournir aussi l'URL de la politique).
+5. **App Store, étiquettes de confidentialité :** User ID, Gameplay Content et Other User Content, reliés à l'utilisateur, sans tracking, pour la finalité App Functionality. Elles reprennent `Plugins/iOS/PrivacyInfo.xcprivacy`, le manifeste inclus dans le build Xcode.
+6. Public visé : déclarer la tranche d'âge dans les consoles (si les moins de 13 ans sont visés, Google Play impose la politique *Families* et Apple la catégorie Enfants, avec des contraintes supplémentaires).
+7. Ces textes et ce fonctionnement ne remplacent pas un avis juridique : à faire relire avant la sortie.
 
 ## Avant publication
 

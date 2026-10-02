@@ -93,7 +93,7 @@ namespace MummyEscape.UI.Screens
             Header("Ton pays", () => Router.Close(this));
             var body = Body(190, 40, 40);
             UIKit.Column(body, 16);
-            UIKit.Size(UIKit.Label(body, "Utilisé pour le classement « Pays ».", 32, UIKit.Dim), 50);
+            UIKit.Size(UIKit.Label(body, "Affiché à côté de tes scores et utilisé pour le classement « Pays ».\nFacultatif : tu peux le retirer à tout moment.", 30, UIKit.Dim), 90);
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 6;
@@ -104,7 +104,8 @@ namespace MummyEscape.UI.Screens
             UIKit.ClearChildren(_list);
             string chosen = App.Save.Data.Country;
             string device = CountryService.Detect();
-            Item("", "Automatique", string.IsNullOrEmpty(device) ? "appareil : inconnu" : $"appareil : {CountryService.NameOf(device)}", string.IsNullOrEmpty(chosen));
+            Item("", "Ne pas afficher", "par défaut", string.IsNullOrEmpty(chosen));
+            Item(SaveService.AutoCountry, "Pays de l'appareil", string.IsNullOrEmpty(device) ? "inconnu" : CountryService.NameOf(device), chosen == SaveService.AutoCountry);
             foreach (var c in CountryService.All) Item(c.Code, c.Name, c.Code, chosen == c.Code);
             _scroll.verticalNormalizedPosition = 1f;
         }

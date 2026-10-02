@@ -51,12 +51,72 @@ namespace MummyEscape.Online
         public List<LevelRecord> Records = new List<LevelRecord>();
     }
 
+    /// <summary>Offline = no session; Guest = anonymous player (tied to this install); Account = username + password.</summary>
+    public enum AccountState { Offline, Guest, Account }
+
+    /// <summary>
+    /// Account rules (those of Unity Authentication "Username &amp; Password"). No e-mail is ever asked: the account
+    /// only needs a username and a password (data minimisation), the trade-off being that a forgotten password
+    /// cannot be recovered.
+    /// </summary>
+    public static class AccountRules
+    {
+        public const int UsernameMin = 3, UsernameMax = 20, PasswordMin = 8, PasswordMax = 30;
+
+        /// <summary>Error message in French, or null when valid.</summary>
+        public static string CheckUsername(string u)
+        {
+            if (string.IsNullOrEmpty(u) || u.Length < UsernameMin || u.Length > UsernameMax)
+                return $"Identifiant : {UsernameMin} à {UsernameMax} caractères.";
+            foreach (char c in u)
+                if (!(char.IsLetterOrDigit(c) && c < 128) && c != '.' && c != '-' && c != '_' && c != '@')
+                    return "Identifiant : lettres, chiffres et . - _ @ uniquement (sans accents ni espaces).";
+            return null;
+        }
+
+        public static string CheckPassword(string p)
+        {
+            if (string.IsNullOrEmpty(p) || p.Length < PasswordMin || p.Length > PasswordMax)
+                return $"Mot de passe : {PasswordMin} à {PasswordMax} caractères.";
+            bool upper = false, lower = false, digit = false, symbol = false;
+            foreach (char c in p)
+            {
+                if (char.IsUpper(c)) upper = true;
+                else if (char.IsLower(c)) lower = true;
+                else if (char.IsDigit(c)) digit = true;
+                else symbol = true;
+            }
+            return upper && lower && digit && symbol ? null : "Mot de passe : au moins une majuscule, une minuscule, un chiffre et un symbole.";
+        }
+    }
+
     /// <summary>
     /// Everything social: identity, per-level leaderboards, friends, progression sharing.
     /// The game must stay fully playable when <see cref="IsAvailable"/> is false.
     /// </summary>
     public interface IOnlineService
     {
+        // ---- account (all error-returning calls give a French message, or null on success)
+        AccountState Account { get; }
+        /// <summary>Login of the account (empty for a guest).</summary>
+        string Username { get; }
+        /// <summary>Turns the current guest into an account: progress, scores and friends are kept.</summary>
+        Task<string> CreateAccountAsync(string username, string password);
+        /// <summary>Signs in to an existing account (another device, after a sign-out...).</summary>
+        Task<string> SignInAsync(string username, string password);
+        /// <summary>Ends the session on this device; online features stop until the next sign-in.</summary>
+        Task SignOutAsync();
+        Task<string> ChangePasswordAsync(string current, string next);
+        /// <summary>Erases the online account and all its data (GDPR art. 17, store requirements).</summary>
+        Task<string> DeleteAccountAsync();
+        /// <summary>Private cloud copy of the local save (accounts only), null when none.</summary>
+        Task<string> LoadCloudSaveAsync();
+        Task SaveCloudSaveAsync(string json);
+        /// <summary>Removes the progression snapshot friends could read.</summary>
+        Task ClearPublishedProgressAsync();
+        /// <summary>Everything the server holds about the player, as JSON (GDPR art. 15 and 20).</summary>
+        Task<string> ExportOnlineDataAsync();
+
         bool IsAvailable { get; }
         string PlayerId { get; }
         string PlayerName { get; }

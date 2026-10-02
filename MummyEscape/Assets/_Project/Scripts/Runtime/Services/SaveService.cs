@@ -74,6 +74,38 @@ namespace MummyEscape.Services
             Changed?.Invoke();
         }
 
+        /// <summary>
+        /// Folds in the save of another device (account cloud copy): best record per level, owned skins united,
+        /// the larger wallet (never the sum: syncing twice must not mint scarabs). Returns true when something changed.
+        /// </summary>
+        public bool MergeFrom(SaveData other)
+        {
+            if (other == null) return false;
+            string before = JsonUtility.ToJson(Data);
+            foreach (var theirs in other.Records)
+            {
+                if (theirs == null || string.IsNullOrEmpty(theirs.Key)) continue;
+                var mine = Data.Records.Find(r => r.Key == theirs.Key);
+                if (mine == null) Data.Records.Add(JsonUtility.FromJson<LevelRecord>(JsonUtility.ToJson(theirs)));
+                else mine.MergeWith(theirs);
+            }
+            Data.Coins = Math.Max(Data.Coins, other.Coins);
+            foreach (var s in other.OwnedSkins) if (!Data.OwnedSkins.Contains(s)) Data.OwnedSkins.Add(s);
+            if (string.IsNullOrEmpty(Data.Country)) Data.Country = other.Country ?? "";
+            bool changed = JsonUtility.ToJson(Data) != before;
+            if (changed) Save();
+            return changed;
+        }
+
+        /// <summary>Erases the local progression (the file and the memory copy).</summary>
+        public void Wipe()
+        {
+            Data = new SaveData();
+            try { if (File.Exists(FilePath)) File.Delete(FilePath); }
+            catch (Exception e) { Debug.LogWarning($"[Save] {e.Message}"); }
+            Changed?.Invoke();
+        }
+
         public LevelRecord GetRecord(LevelId id) => Data.Records.Find(r => r.Key == id.Key);
 
         LevelRecord GetOrCreateRecord(LevelId id)
@@ -139,8 +171,14 @@ namespace MummyEscape.Services
             Save();
         }
 
-        /// <summary>Chosen country, or the device region when the player never picked one.</summary>
-        public string Country => string.IsNullOrEmpty(Data.Country) ? CountryService.Detect() : Data.Country;
+        /// <summary>Stored in <see cref="SaveData.Country"/> when the player asks to use the device region.</summary>
+        public const string AutoCountry = "auto";
+
+        /// <summary>
+        /// Country attached to the player's public scores. Empty unless the player chose one (privacy by default):
+        /// a code, or <see cref="AutoCountry"/> for the device region.
+        /// </summary>
+        public string Country => Data.Country == AutoCountry ? CountryService.Detect() : Data.Country ?? "";
 
         public void SetCountry(string code)
         {
