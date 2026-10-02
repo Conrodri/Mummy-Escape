@@ -1,0 +1,30 @@
+{
+    "name": "MummyEscape.Online.UGS",
+    "rootNamespace": "MummyEscape.Online",
+    "references": [
+        "MummyEscape.Core",
+        "MummyEscape.Runtime",
+        "Unity.Services.Core",
+        "Unity.Services.Authentication",
+        "Unity.Services.Leaderboards",
+        "Unity.Services.Friends",
+        "Unity.Services.CloudSave"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MUMMY_UGS_LEADERBOARDS",
+        "MUMMY_UGS_FRIENDS",
+        "MUMMY_UGS_CLOUDSAVE"
+    ],
+    "versionDefines": [
+        { "name": "com.unity.services.leaderboards", "expression": "2.0.0", "define": "MUMMY_UGS_LEADERBOARDS" },
+        { "name": "com.unity.services.friends", "expression": "1.0.0", "define": "MUMMY_UGS_FRIENDS" },
+        { "name": "com.unity.services.cloudsave", "expression": "3.0.0", "define": "MUMMY_UGS_CLOUDSAVE" }
+    ],
+    "noEngineReferences": false
+}

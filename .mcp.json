@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "unity-editor": {
+      "command": "unity",
+      "args": ["mcp", "--project-path", "MummyEscape"]
+    }
+  }
+}

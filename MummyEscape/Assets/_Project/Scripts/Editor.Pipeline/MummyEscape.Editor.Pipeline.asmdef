@@ -1,0 +1,25 @@
+{
+    "name": "MummyEscape.Editor.Pipeline",
+    "rootNamespace": "MummyEscape.EditorTools",
+    "references": [
+        "MummyEscape.Core",
+        "MummyEscape.Editor",
+        "Unity.Pipeline",
+        "Unity.Pipeline.Attributes"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "MUMMY_PIPELINE"
+    ],
+    "versionDefines": [
+        { "name": "com.unity.pipeline", "expression": "0.1.0-exp", "define": "MUMMY_PIPELINE" }
+    ],
+    "noEngineReferences": false
+}
