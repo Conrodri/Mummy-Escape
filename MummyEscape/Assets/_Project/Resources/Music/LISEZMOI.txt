@@ -1,0 +1,11 @@
+Musiques personnalisées (ex. générées avec Suno)
+
+Déposer ici un fichier par thème, il remplace automatiquement la musique codée :
+  menu.mp3   -> menus
+  act1.mp3   -> L'Antichambre
+  act2.mp3   -> Les Galeries inondées
+  act3.mp3   -> Les Ruines effondrées
+  act4.mp3   -> La Cité d'Anubis
+  act5.mp3   -> Le Sanctuaire embrasé
+(.ogg / .wav aussi.) Conseil : boucle propre (fin qui s'enchaîne au début), 1 à 3 min,
+import Unity "Load Type: Streaming" pour économiser la mémoire.

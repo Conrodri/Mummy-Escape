@@ -66,6 +66,7 @@ namespace MummyEscape.Game
             _input.Enabled = false;
             ScreenshotRedraw = false;
             CurrentLevel = id;
+            _app.Audio.PlayMusic(id.Act); // renders (if needed) while the maze is generated
             LevelLoading?.Invoke(id);
 
             // Every run draws a new maze of the level (variant), usually prefetched while the previous run was played.

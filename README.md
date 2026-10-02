@@ -81,6 +81,15 @@ Courants, dalles et leviers peuvent enfermer la momie : après chaque glissade, 
 
 **Ambiance** : chaque acte a sa palette, ses décors rares (os, cartouches, flaques, câbles, lave…), son éclairage (ambiance, bloom, couleur des torches murales) et ses particules flottantes. `World/FxRig.cs` joue les effets : poussière des pas, étincelles et flash de lumière des boutons/leviers, portes qui s'ouvrent, implosion/explosion des portails, gerbes d'eau, éboulis, flammes, fumée de cécité, flamme qui saute de la torche murale à celle de la momie, victoire et mort. Les effets en boucle (braises des torches, tourbillon des portails, écume des courants, rayon de la sortie) ne tournent que sur les cases visibles ; l'option « Effets lumineux avancés » coupe les effets décoratifs.
 
+**Musique par acte** (`Services/MusicComposer.cs`) : chaque thème est *codé*, façon Strudel/Tidal (motifs texte `"0 ~ 1 2 _ 4"` = degré de la gamme, silence, tenue), puis rendu en boucle sans couture sur un thread de fond au premier lancement de l'acte (fondu enchaîné de 1,8 s) :
+1. oud, bourdon, darbouka (rythme maqsum) et flûte ney, gamme hijaz ;
+2. nappes lentes, cloches en écho, gouttes et houle (dorien) ;
+3. bourdon grave avec triton, tambours lointains, notes isolées, éboulis (locrien) ;
+4. synthés sur gamme égyptienne : kick, basse carrée, arpège en doubles croches, lead ;
+5. taikos, bourdon saturé, trémolo d'oud, chœur et crépitements (double harmonique).
+
+Pour utiliser de vraies pistes (Suno…), déposer `menu`, `act1` … `act5` (.mp3/.ogg/.wav) dans `Assets/_Project/Resources/Music/` : elles remplacent automatiquement les thèmes codés.
+
 **Anti-capture de la carte** (`Services/ScreenGuard.cs`, `Plugins/iOS/MummyScreenGuard.mm`), active seulement pendant les 5 s d'aperçu :
 - Android : `FLAG_SECURE` sur la fenêtre (captures et enregistrements noirs) ;
 - iOS (capture impossible à bloquer) : une capture d'écran jette le tombeau et en tire un nouveau (nouvel aperçu, message au joueur) ; un enregistrement / recopie d'écran (`UIScreen.isCaptured`) masque la carte et met le compte à rebours en pause.

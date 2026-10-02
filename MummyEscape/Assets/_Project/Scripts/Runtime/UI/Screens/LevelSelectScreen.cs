@@ -39,8 +39,10 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             App.Lighting.SetMood(false);
+            App.Audio.PlayMusic(0);
             var furthest = App.Save.FurthestUnlocked();
             SetAct(furthest.Act);
+            App.Audio.PrefetchMusic(furthest.Act); // its theme is ready when the level starts
         }
 
         void SetAct(int act)

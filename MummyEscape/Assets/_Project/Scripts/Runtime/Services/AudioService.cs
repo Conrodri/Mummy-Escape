@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace MummyEscape.Services
@@ -14,32 +16,121 @@ namespace MummyEscape.Services
     {
         const int Rate = 22050;
 
-        AudioSource _music;
+        AudioSource _music;      // the theme playing (or fading in)
+        AudioSource _musicOut;   // the previous theme, fading out
         AudioSource _sfx;
         SettingsService _settings;
         readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
 
+        /// <summary>Theme 0 = menus, 1..5 = acts.</summary>
+        int _theme = -1;
+        float _mix = 1f;
+        const float CrossfadeSeconds = 1.8f;
+        AudioClip _menuOverride;
+        readonly Dictionary<int, AudioClip> _themes = new Dictionary<int, AudioClip>();
+        readonly Dictionary<int, Task<float[]>> _rendering = new Dictionary<int, Task<float[]>>();
+
         public void Init(SettingsService settings, AudioClip musicOverride)
         {
             _settings = settings;
-            _music = gameObject.AddComponent<AudioSource>();
-            _music.loop = true;
-            _music.playOnAwake = false;
+            _music = NewMusicSource();
+            _musicOut = NewMusicSource();
             _sfx = gameObject.AddComponent<AudioSource>();
             _sfx.playOnAwake = false;
+            _menuOverride = musicOverride;
 
             foreach (Sfx s in Enum.GetValues(typeof(Sfx))) _clips[s] = Synth.Make(s);
-            _music.clip = musicOverride != null ? musicOverride : Synth.AmbientLoop();
-            _music.Play();
 
             settings.Changed += ApplyVolumes;
+            PlayMusic(0);
             ApplyVolumes();
+        }
+
+        AudioSource NewMusicSource()
+        {
+            var src = gameObject.AddComponent<AudioSource>();
+            src.loop = true;
+            src.playOnAwake = false;
+            return src;
         }
 
         void ApplyVolumes()
         {
-            _music.volume = _settings.MusicVolume * 0.5f;
+            float music = _settings.MusicVolume * 0.5f;
+            _music.volume = music * _mix;
+            _musicOut.volume = music * (1f - _mix);
             _sfx.volume = _settings.SfxVolume;
+        }
+
+        void Update()
+        {
+            if (_mix >= 1f) return;
+            _mix = Mathf.Min(1f, _mix + Time.unscaledDeltaTime / CrossfadeSeconds);
+            ApplyVolumes();
+            if (_mix >= 1f) _musicOut.Stop();
+        }
+
+        /// <summary>
+        /// Switches to the theme of an act (0 = menus), crossfading. A track placed in <c>Resources/Music/act{n}</c>
+        /// (or <c>menu</c>) — e.g. made with Suno — replaces the coded one; otherwise <see cref="MusicComposer"/>
+        /// renders it on a worker thread the first time (the previous theme keeps playing meanwhile).
+        /// </summary>
+        public void PlayMusic(int theme)
+        {
+            if (theme == _theme) return;
+            _theme = theme;
+            var clip = ThemeClip(theme);
+            if (clip != null) { CrossfadeTo(clip); return; }
+            StartCoroutine(RenderThenPlay(theme));
+        }
+
+        /// <summary>Starts rendering a theme in the background so it is ready when needed.</summary>
+        public void PrefetchMusic(int theme)
+        {
+            if (ThemeClip(theme) == null) Render(theme);
+        }
+
+        AudioClip ThemeClip(int theme)
+        {
+            if (_themes.TryGetValue(theme, out var cached)) return cached;
+            var file = Resources.Load<AudioClip>(theme == 0 ? "Music/menu" : $"Music/act{theme}");
+            if (file == null && theme == 0) file = _menuOverride != null ? _menuOverride : Synth.AmbientLoop();
+            if (file != null) _themes[theme] = file;
+            return file;
+        }
+
+        Task<float[]> Render(int theme)
+        {
+            if (!_rendering.TryGetValue(theme, out var task))
+                _rendering[theme] = task = Task.Run(() => MusicComposer.Render(theme));
+            return task;
+        }
+
+        IEnumerator RenderThenPlay(int theme)
+        {
+            var task = Render(theme);
+            while (!task.IsCompleted) yield return null;
+            _rendering.Remove(theme);
+            if (task.IsFaulted) { Debug.LogError($"[Audio] Theme {theme} failed: {task.Exception}"); yield break; }
+            var data = task.Result;
+            var clip = AudioClip.Create($"theme_act{theme}", data.Length, 1, MusicComposer.Rate, false);
+            clip.SetData(data, 0);
+            // Keep the menu theme and the current act only (each loop is a few MB).
+            foreach (var key in new List<int>(_themes.Keys))
+                if (key != 0 && key != theme && _themes[key].name.StartsWith("theme_")) { Destroy(_themes[key]); _themes.Remove(key); }
+            _themes[theme] = clip;
+            if (_theme == theme) CrossfadeTo(clip);
+        }
+
+        void CrossfadeTo(AudioClip clip)
+        {
+            if (_music.clip == clip && _music.isPlaying) return;
+            (_music, _musicOut) = (_musicOut, _music);
+            _music.Stop();
+            _mix = 0f; // the new theme fades in while the old one fades out
+            _music.clip = clip;
+            _music.Play();
+            ApplyVolumes();
         }
 
         public void Play(Sfx s, float pitchJitter = 0.05f)
