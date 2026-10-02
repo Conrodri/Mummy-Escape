@@ -20,6 +20,8 @@ namespace MummyEscape.World
         SettingsService _settings;
 
         float _baseAmbient = 0.55f;
+        Color _gameAmbient = new Color(0.5f, 0.58f, 0.85f);
+        float _gameIntensity = 0.5f;
         float _flash;
         Color _flashColor = Color.red;
 
@@ -60,19 +62,33 @@ namespace MummyEscape.World
             Apply();
         }
 
+        /// <summary>Each act has its own darkness: blue-green under the Nile, dusty grey in the ruins, red in the sanctuary...</summary>
+        public void SetTheme(Visual.TombTheme theme)
+        {
+            _gameAmbient = theme.Ambient;
+            _gameIntensity = theme.AmbientIntensity;
+            // Wet stone and neon glow more; ruins are dusty and dull.
+            _bloom.intensity.Override(theme.Kind == Visual.TombTheme.Style.Tech ? 1.5f : theme.Kind == Visual.TombTheme.Style.Inferno ? 1.35f : 1.1f);
+            _color.saturation.Override(theme.Kind == Visual.TombTheme.Style.Ruins ? -18f : theme.Kind == Visual.TombTheme.Style.Tech ? 5f : -5f);
+            _color.colorFilter.Override(theme.Kind == Visual.TombTheme.Style.Flooded ? new Color(0.9f, 0.98f, 1f)
+                : theme.Kind == Visual.TombTheme.Style.Inferno ? new Color(1f, 0.9f, 0.82f)
+                : theme.Kind == Visual.TombTheme.Style.Tech ? new Color(0.92f, 0.95f, 1f)
+                : new Color(1f, 0.95f, 0.88f));
+        }
+
         /// <summary>Menu = brighter warm tomb, Game = dark exploration.</summary>
         public void SetMood(bool inGame)
         {
-            _baseAmbient = inGame ? 0.5f : 0.9f;
-            _ambient.color = inGame ? new Color(0.5f, 0.58f, 0.85f) : new Color(1f, 0.85f, 0.65f);
+            _baseAmbient = inGame ? _gameIntensity : 0.9f;
+            _ambient.color = inGame ? _gameAmbient : new Color(1f, 0.85f, 0.65f);
             Apply();
         }
 
         /// <summary>Start-of-run map preview: the tomb is bathed in light so the whole layout reads at a glance.</summary>
         public void SetPreview(bool on)
         {
-            _baseAmbient = on ? 1.05f : 0.5f;
-            _ambient.color = on ? new Color(1f, 0.9f, 0.75f) : new Color(0.5f, 0.58f, 0.85f);
+            _baseAmbient = on ? 1.05f : _gameIntensity;
+            _ambient.color = on ? Color.Lerp(new Color(1f, 0.9f, 0.75f), _gameAmbient, 0.2f) : _gameAmbient;
             Apply();
         }
 

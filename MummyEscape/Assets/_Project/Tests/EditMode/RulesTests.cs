@@ -198,6 +198,80 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Current_CarriesDownstream_AndCannotBeClimbed()
+        {
+            var s = new GameSession(FromAscii("########", "#S>>..E#", "########"));
+            var start = s.Position;
+            var ride = s.Move(Dir.Right);
+            Assert.IsTrue(ride.Has(StepFlags.Swept));
+            Assert.AreEqual(start.X + 3, s.Position.X, "two current tiles carry the mummy to still ground in one move");
+            Assert.AreEqual(1, s.Moves);
+            var upstream = s.Move(Dir.Left);
+            Assert.IsTrue(upstream.Has(StepFlags.Swept), "walking into the current pushes the mummy back");
+            Assert.AreEqual(start.X + 3, s.Position.X);
+            Assert.AreEqual(3, Solver.Solve(FromAscii("########", "#S>>..E#", "########")).Moves);
+        }
+
+        [Test]
+        public void Crumbling_SlabCollapsesBehindTheMummy()
+        {
+            var s = new GameSession(FromAscii("#######", "#Sx..E#", "#######"));
+            s.Move(Dir.Right);
+            Assert.IsFalse(s.IsCollapsed(s.Position), "it holds while the mummy stands on it");
+            var off = s.Move(Dir.Right);
+            Assert.IsTrue(off.Has(StepFlags.Collapsed));
+            Assert.IsTrue(s.IsCollapsed(s.Position.Step(Dir.Left)));
+            Assert.IsTrue(s.Move(Dir.Left).Has(StepFlags.Blocked), "rubble blocks the way back");
+        }
+
+        [Test]
+        public void Switch_FlipsRedAndBlueBarriers()
+        {
+            var lvl = FromAscii("#######", "#S=$|E#", "#######");
+            var s = new GameSession(lvl);
+            Assert.IsTrue(s.IsDoorOpen(s.Position.Step(Dir.Right)), "blue is open while the switch is off");
+            s.Move(Dir.Right);
+            var flip = s.Move(Dir.Right);
+            Assert.IsTrue(flip.Has(StepFlags.Switched) && flip.Has(StepFlags.ButtonPressed));
+            Assert.IsFalse(s.IsDoorOpen(s.Position.Step(Dir.Left)), "blue closes");
+            Assert.IsTrue(s.IsDoorOpen(s.Position.Step(Dir.Right)), "red opens");
+            Assert.AreEqual(SessionStatus.Playing, s.Status, "stepping back onto the switch reopens blue: not trapped");
+            s.Move(Dir.Right);
+            s.Move(Dir.Right);
+            Assert.AreEqual(SessionStatus.Won, s.Status);
+            Assert.AreEqual(4, Solver.Solve(lvl).Moves);
+            Assert.AreEqual(1, Solver.Solve(lvl).ButtonsPressed);
+        }
+
+        [Test]
+        public void FireJet_BurnsOnItsBeat()
+        {
+            // Phase 1 fires right after the first move: walking straight in burns.
+            var burnt = new GameSession(FromAscii("######", "#S1.E#", "######"));
+            Assert.IsTrue(burnt.IsAboutToFire(burnt.Position.Step(Dir.Right)));
+            var r = burnt.Move(Dir.Right);
+            Assert.IsTrue(r.Has(StepFlags.Burned) && r.Has(StepFlags.Damaged));
+            Assert.AreEqual(1, burnt.Hp);
+            Assert.IsTrue(burnt.IsFiring(burnt.Position));
+
+            var safe = new GameSession(FromAscii("######", "#S0.E#", "######"));
+            Assert.IsFalse(safe.Move(Dir.Right).Has(StepFlags.Burned), "phase 0 is quiet on that move");
+            Assert.AreEqual(2, safe.Hp);
+        }
+
+        [Test]
+        public void Trapped_WhenNoWayOutIsLeft()
+        {
+            // The current carries the mummy into a pocket it can never leave: the run ends at once.
+            var s = new GameSession(FromAscii("#######", "#E.S>.#", "#######"));
+            var r = s.Move(Dir.Right);
+            Assert.IsTrue(r.Has(StepFlags.Trapped));
+            Assert.AreEqual(SessionStatus.Dead, s.Status);
+            Assert.AreEqual(DefeatCause.Trapped, s.Defeat);
+            Assert.IsNotNull(Solver.Solve(FromAscii("#######", "#E.S>.#", "#######")), "the omniscient route simply walks left");
+        }
+
+        [Test]
         public void Fog_RevealsNeighboursAndRemembersPath()
         {
             var s = new GameSession(FromAscii("#######", "#S...E#", "#######"));

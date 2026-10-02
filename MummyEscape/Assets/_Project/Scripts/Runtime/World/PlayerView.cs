@@ -18,6 +18,7 @@ namespace MummyEscape.World
         ParticleSystem _dust;
         ArtLibrary _art;
         SettingsService _settings;
+        Material _spriteMaterial;
         bool _blind;
         float _torchRadius = 2.6f;
         Color _torchColor = new Color(1f, 0.72f, 0.42f);
@@ -29,6 +30,7 @@ namespace MummyEscape.World
         {
             _art = art;
             _settings = settings;
+            _spriteMaterial = spriteMaterial;
 
             _body = new GameObject("Body").transform;
             _body.SetParent(transform, false);
@@ -64,6 +66,23 @@ namespace MummyEscape.World
             _torch.color = _torchColor;
         }
 
+        /// <summary>The motes floating in the torch light follow the act: dust, dripping water, embers, data sparks...</summary>
+        public void SetTheme(TombTheme theme, Material unlit)
+        {
+            var main = _dust.main;
+            main.startColor = theme.Motes;
+            var vel = _dust.velocityOverLifetime;
+            vel.enabled = Mathf.Abs(theme.MotesFall) > 0.001f;
+            vel.space = ParticleSystemSimulationSpace.World;
+            vel.x = 0f;
+            vel.y = -theme.MotesFall;
+            vel.z = 0f;
+            var r = _dust.GetComponent<ParticleSystemRenderer>();
+            if (theme.MotesGlow && unlit != null) r.sharedMaterial = unlit;
+            else if (_spriteMaterial != null) r.sharedMaterial = _spriteMaterial;
+            _dust.Clear();
+        }
+
         public void SetBlind(bool blind) => _blind = blind;
 
         public void SetTorchLit(bool lit)
@@ -93,6 +112,21 @@ namespace MummyEscape.World
             }
             transform.position = to;
             _body.localPosition = Vector3.zero;
+        }
+
+        /// <summary>Carried by a current: glides without walking, slightly tilted.</summary>
+        public IEnumerator Slide(Cell c, float duration = 0.09f)
+        {
+            Vector3 from = transform.position, to = MazeView.CellToWorld(c);
+            float tilt = to.x < from.x - 0.01f ? 8f : to.x > from.x + 0.01f ? -8f : 0f;
+            for (float t = 0; t < 1f; t += Time.deltaTime / duration)
+            {
+                transform.position = Vector3.Lerp(from, to, t);
+                _body.localRotation = Quaternion.Euler(0f, 0f, tilt + Mathf.Sin(Time.time * 30f) * 3f);
+                yield return null;
+            }
+            transform.position = to;
+            _body.localRotation = Quaternion.identity;
         }
 
         public IEnumerator Bump(Dir d)

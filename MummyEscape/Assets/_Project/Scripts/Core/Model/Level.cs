@@ -108,6 +108,9 @@ namespace MummyEscape.Core
             return sb.ToString();
         }
 
+        /// <summary>Current glyphs indexed by <see cref="Dir"/>: up, right, down, left.</summary>
+        public const string CurrentGlyphs = "{>}<";
+
         char Glyph(Cell c, ICollection<Cell> highlight)
         {
             if (c == Start) return 'S';
@@ -126,6 +129,11 @@ namespace MummyEscape.Core
                 case TileType.LadderDown: return 'D';
                 case TileType.Dust: return ',';
                 case TileType.WallTorch: return '!';
+                case TileType.Current: return CurrentGlyphs[t.Param & 3];
+                case TileType.Crumbling: return 'x';
+                case TileType.Barrier: return t.Param == 0 ? '|' : '=';
+                case TileType.Switch: return '$';
+                case TileType.FireJet: return (char)('0' + t.Param);
             }
             return highlight != null && highlight.Contains(c) ? '*' : '.';
         }

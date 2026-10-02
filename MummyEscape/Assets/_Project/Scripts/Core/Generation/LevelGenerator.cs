@@ -81,6 +81,10 @@ namespace MummyEscape.Core
             readonly List<Cell> _traps = new List<Cell>();
             int _channels;
             int _decoyMask;
+            int _crumbling;
+            readonly List<Cell> _hazards = new List<Cell>();
+            /// <summary>Laser gates placed: barrier, switch and channel (blue barriers are added behind them later).</summary>
+            readonly List<(Cell barrier, Cell toggle, int channel)> _lasers = new List<(Cell, Cell, int)>();
 
             // Gate bookkeeping: channel to open each gate (-1 = none) and which gate each portal pad belongs to.
             readonly List<int> _gateChannels = new List<int>();
@@ -102,7 +106,7 @@ namespace MummyEscape.Core
 
             public Level Build(out string failure)
             {
-                if (_level.CellCount >= 1 << 16) { failure = "too-big: tomb exceeds solver packing"; return null; }
+                if (_level.CellCount > Solver.MaxCells) { failure = "too-big: tomb exceeds solver packing"; return null; }
                 if (_spec.Gates.Count == 0) { failure = "spec: a level needs at least one gate"; return null; }
 
                 for (int f = 0; f < _spec.Floors; f++) CarveMaze(f);
@@ -129,6 +133,16 @@ namespace MummyEscape.Core
                 // Cheap early reject: the route with every door open is a lower bound of the par.
                 if (route.Count - 1 > _spec.MaxMoves) { failure = $"too-long: open route {route.Count - 1} > {_spec.MaxMoves}"; return null; }
 
+                // Act mechanics, laid on the route once the layout is final.
+                if (_spec.BlueBarriers)
+                    foreach (var laser in _lasers) PlaceBlueBarrier(route, laser);
+                for (int k = 0; k < _spec.Currents; k++)
+                    if (!PlaceCurrent(route)) { failure = "current: no spot"; return null; }
+                for (int k = 0; k < _spec.CrumblingTiles; k++)
+                    if (!PlaceCrumbling(route)) { failure = "crumbling: no spot"; return null; }
+                for (int k = 0; k < _spec.FireJets; k++)
+                    if (!PlaceFireJet(route)) { failure = "fire: no spot"; return null; }
+
                 for (int k = 0; k < _spec.DustPatches; k++)
                     if (!PlaceDust(route)) { failure = "dust: no spot"; return null; }
 
@@ -138,7 +152,11 @@ namespace MummyEscape.Core
                 for (int k = 0; k < _spec.DarknessTraps; k++)
                     if (!PlaceTrap(TrapKind.Darkness, k % 2 == 0 ? route : null)) { failure = "darkness: no spot"; return null; }
 
-                if (_channels > 16 || _traps.Count > 16) { failure = "too-many: channels or traps exceed 16"; return null; }
+                if (_channels > Solver.MaxChannels || _traps.Count > Solver.MaxTraps || _crumbling > Solver.MaxCrumbling)
+                {
+                    failure = "too-many: channels, traps or fragile slabs exceed the solver packing";
+                    return null;
+                }
                 _level.ChannelCount = _channels;
                 _level.TrapCount = _traps.Count;
                 _level.DecoyChannels = _decoyMask;
@@ -367,18 +385,21 @@ namespace MummyEscape.Core
                 // Detours are measured from the stretch since the previous gate; spots must lie beyond that gate too.
                 var before = route.GetRange(from, cutIndex - from);
 
-                if (gate.Kind == GateKind.Door)
+                if (gate.Kind == GateKind.Door || gate.Kind == GateKind.Laser)
                 {
+                    bool laser = gate.Kind == GateKind.Laser;
                     int channel = _channels;
-                    _level[cut] = new Tile { Type = TileType.Door, Channel = (byte)channel };
-                    // The new door is still closed: its channel is not in AllOpen yet.
+                    // A red barrier behaves like a door: open once its channel is on.
+                    _level[cut] = new Tile { Type = laser ? TileType.Barrier : TileType.Door, Channel = (byte)channel };
+                    // The new gate is still closed: its channel is not in AllOpen yet.
                     var button = PickSideSpot(before, AllOpen, maxDetour, cut, null, earlier);
                     if (!button.HasValue) { _level[cut] = Tile.Floor; return false; }
                     _channels++;
                     Reserve(cut);
-                    _level[button.Value] = new Tile { Type = TileType.Button, Channel = (byte)channel };
+                    _level[button.Value] = new Tile { Type = laser ? TileType.Switch : TileType.Button, Channel = (byte)channel };
                     Reserve(button.Value);
                     _gateChannels.Add(channel);
+                    if (laser) _lasers.Add((cut, button.Value, channel));
                     _lastGate = cut;
                     return true;
                 }
@@ -605,7 +626,7 @@ namespace MummyEscape.Core
                 for (int i = 0; i < comp.Length; i++)
                 {
                     var c0 = _level.CellAt(i);
-                    if (comp[i] >= 0 || !Walkable(c0) || _level[c0].Type == TileType.Door) continue;
+                    if (comp[i] >= 0 || !Walkable(c0) || _level[c0].IsGate) continue;
                     comp[i] = next;
                     q.Enqueue(c0);
                     while (q.Count > 0)
@@ -614,7 +635,7 @@ namespace MummyEscape.Core
                         foreach (var d in DirExt.All)
                         {
                             var n = c.Step(d);
-                            if (!Walkable(n) || _level[n].Type == TileType.Door) continue;
+                            if (!Walkable(n) || _level[n].IsGate) continue;
                             int ni = _level.IndexOf(n);
                             if (comp[ni] >= 0) continue;
                             comp[ni] = next;
@@ -685,7 +706,7 @@ namespace MummyEscape.Core
                     if (IsCell(c) && TryBraid(c, comp, depth)) return;
                     Cell next = c;
                     foreach (var d in DirExt.All) if (Walkable(c.Step(d))) next = c.Step(d);
-                    if (_level[next].Type == TileType.Door) return;
+                    if (_level[next].IsGate) return;
                     bool junction = Degree(next) >= 3;
                     _level[c] = Tile.Wall;
                     if (junction || _level[next].Type != TileType.Floor) return;
@@ -724,7 +745,7 @@ namespace MummyEscape.Core
                 {
                     Cell next = c;
                     foreach (var d in DirExt.All) if (Walkable(c.Step(d))) next = c.Step(d);
-                    if (_level[next].Type == TileType.Door) break; // a decoy door keeps its (empty) pocket
+                    if (_level[next].IsGate) break; // a decoy door keeps its (empty) pocket
                     bool junction = Degree(next) >= 3;
                     _level[c] = Tile.Wall;
                     if (junction) break; // stop at the junction this branch hangs from (no cascade)
@@ -762,6 +783,94 @@ namespace MummyEscape.Core
                     _level[w] = Tile.Floor;
                     count--;
                 }
+            }
+
+            // ------------------------------------------------------------------ act mechanics
+
+            /// <summary>A plain corridor tile of the route, away from other hazards: where act mechanics go.</summary>
+            bool IsRouteCorridor(List<Cell> route, int i) =>
+                i > 0 && i < route.Count - 1 && IsFree(route[i]) && Degree(route[i]) == 2 && FarFromTraps(route[i])
+                && route[i - 1].Floor == route[i].Floor && route[i + 1].Floor == route[i].Floor
+                && route[i - 1].Manhattan(route[i]) == 1 && route[i + 1].Manhattan(route[i]) == 1;
+
+            static Dir DirTo(Cell a, Cell b) => b.X > a.X ? Dir.Right : b.X < a.X ? Dir.Left : b.Y > a.Y ? Dir.Up : Dir.Down;
+
+            /// <summary>
+            /// Flipping a laser switch raises a blue barrier on the way the player came: the corridor behind closes
+            /// until the switch is flipped back. Optional: skipped when the route offers no clean spot.
+            /// </summary>
+            void PlaceBlueBarrier(List<Cell> route, (Cell barrier, Cell toggle, int channel) laser)
+            {
+                int cut = route.IndexOf(laser.barrier);
+                if (cut < 0) return;
+                // Where the switch branch leaves the route: blue goes before that junction, so it seals the way back.
+                var fromSwitch = Distances(laser.toggle, AllOpen, out _);
+                int junction = -1, best = int.MaxValue;
+                for (int i = 0; i < cut; i++)
+                {
+                    int d = fromSwitch[_level.IndexOf(route[i])];
+                    if (d >= 0 && d < best) { best = d; junction = i; }
+                }
+                var spots = new List<int>();
+                for (int i = 2; i < junction - 1; i++)
+                    if (IsRouteCorridor(route, i) && !IsCell(route[i]) && FarFromPois(route[i], _spec.MinPoiSpacing - 1)) spots.Add(i);
+                if (spots.Count == 0) return;
+                // The closest spot to the junction: the player sees it close right behind them.
+                var c = route[spots[spots.Count - 1]];
+                _level[c] = new Tile { Type = TileType.Barrier, Channel = (byte)laser.channel, Param = 1 };
+                Reserve(c);
+            }
+
+            /// <summary>A stream of 2-4 current tiles along the route, flowing towards the exit: a one-way passage.</summary>
+            bool PlaceCurrent(List<Cell> route)
+            {
+                var starts = new List<int>();
+                for (int i = 2; i < route.Count - 4; i++) starts.Add(i);
+                _rng.Shuffle(starts);
+                foreach (int i in starts)
+                {
+                    int len = _rng.Range(2, 5);
+                    if (i + len >= route.Count - 1 || _level[route[i - 1]].Type == TileType.Current) continue;
+                    bool ok = true;
+                    for (int j = i; j < i + len && ok; j++) ok = IsRouteCorridor(route, j);
+                    var end = route[i + len];
+                    if (!ok || end.Floor != route[i].Floor || !(IsFloorType(end) || _level[end].Type == TileType.Exit)) continue;
+                    for (int j = i; j < i + len; j++)
+                    {
+                        _level[route[j]] = new Tile { Type = TileType.Current, Param = (byte)DirTo(route[j], route[j + 1]) };
+                        _reserved[_level.IndexOf(route[j])] = true;
+                        _hazards.Add(route[j]);
+                    }
+                    _reserved[_level.IndexOf(end)] = true; // still ground where the stream lets go
+                    return true;
+                }
+                return false;
+            }
+
+            /// <summary>A fragile slab on the route: the optimal route crosses it once, a careless player maybe twice.</summary>
+            bool PlaceCrumbling(List<Cell> route)
+            {
+                var spots = new List<int>();
+                for (int i = 2; i < route.Count - 2; i++) if (IsRouteCorridor(route, i)) spots.Add(i);
+                if (spots.Count == 0) return false;
+                var c = route[_rng.Pick(spots)];
+                _level[c] = new Tile { Type = TileType.Crumbling, Param = (byte)_crumbling++ };
+                _reserved[_level.IndexOf(c)] = true;
+                _hazards.Add(c);
+                return true;
+            }
+
+            /// <summary>A flame jet on the route with a random beat: the route has to be walked in rhythm.</summary>
+            bool PlaceFireJet(List<Cell> route)
+            {
+                var spots = new List<int>();
+                for (int i = 2; i < route.Count - 1; i++) if (IsRouteCorridor(route, i)) spots.Add(i);
+                if (spots.Count == 0) return false;
+                var c = route[_rng.Pick(spots)];
+                _level[c] = new Tile { Type = TileType.FireJet, Param = (byte)_rng.Range(0, Rules.FlameCycle) };
+                _reserved[_level.IndexOf(c)] = true;
+                _hazards.Add(c);
+                return true;
             }
 
             // ------------------------------------------------------------------ torch
@@ -835,6 +944,8 @@ namespace MummyEscape.Core
             {
                 foreach (var t in _traps)
                     if (t.Floor == c.Floor && Math.Abs(t.X - c.X) + Math.Abs(t.Y - c.Y) < 3) return false;
+                foreach (var h in _hazards)
+                    if (h.Floor == c.Floor && Math.Abs(h.X - c.X) + Math.Abs(h.Y - c.Y) < 2) return false;
                 foreach (var d in DirExt.All)
                     if (_level.Get(c.Step(d)).Type == TileType.Dust) return false;
                 return true;

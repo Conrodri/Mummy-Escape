@@ -49,7 +49,7 @@ namespace MummyEscape.Core
             if (d >= spec.MinExitDistance) return null;
             if (spec.RequiredButtons > 0)
                 foreach (var c in level.AllCells())
-                    if (level[c].Type == TileType.Button && (level.DecoyChannels & (1 << level[c].Channel)) == 0
+                    if (level[c].IsTrigger && (level.DecoyChannels & (1 << level[c].Channel)) == 0
                         && level.Start.Manhattan(c) >= spec.MinExitDistance)
                         return null;
             return $"too-close: exit {d} from start (< {spec.MinExitDistance})";
@@ -137,7 +137,7 @@ namespace MummyEscape.Core
                     if (a.Floor != b.Floor) continue;
                     int d = Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
                     int min = spec.MinPoiSpacing;
-                    if (level[a].Type == TileType.Door || level[b].Type == TileType.Door) min--;
+                    if (level[a].IsGate || level[b].IsGate) min--;
                     if (d < min) return $"spacing: {level[a].Type}{a} and {level[b].Type}{b} are {d} apart (< {min})";
                 }
             return null;

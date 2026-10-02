@@ -34,13 +34,19 @@ namespace MummyEscape.Core
         public int Blind;
         /// <summary>The torch was smothered by dust: only the own tile is lit (and traps cannot be seen to disarm).</summary>
         public bool TorchOut;
+        /// <summary>Bit i set = fragile slab with Param i has collapsed (impassable rubble).</summary>
+        public int Crumbled;
+        /// <summary>Actions taken, modulo 3: the rhythm of the flame jets.</summary>
+        public int Tick;
 
         /// <summary>The torch lights the 4 neighbouring tiles: not while blinded, not while it is out.</summary>
         public bool SeesNeighbours => Blind == 0 && !TorchOut;
 
-        public bool Equals(RuleState o) => Position == o.Position && Pressed == o.Pressed && Disarmed == o.Disarmed && Hp == o.Hp && Blind == o.Blind && TorchOut == o.TorchOut;
+        public bool Equals(RuleState o) => Position == o.Position && Pressed == o.Pressed && Disarmed == o.Disarmed && Hp == o.Hp && Blind == o.Blind
+                                           && TorchOut == o.TorchOut && Crumbled == o.Crumbled && Tick == o.Tick;
         public override bool Equals(object obj) => obj is RuleState s && Equals(s);
-        public override int GetHashCode() => Position.GetHashCode() ^ (Pressed * 397) ^ (Disarmed * 7919) ^ Hp ^ (Blind << 20) ^ (TorchOut ? 1 << 24 : 0);
+        public override int GetHashCode() => Position.GetHashCode() ^ (Pressed * 397) ^ (Disarmed * 7919) ^ Hp ^ (Blind << 20) ^ (TorchOut ? 1 << 24 : 0)
+                                             ^ (Crumbled * 1543) ^ (Tick << 28);
     }
 
     [Flags]
@@ -64,6 +70,16 @@ namespace MummyEscape.Core
         HiddenRevealed = 1 << 14,
         TorchSmothered = 1 << 15,
         TorchRelit = 1 << 16,
+        /// <summary>A current carried the player further than the tile it walked onto.</summary>
+        Swept = 1 << 17,
+        /// <summary>The fragile slab the player just left collapsed.</summary>
+        Collapsed = 1 << 18,
+        /// <summary>A toggle switch flipped its channel (also flagged ButtonPressed).</summary>
+        Switched = 1 << 19,
+        /// <summary>Walked into a firing flame jet (also flagged Damaged).</summary>
+        Burned = 1 << 20,
+        /// <summary>Set by the session: no way to the exit is left (currents, collapsed slabs, barriers).</summary>
+        Trapped = 1 << 21,
     }
 
     public struct StepResult
@@ -94,12 +110,30 @@ namespace MummyEscape.Core
         public static bool IsDoorOpen(Tile t, int pressed) => (pressed & (1 << t.Channel)) != 0;
         public static bool IsTrapArmed(Tile t, int disarmed) => t.Type == TileType.Trap && (disarmed & (1 << t.TrapIndex)) == 0;
 
-        public static bool CanEnter(Level level, Cell c, int pressed)
+        /// <summary>Doors open with their channel; red barriers too, blue barriers do the opposite.</summary>
+        public static bool IsGateOpen(Tile t, int pressed)
+        {
+            if (t.Type == TileType.Door) return IsDoorOpen(t, pressed);
+            if (t.Type == TileType.Barrier) return IsDoorOpen(t, pressed) == (t.Param == 0);
+            return true;
+        }
+
+        public static bool IsCollapsed(Tile t, int crumbled) => t.Type == TileType.Crumbling && (crumbled & (1 << t.Param)) != 0;
+
+        /// <summary>The flame jet is blasting in this state (a player standing in it at this tick gets burned).</summary>
+        public static bool IsFiring(Tile t, int tick) => t.Type == TileType.FireJet && t.Param == tick;
+
+        public const int FlameCycle = 3;
+
+        public static bool CanEnter(Level level, Cell c, int pressed) => CanEnter(level, c, new RuleState { Pressed = pressed });
+
+        public static bool CanEnter(Level level, Cell c, RuleState s)
         {
             if (!level.InBounds(c)) return false;
             var t = level[c];
             if (t.IsSolid) return false;
-            if (t.Type == TileType.Door && !IsDoorOpen(t, pressed)) return false;
+            if (t.IsGate && !IsGateOpen(t, s.Pressed)) return false;
+            if (IsCollapsed(t, s.Crumbled)) return false;
             return true;
         }
 
@@ -108,6 +142,7 @@ namespace MummyEscape.Core
             var r = new StepResult { State = s, SteppedOn = s.Position };
             // Every accepted action ticks blindness down; a fresh darkness trap resets it below.
             r.State.Blind = s.Blind > 0 ? s.Blind - 1 : 0;
+            r.State.Tick = (s.Tick + 1) % FlameCycle;
             var target = s.Position.Step(action.Dir);
 
             if (action.Kind == ActionKind.Disarm)
@@ -119,9 +154,26 @@ namespace MummyEscape.Core
                 return r;
             }
 
-            if (!CanEnter(level, target, s.Pressed)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
+            if (!CanEnter(level, target, s)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
 
             r.Flags = StepFlags.Moved;
+            // A fragile slab gives way as soon as the mummy steps off it.
+            var from = level[s.Position];
+            if (from.Type == TileType.Crumbling)
+            {
+                r.State.Crumbled |= 1 << from.Param;
+                r.Flags |= StepFlags.Collapsed;
+            }
+
+            // Currents carry the mummy downstream, tile after tile, until still ground or an obstacle.
+            for (int guard = 0; guard < 64 && level[target].Type == TileType.Current; guard++)
+            {
+                var next = target.Step((Dir)level[target].Param);
+                if (!CanEnter(level, next, r.State)) break;
+                target = next;
+                r.Flags |= StepFlags.Swept;
+            }
+
             r.SteppedOn = target;
             r.State.Position = target;
             var t = level[target];
@@ -138,6 +190,21 @@ namespace MummyEscape.Core
                         r.State.Pressed |= 1 << t.Channel;
                         r.Flags |= StepFlags.ButtonPressed;
                         r.Channel = t.Channel;
+                    }
+                    break;
+
+                case TileType.Switch:
+                    r.State.Pressed ^= 1 << t.Channel;
+                    r.Flags |= StepFlags.ButtonPressed | StepFlags.Switched;
+                    r.Channel = t.Channel;
+                    break;
+
+                case TileType.FireJet:
+                    if (IsFiring(t, r.State.Tick))
+                    {
+                        r.State.Hp--;
+                        r.Flags |= StepFlags.TrapTriggered | StepFlags.Damaged | StepFlags.Burned;
+                        if (r.State.Hp <= 0) r.Flags |= StepFlags.Died;
                     }
                     break;
 

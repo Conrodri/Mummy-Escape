@@ -24,19 +24,21 @@ namespace MummyEscape.App
         public ArtLibrary Art { get; private set; }
         public CameraRig Camera { get; private set; }
         public LightingRig Lighting { get; private set; }
+        public FxRig Fx { get; private set; }
+        public ScreenGuard Guard { get; private set; }
         public GameController Game { get; private set; }
         public UIRouter UI { get; private set; }
 
-        public static GameApp Create(Material spriteMaterial, AudioClip music)
+        public static GameApp Create(Material spriteMaterial, Material unlitMaterial, AudioClip music)
         {
             var go = new GameObject("MummyEscape");
             DontDestroyOnLoad(go);
             var app = go.AddComponent<GameApp>();
-            app.Init(spriteMaterial, music);
+            app.Init(spriteMaterial, unlitMaterial, music);
             return app;
         }
 
-        void Init(Material spriteMaterial, AudioClip music)
+        void Init(Material spriteMaterial, Material unlitMaterial, AudioClip music)
         {
             I = this;
             Application.targetFrameRate = 60;
@@ -63,8 +65,12 @@ namespace MummyEscape.App
             Lighting = Child<LightingRig>("Lighting");
             Lighting.Init(Settings);
 
+            Guard = Child<ScreenGuard>("ScreenGuard");
+            Fx = Child<FxRig>("Fx");
+            Fx.Init(Art, spriteMaterial, unlitMaterial, Settings);
+
             var maze = Child<MazeView>("Maze");
-            maze.Init(Art, spriteMaterial);
+            maze.Init(Art, spriteMaterial, Fx, Settings);
             var player = Child<PlayerView>("Player");
             player.Init(Art, spriteMaterial, Settings);
             var input = Child<SwipeInput>("Input");

@@ -15,6 +15,7 @@ namespace MummyEscape.EditorTools
     {
         public const string ScenePath = "Assets/_Project/Scenes/Main.unity";
         const string MaterialPath = "Assets/_Project/Art/SpriteLit.mat";
+        const string UnlitMaterialPath = "Assets/_Project/Art/SpriteUnlit.mat";
 
         [MenuItem("Mummy Escape/Setup Project (scène + réglages)", priority = 0)]
         public static void Run()
@@ -31,11 +32,21 @@ namespace MummyEscape.EditorTools
                 AssetDatabase.CreateAsset(material, MaterialPath);
             }
 
+            var unlit = AssetDatabase.LoadAssetAtPath<Material>(UnlitMaterialPath);
+            if (unlit == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+                if (shader == null) { Debug.LogError("[Setup] URP 2D Sprite-Unlit-Default shader not found."); return; }
+                unlit = new Material(shader) { name = "SpriteUnlit" };
+                AssetDatabase.CreateAsset(unlit, UnlitMaterialPath);
+            }
+
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var go = new GameObject("GameBootstrap");
             var bootstrap = go.AddComponent<GameBootstrap>();
             var so = new SerializedObject(bootstrap);
             so.FindProperty("spriteLitMaterial").objectReferenceValue = material;
+            so.FindProperty("spriteUnlitMaterial").objectReferenceValue = unlit;
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };

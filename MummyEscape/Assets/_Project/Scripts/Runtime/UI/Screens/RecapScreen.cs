@@ -49,7 +49,8 @@ namespace MummyEscape.UI.Screens
         public void Show(LevelResult result, RecordOutcome outcome)
         {
             _result = result;
-            _title.text = result.Won ? "ÉVADÉ !" : "LA MOMIE A PÉRI";
+            bool walledIn = !result.Won && App.Game.Session != null && App.Game.Session.Defeat == DefeatCause.Trapped;
+            _title.text = result.Won ? "ÉVADÉ !" : walledIn ? "EMMURÉE !" : "LA MOMIE A PÉRI";
             _title.color = result.Won ? UIKit.Gold : UIKit.Danger;
 
             UIKit.ClearChildren(_starsSlot);
@@ -63,6 +64,8 @@ namespace MummyEscape.UI.Screens
                 ? $"Évadé en <b>{result.Moves}</b> coups · <b>{LevelResult.FormatTime(result.TimeMs)}</b>\n{over}\n" +
                   $"<b>{result.Interactions}</b> interaction{(result.Interactions > 1 ? "s" : "")} · " +
                   $"<b>{result.HpLeft}</b>/{result.MaxHp} PV"
+                : walledIn
+                ? $"Plus aucune issue : la momie est emmurée après {result.Moves} coups.\nCourants, dalles effondrées et barrières ne pardonnent pas.\nRéessaie : un nouveau tombeau t'attend."
                 : $"Les pièges ont eu raison de toi après {result.Moves} coups.\n{result.Interactions} interaction{(result.Interactions > 1 ? "s" : "")}\nRéessaie : un nouveau tombeau t'attend.";
 
             string extra = "";

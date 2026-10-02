@@ -9,6 +9,9 @@ namespace MummyEscape.Core
         Door,
         /// <summary>The route is cut by a wall; the only way on is a teleporter hidden at the end of a dead end.</summary>
         Portal,
+        /// <summary>A red laser barrier across the route; its toggle switch waits at the end of a dead end. Flipping it
+        /// also raises a blue barrier behind the player when the spec asks for one.</summary>
+        Laser,
     }
 
     public struct Gate
@@ -18,8 +21,9 @@ namespace MummyEscape.Core
         public TeleporterKind Portal;
 
         public static Gate Door => new Gate { Kind = GateKind.Door };
+        public static Gate Laser => new Gate { Kind = GateKind.Laser };
         public static Gate Teleporter(TeleporterKind kind) => new Gate { Kind = GateKind.Portal, Portal = kind };
-        public override string ToString() => Kind == GateKind.Door ? "Door" : "Portal:" + Portal;
+        public override string ToString() => Kind == GateKind.Portal ? "Portal:" + Portal : Kind.ToString();
     }
 
     /// <summary>
@@ -68,6 +72,16 @@ namespace MummyEscape.Core
         public List<TeleporterKind> Teleporters = new List<TeleporterKind>();
         public int BreakableFloors;
 
+        // ---- Act mechanics ----
+        /// <summary>Streams of current (2-4 tiles) laid along the route, flowing towards the exit: one-way passages.</summary>
+        public int Currents;
+        /// <summary>Fragile slabs on the route: crossed once, then rubble.</summary>
+        public int CrumblingTiles;
+        /// <summary>Flame jets on the route, each with its own beat.</summary>
+        public int FireJets;
+        /// <summary>Laser gates also raise a blue barrier on the way back when their switch is flipped.</summary>
+        public bool BlueBarriers;
+
         // ---- Feel ----
         /// <summary>Minimum Manhattan distance between two points of interest.</summary>
         public int MinPoiSpacing = 4;
@@ -84,7 +98,7 @@ namespace MummyEscape.Core
             get
             {
                 int n = 0;
-                foreach (var g in Gates) if (g.Kind == GateKind.Door || g.Portal == TeleporterKind.Locked) n++;
+                foreach (var g in Gates) if (g.Kind != GateKind.Portal || g.Portal == TeleporterKind.Locked) n++;
                 return n;
             }
         }
@@ -101,6 +115,7 @@ namespace MummyEscape.Core
 
         public override string ToString() =>
             $"{Id} moves[{MinMoves}-{MaxMoves}] floors:{Floors} cells:{CellsX}x{CellsY} gates:[{string.Join(",", Gates)}] decoy:{DecoyDoors} " +
-            $"spikes:{SpikeTraps} dark:{DarknessTraps} dust:{DustPatches} tp:[{string.Join(",", Teleporters)}] breakable:{BreakableFloors} loops:{ExtraLoops}";
+            $"spikes:{SpikeTraps} dark:{DarknessTraps} dust:{DustPatches} tp:[{string.Join(",", Teleporters)}] breakable:{BreakableFloors} loops:{ExtraLoops}" +
+            $" currents:{Currents} crumbling:{CrumblingTiles} fire:{FireJets}{(BlueBarriers ? " blue" : "")}";
     }
 }

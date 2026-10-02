@@ -48,6 +48,11 @@ namespace MummyEscape.Core
         /// <summary>Teleporter kinds unlocked in this act, cycled through as the count grows.</summary>
         public TeleporterKind[] TeleporterKinds = { TeleporterKind.Visible };
         public Ramp BreakableFloors;
+        /// <summary>Signature mechanics of the act's theme.</summary>
+        public Ramp Currents;
+        public Ramp CrumblingTiles;
+        public Ramp FireJets;
+        public bool BlueBarriers;
         public int MinPoiSpacing = 4;
         public int MinHpLeftForPar = 1;
     }
@@ -58,8 +63,13 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 2;
+        public const int GeneratorVersion = 3;
 
+        /// <summary>
+        /// One theme and one signature mechanic per act: the intact antechamber (doors, portals), the flooded galleries
+        /// (currents), the collapsed ruins (fragile slabs), the high-tech city of Anubis (laser barriers and switches)
+        /// and the burning sanctuary (flame jets on a beat, over crumbling ground).
+        /// </summary>
         public static readonly IReadOnlyList<ActDefinition> Acts = new[]
         {
             new ActDefinition
@@ -73,37 +83,41 @@ namespace MummyEscape.Core
             },
             new ActDefinition
             {
-                Name = "Les Galeries", MinMoves = 22, MaxMoves = new Ramp(32, 38),
+                Name = "Les Galeries inondées", MinMoves = 22, MaxMoves = new Ramp(32, 38),
                 Floors = new Ramp(1, 2), Cells = new Ramp(7, 8), ExtraLoops = new Ramp(1, 3),
                 Gates = new Ramp(2, 3), GateKinds = new[] { GateKind.Door, GateKind.Portal, GateKind.Door },
-                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(0, 1), DarknessTraps = new Ramp(1, 2), DustPatches = new Ramp(0, 1),
+                Currents = new Ramp(1, 3),
+                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(0, 1), DarknessTraps = new Ramp(0, 1), DustPatches = new Ramp(0, 1),
                 TeleporterCount = new Ramp(0, 1), TeleporterKinds = new[] { TeleporterKind.Visible, TeleporterKind.Hidden },
                 BreakableFloors = new Ramp(0, 1), MinPoiSpacing = 4,
             },
             new ActDefinition
             {
-                Name = "La Chambre des Pièges", MinMoves = 28, MaxMoves = new Ramp(44, 50),
+                Name = "Les Ruines effondrées", MinMoves = 28, MaxMoves = new Ramp(44, 50),
                 Floors = 2, Cells = new Ramp(8, 9), ExtraLoops = new Ramp(2, 4),
                 Gates = 3, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
-                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(1, 3), DarknessTraps = new Ramp(1, 2), DustPatches = 1,
+                CrumblingTiles = new Ramp(2, 4),
+                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(1, 2), DarknessTraps = 1, DustPatches = 1,
                 TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Hidden, TeleporterKind.Locked, TeleporterKind.Visible },
-                BreakableFloors = 1, MinPoiSpacing = 4,
-            },
-            new ActDefinition
-            {
-                Name = "Le Labyrinthe d'Anubis", MinMoves = 34, MaxMoves = new Ramp(52, 60),
-                Floors = new Ramp(2, 3), Cells = new Ramp(8, 10), ExtraLoops = new Ramp(3, 5),
-                Gates = new Ramp(3, 4), GateKinds = new[] { GateKind.Door, GateKind.Portal, GateKind.Door, GateKind.Portal },
-                DecoyDoors = 2, SpikeTraps = new Ramp(2, 3), DarknessTraps = new Ramp(2, 3), DustPatches = new Ramp(1, 2),
-                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Locked, TeleporterKind.Hidden },
                 BreakableFloors = new Ramp(1, 2), MinPoiSpacing = 4,
             },
             new ActDefinition
             {
-                Name = "Le Sanctuaire d'Osiris", MinMoves = 40, MaxMoves = new Ramp(62, 70),
+                Name = "La Cité d'Anubis", MinMoves = 34, MaxMoves = new Ramp(52, 60),
+                Floors = new Ramp(2, 3), Cells = new Ramp(8, 10), ExtraLoops = new Ramp(3, 5),
+                Gates = new Ramp(3, 4), GateKinds = new[] { GateKind.Laser, GateKind.Portal, GateKind.Laser, GateKind.Door },
+                BlueBarriers = true,
+                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(1, 2), DarknessTraps = new Ramp(1, 2), DustPatches = new Ramp(1, 2),
+                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Locked, TeleporterKind.Hidden },
+                BreakableFloors = 1, MinPoiSpacing = 4,
+            },
+            new ActDefinition
+            {
+                Name = "Le Sanctuaire embrasé", MinMoves = 40, MaxMoves = new Ramp(62, 70),
                 Floors = 3, Cells = new Ramp(9, 11), ExtraLoops = new Ramp(4, 6),
-                Gates = 4, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
-                DecoyDoors = new Ramp(2, 3), SpikeTraps = new Ramp(3, 4), DarknessTraps = new Ramp(2, 3), DustPatches = 2,
+                Gates = 4, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Laser, GateKind.Door },
+                FireJets = new Ramp(2, 4), CrumblingTiles = new Ramp(1, 2),
+                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(1, 2), DarknessTraps = 1, DustPatches = 1,
                 TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Hidden, TeleporterKind.Locked },
                 BreakableFloors = 2, MinPoiSpacing = 4,
             },
@@ -149,6 +163,10 @@ namespace MummyEscape.Core
                 DarknessTraps = act.DarknessTraps.At(i, n),
                 DustPatches = act.DustPatches.At(i, n),
                 BreakableFloors = floors > 1 ? act.BreakableFloors.At(i, n) : 0,
+                Currents = act.Currents.At(i, n),
+                CrumblingTiles = act.CrumblingTiles.At(i, n),
+                FireJets = act.FireJets.At(i, n),
+                BlueBarriers = act.BlueBarriers,
                 MinPoiSpacing = act.MinPoiSpacing,
                 MinHpLeftForPar = act.MinHpLeftForPar,
                 // "Far from the entrance": two thirds of the tomb's side, as the crow flies.
@@ -161,7 +179,8 @@ namespace MummyEscape.Core
             for (int k = 0; k < gates; k++)
             {
                 var kind = act.GateKinds[(i - 1 + k) % act.GateKinds.Length];
-                spec.Gates.Add(kind == GateKind.Door ? Gate.Door : Gate.Teleporter(act.TeleporterKinds[(i + portal++) % kinds]));
+                spec.Gates.Add(kind == GateKind.Door ? Gate.Door : kind == GateKind.Laser ? Gate.Laser
+                               : Gate.Teleporter(act.TeleporterKinds[(i + portal++) % kinds]));
             }
             int tp = act.TeleporterCount.At(i, n);
             for (int k = 0; k < tp; k++)

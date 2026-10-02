@@ -203,6 +203,7 @@ namespace MummyEscape.UI.Screens
                 _previewTitle.text = $"Mémorise le tombeau !\n<size=30>{sub}</size>";
             }
 
+
             while (_ankhs.Count < level.MaxHp)
             {
                 var img = UIKit.Image(_hearts, UIKit.Art.Ankh, Color.white);
@@ -215,14 +216,37 @@ namespace MummyEscape.UI.Screens
                 _ankhs[i].sprite = i < s.Hp ? UIKit.Art.Ankh : UIKit.Art.AnkhEmpty;
             }
 
-            _status.color = s.IsBlind ? new Color(0.75f, 0.55f, 1f) : new Color(1f, 0.62f, 0.3f);
-            _status.text = preview ? ""
+            _status.color = preview ? new Color(1f, 0.45f, 0.35f) : s.IsBlind ? new Color(0.75f, 0.55f, 1f) : new Color(1f, 0.62f, 0.3f);
+            _status.text = preview
+                    ? App.Game.ScreenCaptured ? "Enregistrement d'écran détecté :\nle tombeau reste dans l'ombre"
+                    : App.Game.ScreenshotRedraw ? "Capture d'écran : les dieux ont scellé\nun autre tombeau !"
+                    : ""
                 : s.IsBlind ? $"Aveuglé ! ({s.BlindTurnsLeft})"
                 : !s.TorchLit ? "Torche éteinte : longe une torche murale"
                 : "";
+
+            // Act 1 teaches the controls; later acts recall their own rule first, then the map button.
+            const string Controls = "Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines.";
+            const string Map = "Maintiens « Carte » pour revoir ce que tu as exploré.";
+            string mechanic = ActHint(level.Id.Act);
             _hint.text = preview ? ""
-                : s.Moves == 0 ? "Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines."
-                : s.Moves < 4 ? "Maintiens « Carte » pour revoir ce que tu as exploré." : "";
+                : mechanic == null ? (s.Moves == 0 ? Controls : s.Moves < 4 ? Map : "")
+                : s.Moves < 4 ? mechanic
+                : s.Moves < 8 ? Map
+                : "";
+        }
+
+        /// <summary>The rule each act adds, recalled at the start of its tombs.</summary>
+        static string ActHint(int act)
+        {
+            switch (act)
+            {
+                case 2: return "Les courants t'emportent jusqu'au bout\net ne se remontent pas.";
+                case 3: return "Les dalles fissurées s'effondrent\ndès que tu les quittes.";
+                case 4: return "Un levier inverse les barrières :\nrouges ouvertes, bleues fermées.";
+                case 5: return "Les jets de flammes crachent un pas sur trois :\nobserve leur rythme.";
+            }
+            return null;
         }
     }
 }

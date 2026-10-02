@@ -149,6 +149,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: MummyEscape.Runtime::MummyEscape.App.GameBootstrap
   spriteLitMaterial: {fileID: 2100000, guid: d0f03eb1dea4ca64c8fc88cde3ce530f, type: 2}
+  spriteUnlitMaterial: {fileID: 2100000, guid: 09224e10986995c4cae99b2369e97531, type: 2}
   music: {fileID: 0}
 --- !u!4 &1515030117
 Transform:

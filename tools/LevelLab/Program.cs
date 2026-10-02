@@ -17,10 +17,18 @@ if (args.Length >= 1 && args[0].Contains("-") && !args[0].StartsWith("--"))
     Console.WriteLine(DifficultyTable.Spec(id));
     Console.WriteLine($"variant {variant} | par {sol.Moves} | buttons {sol.ButtonsPressed} portals {sol.Teleports} disarms {sol.Disarms} | hp left {sol.HpLeft} | attempt {level.Attempt}");
     Console.WriteLine("solution: " + string.Join(" ", sol.Actions));
+    var histogram = new SortedDictionary<string, int>();
+    foreach (var c in level.AllCells())
+    {
+        var type = level[c].Type;
+        if (type == TileType.Wall || type == TileType.Floor) continue;
+        histogram[type.ToString()] = histogram.TryGetValue(type.ToString(), out int n) ? n + 1 : 1;
+    }
+    Console.WriteLine("tiles: " + string.Join(", ", histogram.Select(kv => $"{kv.Key} {kv.Value}")));
     var path = new HashSet<Cell>();
     var s = Rules.Initial(level);
     foreach (var a in sol.Actions) { s = Rules.Step(level, s, a).State; path.Add(s.Position); }
-    Console.WriteLine("legend: S start E exit A-P doors a-p buttons @ portal ? hidden & locked % cursed ^ spikes ~ darkness , dust ! wall torch U/D ladders v hole * route");
+    Console.WriteLine("legend: S start E exit A-P doors a-p buttons @ portal ? hidden & locked % cursed ^ spikes ~ darkness , dust ! wall torch U/D ladders v hole {>}< currents x fragile | red = blue barrier $ switch 0-2 flame * route");
     Console.WriteLine(level.ToAscii(path));
     return;
 }

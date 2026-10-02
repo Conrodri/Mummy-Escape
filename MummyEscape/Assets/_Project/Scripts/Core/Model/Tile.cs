@@ -21,6 +21,16 @@ namespace MummyEscape.Core
         Dust,
         /// <summary>A wall with a burning sconce: passing next to it relights the mummy's torch. Solid like a wall.</summary>
         WallTorch,
+        /// <summary>Flowing water (flooded galleries): carries the mummy along its flow (<see cref="Tile.Param"/> = Dir) until it reaches still ground. Cannot be walked upstream.</summary>
+        Current,
+        /// <summary>Fragile slab (ruins): bears the mummy once, then collapses into rubble when it steps off (<see cref="Tile.Param"/> = collapse bit).</summary>
+        Crumbling,
+        /// <summary>Laser barrier (Anubis city). <see cref="Tile.Param"/> 0 = red, open while its channel is ON; 1 = blue, open while it is OFF.</summary>
+        Barrier,
+        /// <summary>Toggle switch: every step onto it flips its channel (red barriers open, blue ones close, and back).</summary>
+        Switch,
+        /// <summary>Flame jet (burning sanctuary): fires every third move (<see cref="Tile.Param"/> = phase 0-2); walking into the blast costs 1 HP.</summary>
+        FireJet,
     }
 
     public enum TrapKind : byte
@@ -54,6 +64,8 @@ namespace MummyEscape.Core
         /// <summary>Index of this trap in the disarmed mask.</summary>
         public byte TrapIndex;
         public TeleporterKind Teleporter;
+        /// <summary>Per-type parameter: current direction, crumbling bit, barrier colour, flame phase.</summary>
+        public byte Param;
 
         public bool IsWalkableTerrain => !IsSolid;
         /// <summary>Blocks movement (plain wall or wall torch).</summary>
@@ -63,7 +75,15 @@ namespace MummyEscape.Core
         public bool IsPointOfInterest =>
             Type == TileType.Exit || Type == TileType.Door || Type == TileType.Button ||
             Type == TileType.Teleporter || Type == TileType.BreakableFloor ||
-            Type == TileType.LadderUp || Type == TileType.LadderDown;
+            Type == TileType.LadderUp || Type == TileType.LadderDown ||
+            Type == TileType.Barrier || Type == TileType.Switch;
+
+        /// <summary>Door or laser barrier: blocks the way depending on a channel.</summary>
+        public bool IsGate => Type == TileType.Door || Type == TileType.Barrier;
+        /// <summary>Button or switch: drives a channel.</summary>
+        public bool IsTrigger => Type == TileType.Button || Type == TileType.Switch;
+        /// <summary>Changes the tomb for good or carries the player off: the run can end up with no way out.</summary>
+        public bool IsIrreversible => Type == TileType.Current || Type == TileType.Crumbling || Type == TileType.Barrier;
 
         public static Tile Wall => new Tile { Type = TileType.Wall };
         public static Tile Floor => new Tile { Type = TileType.Floor };

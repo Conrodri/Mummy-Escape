@@ -29,7 +29,8 @@ namespace MummyEscape.Core
     }
 
     /// <summary>
-    /// Exact breadth-first search over (position, activated channels, disarmed traps, hp, blindness, torch).
+    /// Exact breadth-first search over (position, activated channels, disarmed traps, hp, blindness, torch, collapsed
+    /// slabs, flame rhythm).
     /// Every action costs one move, so BFS gives the true minimum number of moves for an omniscient player.
     /// Darkness traps are never worth disarming for an omniscient player (blindness has no cost), so the solver
     /// only considers disarming spikes; this keeps the state space small without changing the optimum.
@@ -41,7 +42,8 @@ namespace MummyEscape.Core
         public static Solution Solve(Level level, SolverOptions options)
         {
             var start = Rules.Initial(level);
-            var startKey = Pack(level, start);
+            bool tick = HasFireJets(level);
+            var startKey = Pack(level, start, tick);
             var parent = new Dictionary<long, (long prev, PlayerAction action)>();
             var states = new Dictionary<long, RuleState>();
             var queue = new Queue<long>();
@@ -72,7 +74,7 @@ namespace MummyEscape.Core
                     if (!options.AllowTeleporters && r.Has(StepFlags.Teleported)) r.State.Position = r.SteppedOn; // stand on the pad, no transport
                     var ns = r.State;
                     if (!options.AllowButtons) ns.Pressed = s.Pressed;
-                    long nk = Pack(level, ns);
+                    long nk = Pack(level, ns, tick);
                     if (parent.ContainsKey(nk)) continue;
                     parent[nk] = (key, a);
                     if (r.Has(StepFlags.Won)) return Rebuild(level, parent, nk, options);
@@ -109,14 +111,58 @@ namespace MummyEscape.Core
             return sol;
         }
 
-        static long Pack(Level level, RuleState s)
+        /// <summary>Limits of the packed state: tiles, channels, traps and fragile slabs.</summary>
+        public const int MaxCells = 1 << 12, MaxChannels = 12, MaxTraps = 12, MaxCrumbling = 12;
+
+        /// <summary>
+        /// 12 bits position, 12 channels, 12 traps, 3 hp, 2 blind, 1 torch, 12 collapsed slabs, 2 flame tick = 56 bits.
+        /// The tick only matters when the tomb has flame jets (otherwise it would triple the states for nothing).
+        /// </summary>
+        static long Pack(Level level, RuleState s, bool tick)
         {
             return (long)level.IndexOf(s.Position)
-                   | ((long)(s.Pressed & 0xFFFF) << 16)
-                   | ((long)(s.Disarmed & 0xFFFF) << 32)
-                   | ((long)(s.Hp & 0xF) << 48)
-                   | ((long)(s.Blind & 0xF) << 52)
-                   | (s.TorchOut ? 1L << 56 : 0);
+                   | ((long)(s.Pressed & 0xFFF) << 12)
+                   | ((long)(s.Disarmed & 0xFFF) << 24)
+                   | ((long)(s.Hp & 0x7) << 36)
+                   | ((long)(s.Blind & 0x3) << 39)
+                   | (s.TorchOut ? 1L << 41 : 0)
+                   | ((long)(s.Crumbled & 0xFFF) << 42)
+                   | (tick ? (long)(s.Tick & 0x3) << 54 : 0);
+        }
+
+        static bool HasFireJets(Level level)
+        {
+            for (int i = 0; i < level.CellCount; i++)
+                if (level[level.CellAt(i)].Type == TileType.FireJet) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Can the exit still be reached from this state, whatever it costs? Traps are ignored (a hurt mummy is not a
+        /// stuck one): only what changes the layout counts (currents, collapsed slabs, barriers, doors).
+        /// </summary>
+        public static bool CanEscape(Level level, RuleState from, int maxStates = 200_000)
+        {
+            var seen = new HashSet<long>();
+            var queue = new Queue<RuleState>();
+            RuleState Norm(RuleState s) => new RuleState { Position = s.Position, Pressed = s.Pressed, Crumbled = s.Crumbled, Disarmed = -1, Hp = 7 };
+            var start = Norm(from);
+            seen.Add(Pack(level, start, false));
+            queue.Enqueue(start);
+            while (queue.Count > 0 && seen.Count < maxStates)
+            {
+                var s = queue.Dequeue();
+                if (level[s.Position].Type == TileType.Exit) return true;
+                foreach (var dir in DirExt.All)
+                {
+                    var r = Rules.Step(level, s, PlayerAction.Move(dir));
+                    if (r.Has(StepFlags.Blocked)) continue;
+                    if (r.Has(StepFlags.Won)) return true;
+                    var ns = Norm(r.State);
+                    if (seen.Add(Pack(level, ns, false))) queue.Enqueue(ns);
+                }
+            }
+            return queue.Count > 0; // state cap hit: give the player the benefit of the doubt
         }
     }
 }

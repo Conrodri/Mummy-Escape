@@ -10,12 +10,14 @@ namespace MummyEscape.App
     {
         [Tooltip("URP 2D 'Sprite-Lit-Default' material so sprites react to 2D lights.")]
         [SerializeField] Material spriteLitMaterial;
+        [Tooltip("URP 2D 'Sprite-Unlit-Default' material for glowing particles (sparks, magic, fire).")]
+        [SerializeField] Material spriteUnlitMaterial;
         [Tooltip("Optional music loop. A synthesized ambient loop is used when empty.")]
         [SerializeField] AudioClip music;
 
         void Awake()
         {
-            if (GameApp.I == null) GameApp.Create(spriteLitMaterial, music);
+            if (GameApp.I == null) GameApp.Create(spriteLitMaterial, spriteUnlitMaterial, music);
             Destroy(gameObject);
         }
     }

@@ -103,10 +103,33 @@ namespace MummyEscape.Tests
             var spec = DifficultyTable.Spec(id);
             var level = Get(id, variant);
             bool far = level.Start.Manhattan(level.Exit) >= spec.MinExitDistance;
-            bool farButton = level.AllCells().Any(c => level[c].Type == TileType.Button
+            bool farButton = level.AllCells().Any(c => level[c].IsTrigger
                                                      && (level.DecoyChannels & (1 << level[c].Channel)) == 0
                                                      && level.Start.Manhattan(c) >= spec.MinExitDistance);
             Assert.IsTrue(far || farButton, $"exit {level.Start.Manhattan(level.Exit)} tiles from the start");
+        }
+
+        /// <summary>Each act has its own signature mechanic, present in every one of its tombs.</summary>
+        [TestCaseSource(nameof(AllMazes))]
+        public void Maze_HasItsActMechanic(int act, int index, int variant)
+        {
+            var level = Get(new LevelId(act, index), variant);
+            int Count(TileType type) => level.AllCells().Count(c => level[c].Type == type);
+            switch (act)
+            {
+                case 2: Assert.That(Count(TileType.Current), Is.GreaterThanOrEqualTo(2), "flooded galleries: currents"); break;
+                case 3: Assert.That(Count(TileType.Crumbling), Is.GreaterThanOrEqualTo(2), "ruins: fragile slabs"); break;
+                case 4:
+                    Assert.That(Count(TileType.Switch), Is.GreaterThanOrEqualTo(1), "city of Anubis: switches");
+                    Assert.That(level.AllCells().Count(c => level[c].Type == TileType.Barrier && level[c].Param == 0), Is.GreaterThanOrEqualTo(1), "red barriers");
+                    break;
+                case 5: Assert.That(Count(TileType.FireJet), Is.GreaterThanOrEqualTo(2), "burning sanctuary: flame jets"); break;
+            }
+            if (act >= 2)
+            {
+                // The omniscient route never gets trapped (it reaches the exit), and the start is never a dead lock.
+                Assert.IsTrue(Solver.CanEscape(level, Rules.Initial(level)));
+            }
         }
 
         [TestCaseSource(nameof(AllLevels))]

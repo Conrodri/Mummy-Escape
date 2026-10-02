@@ -5,6 +5,9 @@ namespace MummyEscape.Core
 {
     public enum SessionStatus { Playing, Won, Dead }
 
+    /// <summary>Why a run was lost.</summary>
+    public enum DefeatCause { None, Wounds, Trapped }
+
     /// <summary>
     /// One run through a level: wraps the pure <see cref="Rules"/> with everything the player experiences
     /// (fog of war, blindness, revealed secrets, counters). Engine agnostic so it is unit tested.
@@ -27,6 +30,10 @@ namespace MummyEscape.Core
         readonly bool[] _revealedHidden;
         readonly List<PlayerAction> _history = new List<PlayerAction>();
 
+        /// <summary>Currents, fragile slabs or barriers: a careless move can leave no way out.</summary>
+        readonly bool _canGetStuck;
+        public DefeatCause Defeat { get; private set; }
+
         /// <summary>Raised after every accepted action, with what happened.</summary>
         public event Action<StepResult> Stepped;
 
@@ -36,6 +43,7 @@ namespace MummyEscape.Core
             State = Rules.Initial(level);
             _explored = new bool[level.CellCount];
             _revealedHidden = new bool[level.CellCount];
+            for (int i = 0; i < level.CellCount && !_canGetStuck; i++) _canGetStuck = level[level.CellAt(i)].IsIrreversible;
             RevealAround(State.Position);
         }
 
@@ -85,7 +93,14 @@ namespace MummyEscape.Core
             RevealAround(State.Position);
 
             if (r.Has(StepFlags.Won)) Status = SessionStatus.Won;
-            else if (r.Has(StepFlags.Died)) Status = SessionStatus.Dead;
+            else if (r.Has(StepFlags.Died)) { Status = SessionStatus.Dead; Defeat = DefeatCause.Wounds; }
+            else if (_canGetStuck && (r.Flags & (StepFlags.Swept | StepFlags.Collapsed | StepFlags.Switched)) != 0 && !Solver.CanEscape(Level, State))
+            {
+                // Walled in for good: no point letting the player wander, the run is over.
+                r.Flags |= StepFlags.Trapped;
+                Status = SessionStatus.Dead;
+                Defeat = DefeatCause.Trapped;
+            }
 
             Stepped?.Invoke(r);
             return r;
@@ -112,7 +127,12 @@ namespace MummyEscape.Core
             return t;
         }
 
-        public bool IsDoorOpen(Cell c) => Level.Get(c).Type == TileType.Door && Rules.IsDoorOpen(Level[c], State.Pressed);
+        public bool IsDoorOpen(Cell c) => Level.Get(c).IsGate && Rules.IsGateOpen(Level[c], State.Pressed);
+        public bool IsCollapsed(Cell c) => Rules.IsCollapsed(Level.Get(c), State.Crumbled);
+        /// <summary>Flame jet blasting right now.</summary>
+        public bool IsFiring(Cell c) => Rules.IsFiring(Level.Get(c), State.Tick);
+        /// <summary>Flame jet that will blast on the next move: stepping onto it now burns.</summary>
+        public bool IsAboutToFire(Cell c) => Rules.IsFiring(Level.Get(c), (State.Tick + 1) % Rules.FlameCycle);
         public bool IsChannelActive(int channel) => (State.Pressed & (1 << channel)) != 0;
         public bool IsTrapArmed(Cell c) => Rules.IsTrapArmed(Level.Get(c), State.Disarmed);
 

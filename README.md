@@ -65,7 +65,28 @@ Tout est déterministe : un couple (niveau, variante) produit **la même carte s
 | 4 | 34 | 52 → 60 | 2 → 3 | 3 → 4 |
 | 5 | 40 | 62 → 70 | 3 | 4 |
 
-(+6 coups de plafond par étage supplémentaire.) Garanties du générateur (`Core/Generation/LevelGenerator.cs`, vérifiées par `Core/Solving/LevelValidator.cs`) :
+(+6 coups de plafond par étage supplémentaire.)
+
+**Un thème et une mécanique par acte** (`Runtime/Visual/TombTheme.cs` pour l'ambiance, `DifficultyTable` pour les règles) :
+
+| Acte | Thème | Mécanique propre | Glyphes ASCII |
+|------|-------|------------------|---------------|
+| 1 | L'Antichambre : grès doré, hiéroglyphes | portes / boutons, pièges, portails | |
+| 2 | Les Galeries inondées : pierre mouillée, mousse, gouttes | **courants** : emportent la momie jusqu'au bout, impossibles à remonter | `{ > } <` (haut, droite, bas, gauche) |
+| 3 | Les Ruines effondrées : pierre grise, os, éboulis | **dalles fragiles** : s'effondrent dès qu'on les quitte | `x` |
+| 4 | La Cité d'Anubis : métal, néons cyan | **leviers + barrières laser** : un levier inverse rouges (ouvertes) et bleues (fermées) | `$` levier, `|` rouge, `=` bleue |
+| 5 | Le Sanctuaire embrasé : basalte, lave | **jets de flammes** : crachent un pas sur trois (déphasés), touchent comme des pics | `0` `1` `2` (phase) |
+
+Courants, dalles et leviers peuvent enfermer la momie : après chaque glissade, effondrement ou levier, un BFS (`Solver.CanEscape`) vérifie qu'une sortie reste atteignable ; sinon la partie est perdue (« Emmurée ! »). Le générateur garantit que le chemin optimal ne s'enferme jamais.
+
+**Ambiance** : chaque acte a sa palette, ses décors rares (os, cartouches, flaques, câbles, lave…), son éclairage (ambiance, bloom, couleur des torches murales) et ses particules flottantes. `World/FxRig.cs` joue les effets : poussière des pas, étincelles et flash de lumière des boutons/leviers, portes qui s'ouvrent, implosion/explosion des portails, gerbes d'eau, éboulis, flammes, fumée de cécité, flamme qui saute de la torche murale à celle de la momie, victoire et mort. Les effets en boucle (braises des torches, tourbillon des portails, écume des courants, rayon de la sortie) ne tournent que sur les cases visibles ; l'option « Effets lumineux avancés » coupe les effets décoratifs.
+
+**Anti-capture de la carte** (`Services/ScreenGuard.cs`, `Plugins/iOS/MummyScreenGuard.mm`), active seulement pendant les 5 s d'aperçu :
+- Android : `FLAG_SECURE` sur la fenêtre (captures et enregistrements noirs) ;
+- iOS (capture impossible à bloquer) : une capture d'écran jette le tombeau et en tire un nouveau (nouvel aperçu, message au joueur) ; un enregistrement / recopie d'écran (`UIScreen.isCaptured`) masque la carte et met le compte à rebours en pause.
+- Test dans l'éditeur : `GameApp.I.Guard.SimulateScreenshot()` / `SimulateCapture(true)`.
+
+Garanties du générateur (`Core/Generation/LevelGenerator.cs`, vérifiées par `Core/Solving/LevelValidator.cs`) :
 - au moins **1 interaction obligatoire** (bouton ou téléporteur) sur le chemin optimal ; sans elle, la sortie est inatteignable ;
 - les **culs-de-sac servent** : bouton, téléporteur, échelle, point de chute… les impasses vides sont rebouclées ou comblées (seule exception : derrière une fausse porte, qui est le leurre) ;
 - la **sortie est loin** de l'entrée (≥ 2/3 du côté du tombeau), ou derrière une porte dont le bouton est lui-même loin ;
