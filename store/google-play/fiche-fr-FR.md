@@ -20,7 +20,7 @@ Tu es la momie : échappe-toi du tombeau plongé dans le noir, coup après coup.
 Tu es la momie. Réveillée au fond d'un tombeau, tu dois trouver la sortie… dans le noir.
 
 MÉMORISE, PUIS AVANCE À L'AVEUGLE
-Au début de chaque niveau, le tombeau entier s'affiche pendant 5 secondes. Puis l'obscurité tombe : ta torche n'éclaire plus que les cases voisines. Chaque glissement du doigt fait avancer la momie d'une case. Ton but : t'échapper en un minimum de coups.
+Au début de chaque niveau, le tombeau s'affiche étage par étage, 10 secondes chacun (passable). Puis l'obscurité tombe : ta torche n'éclaire plus que les cases voisines. Chaque glissement du doigt fait avancer la momie d'une case. Ton but : t'échapper en un minimum de coups.
 
 UN NOUVEAU LABYRINTHE À CHAQUE PARTIE
 Chaque partie tire un tombeau différent, toujours vérifié par un solveur : il existe un chemin parfait, à toi de le trouver. Impossible d'apprendre les niveaux par cœur : il faut de la logique et de la mémoire.

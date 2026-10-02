@@ -14,6 +14,8 @@ namespace MummyEscape.Services
         /// <summary>Bloom, film grain, dust particles and flickering torch. Off = better battery life.</summary>
         public bool AdvancedLighting { get; private set; }
         public bool Haptics { get; private set; }
+        /// <summary>Start-of-run tomb preview (memorise, then play in the dark). Off = every run starts in the dark at once.</summary>
+        public bool ShowPreview { get; private set; }
         /// <summary>Language code ("fr", "en"), or "" to follow the device language.</summary>
         public string Language { get; private set; }
 
@@ -27,6 +29,7 @@ namespace MummyEscape.Services
             Brightness = PlayerPrefs.GetFloat("brightness", 0f);
             AdvancedLighting = PlayerPrefs.GetInt("fx", 1) == 1;
             Haptics = PlayerPrefs.GetInt("haptics", 1) == 1;
+            ShowPreview = PlayerPrefs.GetInt("preview", 1) == 1;
             Language = PlayerPrefs.GetString("lang", "");
         }
 
@@ -36,6 +39,7 @@ namespace MummyEscape.Services
         public void SetBrightness(float v) { Brightness = Mathf.Clamp(v, -1f, 1f); PlayerPrefs.SetFloat("brightness", Brightness); Commit(); }
         public void SetAdvancedLighting(bool on) { AdvancedLighting = on; PlayerPrefs.SetInt("fx", on ? 1 : 0); Commit(); }
         public void SetHaptics(bool on) { Haptics = on; PlayerPrefs.SetInt("haptics", on ? 1 : 0); Commit(); }
+        public void SetShowPreview(bool on) { ShowPreview = on; PlayerPrefs.SetInt("preview", on ? 1 : 0); Commit(); }
         public void SetLanguage(string code) { Language = code ?? ""; PlayerPrefs.SetString("lang", Language); Commit(); Loc.Apply(Language); }
 
         void Commit()

@@ -1,6 +1,6 @@
 # Mummy Escape
 
-Puzzle-labyrinthe mobile (Unity 6000.3 LTS, URP 2D). Une momie s'échappe d'un tombeau plongé dans le noir : la carte entière est montrée 5 s au début, puis la momie ne voit plus que les cases voisines grâce à sa torche. Chaque swipe = 1 case, objectif = sortir en un minimum de coups. Chaque partie tire un nouveau labyrinthe.
+Puzzle-labyrinthe mobile (Unity 6000.3 LTS, URP 2D). Une momie s'échappe d'un tombeau plongé dans le noir : la carte est montrée au début (10 s par étage), puis la momie ne voit plus que les cases voisines grâce à sa torche. Chaque swipe = 1 case, objectif = sortir en un minimum de coups. Chaque partie tire un nouveau labyrinthe.
 
 ```
 Escape/
@@ -56,7 +56,7 @@ Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnu
 
 ## Contrat de difficulté
 
-**Déroulé d'une partie** : la carte entière (étages empilés, le 1er en bas) est affichée 5 s (bouton « Prêt » pour passer), puis le brouillard tombe. La torche éclaire les cases voisines ; la **poussière** l'éteint (on ne voit plus que sa propre case, impossible de désamorcer) et longer une **torche murale** la rallume (à partir de l'acte 2). Chaque nouvelle partie d'un niveau tire un **nouveau labyrinthe** (variante n° = nombre de parties jouées) : il faut à la fois de la logique et de la mémoire.
+**Déroulé d'une partie** : chaque étage est affiché tour à tour pendant 10 s, l’étage de départ en dernier (bouton « Étage suivant » / « Prêt » pour passer ; le temps s’arrête dans le menu pause ; aperçu désactivable dans les Paramètres), puis le brouillard tombe. La torche éclaire les cases voisines ; la **poussière** l'éteint (on ne voit plus que sa propre case, impossible de désamorcer) et longer une **torche murale** la rallume (à partir de l'acte 2). Chaque nouvelle partie d'un niveau tire un **nouveau labyrinthe** (variante n° = nombre de parties jouées) : il faut à la fois de la logique et de la mémoire.
 
 Tout est déterministe : un couple (niveau, variante) produit **la même carte sur tous les appareils** (graine = hash(version du générateur, niveau, variante), PRNG PCG32 maison). Chaque labyrinthe est validé par un solveur BFS exact (position, boutons, pièges désamorcés, PV, cécité, torche) :
 
@@ -93,7 +93,7 @@ Courants, dalles et leviers peuvent enfermer la momie : après chaque glissade, 
 
 Pour utiliser de vraies pistes (Suno…), déposer `menu`, `act1` … `act5` (.mp3/.ogg/.wav) dans `Assets/_Project/Resources/Music/` : elles remplacent automatiquement les thèmes codés.
 
-**Anti-capture de la carte** (`Services/ScreenGuard.cs`, `Plugins/iOS/MummyScreenGuard.mm`), active seulement pendant les 5 s d'aperçu :
+**Anti-capture de la carte** (`Services/ScreenGuard.cs`, `Plugins/iOS/MummyScreenGuard.mm`), active seulement pendant l’aperçu :
 - Android : `FLAG_SECURE` sur la fenêtre (captures et enregistrements noirs) ;
 - iOS (capture impossible à bloquer) : une capture d'écran jette le tombeau et en tire un nouveau (nouvel aperçu, message au joueur) ; un enregistrement / recopie d'écran (`UIScreen.isCaptured`) masque la carte et met le compte à rebours en pause.
 - Test dans l'éditeur : `GameApp.I.Guard.SimulateScreenshot()` / `SimulateCapture(true)`.
@@ -101,6 +101,7 @@ Pour utiliser de vraies pistes (Suno…), déposer `menu`, `act1` … `act5` (.m
 Garanties du générateur (`Core/Generation/LevelGenerator.cs`, vérifiées par `Core/Solving/LevelValidator.cs`) :
 - au moins **1 interaction obligatoire** (bouton ou téléporteur) sur le chemin optimal ; sans elle, la sortie est inatteignable ;
 - les **culs-de-sac servent** : bouton, téléporteur, échelle, point de chute… les impasses vides sont rebouclées ou comblées (seule exception : derrière une fausse porte, qui est le leurre) ;
+- **2 étages maximum** (tout doit tenir en mémoire après l’aperçu) ; aux **actes 1 et 2**, chaque téléporteur est au fond d’un cul-de-sac : une seule sortie à l’arrivée, un pas en arrière pour repartir (jamais de double passage pour changer de direction) ;
 - la **sortie est loin** de l'entrée (≥ 2/3 du côté du tombeau), ou derrière une porte dont le bouton est lui-même loin ;
 - espacement minimal entre points d'intérêt, PV suffisants pour le par.
 

@@ -39,6 +39,11 @@ namespace MummyEscape.Core
             if (far != null) return far;
             var deadEnd = CheckDeadEnds(level);
             if (deadEnd != null) return deadEnd;
+            if (spec.DeadEndPortals)
+            {
+                var pads = CheckDeadEndPortals(level);
+                if (pads != null) return pads;
+            }
             return CheckSpacing(level, spec);
         }
 
@@ -72,6 +77,22 @@ namespace MummyEscape.Core
                 int degree = 0;
                 foreach (var d in DirExt.All) if (!level.Get(c.Step(d)).IsSolid) degree++;
                 if (degree == 1) return $"dead-end: nothing to find at {c}";
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Every teleporter at the end of a dead end: arriving, there is a single way out, and stepping back takes the
+        /// portal again. A pad with several exits would force a double trip through the portal to change direction.
+        /// </summary>
+        public static string CheckDeadEndPortals(Level level)
+        {
+            foreach (var c in level.AllCells())
+            {
+                if (level[c].Type != TileType.Teleporter) continue;
+                int degree = 0;
+                foreach (var d in DirExt.All) if (!level.Get(c.Step(d)).IsSolid) degree++;
+                if (degree != 1) return $"portal: {c} has {degree} exits (dead end required)";
             }
             return null;
         }

@@ -20,7 +20,7 @@ You are the mummy: escape the pitch-dark tomb, one move at a time.
 You are the mummy. Awakened deep inside a tomb, you must find the way out… in the dark.
 
 MEMORIZE, THEN MOVE BLIND
-At the start of each level, the whole tomb is shown for 5 seconds. Then darkness falls: your torch only lights the tiles around you. Each swipe moves the mummy one tile. Your goal: escape in as few moves as possible.
+At the start of each level, the tomb is shown floor by floor, 10 seconds each (skippable). Then darkness falls: your torch only lights the tiles around you. Each swipe moves the mummy one tile. Your goal: escape in as few moves as possible.
 
 A NEW MAZE EVERY GAME
 Every game draws a different tomb, always checked by a solver: there is a perfect path, and it is up to you to find it. You cannot learn the levels by heart: it takes logic and memory.

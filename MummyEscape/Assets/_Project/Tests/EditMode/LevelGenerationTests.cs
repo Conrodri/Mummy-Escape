@@ -97,6 +97,14 @@ namespace MummyEscape.Tests
         }
 
         [TestCaseSource(nameof(AllMazes))]
+        public void Maze_EasyActsPutPortalsInDeadEnds(int act, int index, int variant)
+        {
+            var level = Get(new LevelId(act, index), variant);
+            if (act <= 2) Assert.IsNull(LevelValidator.CheckDeadEndPortals(level), "acts 1-2: one way out of each teleporter");
+            Assert.That(level.Floors, Is.LessThanOrEqualTo(2), "a human memorises 2 floors at most");
+        }
+
+        [TestCaseSource(nameof(AllMazes))]
         public void Maze_ExitIsFarOrBehindAFarButton(int act, int index, int variant)
         {
             var id = new LevelId(act, index);

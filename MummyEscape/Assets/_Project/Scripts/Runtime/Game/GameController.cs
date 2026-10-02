@@ -32,10 +32,14 @@ namespace MummyEscape.Game
         SwipeInput _input;
         readonly Dictionary<(LevelId, int), Task<Level>> _pending = new Dictionary<(LevelId, int), Task<Level>>();
 
-        /// <summary>The whole tomb is shown this long at the start of every run, then the fog falls.</summary>
-        public const float PreviewSeconds = 5f;
+        /// <summary>Each floor of the tomb is shown this long at the start of every run (one after the other), then the fog falls.</summary>
+        public const float PreviewSecondsPerFloor = 10f;
         public bool Previewing { get; private set; }
         public float PreviewLeft { get; private set; }
+        /// <summary>Floor shown by the preview right now (0 = bottom), and how many floors are still to come.</summary>
+        public int PreviewFloor { get; private set; }
+        public int PreviewFloorsLeft { get; private set; }
+        public bool PreviewOnLastFloor => PreviewFloorsLeft <= 0;
         public event Action PreviewChanged;
         bool _skipPreview;
 
@@ -148,32 +152,54 @@ namespace MummyEscape.Game
 
         // ------------------------------------------------------------------ map preview
 
+        /// <summary>
+        /// Shows the floors one after the other (the start floor last), <see cref="PreviewSecondsPerFloor"/> each; "Ready" moves on
+        /// to the next floor (or starts on the last one). Turned off for good in the settings, the run starts at once.
+        /// </summary>
         IEnumerator PreviewRoutine()
         {
+            if (!_app.Settings.ShowPreview)
+            {
+                _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
+                PreviewChanged?.Invoke();
+                yield break;
+            }
             Previewing = true;
-            _skipPreview = false;
-            PreviewLeft = PreviewSeconds;
             _input.Enabled = false;
             _app.Guard.Arm(true); // the map must not leave the phone (screenshot / recording)
-            _maze.SetPreview(true);
             _app.Lighting.SetPreview(true);
-            _app.Camera.ShowArea(_maze.PreviewBounds());
-            PreviewChanged?.Invoke();
-            // Let the camera settle on the whole tomb before the clock starts.
-            yield return new WaitForSeconds(0.35f);
-            while (PreviewLeft > 0f && !_skipPreview)
+            // The start floor comes last: the preview ends where the mummy stands, and that floor sinks into the dark.
+            var order = new List<int>();
+            int startFloor = Session.Level.Start.Floor;
+            for (int f = 0; f < Session.Level.Floors; f++) if (f != startFloor) order.Add(f);
+            order.Add(startFloor);
+            for (int step = 0; step < order.Count; step++)
             {
-                // Screen being recorded or mirrored: the tomb stays dark, and the clock waits for it to stop.
-                bool captured = _app.Guard.IsCaptured;
-                if (captured != _maze.Concealed)
+                PreviewFloor = order[step];
+                PreviewFloorsLeft = order.Count - 1 - step;
+                _skipPreview = false;
+                PreviewLeft = PreviewSecondsPerFloor;
+                _maze.SetPreview(true, PreviewFloor);
+                _player.gameObject.SetActive(PreviewFloor == startFloor); // the mummy stands on the start floor only
+                _app.Camera.ShowArea(_maze.PreviewBounds());
+                PreviewChanged?.Invoke();
+                // Let the camera settle on the floor before the clock starts.
+                yield return new WaitForSeconds(0.35f);
+                while (PreviewLeft > 0f && !_skipPreview)
                 {
-                    _maze.Concealed = captured;
-                    PreviewChanged?.Invoke();
+                    // Screen being recorded or mirrored: the tomb stays dark, and the clock waits for it to stop (as in the pause menu).
+                    bool captured = _app.Guard.IsCaptured;
+                    if (captured != _maze.Concealed)
+                    {
+                        _maze.Concealed = captured;
+                        PreviewChanged?.Invoke();
+                    }
+                    if (!captured && !_paused) PreviewLeft -= Time.deltaTime;
+                    yield return null;
                 }
-                if (!captured) PreviewLeft -= Time.deltaTime;
-                yield return null;
             }
             PreviewLeft = 0f;
+            _player.gameObject.SetActive(true);
             EndPreviewVisuals();
             _app.Audio.Play(Sfx.Darkness);
             _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
@@ -204,7 +230,7 @@ namespace MummyEscape.Game
             PreviewChanged?.Invoke();
         }
 
-        /// <summary>Lets the player start before the 5 seconds are over.</summary>
+        /// <summary>"Ready": next floor of the preview, or the start of the run on the last one.</summary>
         public void SkipPreview() => _skipPreview = true;
 
         void EndPreviewVisuals()

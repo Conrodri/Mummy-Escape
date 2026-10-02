@@ -406,7 +406,7 @@ namespace MummyEscape.Core
 
                 // Portal gate: wall the route off; a teleporter at the end of a dead end is the only way on.
                 _level[cut] = Tile.Wall;
-                var a = PickSideSpot(before, AllOpen, maxDetour, cut, null, earlier);
+                var a = PickSideSpot(before, AllOpen, maxDetour, cut, null, earlier, deadEndOnly: _spec.DeadEndPortals);
                 if (!a.HasValue) { _level[cut] = Tile.Floor; return false; }
 
                 var reachA = Distances(_level.Start, AllOpen, out _);
@@ -429,7 +429,7 @@ namespace MummyEscape.Core
                         int est = toPad + toExit[i];
                         return IsCell(c) && reachA[i] < 0 && fromCut[i] >= 2 && fromCut[i] <= mfc && toExit[i] >= 0
                                && est >= lower && est <= upper && c.Manhattan(a.Value) >= apart && FarFromPois(c);
-                    }, deadEndsOnly: false);
+                    }, deadEndsOnly: _spec.DeadEndPortals);
                     if (list.Count > 0) { b = list[0]; break; }
                 }
                 if (!b.HasValue) { _level[cut] = Tile.Floor; return false; }
@@ -465,7 +465,7 @@ namespace MummyEscape.Core
             /// A spot for a button or a portal, reachable with <paramref name="pressed"/>, off the route: ideally the end
             /// of a dead end a few steps away from it (a real detour to remember), never right next to the gate.
             /// </summary>
-            Cell? PickSideSpot(List<Cell> route, int pressed, int maxDetour, Cell awayFrom, Cell[] avoid, int[] earlier)
+            Cell? PickSideSpot(List<Cell> route, int pressed, int maxDetour, Cell awayFrom, Cell[] avoid, int[] earlier, bool deadEndOnly = false)
             {
                 var reach = Distances(_level.Start, pressed, out _);
                 var detour = MultiSourceDistances(route, pressed);
@@ -481,6 +481,7 @@ namespace MummyEscape.Core
                     var dead = CandidatesAllFloors(c => Ok(c, md), deadEndsOnly: true);
                     if (dead.Count > 0) return dead[0];
                 }
+                if (deadEndOnly) return null;
                 for (int minDetour = 2; minDetour >= 1; minDetour--)
                 {
                     int md = minDetour;

@@ -20,6 +20,7 @@ namespace MummyEscape.UI.Screens
         CanvasGroup _preview;
         Text _previewTitle;
         Text _previewCount;
+        Button _ready;
         CanvasGroup _intro;
         Text _introText;
         float _introTimer;
@@ -82,18 +83,19 @@ namespace MummyEscape.UI.Screens
             var pbg = UIKit.Image(pv, UIKit.Art.White, new Color(0, 0, 0, 0.62f));
             UIKit.Stretch(pbg.rectTransform);
             _previewTitle = UIKit.Label(pv, "", 40, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.Stretch(_previewTitle.rectTransform, 40, 0, 420, 0);
+            UIKit.Stretch(_previewTitle.rectTransform, 40, 0, 460, 0);
             _previewCount = UIKit.Label(pv, "", 110, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
             var crt = _previewCount.rectTransform;
             crt.anchorMin = crt.anchorMax = new Vector2(1, 0.5f);
             crt.pivot = new Vector2(1, 0.5f);
             crt.sizeDelta = new Vector2(150, 190);
-            crt.anchoredPosition = new Vector2(-250, 0);
-            var ready = UIKit.Button(pv, Loc.T("Prêt"), () => App.Game.SkipPreview(), 42);
+            crt.anchoredPosition = new Vector2(-295, 0);
+            var ready = _ready = UIKit.Button(pv, "Prêt", () => App.Game.SkipPreview(), 42);
+            UIKit.FitText(ready.GetComponentInChildren<Text>(), 26);
             var rrt = (RectTransform)ready.transform;
             rrt.anchorMin = rrt.anchorMax = new Vector2(1, 0.5f);
             rrt.pivot = new Vector2(1, 0.5f);
-            rrt.sizeDelta = new Vector2(200, 130);
+            rrt.sizeDelta = new Vector2(250, 130);
             rrt.anchoredPosition = new Vector2(-30, 0);
             _preview = pv.gameObject.AddComponent<CanvasGroup>();
             SetPreviewVisible(false);
@@ -199,8 +201,9 @@ namespace MummyEscape.UI.Screens
             if (preview)
             {
                 var act = DifficultyTable.GetAct(level.Id.Act);
-                string sub = level.Floors > 1 ? Loc.F("{0} étages empilés, le 1er en bas", level.Floors) : Loc.F("Acte {0} — {1}", level.Id.Act, Loc.T(act.Name));
+                string sub = level.Floors > 1 ? Loc.F("Étage {0} / {1}", App.Game.PreviewFloor + 1, level.Floors) : Loc.F("Acte {0} — {1}", level.Id.Act, Loc.T(act.Name));
                 _previewTitle.text = Loc.T("Mémorise le tombeau !") + $"\n<size=30>{sub}</size>";
+                UIKit.SetLabel(_ready, App.Game.PreviewOnLastFloor ? "Prêt" : "Étage suivant");
             }
 
 

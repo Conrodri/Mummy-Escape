@@ -151,27 +151,25 @@ namespace MummyEscape.World
         }
 
         /// <summary>
-        /// Start-of-run preview: every floor is drawn fully lit (as the player perceives it: hidden portals stay
-        /// hidden), floors stacked bottom to top so the whole tomb fits on screen. Turning it off lets the fog fall back.
+        /// Start-of-run preview: one floor at a time is drawn fully lit (as the player perceives it: hidden portals stay
+        /// hidden), filling the screen. Turning it off lets the fog fall back.
         /// </summary>
         public bool Preview { get; private set; }
 
         /// <summary>Hides the whole map at once (screen capture detected during the preview).</summary>
         public bool Concealed { get; set; }
 
-        /// <summary>Vertical gap between stacked floors in the preview, in tiles.</summary>
-        const float PreviewFloorGap = 2f;
+        /// <summary>Floor drawn by the preview (one at a time: each floor is memorised on its own).</summary>
+        public int PreviewFloor { get; private set; }
 
-        public void SetPreview(bool on)
+        public void SetPreview(bool on, int floor = 0)
         {
             if (_session == null) return;
+            if (on && Preview && floor != PreviewFloor) HideFloor(PreviewFloor); // left floor goes dark at once
             Preview = on;
-            float step = _session.Level.Height + PreviewFloorGap;
+            PreviewFloor = Mathf.Clamp(floor, 0, _floorRoots.Count - 1);
             for (int f = 0; f < _floorRoots.Count; f++)
-            {
-                _floorRoots[f].transform.localPosition = on ? new Vector3(0f, f * step, 0f) : Vector3.zero;
-                _floorRoots[f].SetActive(on || f == _shownFloor);
-            }
+                _floorRoots[f].SetActive(on ? f == PreviewFloor : f == _shownFloor);
             if (!on)
             {
                 // Other floors vanish at once (no fade that would leak them later); the current one sinks slowly.
@@ -190,13 +188,23 @@ namespace MummyEscape.World
             RefreshSprites();
         }
 
-        /// <summary>World bounds of the stacked preview.</summary>
+        void HideFloor(int floor)
+        {
+            if (floor < 0 || floor >= _floors.Count) return;
+            foreach (var tv in _floors[floor])
+            {
+                tv.Visibility = 0f;
+                ApplyColor(tv, Color.clear);
+                if (tv.Glow != null) tv.Glow.intensity = 0f;
+                SetLoop(tv, false);
+            }
+        }
+
+        /// <summary>World bounds of the floor shown by the preview.</summary>
         public Bounds PreviewBounds()
         {
             var level = _session.Level;
-            float step = level.Height + PreviewFloorGap;
-            float h = level.Floors * step - PreviewFloorGap;
-            return new Bounds(new Vector3((level.Width - 1) * 0.5f, (h - 1) * 0.5f, 0f), new Vector3(level.Width, h, 0f));
+            return new Bounds(new Vector3((level.Width - 1) * 0.5f, (level.Height - 1) * 0.5f, 0f), new Vector3(level.Width, level.Height, 0f));
         }
 
         public void Clear()
@@ -365,8 +373,7 @@ namespace MummyEscape.World
 
             if (Preview)
             {
-                foreach (var tiles in _floors)
-                    foreach (var tv in tiles) Paint(tv, true, dt, pulse);
+                foreach (var tv in _floors[PreviewFloor]) Paint(tv, true, dt, pulse);
                 return;
             }
 

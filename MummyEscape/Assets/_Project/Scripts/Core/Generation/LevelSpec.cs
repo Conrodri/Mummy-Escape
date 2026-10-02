@@ -81,6 +81,8 @@ namespace MummyEscape.Core
         public int FireJets;
         /// <summary>Laser gates also raise a blue barrier on the way back when their switch is flipped.</summary>
         public bool BlueBarriers;
+        /// <summary>Teleporters only at the end of dead ends (see <see cref="ActDefinition.DeadEndPortals"/>).</summary>
+        public bool DeadEndPortals;
 
         // ---- Feel ----
         /// <summary>Minimum Manhattan distance between two points of interest.</summary>

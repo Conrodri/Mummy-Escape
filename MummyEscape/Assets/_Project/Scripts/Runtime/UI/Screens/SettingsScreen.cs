@@ -13,8 +13,11 @@ namespace MummyEscape.UI.Screens
         {
             UIKit.Backdrop(Root);
             Header("Paramètres", () => Router.Close(this));
-            var body = Body(200, 110, 50);
-            UIKit.Column(body, 36);
+            // Scrolls once the cards outgrow short screens.
+            var body = UIKit.Scroll(Body(200, 110, 50), out var scroll);
+            UIKit.Stretch((RectTransform)scroll.transform);
+            scroll.GetComponent<Image>().color = Color.clear;
+            body.GetComponent<VerticalLayoutGroup>().spacing = 36;
             var s = App.Settings;
 
             var sound = UIKit.Card(body);
@@ -32,6 +35,7 @@ namespace MummyEscape.UI.Screens
             var comfort = UIKit.Card(body);
             UIKit.SectionTitle(comfort, "Confort et compte");
             UIKit.Toggle(comfort, "Vibrations", s.Haptics, s.SetHaptics);
+            UIKit.Toggle(comfort, "Aperçu du tombeau au départ", s.ShowPreview, s.SetShowPreview);
             _language = UIKit.Button(comfort, "Langue", () => Router.Open<LanguagePickerScreen>(), 38);
             UIKit.Size(_language, 110);
             RefreshLanguage();
@@ -40,7 +44,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(row.transform, "Mon compte", () => Router.Open<AccountScreen>(), 38), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Confidentialité", () => Router.Open<PrivacyScreen>(), 38), -1, -1, 1);
 
-            var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · " + Loc.F("générateur v{0}", Core.DifficultyTable.GeneratorVersion), 28, UIKit.Dim);
+            var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · " + Loc.F("générateur v{0}", Core.DifficultyTable.GeneratorVersion), 28, UIKit.Dim); // noloc
             UIKit.BottomBand(version.rectTransform, 50, 30);
         }
 
