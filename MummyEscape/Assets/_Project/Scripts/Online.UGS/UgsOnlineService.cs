@@ -137,15 +137,14 @@ namespace MummyEscape.Online
 
         LeaderboardRow ToRow(Unity.Services.Leaderboards.Models.LeaderboardEntry e, int rank)
         {
-            var (overPar, hpLost, interactions) = LevelResult.DecodeScore((long)e.Score);
+            var (overPar, timeMs) = LevelResult.DecodeScore((long)e.Score);
             return new LeaderboardRow
             {
                 Rank = rank,
                 PlayerId = e.PlayerId,
                 PlayerName = e.PlayerName,
                 OverPar = overPar,
-                HpLost = hpLost,
-                Interactions = interactions,
+                TimeMs = timeMs,
                 IsMe = e.PlayerId == PlayerId,
                 Country = CountryOf(e),
             };

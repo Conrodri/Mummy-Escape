@@ -57,13 +57,12 @@ namespace MummyEscape.Online
             if (_best.TryGetValue(level.Key, out var r))
                 all.Add((r.LeaderboardScore, new LeaderboardRow
                 {
-                    PlayerId = PlayerId, PlayerName = PlayerName, OverPar = r.OverPar, HpLost = r.MaxHp - r.HpLeft,
-                    Interactions = r.Interactions, IsMe = true, Country = Country,
+                    PlayerId = PlayerId, PlayerName = PlayerName, OverPar = r.OverPar, TimeMs = r.TimeMs, IsMe = true, Country = Country,
                 }));
             else if (local != null && local.HasBest)
-                all.Add((LevelResult.EncodeScore(local.BestOverPar, 0, 0), new LeaderboardRow
+                all.Add((LevelResult.EncodeScore(local.BestOverPar, local.BestTimeMs), new LeaderboardRow
                 {
-                    PlayerId = PlayerId, PlayerName = PlayerName, OverPar = local.BestOverPar, IsMe = true, Country = Country,
+                    PlayerId = PlayerId, PlayerName = PlayerName, OverPar = local.BestOverPar, TimeMs = local.BestTimeMs, IsMe = true, Country = Country,
                 }));
             if (IsDemo) AddDemoScores(level, scope, all);
 
@@ -133,13 +132,13 @@ namespace MummyEscape.Online
                 if (scope == LeaderboardScope.Country && country != Country) continue;
                 // Many players get close to the optimal route, a long tail wanders much more.
                 int overPar = (int)(Mathf.Pow(rng.Range(0, 1000) / 1000f, 1.3f) * spec.MinMoves * 1.2f);
-                int hpLost = rng.Range(0, 10) < 2 ? 1 : 0;
-                int interactions = 1 + rng.Range(0, 6);
+                // About 0.9-2.4 s per move (the route is played from memory), detours included.
+                int timeMs = (spec.MinMoves + 4 + overPar) * (900 + rng.Range(0, 1500)) + rng.Range(0, 1000);
                 string name = scope == LeaderboardScope.Friends ? _friends[i].Name : $"{DemoNames[i % DemoNames.Length]}#{1000 + rng.Range(0, 9000)}";
-                long score = LevelResult.EncodeScore(overPar, hpLost, interactions);
+                long score = LevelResult.EncodeScore(overPar, timeMs);
                 all.Add((score, new LeaderboardRow
                 {
-                    PlayerId = "demo" + i, PlayerName = name, OverPar = overPar, HpLost = hpLost, Interactions = interactions, Country = country,
+                    PlayerId = "demo" + i, PlayerName = name, OverPar = overPar, TimeMs = timeMs, Country = country,
                 }));
             }
         }
@@ -162,7 +161,7 @@ namespace MummyEscape.Online
             {
                 if (lvl.ToString() == furthest) break;
                 var spec = DifficultyTable.Spec(lvl);
-                snapshot.Records.Add(new LevelRecord { Key = lvl.Key, BestOverPar = rng.Range(0, 8), BestMoves = spec.MinMoves + rng.Range(0, 8), BestStars = 1 + rng.Range(0, 3), Completions = 1 });
+                snapshot.Records.Add(new LevelRecord { Key = lvl.Key, BestOverPar = rng.Range(0, 8), BestTimeMs = spec.MinMoves * (600 + rng.Range(0, 700)), BestMoves = spec.MinMoves + rng.Range(0, 8), BestStars = 1 + rng.Range(0, 3), Completions = 1 });
             }
             _progress[id] = snapshot;
         }

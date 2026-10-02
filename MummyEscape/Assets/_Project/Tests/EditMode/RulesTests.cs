@@ -147,7 +147,7 @@ namespace MummyEscape.Tests
             Assert.AreEqual(0, perfect.OverPar);
             Assert.AreEqual(4, sloppyShortMaze.OverPar);
             Assert.Less(perfect.LeaderboardScore, sloppyShortMaze.LeaderboardScore, "a perfect run beats fewer raw moves in an easier maze");
-            Assert.AreEqual((4, 0, 0), LevelResult.DecodeScore(sloppyShortMaze.LeaderboardScore));
+            Assert.AreEqual((4, 0), LevelResult.DecodeScore(sloppyShortMaze.LeaderboardScore), "no time measured");
             Assert.AreEqual("parfait", LevelResult.FormatOverPar(0));
             Assert.AreEqual("+1 coup", LevelResult.FormatOverPar(1));
             Assert.AreEqual("+4 coups", LevelResult.FormatOverPar(4));
@@ -158,6 +158,43 @@ namespace MummyEscape.Tests
             Assert.AreEqual(0, rec.BestOverPar);
             Assert.IsFalse(rec.Merge(sloppyShortMaze));
             Assert.AreEqual(3, rec.Completions);
+        }
+
+        [Test]
+        public void Score_TiesOnMovesAreBrokenByTime()
+        {
+            var fastSloppy = new LevelResult { Won = true, Moves = 26, Par = 24, MaxHp = 2, HpLeft = 2, TimeMs = 9_000 };
+            var slowPerfect = new LevelResult { Won = true, Moves = 24, Par = 24, MaxHp = 2, HpLeft = 2, TimeMs = 95_400 };
+            var fastPerfect = new LevelResult { Won = true, Moves = 30, Par = 30, MaxHp = 2, HpLeft = 1, TimeMs = 31_250 };
+            Assert.Less(slowPerfect.LeaderboardScore, fastSloppy.LeaderboardScore, "moves over par come first");
+            Assert.Less(fastPerfect.LeaderboardScore, slowPerfect.LeaderboardScore, "then the fastest run wins");
+            Assert.AreEqual((0, 31_250), LevelResult.DecodeScore(fastPerfect.LeaderboardScore));
+            Assert.Less(LevelResult.EncodeScore(0, 3_600_000), LevelResult.EncodeScore(0, 0), "an unknown time ranks after any measured one");
+            Assert.Less(LevelResult.EncodeScore(0, 0), LevelResult.EncodeScore(1, 1), "...but never above a better gap");
+            Assert.AreEqual("31,2 s", LevelResult.FormatTime(31_250));
+            Assert.AreEqual("1:35,4", LevelResult.FormatTime(95_400));
+            Assert.AreEqual("parfait · 31,2 s", LevelResult.FormatScore(0, 31_250));
+
+            var rec = new LevelRecord();
+            rec.Merge(slowPerfect);
+            Assert.IsTrue(rec.Merge(fastPerfect), "same gap, faster: new record");
+            Assert.AreEqual(31_250, rec.BestTimeMs);
+            Assert.IsFalse(rec.Merge(slowPerfect));
+            Assert.IsFalse(rec.Merge(fastSloppy), "faster but more moves is not a record");
+        }
+
+        [Test]
+        public void Clock_RunsOnlyWhilePlaying()
+        {
+            var s = new GameSession(FromAscii("#####", "#S.E#", "#####"));
+            s.Tick(1.25);
+            s.Tick(-3);
+            s.Move(Dir.Right);
+            s.Move(Dir.Right);
+            Assert.AreEqual(SessionStatus.Won, s.Status);
+            s.Tick(10);
+            Assert.AreEqual(1250, s.ElapsedMs, "frozen once escaped");
+            Assert.AreEqual(1250, s.BuildResult().TimeMs);
         }
 
         [Test]

@@ -26,6 +26,8 @@ namespace MummyEscape.Services
         public int CoinsEarned;
         /// <summary>Previous best gap to the optimal route, -1 when there was none.</summary>
         public int PreviousBestOverPar;
+        /// <summary>Play time of that previous best (0 = unknown).</summary>
+        public int PreviousBestTimeMs;
     }
 
     /// <summary>Local progression (JSON in persistentDataPath). The online layer mirrors it but is never required.</summary>
@@ -113,11 +115,12 @@ namespace MummyEscape.Services
             }
             int previousStars = rec.BestStars;
             int previousBest = rec.HasBest ? rec.BestOverPar : -1;
+            int previousTime = rec.HasBest ? rec.BestTimeMs : 0;
             bool improved = rec.Merge(result);
             int coins = Progression.CoinsFor(result, previousStars);
             Data.Coins += coins;
             Save();
-            return new RecordOutcome { NewBest = improved && result.Won, CoinsEarned = coins, PreviousBestOverPar = previousBest };
+            return new RecordOutcome { NewBest = improved && result.Won, CoinsEarned = coins, PreviousBestOverPar = previousBest, PreviousBestTimeMs = previousTime };
         }
 
         public bool TryBuySkin(string id, int price)

@@ -168,11 +168,21 @@ namespace MummyEscape.UI.Screens
 
         void Update()
         {
+            var session = App.Game.Session;
+            if (session != null) UpdateCounter(session);
             if (App.Game.Previewing)
                 _previewCount.text = Mathf.Max(1, Mathf.CeilToInt(App.Game.PreviewLeft)).ToString();
             if (_introTimer == float.MaxValue || _introTimer < 0f) return;
             _introTimer -= Time.deltaTime;
             if (_introTimer < 0.6f) _intro.alpha = Mathf.Clamp01(_introTimer / 0.6f);
+        }
+
+        /// <summary>"Coups : 12 · 0:42" — the clock starts once the tomb is hidden.</summary>
+        void UpdateCounter(GameSession s)
+        {
+            int sec = s.ElapsedMs / 1000;
+            string text = $"Coups : {s.Moves}  ·  {sec / 60}:{sec % 60:00}";
+            if (_moves.text != text) _moves.text = text;
         }
 
         void Refresh()
@@ -181,7 +191,7 @@ namespace MummyEscape.UI.Screens
             if (s == null) return;
             var level = s.Level;
             _level.text = $"Niveau {level.Id}";
-            _moves.text = $"Coups : {s.Moves}";
+            UpdateCounter(s);
             _floor.text = level.Floors > 1 && !App.Game.Previewing ? $"Étage {s.Position.Floor + 1} / {level.Floors}" : "";
 
             bool preview = App.Game.Previewing;

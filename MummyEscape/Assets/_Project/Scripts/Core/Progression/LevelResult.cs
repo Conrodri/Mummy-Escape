@@ -18,6 +18,8 @@ namespace MummyEscape.Core
         /// <summary>Optimal move count of this maze. Never shown as such: only the gap to it is.</summary>
         public int Par;
         public int TrapsTriggered;
+        /// <summary>Play time after the map preview, in milliseconds (second sort key of the leaderboard).</summary>
+        public int TimeMs;
 
         /// <summary>Moves spent above the optimal route of this maze (0 = perfect run).</summary>
         public int OverPar => Math.Max(0, Moves - Par);
@@ -34,17 +36,44 @@ namespace MummyEscape.Core
             }
         }
 
+        /// <summary>Bump when the score encoding changes: it is part of the leaderboard ids.</summary>
+        public const int ScoreFormat = 2;
+        /// <summary>Time slots per move over par in the encoded score (time capped just under 27.8 hours).</summary>
+        const long TimeSlots = 100_000_000;
+
         /// <summary>
-        /// Leaderboard score, lower is better. Every run is a different maze, so runs are compared by the moves spent
-        /// above that maze's optimal route, then HP lost, then interactions as tie breakers.
+        /// Leaderboard score, lower is better. Every run is a different maze, so runs are ranked by the moves spent
+        /// above that maze's optimal route first, then by play time.
         /// </summary>
-        public long LeaderboardScore => EncodeScore(OverPar, MaxHp - HpLeft, Interactions);
+        public long LeaderboardScore => EncodeScore(OverPar, TimeMs);
 
-        public static long EncodeScore(int overPar, int hpLost, int interactions) =>
-            (long)Math.Min(overPar, 99999) * 10000 + Math.Min(hpLost, 9) * 1000 + Math.Min(interactions, 999);
+        public static long EncodeScore(int overPar, int timeMs) =>
+            Math.Min(Math.Max(overPar, 0), 99999) * TimeSlots + TimeKey(timeMs);
 
-        public static (int overPar, int hpLost, int interactions) DecodeScore(long score) =>
-            ((int)(score / 10000), (int)(score % 10000 / 1000), (int)(score % 1000));
+        public static (int overPar, int timeMs) DecodeScore(long score)
+        {
+            int time = (int)(score % TimeSlots);
+            return ((int)(score / TimeSlots), time >= TimeSlots - 1 ? 0 : time);
+        }
+
+        /// <summary>Unknown times (0, legacy records) sort after every measured time.</summary>
+        static long TimeKey(int timeMs) => timeMs <= 0 ? TimeSlots - 1 : Math.Min(timeMs, TimeSlots - 2);
+
+        /// <summary>Negative when run A beats run B: fewer moves over par, then faster.</summary>
+        public static int CompareRuns(int overParA, int timeMsA, int overParB, int timeMsB) =>
+            EncodeScore(overParA, timeMsA).CompareTo(EncodeScore(overParB, timeMsB));
+
+        /// <summary>"42,3 s" or "1:05,3" (tenths, truncated); "—" when unknown.</summary>
+        public static string FormatTime(int timeMs)
+        {
+            if (timeMs <= 0) return "—";
+            int tenths = timeMs / 100, s = tenths / 10, t = tenths % 10;
+            return s < 60 ? $"{s},{t} s" : $"{s / 60}:{s % 60:00},{t}";
+        }
+
+        /// <summary>Leaderboard cell: "parfait · 42,3 s".</summary>
+        public static string FormatScore(int overPar, int timeMs) =>
+            timeMs > 0 ? $"{FormatOverPar(overPar)} · {FormatTime(timeMs)}" : FormatOverPar(overPar);
 
         /// <summary>"parfait" or "+3 coups": how far from the optimal route, without revealing the route length.</summary>
         public static string FormatOverPar(int overPar) =>
@@ -52,7 +81,7 @@ namespace MummyEscape.Core
 
         public string ShareText(string gameUrl) =>
             $"🏺 Mummy Escape — Niveau {Level}\n" +
-            $"Évadé en {Moves} coups ({FormatOverPar(OverPar)}) {new string('★', Stars)}{new string('☆', 3 - Stars)}\n" +
+            $"Évadé en {Moves} coups, {FormatTime(TimeMs)} ({FormatOverPar(OverPar)}) {new string('★', Stars)}{new string('☆', 3 - Stars)}\n" +
             $"{Interactions} interactions · {HpLeft}/{MaxHp} PV restants\n" +
             $"Feras-tu mieux ? {gameUrl}";
     }
@@ -68,6 +97,8 @@ namespace MummyEscape.Core
         public int BestMoves;
         public int BestStars;
         public int BestHpLeft;
+        /// <summary>Play time of the best run in milliseconds (0 = unknown, legacy save).</summary>
+        public int BestTimeMs;
         public int Completions;
         public int Deaths;
         /// <summary>Mazes drawn so far for this level: the next run plays maze number Runs (a new tomb every time).</summary>
@@ -80,8 +111,8 @@ namespace MummyEscape.Core
             if (!r.Won) { Deaths++; return false; }
             bool first = !HasBest;
             Completions++;
-            bool improved = first || r.OverPar < BestOverPar || (r.OverPar == BestOverPar && r.HpLeft > BestHpLeft);
-            if (improved) { BestOverPar = r.OverPar; BestMoves = r.Moves; BestHpLeft = r.HpLeft; }
+            bool improved = first || LevelResult.CompareRuns(r.OverPar, r.TimeMs, BestOverPar, BestTimeMs) < 0;
+            if (improved) { BestOverPar = r.OverPar; BestTimeMs = r.TimeMs; BestMoves = r.Moves; BestHpLeft = r.HpLeft; }
             BestStars = Math.Max(BestStars, r.Stars);
             return improved;
         }

@@ -173,6 +173,13 @@ namespace MummyEscape.Game
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
         }
 
+        void Update()
+        {
+            // The clock runs once the tomb is hidden, never while paused. Scaled delta: Unity caps it after a hitch or
+            // when the app comes back from the background, so a phone call does not ruin a run.
+            if (Session != null && !Previewing && !_paused) Session.Tick(Time.deltaTime);
+        }
+
         public void SetPaused(bool paused)
         {
             _paused = paused;

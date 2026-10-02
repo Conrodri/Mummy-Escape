@@ -116,7 +116,7 @@ Sans configuration, le jeu tourne **hors ligne** (sauvegarde locale, classement/
 2. Activer Authentication (anonyme), Leaderboards, Friends, Cloud Save dans le dashboard.
 3. Menu **Mummy Escape › Online › Export leaderboard configs** → déployer `Assets/_Project/Online` via Services › Deployment (ou `ugs deploy`).
 
-Score de classement = `coups au-delà du par×10000 + PV perdus×1000 + interactions` (plus bas = meilleur). Chaque partie tirant un labyrinthe différent, on compare l'écart au chemin optimal (« parfait », « +3 coups ») plutôt que le nombre brut de coups. La progression des amis est publiée dans Cloud Save (clé publique `progress`).
+Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = meilleur) : on trie d'abord sur l'écart au chemin optimal (« parfait », « +3 coups »), puis sur le **temps** (chronomètre lancé à la fin de l'aperçu, arrêté en pause). Chaque partie tirant un labyrinthe différent, le nombre brut de coups ne serait pas comparable. Les ids de leaderboard incluent la version du générateur et du format de score (`v2s2_1-1`). La progression des amis est publiée dans Cloud Save (clé publique `progress`).
 
 ## Avant publication
 

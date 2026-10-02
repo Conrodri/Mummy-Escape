@@ -102,6 +102,12 @@ namespace MummyEscape.UI.Screens
             return v;
         }
 
+        /// <summary>Gap to the optimal route, with the play time (the tie breaker) underneath.</summary>
+        static string ScoreText(LeaderboardRow row) =>
+            row.TimeMs > 0
+                ? $"{LevelResult.FormatOverPar(row.OverPar)}\n<size=26><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color></size>"
+                : LevelResult.FormatOverPar(row.OverPar);
+
         public override void OnShow()
         {
             _tabs.Select(_scope);
@@ -171,8 +177,7 @@ namespace MummyEscape.UI.Screens
             v.Name.text = row.IsMe ? $"{row.PlayerName}  (toi)" : row.PlayerName;
             v.Name.color = row.IsMe ? UIKit.Turquoise : UIKit.Sand;
             v.Country.text = row.Country;
-            string score = LevelResult.FormatOverPar(row.OverPar);
-            v.Score.text = row.HpLost > 0 ? $"{score} <size=26><color=#D65440>-{row.HpLost}♥</color></size>" : score;
+            v.Score.text = ScoreText(row);
             v.Background.color = row.IsMe ? new Color(0.13f, 0.4f, 0.4f, 0.65f)
                                : rank <= 3 ? new Color(1f, 0.85f, 0.4f, 0.12f)
                                : new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.04f : 0.07f);
@@ -186,7 +191,7 @@ namespace MummyEscape.UI.Screens
             {
                 var rec = App.Save.GetRecord(_levels[_index]);
                 _meEmpty.text = !loaded ? ""
-                    : rec != null && rec.HasBest ? $"Ton record : {LevelResult.FormatOverPar(rec.BestOverPar)} (pas encore classé)"
+                    : rec != null && rec.HasBest ? $"Ton record : {LevelResult.FormatScore(rec.BestOverPar, rec.BestTimeMs)} (pas encore classé)"
                     : "Termine ce niveau pour entrer au classement";
                 return;
             }
@@ -196,7 +201,7 @@ namespace MummyEscape.UI.Screens
             _me.Name.text = $"{me.PlayerName}  (toi)";
             _me.Name.color = UIKit.Sand;
             _me.Country.text = me.Country;
-            _me.Score.text = LevelResult.FormatOverPar(me.OverPar);
+            _me.Score.text = ScoreText(me);
         }
     }
 }

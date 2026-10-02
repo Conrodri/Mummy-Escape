@@ -19,6 +19,9 @@ namespace MummyEscape.Core
         public int BlindTurnsLeft => State.Blind;
         public int TrapsTriggered { get; private set; }
         public int Teleports { get; private set; }
+        /// <summary>Play time in milliseconds (the host ticks it while the player can act; frozen once the run ends).</summary>
+        public int ElapsedMs => (int)Math.Min(int.MaxValue, _elapsed * 1000.0);
+        double _elapsed;
 
         readonly bool[] _explored;
         readonly bool[] _revealedHidden;
@@ -34,6 +37,12 @@ namespace MummyEscape.Core
             _explored = new bool[level.CellCount];
             _revealedHidden = new bool[level.CellCount];
             RevealAround(State.Position);
+        }
+
+        /// <summary>Advances the run clock. Ignored once the run is over.</summary>
+        public void Tick(double seconds)
+        {
+            if (Status == SessionStatus.Playing && seconds > 0) _elapsed += seconds;
         }
 
         public Cell Position => State.Position;
@@ -118,6 +127,7 @@ namespace MummyEscape.Core
             MaxHp = Level.MaxHp,
             Par = Level.Solution?.Moves ?? 0,
             TrapsTriggered = TrapsTriggered,
+            TimeMs = ElapsedMs,
         };
 
         void RevealAround(Cell p)

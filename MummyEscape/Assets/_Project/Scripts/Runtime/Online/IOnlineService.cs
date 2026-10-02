@@ -14,8 +14,8 @@ namespace MummyEscape.Online
         public string PlayerName;
         /// <summary>Moves above the optimal route of the maze that player drew (0 = perfect run).</summary>
         public int OverPar;
-        public int HpLost;
-        public int Interactions;
+        /// <summary>Play time of that run in milliseconds (tie breaker; 0 = unknown).</summary>
+        public int TimeMs;
         public bool IsMe;
         /// <summary>ISO 3166 alpha-2 code ("FR"), empty when unknown.</summary>
         public string Country = "";
@@ -91,6 +91,6 @@ namespace MummyEscape.Online
         public static Func<IOnlineService> Create = () => new OfflineOnlineService();
 
         /// <summary>Leaderboard id for a level. Includes the generator version so different layouts never mix.</summary>
-        public static string LeaderboardId(LevelId id) => $"v{DifficultyTable.GeneratorVersion}_{id.Key}";
+        public static string LeaderboardId(LevelId id) => $"v{DifficultyTable.GeneratorVersion}s{LevelResult.ScoreFormat}_{id.Key}";
     }
 }

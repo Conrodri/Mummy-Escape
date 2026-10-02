@@ -75,7 +75,7 @@ namespace MummyEscape.UI.Screens
                 else
                 {
                     UIKit.Stars(col, rec?.BestStars ?? 0, 56);
-                    var best = UIKit.Label(col, rec != null && rec.HasBest ? LevelResult.FormatOverPar(rec.BestOverPar) : rec != null && rec.Completions > 0 ? "Évadé" : "Inexploré", 28, UIKit.Dim);
+                    var best = UIKit.Label(col, rec != null && rec.HasBest ? LevelResult.FormatScore(rec.BestOverPar, rec.BestTimeMs) : rec != null && rec.Completions > 0 ? "Évadé" : "Inexploré", 28, UIKit.Dim);
                     UIKit.Size(best, 40);
                 }
             }
