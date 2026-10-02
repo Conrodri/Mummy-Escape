@@ -63,12 +63,13 @@ namespace MummyEscape.Core
         public static int CompareRuns(int overParA, int timeMsA, int overParB, int timeMsB) =>
             EncodeScore(overParA, timeMsA).CompareTo(EncodeScore(overParB, timeMsB));
 
-        /// <summary>"42,3 s" or "1:05,3" (tenths, truncated); "—" when unknown.</summary>
+        /// <summary>"42,3 s" or "1:05,3" (tenths, truncated); "—" when unknown. Separator follows the language.</summary>
         public static string FormatTime(int timeMs)
         {
             if (timeMs <= 0) return "—";
             int tenths = timeMs / 100, s = tenths / 10, t = tenths % 10;
-            return s < 60 ? $"{s},{t} s" : $"{s / 60}:{s % 60:00},{t}";
+            string sep = CoreText.DecimalSeparator;
+            return s < 60 ? $"{s}{sep}{t} s" : $"{s / 60}:{s % 60:00}{sep}{t}";
         }
 
         /// <summary>Leaderboard cell: "parfait · 42,3 s".</summary>
@@ -77,13 +78,14 @@ namespace MummyEscape.Core
 
         /// <summary>"parfait" or "+3 coups": how far from the optimal route, without revealing the route length.</summary>
         public static string FormatOverPar(int overPar) =>
-            overPar <= 0 ? "parfait" : $"+{overPar} coup{(overPar > 1 ? "s" : "")}";
+            overPar <= 0 ? CoreText.T("parfait") : CoreText.F(overPar > 1 ? "+{0} coups" : "+{0} coup", overPar);
 
         public string ShareText(string gameUrl) =>
-            $"🏺 Mummy Escape — Niveau {Level}\n" +
-            $"Évadé en {Moves} coups, {FormatTime(TimeMs)} ({FormatOverPar(OverPar)}) {new string('★', Stars)}{new string('☆', 3 - Stars)}\n" +
-            $"{Interactions} interactions · {HpLeft}/{MaxHp} PV restants\n" +
-            $"Feras-tu mieux ? {gameUrl}";
+            "🏺 Mummy Escape — " + CoreText.F("Niveau {0}", Level) + "\n" +
+            CoreText.F("Évadé en {0} coups, {1} ({2})", Moves, FormatTime(TimeMs), FormatOverPar(OverPar)) +
+            $" {new string('★', Stars)}{new string('☆', 3 - Stars)}\n" +
+            CoreText.F("{0} interactions · {1}/{2} PV restants", Interactions, HpLeft, MaxHp) + "\n" +
+            CoreText.F("Feras-tu mieux ? {0}", gameUrl);
     }
 
     /// <summary>Per level best record (saved locally and mirrored online).</summary>

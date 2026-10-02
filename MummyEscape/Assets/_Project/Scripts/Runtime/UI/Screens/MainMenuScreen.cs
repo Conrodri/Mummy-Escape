@@ -34,7 +34,7 @@ namespace MummyEscape.UI.Screens
             outline.effectColor = new Color(0.35f, 0.2f, 0.05f);
             outline.effectDistance = new Vector2(4, -4);
 
-            var subtitle = UIKit.Label(column, "Échappe-toi du tombeau… à l'aveugle.", 40, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Italic);
+            var subtitle = UIKit.Label(column, Loc.T("Échappe-toi du tombeau… à l'aveugle."), 40, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Italic);
             UIKit.FitText(subtitle, 26);
             UIKit.Size(subtitle, 60);
 
@@ -56,14 +56,14 @@ namespace MummyEscape.UI.Screens
 
             void Add(string label, System.Action onClick, int size, float height) =>
                 UIKit.Size(UIKit.Button(menu, label, onClick, size), height, 760);
-            Add("JOUER", () => Router.Open<LevelSelectScreen>(), 64, 150);
-            Add("Classement", () => Router.Open<LeaderboardScreen>(), 44, 115);
-            Add("Amis", () => Router.Open<FriendsScreen>(), 44, 115);
-            Add("Boutique", () => Router.Open<ShopScreen>(), 44, 115);
-            Add("Paramètres", () => Router.Open<SettingsScreen>(), 44, 115);
+            Add(Loc.T("JOUER"), () => Router.Open<LevelSelectScreen>(), 64, 150);
+            Add(Loc.T("Classement"), () => Router.Open<LeaderboardScreen>(), 44, 115);
+            Add(Loc.T("Amis"), () => Router.Open<FriendsScreen>(), 44, 115);
+            Add(Loc.T("Boutique"), () => Router.Open<ShopScreen>(), 44, 115);
+            Add(Loc.T("Paramètres"), () => Router.Open<SettingsScreen>(), 44, 115);
 #if !UNITY_IOS
             // Apple's guidelines discourage quit buttons; on iOS the home gesture closes the app.
-            Add("Quitter", Quit, 44, 115);
+            Add(Loc.T("Quitter"), Quit, 44, 115);
 #endif
 
             _online = UIKit.Label(Root, "", 26, UIKit.Dim, TextAnchor.MiddleCenter);
@@ -75,11 +75,11 @@ namespace MummyEscape.UI.Screens
             App.Lighting.SetMood(false);
             App.Audio.PlayMusic(0);
             FitMummy();
-            _wallet.text = $"Étoiles : {App.Save.TotalStars}    Scarabées : {App.Save.Data.Coins}";
+            _wallet.text = Loc.F("Étoiles : {0}", App.Save.TotalStars) + "    " + Loc.F("Scarabées : {0}", App.Save.Data.Coins);
             _mummy.sprite = App.Art.MummyPortrait(SkinCatalog.Get(App.Save.Data.SelectedSkin));
             var online = App.Online;
-            _online.text = !online.IsAvailable ? online.Status
-                : online.Account == Online.AccountState.Account ? $"Compte {online.Username} · {online.PlayerName}" : $"Invité : {online.PlayerName}";
+            _online.text = !online.IsAvailable ? Loc.T(online.Status)
+                : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName) : Loc.F("Invité : {0}", online.PlayerName);
         }
 
         void Update()

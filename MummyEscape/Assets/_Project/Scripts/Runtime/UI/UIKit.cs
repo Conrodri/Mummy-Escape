@@ -154,7 +154,7 @@ namespace MummyEscape.UI
                 }
             }
 
-            public void SetLabel(int i, string text) => _labels[i].text = text;
+            public void SetLabel(int i, string text) => _labels[i].text = Loc.T(text);
 
             public void Select(int index)
             {
@@ -180,7 +180,7 @@ namespace MummyEscape.UI
             var rt = Rect("Label", parent);
             var t = rt.gameObject.AddComponent<Text>();
             t.font = Font;
-            t.text = text;
+            t.text = Loc.T(text); // static texts are translated here; dynamic ones use Loc.F at the call site
             t.fontSize = size;
             t.color = color;
             t.alignment = align;
@@ -231,7 +231,7 @@ namespace MummyEscape.UI
         public static void SetLabel(Button b, string text)
         {
             var t = b.GetComponentInChildren<Text>();
-            if (t != null) t.text = text;
+            if (t != null) t.text = Loc.T(text);
         }
 
         public static LayoutElement Size(Component c, float height = -1, float width = -1, float flexWidth = -1, float flexHeight = -1)
@@ -347,7 +347,7 @@ namespace MummyEscape.UI
             {
                 track.color = on ? new Color(0.13f, 0.62f, 0.56f) : new Color(0.22f, 0.18f, 0.15f);
                 krt.anchoredPosition = new Vector2(on ? 112 : 38, 0);
-                state.text = on ? "ON" : "OFF";
+                state.text = on ? Loc.T("ON") : Loc.T("OFF");
                 var srt = state.rectTransform;
                 Stretch(srt, on ? 8 : 76, 0, on ? 76 : 8, 0);
             }

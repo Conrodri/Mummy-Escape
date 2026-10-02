@@ -53,6 +53,8 @@ namespace MummyEscape.App
 
             Settings = new SettingsService();
             Settings.Load();
+            Loc.Apply(Settings.Language); // before any text is built
+            Loc.Changed += OnLanguageChanged;
             Save = new SaveService();
             Save.Load();
             Privacy = new PrivacyService();
@@ -90,6 +92,22 @@ namespace MummyEscape.App
 
             if (Privacy.OnlineAllowed) _ = StartOnline();
             Save.Changed += () => _cloudDirty = true;
+        }
+
+        void OnDestroy() => Loc.Changed -= OnLanguageChanged;
+
+        /// <summary>Screens are built once with their texts: rebuild them all, back where the player was (the settings).</summary>
+        void OnLanguageChanged()
+        {
+            if (UI == null) return;
+            UI.RebuildAll();
+            if (Game.Session != null)
+            {
+                UI.Open<HudScreen>();
+                UI.Open<PauseScreen>();
+            }
+            else UI.Open<MainMenuScreen>();
+            UI.Open<SettingsScreen>();
         }
 
         string OfflineReason => Privacy.NeedsAnswer ? "Hors ligne" : Privacy.Data.IsMinor && !Privacy.Data.ParentalConsent
@@ -214,7 +232,7 @@ namespace MummyEscape.App
                 // Online mode off or signed out: reconnect the cached session just to delete it.
                 var service = OnlineServiceFactory.Create();
                 await service.InitializeAsync();
-                if (!service.IsAvailable) return service is OfflineOnlineService ? null : "Connexion impossible : " + service.Status;
+                if (!service.IsAvailable) return service is OfflineOnlineService ? null : Loc.F("Connexion impossible : {0}", Loc.T(service.Status));
                 Online = service;
             }
             string error = await Online.DeleteAccountAsync();

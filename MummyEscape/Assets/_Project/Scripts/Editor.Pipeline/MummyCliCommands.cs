@@ -54,6 +54,9 @@ namespace MummyEscape.EditorTools
         [CliCommand("mummy_signing_create", "Mummy Escape: create the Google Play upload key in ~/.mummyescape (never overwrites).", Tags = new[] { "mummy" })]
         public static string CreateSigning() => Signing.Create();
 
+        [CliCommand("mummy_loc_check", "Mummy Escape: list player-facing texts without translation and interpolations to wrap in Loc.F.", Tags = new[] { "mummy" })]
+        public static string LocCheck() => EditorTools.LocCheck.Report();
+
         [CliCommand("mummy_build_android", "Mummy Escape: build a development APK to Builds/Android/MummyEscape.apk.", Tags = new[] { "mummy" })]
         public static string BuildAndroid()
         {

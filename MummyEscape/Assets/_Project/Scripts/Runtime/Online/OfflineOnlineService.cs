@@ -30,7 +30,8 @@ namespace MummyEscape.Online
         public bool IsAvailable => false;
         public bool IsDemo { get; }
         public string PlayerId => "local";
-        public string PlayerName { get; private set; } = "Momie";
+        string _playerName; // null = default name, in the current language
+        public string PlayerName { get => _playerName ?? Loc.T("Momie"); private set => _playerName = value; }
         public string Status { get; } = "Hors ligne — configure Unity Gaming Services pour les classements et les amis.";
         public string Country { get; set; } = "";
 
@@ -180,8 +181,8 @@ namespace MummyEscape.Online
 
         static readonly string[] DemoNames =
         {
-            "Nefertari", "Ahmose", "Imhotep", "Tiye", "Khaemwaset", "Merit", "Senenmut", "Hatshepsout", "Kha", "Iset",
-            "Ramses", "Bastet", "Thoutmosis", "Neith", "Amenhotep", "Meritamon", "Sobek", "Henutsen", "Djoser", "Nebet",
+            "Nefertari", "Ahmose", "Imhotep", "Tiye", "Khaemwaset", "Merit", "Senenmut", "Hatshepsout", "Kha", "Iset", // noloc: names
+            "Ramses", "Bastet", "Thoutmosis", "Neith", "Amenhotep", "Meritamon", "Sobek", "Henutsen", "Djoser", "Nebet", // noloc
         };
         static readonly string[] DemoCountries = { "FR", "FR", "BE", "CH", "CA", "US", "DE", "ES", "IT", "MA", "EG", "BR", "JP", "GB" };
 

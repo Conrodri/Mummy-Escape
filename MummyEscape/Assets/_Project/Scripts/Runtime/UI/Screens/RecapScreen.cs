@@ -50,7 +50,7 @@ namespace MummyEscape.UI.Screens
         {
             _result = result;
             bool walledIn = !result.Won && App.Game.Session != null && App.Game.Session.Defeat == DefeatCause.Trapped;
-            _title.text = result.Won ? "ÉVADÉ !" : walledIn ? "EMMURÉE !" : "LA MOMIE A PÉRI";
+            _title.text = Loc.T(result.Won ? "ÉVADÉ !" : walledIn ? "EMMURÉE !" : "LA MOMIE A PÉRI");
             _title.color = result.Won ? UIKit.Gold : UIKit.Danger;
 
             UIKit.ClearChildren(_starsSlot);
@@ -58,21 +58,24 @@ namespace MummyEscape.UI.Screens
             UIKit.Stretch(stars);
 
             string over = result.OverPar == 0
-                ? "<color=#E8C35A><b>Chemin parfait !</b></color>"
-                : $"<b>+{result.OverPar}</b> coup{(result.OverPar > 1 ? "s" : "")} de plus que le chemin idéal";
+                ? "<color=#E8C35A><b>" + Loc.T("Chemin parfait !") + "</b></color>"
+                : Loc.P(result.OverPar, "<b>+{0}</b> coup de plus que le chemin idéal", "<b>+{0}</b> coups de plus que le chemin idéal");
+            string interactions = Loc.P(result.Interactions, "{0} interaction", "{0} interactions");
+            string retry = Loc.T("Réessaie : un nouveau tombeau t'attend.");
             _lines.text = result.Won
-                ? $"Évadé en <b>{result.Moves}</b> coups · <b>{LevelResult.FormatTime(result.TimeMs)}</b>\n{over}\n" +
-                  $"<b>{result.Interactions}</b> interaction{(result.Interactions > 1 ? "s" : "")} · " +
-                  $"<b>{result.HpLeft}</b>/{result.MaxHp} PV"
+                ? Loc.F("Évadé en <b>{0}</b> coups · <b>{1}</b>", result.Moves, LevelResult.FormatTime(result.TimeMs)) + $"\n{over}\n" +
+                  Loc.P(result.Interactions, "<b>{0}</b> interaction", "<b>{0}</b> interactions") + " · " +
+                  Loc.F("<b>{0}</b>/{1} PV", result.HpLeft, result.MaxHp)
                 : walledIn
-                ? $"Plus aucune issue : la momie est emmurée après {result.Moves} coups.\nCourants, dalles effondrées et barrières ne pardonnent pas.\nRéessaie : un nouveau tombeau t'attend."
-                : $"Les pièges ont eu raison de toi après {result.Moves} coups.\n{result.Interactions} interaction{(result.Interactions > 1 ? "s" : "")}\nRéessaie : un nouveau tombeau t'attend.";
+                ? Loc.F("Plus aucune issue : la momie est emmurée après {0} coups.", result.Moves) + "\n" +
+                  Loc.T("Courants, dalles effondrées et barrières ne pardonnent pas.") + "\n" + retry
+                : Loc.F("Les pièges ont eu raison de toi après {0} coups.", result.Moves) + $"\n{interactions}\n" + retry;
 
             string extra = "";
             if (outcome.NewBest && outcome.PreviousBestOverPar >= 0)
-                extra += $"Nouveau record ! ({LevelResult.FormatScore(outcome.PreviousBestOverPar, outcome.PreviousBestTimeMs)} → {LevelResult.FormatScore(result.OverPar, result.TimeMs)})\n";
-            else if (outcome.NewBest) extra += "Premier passage !\n";
-            if (outcome.CoinsEarned > 0) extra += $"+{outcome.CoinsEarned} scarabées";
+                extra += Loc.F("Nouveau record ! ({0} → {1})", LevelResult.FormatScore(outcome.PreviousBestOverPar, outcome.PreviousBestTimeMs), LevelResult.FormatScore(result.OverPar, result.TimeMs)) + "\n";
+            else if (outcome.NewBest) extra += Loc.T("Premier passage !") + "\n";
+            if (outcome.CoinsEarned > 0) extra += Loc.F("+{0} scarabées", outcome.CoinsEarned);
             _extra.text = extra;
 
             var next = Progression.Next(result.Level);

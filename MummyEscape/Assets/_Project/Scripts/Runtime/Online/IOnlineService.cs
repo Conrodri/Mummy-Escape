@@ -67,7 +67,7 @@ namespace MummyEscape.Online
         public static string CheckUsername(string u)
         {
             if (string.IsNullOrEmpty(u) || u.Length < UsernameMin || u.Length > UsernameMax)
-                return $"Identifiant : {UsernameMin} à {UsernameMax} caractères.";
+                return Loc.F("Identifiant : {0} à {1} caractères.", UsernameMin, UsernameMax);
             foreach (char c in u)
                 if (!(char.IsLetterOrDigit(c) && c < 128) && c != '.' && c != '-' && c != '_' && c != '@')
                     return "Identifiant : lettres, chiffres et . - _ @ uniquement (sans accents ni espaces).";
@@ -77,7 +77,7 @@ namespace MummyEscape.Online
         public static string CheckPassword(string p)
         {
             if (string.IsNullOrEmpty(p) || p.Length < PasswordMin || p.Length > PasswordMax)
-                return $"Mot de passe : {PasswordMin} à {PasswordMax} caractères.";
+                return Loc.F("Mot de passe : {0} à {1} caractères.", PasswordMin, PasswordMax);
             bool upper = false, lower = false, digit = false, symbol = false;
             foreach (char c in p)
             {

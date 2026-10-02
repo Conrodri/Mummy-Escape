@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace MummyEscape.UI.Screens
 {
@@ -6,6 +7,7 @@ namespace MummyEscape.UI.Screens
     public sealed class SettingsScreen : UIScreen
     {
         public override bool IsModal => true;
+        Button _language;
 
         protected override void Build()
         {
@@ -23,20 +25,32 @@ namespace MummyEscape.UI.Screens
             var image = UIKit.Card(body);
             UIKit.SectionTitle(image, "Image");
             UIKit.Slider(image, "Luminosité", s.Brightness, s.SetBrightness, -1f, 1f,
-                v => Mathf.Abs(v) < 0.02f ? "normale" : (v > 0 ? "+" : "") + Mathf.RoundToInt(v * 100f) + " %");
+                v => Mathf.Abs(v) < 0.02f ? Loc.T("normale") : (v > 0 ? "+" : "") + Mathf.RoundToInt(v * 100f) + " %");
             UIKit.Toggle(image, "Effets lumineux avancés", s.AdvancedLighting, s.SetAdvancedLighting);
             UIKit.Toggle(image, "Tremblements d'écran", s.ScreenShake, s.SetScreenShake);
 
             var comfort = UIKit.Card(body);
             UIKit.SectionTitle(comfort, "Confort et compte");
             UIKit.Toggle(comfort, "Vibrations", s.Haptics, s.SetHaptics);
+            _language = UIKit.Button(comfort, "Langue", () => Router.Open<LanguagePickerScreen>(), 38);
+            UIKit.Size(_language, 110);
+            RefreshLanguage();
 
             var row = UIKit.Row(comfort, 110, 20);
             UIKit.Size(UIKit.Button(row.transform, "Mon compte", () => Router.Open<AccountScreen>(), 38), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Confidentialité", () => Router.Open<PrivacyScreen>(), 38), -1, -1, 1);
 
-            var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · générateur v{Core.DifficultyTable.GeneratorVersion}", 28, UIKit.Dim);
+            var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · " + Loc.F("générateur v{0}", Core.DifficultyTable.GeneratorVersion), 28, UIKit.Dim);
             UIKit.BottomBand(version.rectTransform, 50, 30);
+        }
+
+        /// <summary>"Langue : Français", or "Langue : automatique (English)" when following the device.</summary>
+        public void RefreshLanguage()
+        {
+            if (_language == null) return;
+            UIKit.SetLabel(_language, string.IsNullOrEmpty(App.Settings.Language)
+                ? Loc.F("Langue : automatique ({0})", Loc.Info.NativeName)
+                : Loc.F("Langue : {0}", Loc.Info.NativeName));
         }
     }
 }

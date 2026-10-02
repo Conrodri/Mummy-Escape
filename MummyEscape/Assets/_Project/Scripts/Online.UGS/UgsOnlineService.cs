@@ -55,7 +55,7 @@ namespace MummyEscape.Online
             catch (Exception e)
             {
                 IsAvailable = false;
-                Status = "Hors ligne (" + e.Message + ")";
+                Status = Loc.F("Hors ligne ({0})", e.Message);
                 Debug.LogWarning("[Online] UGS unavailable, playing offline: " + e);
             }
         }
@@ -374,7 +374,7 @@ namespace MummyEscape.Online
                 {
                     var e = await LeaderboardsService.Instance.GetPlayerScoreAsync(OnlineServiceFactory.LeaderboardId(id), new GetPlayerScoreOptions { IncludeMetadata = true });
                     var (overPar, timeMs) = LevelResult.DecodeScore((long)e.Score);
-                    x.scores.Add($"{id}: +{overPar} coups, {LevelResult.FormatTime(timeMs)}, rang {e.Rank + 1}, pays « {CountryOf(e)} »");
+                    x.scores.Add($"{id}: +{overPar} coups, {LevelResult.FormatTime(timeMs)}, rang {e.Rank + 1}, pays « {CountryOf(e)} »"); // noloc: raw data export
                 }
                 catch (Exception) { /* no score on this level */ }
             }

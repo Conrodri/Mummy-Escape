@@ -26,7 +26,7 @@ namespace MummyEscape.Services
                 intent.Call<AndroidJavaObject>("setAction", intentClass.GetStatic<string>("ACTION_SEND"));
                 intent.Call<AndroidJavaObject>("setType", "text/plain");
                 intent.Call<AndroidJavaObject>("putExtra", intentClass.GetStatic<string>("EXTRA_TEXT"), text);
-                using (var chooser = intentClass.CallStatic<AndroidJavaObject>("createChooser", intent, "Partager mon évasion"))
+                using (var chooser = intentClass.CallStatic<AndroidJavaObject>("createChooser", intent, Loc.T("Partager mon évasion")))
                     activity.Call("startActivity", chooser);
             }
 #elif UNITY_IOS && !UNITY_EDITOR

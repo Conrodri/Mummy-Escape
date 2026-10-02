@@ -36,7 +36,7 @@ namespace MummyEscape.UI.Screens
         void Refresh()
         {
             var save = App.Save;
-            _coins.text = $"{save.Data.Coins} scarabées";
+            _coins.text = Loc.F("{0} scarabées", save.Data.Coins);
             UIKit.ClearChildren(_grid);
             foreach (var skin in SkinCatalog.All)
             {
@@ -48,7 +48,7 @@ namespace MummyEscape.UI.Screens
 
                 bool owned = save.Data.OwnedSkins.Contains(skin.Id);
                 bool selected = save.Data.SelectedSkin == skin.Id;
-                string label = selected ? "Équipé" : owned ? "Équiper" : $"{skin.Price} scarabées";
+                string label = selected ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("{0} scarabées", skin.Price);
                 var s = skin;
                 var btn = UIKit.Button(card.transform, label, () => OnSkin(s), 34);
                 btn.interactable = !selected && (owned || save.Data.Coins >= skin.Price);

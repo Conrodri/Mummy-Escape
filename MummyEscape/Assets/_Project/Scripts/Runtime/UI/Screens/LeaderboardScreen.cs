@@ -130,9 +130,9 @@ namespace MummyEscape.UI.Screens
         {
             var id = _levels[_index];
             var scope = Scopes[_scope];
-            _levelLabel.text = $"Niveau {id}";
-            _actLabel.text = $"Acte {id.Act} · {DifficultyTable.GetAct(id.Act).Name}";
-            _info.text = "Chargement…";
+            _levelLabel.text = Loc.F("Niveau {0}", id);
+            _actLabel.text = Loc.F("Acte {0}", id.Act) + " · " + Loc.T(DifficultyTable.GetAct(id.Act).Name);
+            _info.text = Loc.T("Chargement…");
             _scroll.verticalNormalizedPosition = 1f;
             for (int i = 0; i < _rows.Count; i++) Fill(_rows[i], i + 1, null, scope != LeaderboardScope.Friends);
             ShowMe(null, false);
@@ -140,7 +140,7 @@ namespace MummyEscape.UI.Screens
             string country = App.Online.Country;
             if (scope == LeaderboardScope.Country && string.IsNullOrEmpty(country))
             {
-                _info.text = "Choisis ton pays dans Amis › Profil.";
+                _info.text = Loc.T("Choisis ton pays dans Amis › Profil.");
                 return;
             }
 
@@ -148,11 +148,11 @@ namespace MummyEscape.UI.Screens
             var page = await App.Online.GetLeaderboardAsync(id, scope, Top);
             if (request != _requestId || this == null) return; // superseded by a newer request
 
-            string title = scope == LeaderboardScope.Global ? "Top 100 mondial"
-                         : scope == LeaderboardScope.Country ? $"Top 100 · {CountryService.NameOf(country)}"
-                         : "Toi et tes amis";
-            if (App.Online.IsDemo) title += "  ·  <color=#E8C35A>démo hors ligne</color>";
-            else if (!App.Online.IsAvailable) title += "  ·  hors ligne";
+            string title = scope == LeaderboardScope.Global ? Loc.T("Top 100 mondial")
+                         : scope == LeaderboardScope.Country ? Loc.F("Top 100 · {0}", CountryService.NameOf(country))
+                         : Loc.T("Toi et tes amis");
+            if (App.Online.IsDemo) title += "  ·  <color=#E8C35A>" + Loc.T("démo hors ligne") + "</color>";
+            else if (!App.Online.IsAvailable) title += "  ·  " + Loc.T("hors ligne");
             _info.text = title;
 
             for (int i = 0; i < _rows.Count; i++)
@@ -174,7 +174,7 @@ namespace MummyEscape.UI.Screens
                 v.Background.color = new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.03f : 0.05f);
                 return;
             }
-            v.Name.text = row.IsMe ? $"{row.PlayerName}  (toi)" : row.PlayerName;
+            v.Name.text = row.IsMe ? Loc.F("{0}  (toi)", row.PlayerName) : row.PlayerName;
             v.Name.color = row.IsMe ? UIKit.Turquoise : UIKit.Sand;
             v.Country.text = row.Country;
             v.Score.text = ScoreText(row);
@@ -191,14 +191,14 @@ namespace MummyEscape.UI.Screens
             {
                 var rec = App.Save.GetRecord(_levels[_index]);
                 _meEmpty.text = !loaded ? ""
-                    : rec != null && rec.HasBest ? $"Ton record : {LevelResult.FormatScore(rec.BestOverPar, rec.BestTimeMs)} (pas encore classé)"
-                    : "Termine ce niveau pour entrer au classement";
+                    : rec != null && rec.HasBest ? Loc.F("Ton record : {0} (pas encore classé)", LevelResult.FormatScore(rec.BestOverPar, rec.BestTimeMs))
+                    : Loc.T("Termine ce niveau pour entrer au classement");
                 return;
             }
             _me.Rank.text = me.Rank > 0 ? me.Rank.ToString() : "100+";
             _me.Rank.color = UIKit.Gold;
             _me.Rank.fontSize = 40;
-            _me.Name.text = $"{me.PlayerName}  (toi)";
+            _me.Name.text = Loc.F("{0}  (toi)", me.PlayerName);
             _me.Name.color = UIKit.Sand;
             _me.Country.text = me.Country;
             _me.Score.text = ScoreText(me);

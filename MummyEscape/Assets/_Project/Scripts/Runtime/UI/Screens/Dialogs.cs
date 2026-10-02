@@ -52,9 +52,9 @@ namespace MummyEscape.UI.Screens
 
         public PromptDialog Configure(string title, string hint, string placeholder, string text, string confirmLabel, Func<string, Task<string>> onConfirm)
         {
-            _title.text = title;
-            _hint.text = hint;
-            ((Text)_input.placeholder).text = placeholder;
+            _title.text = Loc.T(title);
+            _hint.text = Loc.T(hint);
+            ((Text)_input.placeholder).text = Loc.T(placeholder);
             _input.text = text ?? "";
             UIKit.SetLabel(_confirm, confirmLabel);
             _error.text = "";
@@ -104,9 +104,9 @@ namespace MummyEscape.UI.Screens
             UIKit.ClearChildren(_list);
             string chosen = App.Save.Data.Country;
             string device = CountryService.Detect();
-            Item("", "Ne pas afficher", "par défaut", string.IsNullOrEmpty(chosen));
-            Item(SaveService.AutoCountry, "Pays de l'appareil", string.IsNullOrEmpty(device) ? "inconnu" : CountryService.NameOf(device), chosen == SaveService.AutoCountry);
-            foreach (var c in CountryService.All) Item(c.Code, c.Name, c.Code, chosen == c.Code);
+            Item("", Loc.T("Ne pas afficher"), Loc.T("par défaut"), string.IsNullOrEmpty(chosen));
+            Item(SaveService.AutoCountry, Loc.T("Pays de l'appareil"), string.IsNullOrEmpty(device) ? Loc.T("inconnu") : CountryService.NameOf(device), chosen == SaveService.AutoCountry);
+            foreach (var c in CountryService.Sorted()) Item(c.Code, c.Name, c.Code, chosen == c.Code);
             _scroll.verticalNormalizedPosition = 1f;
         }
 
@@ -122,6 +122,51 @@ namespace MummyEscape.UI.Screens
             App.SetCountry(code);
             Router.Close(this);
             if (Router.Current is FriendsScreen friends) friends.OnShow();
+        }
+    }
+
+    /// <summary>Game language: automatic (device language) or one of <see cref="Loc.Languages"/>, each shown in its own language.</summary>
+    public sealed class LanguagePickerScreen : UIScreen
+    {
+        public override bool IsModal => true;
+        RectTransform _list;
+
+        protected override void Build()
+        {
+            UIKit.Backdrop(Root);
+            Header("Langue", () => Router.Close(this));
+            var body = Body(190, 40, 40);
+            UIKit.Column(body, 16);
+            _list = UIKit.Scroll(body, out var scroll);
+            UIKit.Size(scroll, -1, -1, -1, 1);
+            _list.GetComponent<VerticalLayoutGroup>().spacing = 6;
+        }
+
+        public override void OnShow()
+        {
+            UIKit.ClearChildren(_list);
+            string chosen = App.Settings.Language;
+            Item("", Loc.T("Automatique (langue du téléphone)"), Loc.FromSystem().NativeName, string.IsNullOrEmpty(chosen));
+            foreach (var l in Loc.Languages) Item(l.Code, l.NativeName, l.Code.ToUpperInvariant(), chosen == l.Code);
+        }
+
+        void Item(string code, string name, string detail, bool selected)
+        {
+            UIKit.ListItem(_list, 120, () => Pick(code), out var h, selected);
+            var label = UIKit.Label(h.transform, "", 42, selected ? UIKit.Gold : UIKit.Sand, TextAnchor.MiddleLeft, selected ? FontStyle.Bold : FontStyle.Normal);
+            label.text = name; // native names are never translated
+            UIKit.Size(label, -1, -1, 1);
+            var d = UIKit.Label(h.transform, "", 30, UIKit.Dim, TextAnchor.MiddleRight);
+            d.text = detail;
+            UIKit.Size(d, -1, 320, 0);
+        }
+
+        void Pick(string code)
+        {
+            Router.Close(this);
+            var before = Loc.Current;
+            App.Settings.SetLanguage(code); // a different language rebuilds every screen
+            if (Loc.Current == before) Router.Get<SettingsScreen>().RefreshLanguage();
         }
     }
 }

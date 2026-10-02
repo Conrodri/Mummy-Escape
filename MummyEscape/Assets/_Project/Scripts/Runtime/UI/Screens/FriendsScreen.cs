@@ -61,10 +61,10 @@ namespace MummyEscape.UI.Screens
         {
             _portrait.sprite = App.Art.MummyPortrait(SkinCatalog.Get(App.Save.Data.SelectedSkin));
             _name.text = App.Online.PlayerName;
-            _code.text = App.Online.IsAvailable ? "Ton code ami : donne-le à tes amis"
-                       : App.Online.IsDemo ? "Démo hors ligne (amis fictifs)" : "Hors ligne";
+            _code.text = Loc.T(App.Online.IsAvailable ? "Ton code ami : donne-le à tes amis"
+                       : App.Online.IsDemo ? "Démo hors ligne (amis fictifs)" : "Hors ligne");
             string country = App.Save.Country;
-            UIKit.SetLabel(_countryButton, string.IsNullOrEmpty(country) ? "Pays ?" : $"Pays : {country}");
+            UIKit.SetLabel(_countryButton, string.IsNullOrEmpty(country) ? "Pays ?" : Loc.F("Pays : {0}", country));
             _tabs.Select(_tab);
             Reload();
         }
@@ -77,15 +77,15 @@ namespace MummyEscape.UI.Screens
             var online = App.Online;
             if (!online.IsAvailable && !online.IsDemo)
             {
-                Message(online.Status + "\n\nLes amis font partie du mode en ligne : Paramètres › Confidentialité.");
+                Message(Loc.T(online.Status) + "\n\n" + Loc.T("Les amis font partie du mode en ligne : Paramètres › Confidentialité."));
                 return;
             }
 
             var requests = await online.GetFriendRequestsAsync();
             var friends = await online.GetFriendsAsync();
             if (id != _reloadId || this == null) return;
-            _tabs.SetLabel(0, friends.Count > 0 ? $"Amis ({friends.Count})" : "Amis");
-            _tabs.SetLabel(1, requests.Count > 0 ? $"Demandes ({requests.Count})" : "Demandes");
+            _tabs.SetLabel(0, friends.Count > 0 ? Loc.F("Amis ({0})", friends.Count) : Loc.T("Amis"));
+            _tabs.SetLabel(1, requests.Count > 0 ? Loc.F("Demandes ({0})", requests.Count) : Loc.T("Demandes"));
 
             if (_tab == 0)
             {
@@ -119,8 +119,8 @@ namespace MummyEscape.UI.Screens
         {
             var p = await App.Online.GetProgressAsync(f.PlayerId);
             if (target == null) return;
-            string status = f.Online ? "En ligne · " : "";
-            target.text = p == null ? status + "progression non partagée" : $"{status}niveau {p.FurthestLevel} · {p.TotalStars} étoiles";
+            string status = f.Online ? Loc.T("En ligne") + " · " : "";
+            target.text = status + (p == null ? Loc.T("progression non partagée") : Loc.F("niveau {0} · {1} étoiles", p.FurthestLevel, p.TotalStars));
         }
 
         void RequestItem(FriendRequest r)
@@ -164,7 +164,7 @@ namespace MummyEscape.UI.Screens
         void ShareCode()
         {
             string name = App.Online.PlayerName;
-            App.Share.ShareText($"Ajoute-moi sur Mummy Escape ! Mon code ami : {name}\n{ShareService.GameUrl}");
+            App.Share.ShareText(Loc.F("Ajoute-moi sur Mummy Escape ! Mon code ami : {0}", name) + "\n" + ShareService.GameUrl);
         }
 
         static string StripTag(string name)
@@ -243,7 +243,7 @@ namespace MummyEscape.UI.Screens
             }
             _furthest.text = p.FurthestLevel;
             int mine = App.Save.TotalStars;
-            _stars.text = $"{p.TotalStars} <size=34><color=#9C8B70>/ toi {mine}</color></size>";
+            _stars.text = $"{p.TotalStars} <size=34><color=#9C8B70>" + Loc.F("/ toi {0}", mine) + "</color></size>";
 
             foreach (var id in DifficultyTable.AllLevels())
             {

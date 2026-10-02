@@ -4,7 +4,7 @@ Ce qui est **déjà prêt** dans le dépôt :
 - **AAB signé :** menu *Mummy Escape › Build › Google Play (AAB signé)*, ou `unity command mummy_build_play`. Il produit `MummyEscape/Builds/Android/MummyEscape.aab` (IL2CPP, ARM64, API cible 36, min 25).
 - **Clé d'envoi :** `~/.mummyescape/` (hors dépôt), avec le certificat `upload_certificate.pem`.
 - **Code de version :** calculé depuis la version (`0.1.0` → `10001`). Monter la version dans *Project Settings › Player › Version* avant chaque envoi.
-- **Fiche :** textes dans [`fiche-fr-FR.md`](fiche-fr-FR.md), visuels dans [`graphics/`](graphics/).
+- **Fiche :** textes dans [`fiche-fr-FR.md`](fiche-fr-FR.md) et sa traduction anglaise [`fiche-en-US.md`](fiche-en-US.md), visuels dans [`graphics/`](graphics/).
 - **Questionnaires :** réponses dans [`declarations.md`](declarations.md).
 - **Pages web publiques** (dossier `docs/`, GitHub Pages) :
   - accueil : https://conrodri.github.io/Mummy-Escape/
@@ -36,7 +36,7 @@ Ce qui est **déjà prêt** dans le dépôt :
 
 ## 3. Configurer l'application (tableau de bord › « Configurer votre application »)
 1. Remplir tout **Contenu de l'application** avec [`declarations.md`](declarations.md).
-2. **Fiche principale** avec [`fiche-fr-FR.md`](fiche-fr-FR.md) et `graphics/`.
+2. **Fiche principale** avec [`fiche-fr-FR.md`](fiche-fr-FR.md) et `graphics/`, puis la traduction anglaise avec [`fiche-en-US.md`](fiche-en-US.md).
 3. **Paramètres de l'appli :**
    - catégorie Réflexion ;
    - e-mail de contact ;

@@ -62,7 +62,7 @@ namespace MummyEscape.UI.Screens
             // Bottom: map peek (hold) + hint.
             var bottom = UIKit.Rect("BottomBar", Root);
             UIKit.BottomBand(bottom, 170, 20);
-            var map = UIKit.Button(bottom, "Carte", null, 40);
+            var map = UIKit.Button(bottom, Loc.T("Carte"), null, 40);
             var mrt = (RectTransform)map.transform;
             mrt.anchorMin = mrt.anchorMax = new Vector2(1, 0.5f);
             mrt.pivot = new Vector2(1, 0.5f);
@@ -89,7 +89,7 @@ namespace MummyEscape.UI.Screens
             crt.pivot = new Vector2(1, 0.5f);
             crt.sizeDelta = new Vector2(150, 190);
             crt.anchoredPosition = new Vector2(-250, 0);
-            var ready = UIKit.Button(pv, "Prêt", () => App.Game.SkipPreview(), 42);
+            var ready = UIKit.Button(pv, Loc.T("Prêt"), () => App.Game.SkipPreview(), 42);
             var rrt = (RectTransform)ready.transform;
             rrt.anchorMin = rrt.anchorMax = new Vector2(1, 0.5f);
             rrt.pivot = new Vector2(1, 0.5f);
@@ -145,7 +145,7 @@ namespace MummyEscape.UI.Screens
 
         void ShowLoading(LevelId id)
         {
-            _introText.text = $"Niveau {id}\n<size=36>Les dieux scellent un nouveau tombeau…</size>";
+            _introText.text = Loc.F("Niveau {0}", id) + "\n<size=36>" + Loc.T("Les dieux scellent un nouveau tombeau…") + "</size>";
             _intro.alpha = 1f;
             _introTimer = float.MaxValue;
         }
@@ -181,7 +181,7 @@ namespace MummyEscape.UI.Screens
         void UpdateCounter(GameSession s)
         {
             int sec = s.ElapsedMs / 1000;
-            string text = $"Coups : {s.Moves}  ·  {sec / 60}:{sec % 60:00}";
+            string text = Loc.F("Coups : {0}", s.Moves) + $"  ·  {sec / 60}:{sec % 60:00}";
             if (_moves.text != text) _moves.text = text;
         }
 
@@ -190,17 +190,17 @@ namespace MummyEscape.UI.Screens
             var s = App.Game.Session;
             if (s == null) return;
             var level = s.Level;
-            _level.text = $"Niveau {level.Id}";
+            _level.text = Loc.F("Niveau {0}", level.Id);
             UpdateCounter(s);
-            _floor.text = level.Floors > 1 && !App.Game.Previewing ? $"Étage {s.Position.Floor + 1} / {level.Floors}" : "";
+            _floor.text = level.Floors > 1 && !App.Game.Previewing ? Loc.F("Étage {0} / {1}", s.Position.Floor + 1, level.Floors) : "";
 
             bool preview = App.Game.Previewing;
             SetPreviewVisible(preview);
             if (preview)
             {
                 var act = DifficultyTable.GetAct(level.Id.Act);
-                string sub = level.Floors > 1 ? $"{level.Floors} étages empilés, le 1er en bas" : $"Acte {level.Id.Act} — {act.Name}";
-                _previewTitle.text = $"Mémorise le tombeau !\n<size=30>{sub}</size>";
+                string sub = level.Floors > 1 ? Loc.F("{0} étages empilés, le 1er en bas", level.Floors) : Loc.F("Acte {0} — {1}", level.Id.Act, Loc.T(act.Name));
+                _previewTitle.text = Loc.T("Mémorise le tombeau !") + $"\n<size=30>{sub}</size>";
             }
 
 
@@ -218,16 +218,16 @@ namespace MummyEscape.UI.Screens
 
             _status.color = preview ? new Color(1f, 0.45f, 0.35f) : s.IsBlind ? new Color(0.75f, 0.55f, 1f) : new Color(1f, 0.62f, 0.3f);
             _status.text = preview
-                    ? App.Game.ScreenCaptured ? "Enregistrement d'écran détecté :\nle tombeau reste dans l'ombre"
-                    : App.Game.ScreenshotRedraw ? "Capture d'écran : les dieux ont scellé\nun autre tombeau !"
+                    ? App.Game.ScreenCaptured ? Loc.T("Enregistrement d'écran détecté :\nle tombeau reste dans l'ombre")
+                    : App.Game.ScreenshotRedraw ? Loc.T("Capture d'écran : les dieux ont scellé\nun autre tombeau !")
                     : ""
-                : s.IsBlind ? $"Aveuglé ! ({s.BlindTurnsLeft})"
-                : !s.TorchLit ? "Torche éteinte : longe une torche murale"
+                : s.IsBlind ? Loc.F("Aveuglé ! ({0})", s.BlindTurnsLeft)
+                : !s.TorchLit ? Loc.T("Torche éteinte : longe une torche murale")
                 : "";
 
             // Act 1 teaches the controls; later acts recall their own rule first, then the map button.
-            const string Controls = "Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines.";
-            const string Map = "Maintiens « Carte » pour revoir ce que tu as exploré.";
+            string Controls = Loc.T("Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines.");
+            string Map = Loc.T("Maintiens « Carte » pour revoir ce que tu as exploré.");
             string mechanic = ActHint(level.Id.Act);
             _hint.text = preview ? ""
                 : mechanic == null ? (s.Moves == 0 ? Controls : s.Moves < 4 ? Map : "")
@@ -241,10 +241,10 @@ namespace MummyEscape.UI.Screens
         {
             switch (act)
             {
-                case 2: return "Les courants t'emportent jusqu'au bout\net ne se remontent pas.";
-                case 3: return "Les dalles fissurées s'effondrent\ndès que tu les quittes.";
-                case 4: return "Un levier inverse les barrières :\nrouges ouvertes, bleues fermées.";
-                case 5: return "Les jets de flammes crachent un pas sur trois :\nobserve leur rythme.";
+                case 2: return Loc.T("Les courants t'emportent jusqu'au bout\net ne se remontent pas.");
+                case 3: return Loc.T("Les dalles fissurées s'effondrent\ndès que tu les quittes.");
+                case 4: return Loc.T("Un levier inverse les barrières :\nrouges ouvertes, bleues fermées.");
+                case 5: return Loc.T("Les jets de flammes crachent un pas sur trois :\nobserve leur rythme.");
             }
             return null;
         }

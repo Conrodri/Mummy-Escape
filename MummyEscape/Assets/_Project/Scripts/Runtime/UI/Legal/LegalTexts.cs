@@ -6,7 +6,7 @@ namespace MummyEscape.UI.Legal
     /// <see cref="Services.PrivacyService.PolicyVersion"/> when a change matters: every player is asked again.
     /// <para>TODO avant publication : remplacer les trois champs ci-dessous par l'identité réelle de l'éditeur.</para>
     /// </summary>
-    public static class LegalTexts
+    public static partial class LegalTexts
     {
         public const string Publisher = "[NOM DE L'ÉDITEUR — personne physique ou société]";
         public const string Address = "[ADRESSE POSTALE DE L'ÉDITEUR]";
@@ -97,7 +97,7 @@ namespace MummyEscape.UI.Legal
         {
             "Un puzzle-labyrinthe égyptien : tu es la momie, et tu dois t'échapper du tombeau plongé dans le noir, coup après coup.",
             "# Informations",
-            "• [Politique de confidentialité](confidentialite.md)\n• [Conditions d'utilisation](conditions.md)\n• [Supprimer ton compte et tes données](suppression-compte.md)",
+            "• [Politique de confidentialité](confidentialite.md)\n• [Conditions d'utilisation](conditions.md)\n• [Supprimer ton compte et tes données](suppression-compte.md)\n• [English version](en/index.md)",
             "# Contact",
             Contact,
         };

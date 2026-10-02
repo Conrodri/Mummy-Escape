@@ -49,12 +49,12 @@ namespace MummyEscape.UI.Screens
         {
             _act = Mathf.Clamp(act, 1, DifficultyTable.ActCount);
             var def = DifficultyTable.GetAct(_act);
-            _actTitle.text = $"Acte {_act}\n{def.Name}";
+            _actTitle.text = Loc.F("Acte {0}", _act) + "\n" + Loc.T(def.Name);
             var first = DifficultyTable.Spec(new LevelId(_act, 1));
             int lastFloors = DifficultyTable.Spec(new LevelId(_act, def.Levels)).Floors;
             _actInfo.text = first.Floors == lastFloors
-                ? $"{first.Floors} étage{(first.Floors > 1 ? "s" : "")}"
-                : $"{first.Floors} à {lastFloors} étages";
+                ? Loc.P(first.Floors, "{0} étage", "{0} étages")
+                : Loc.F("{0} à {1} étages", first.Floors, lastFloors);
 
             UIKit.ClearChildren(_grid);
             for (int i = 1; i <= def.Levels; i++)

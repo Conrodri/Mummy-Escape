@@ -43,8 +43,19 @@ namespace MummyEscape.Services
 
         public static string NameOf(string code)
         {
-            foreach (var c in All) if (c.Code == code) return c.Name;
-            return string.IsNullOrEmpty(code) ? "Inconnu" : code;
+            foreach (var c in All) if (c.Code == code) return Loc.T(c.Name);
+            return string.IsNullOrEmpty(code) ? Loc.T("Inconnu") : code;
+        }
+
+        /// <summary>Countries sorted by their name in the current game language.</summary>
+        public static Country[] Sorted()
+        {
+            var list = Array.ConvertAll(All, c => new Country(c.Code, Loc.T(c.Name)));
+            System.Globalization.CultureInfo culture;
+            try { culture = System.Globalization.CultureInfo.GetCultureInfo(Loc.Info.Code); }
+            catch (Exception) { culture = System.Globalization.CultureInfo.InvariantCulture; }
+            Array.Sort(list, (a, b) => string.Compare(a.Name, b.Name, culture, System.Globalization.CompareOptions.IgnoreNonSpace));
+            return list;
         }
 
 #if UNITY_IOS && !UNITY_EDITOR

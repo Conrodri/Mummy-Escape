@@ -142,6 +142,15 @@ namespace MummyEscape.UI
             return Open<T>();
         }
 
+        /// <summary>Destroys every screen (rebuilt on next use), e.g. after a language change. Open the wanted screens again afterwards.</summary>
+        public void RebuildAll()
+        {
+            CloseAllModals();
+            while (_history.Count > 0) Deactivate(_history.Pop());
+            foreach (var s in _screens.Values) if (s != null) Destroy(s.gameObject);
+            _screens.Clear();
+        }
+
         public void Close(UIScreen modal)
         {
             if (!_modals.Remove(modal)) return;

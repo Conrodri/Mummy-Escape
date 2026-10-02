@@ -49,7 +49,7 @@ namespace MummyEscape.UI.Screens
         }
 
         public static void OpenLegal(UIRouter router, bool privacy) =>
-            router.Open<LegalScreen>().Show(privacy ? "Confidentialité" : "Conditions", privacy ? LegalTexts.Privacy : LegalTexts.Terms);
+            router.Open<LegalScreen>().Show(privacy ? "Confidentialité" : "Conditions", privacy ? LegalTexts.CurrentPrivacy : LegalTexts.CurrentTerms);
     }
 
     // ====================================================================== legal documents
@@ -71,7 +71,7 @@ namespace MummyEscape.UI.Screens
 
         public void Show(string title, string[] lines)
         {
-            _title.text = title;
+            _title.text = Loc.T(title);
             UIKit.ClearChildren(_content);
             PrivacyUI.Document(_content, lines);
             _scroll.verticalNormalizedPosition = 1f;
@@ -173,8 +173,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(row.transform, "Retour", OnBack, 40), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Continuer", () =>
             {
-                if (!ReadYear(year, out int y)) { error.text = "Indique une année valide (4 chiffres)."; return; }
-                if (!accepted) { error.text = "Accepte les conditions pour jouer en ligne."; return; }
+                if (!ReadYear(year, out int y)) { error.text = Loc.T("Indique une année valide (4 chiffres)."); return; }
+                if (!accepted) { error.text = Loc.T("Accepte les conditions pour jouer en ligne."); return; }
                 _isMinor = PrivacyService.IsUnderConsentAge(y, CountryService.Detect());
                 if (_isMinor) Go(Step.Parent);
                 else Finish(true, false, false);
@@ -200,8 +200,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(row.transform, "Hors ligne", () => Finish(false, true, false), 38), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Autoriser", () =>
             {
-                if (!ReadYear(year, out int y) || DateTime.UtcNow.Year - y < 19) { error.text = "L'accord doit venir d'un adulte."; return; }
-                if (!confirmed) { error.text = "Cochez la case pour confirmer votre accord."; return; }
+                if (!ReadYear(year, out int y) || DateTime.UtcNow.Year - y < 19) { error.text = Loc.T("L'accord doit venir d'un adulte."); return; }
+                if (!confirmed) { error.text = Loc.T("Cochez la case pour confirmer votre accord."); return; }
                 Finish(true, true, true);
             }, 40), -1, -1, 1.4f);
         }
@@ -257,13 +257,13 @@ namespace MummyEscape.UI.Screens
             var online = UIKit.Card(_content);
             UIKit.SectionTitle(online, "Mode en ligne");
             UIKit.Toggle(online, "Classements, amis, compte", App.Privacy.OnlineAllowed, SetOnline);
-            PrivacyUI.Paragraph(online, App.Online.IsAvailable ? $"État : en ligne ({AccountLabel()})" : "État : " + App.Online.Status, 28, UIKit.Dim);
+            PrivacyUI.Paragraph(online, App.Online.IsAvailable ? Loc.F("État : en ligne ({0})", AccountLabel()) : Loc.F("État : {0}", Loc.T(App.Online.Status)), 28, UIKit.Dim);
             if (p.IsMinor && p.ParentalConsent)
                 PrivacyUI.Wide(online, "Retirer l'autorisation parentale", () => { App.Privacy.SetParentalConsent(false); App.StopOnline(); Rebuild(); }, 32, 95);
             UIKit.Toggle(online, "Mes amis voient ma progression", p.ShareProgress, v => { App.Privacy.SetShareProgress(v); _ = App.PublishProgress(); });
             string country = App.Save.Data.Country;
-            string countryLabel = string.IsNullOrEmpty(country) ? "non affiché" : country == SaveService.AutoCountry ? "celui de l'appareil" : CountryService.NameOf(country);
-            PrivacyUI.Wide(online, $"Pays dans les classements : {countryLabel}", () => Router.Open<CountryPickerScreen>(), 32, 95);
+            string countryLabel = string.IsNullOrEmpty(country) ? Loc.T("non affiché") : country == SaveService.AutoCountry ? Loc.T("celui de l'appareil") : CountryService.NameOf(country);
+            PrivacyUI.Wide(online, Loc.F("Pays dans les classements : {0}", countryLabel), () => Router.Open<CountryPickerScreen>(), 32, 95);
             PrivacyUI.Wide(online, "Mon compte", () => Router.Open<AccountScreen>(), 36);
 
             var data = UIKit.Card(_content);
@@ -282,11 +282,11 @@ namespace MummyEscape.UI.Screens
                 PrivacyUI.Wide(info, "Contacter l'éditeur", () => Application.OpenURL("mailto:" + LegalTexts.Contact + "?subject=Mummy%20Escape%20-%20donn%C3%A9es%20personnelles"), 34);
             PrivacyUI.Paragraph(info, "Une réclamation ? Tu peux saisir la CNIL (cnil.fr) ou l'autorité de ton pays.", 28, UIKit.Dim);
             if (!string.IsNullOrEmpty(p.AnsweredAtUtc))
-                PrivacyUI.Paragraph(info, $"Ton dernier choix : {p.AnsweredAtUtc.Substring(0, Math.Min(10, p.AnsweredAtUtc.Length))} (politique v{p.AcceptedPolicyVersion}).", 26, UIKit.Dim);
+                PrivacyUI.Paragraph(info, Loc.F("Ton dernier choix : {0} (politique v{1}).", p.AnsweredAtUtc.Substring(0, Math.Min(10, p.AnsweredAtUtc.Length)), p.AcceptedPolicyVersion), 26, UIKit.Dim);
         }
 
         string AccountLabel() =>
-            App.Online.Account == AccountState.Account ? "compte " + App.Online.Username : "invité";
+            App.Online.Account == AccountState.Account ? Loc.F("compte {0}", App.Online.Username) : Loc.T("invité");
 
         void SetOnline(bool on)
         {
@@ -378,8 +378,8 @@ namespace MummyEscape.UI.Screens
             if (online.Account == AccountState.Account)
             {
                 UIKit.SectionTitle(card, "Connecté");
-                PrivacyUI.Paragraph(card, $"Identifiant : {online.Username}\nPseudonyme public : {online.PlayerName}\n\n" +
-                    "Ta progression est sauvegardée en ligne : connecte-toi avec ce compte sur un autre appareil pour la retrouver.");
+                PrivacyUI.Paragraph(card, Loc.F("Identifiant : {0}\nPseudonyme public : {1}", online.Username, online.PlayerName) + "\n\n" +
+                    Loc.T("Ta progression est sauvegardée en ligne : connecte-toi avec ce compte sur un autre appareil pour la retrouver."));
                 PrivacyUI.Wide(card, "Changer le mot de passe", ChangePassword);
                 PrivacyUI.Wide(card, "Se déconnecter", async () => { await App.SignOut(); Rebuild(); });
                 PrivacyUI.Wide(card, "Supprimer mon compte", () => { Router.Close(this); Router.Open<PrivacyScreen>(); }, 34);
@@ -396,7 +396,7 @@ namespace MummyEscape.UI.Screens
             else
             {
                 UIKit.SectionTitle(card, "Non connecté");
-                PrivacyUI.Paragraph(card, online.Status, 30, UIKit.Dim);
+                PrivacyUI.Paragraph(card, Loc.T(online.Status), 30, UIKit.Dim);
                 PrivacyUI.Wide(card, "Continuer en invité", async () => { await App.StartOnline(); Rebuild(); });
             }
             PrivacyUI.Wide(card, "J'ai déjà un compte", SignIn);
@@ -405,8 +405,8 @@ namespace MummyEscape.UI.Screens
 
         void CreateAccount() =>
             Router.Open<FormDialog>().Configure("Créer un compte",
-                $"Identifiant : {AccountRules.UsernameMin}-{AccountRules.UsernameMax} caractères (lettres, chiffres, . - _ @).\n" +
-                $"Mot de passe : {AccountRules.PasswordMin}-{AccountRules.PasswordMax} caractères, majuscule, minuscule, chiffre et symbole.",
+                Loc.F("Identifiant : {0}-{1} caractères (lettres, chiffres, . - _ @).", AccountRules.UsernameMin, AccountRules.UsernameMax) + "\n" +
+                Loc.F("Mot de passe : {0}-{1} caractères, majuscule, minuscule, chiffre et symbole.", AccountRules.PasswordMin, AccountRules.PasswordMax),
                 new[] { ("Identifiant", false), ("Mot de passe", true), ("Confirme le mot de passe", true) }, "Créer",
                 async v =>
                 {
@@ -487,8 +487,8 @@ namespace MummyEscape.UI.Screens
 
         public FormDialog Configure(string title, string hint, (string placeholder, bool secret)[] fields, string confirmLabel, Func<string[], Task<string>> onConfirm)
         {
-            _title.text = title;
-            _hint.text = hint;
+            _title.text = Loc.T(title);
+            _hint.text = Loc.T(hint);
             _hint.gameObject.SetActive(!string.IsNullOrEmpty(hint));
             UIKit.ClearChildren(_fields);
             _inputs = new InputField[fields.Length];
@@ -528,7 +528,7 @@ namespace MummyEscape.UI.Screens
                 foreach (var f in _inputs) f.text = ""; // never keep passwords around
                 Router.Close(this);
             }
-            else _error.text = error;
+            else _error.text = Loc.T(error);
         }
     }
 
@@ -565,8 +565,8 @@ namespace MummyEscape.UI.Screens
 
         public ConfirmDialog Configure(string title, string text, string confirmLabel, Func<Task<string>> onConfirm)
         {
-            _title.text = title;
-            _text.text = text;
+            _title.text = Loc.T(title);
+            _text.text = Loc.T(text);
             _error.text = "";
             UIKit.SetLabel(_confirm, confirmLabel);
             _onConfirm = onConfirm;
@@ -585,7 +585,7 @@ namespace MummyEscape.UI.Screens
             if (this == null) return;
             _confirm.interactable = true;
             if (string.IsNullOrEmpty(error)) Router.Close(this);
-            else _error.text = error;
+            else _error.text = Loc.T(error);
         }
     }
 }

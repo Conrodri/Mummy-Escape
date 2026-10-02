@@ -106,6 +106,15 @@ Garanties du générateur (`Core/Generation/LevelGenerator.cs`, vérifiées par 
 
 Les tests vérifient pour **chaque** niveau et plusieurs variantes : spec respectée, déterminisme par variante, nouvelle carte à chaque partie, par rejoué à l'identique dans `GameSession`, mécaniques réellement obligatoires, impasses utiles, sortie lointaine.
 
+## Langues
+
+Français et anglais, au choix dans **Paramètres › Langue** (par défaut : la langue du téléphone, l'anglais si elle n'est pas prise en charge). Changer de langue reconstruit tous les écrans, même en pleine partie.
+
+- **Le texte français est la clé** : `Loc.T("Jouer")`, `Loc.F("Niveau {0}", id)`, `Loc.P(n, "{0} étage", "{0} étages")`. Les libellés passés à `UIKit` (`Label`, `Button`, `SetLabel`…) sont traduits automatiquement ; seuls les textes dynamiques (`.text =`, interpolations) appellent `Loc` explicitement. `Core` passe par `CoreText` (français par défaut, ce que vérifient les tests).
+- **Traductions** dans `Runtime/Localization/Loc.En.cs` ; textes légaux anglais dans `LegalTexts.En.cs` (exportés dans `docs/en/`).
+- **Vérification** : `unity command mummy_loc_check` (ou *Mummy Escape › Localization › Check missing translations*) liste les textes sans traduction et les interpolations à passer par `Loc.F`. Une ligne marquée `// noloc` est ignorée.
+- **Ajouter une langue** : une valeur dans `Loc.Lang`, son entrée dans `Loc.Languages` et une table `Loc.Xx.cs`.
+
 ## Tests
 
 ```bash
