@@ -9,7 +9,7 @@ namespace MummyEscape.Services
     public sealed class ShareService
     {
         /// <summary>Store link appended to shared results. Replace with the real store URL before release.</summary>
-        public const string GameUrl = "https://mummyescape.game";
+        public const string GameUrl = "https://play.google.com/store/apps/details?id=com.mummyescape.game";
 
 #if UNITY_IOS && !UNITY_EDITOR
         [DllImport("__Internal")] static extern void _MummyShareText(string text);

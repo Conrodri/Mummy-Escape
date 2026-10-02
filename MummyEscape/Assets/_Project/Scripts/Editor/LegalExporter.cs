@@ -19,6 +19,8 @@ namespace MummyEscape.EditorTools
             Directory.CreateDirectory(docs);
             File.WriteAllText(Path.Combine(docs, "confidentialite.md"), ToMarkdown("Mummy Escape — Politique de confidentialité", LegalTexts.Privacy), new UTF8Encoding(false));
             File.WriteAllText(Path.Combine(docs, "conditions.md"), ToMarkdown("Mummy Escape — Conditions d'utilisation", LegalTexts.Terms), new UTF8Encoding(false));
+            File.WriteAllText(Path.Combine(docs, "suppression-compte.md"), ToMarkdown("Mummy Escape — Supprimer ton compte et tes données", LegalTexts.AccountDeletion), new UTF8Encoding(false));
+            File.WriteAllText(Path.Combine(docs, "index.md"), ToMarkdown("Mummy Escape", LegalTexts.Home), new UTF8Encoding(false));
             if (LegalTexts.HasPlaceholders)
                 Debug.LogWarning("[Legal] LegalTexts still holds placeholders ([NOM DE L'ÉDITEUR]…): fill them before publishing.");
             Debug.Log("[Legal] Exported to " + docs);

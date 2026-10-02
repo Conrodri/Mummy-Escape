@@ -557,7 +557,7 @@ namespace MummyEscape.Game
 
         void Haptic()
         {
-#if UNITY_ANDROID || UNITY_IOS
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
             if (_app.Settings.Haptics) Handheld.Vibrate();
 #endif
         }

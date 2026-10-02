@@ -36,6 +36,7 @@ Modules installés pour 6000.3.23f1 : Android (SDK 34–37, NDK r27c, OpenJDK 17
 | Cible | Menu | Sortie |
 |-------|------|--------|
 | Android (test) | Mummy Escape › Build › Android APK (test) | `MummyEscape/Builds/Android/MummyEscape.apk` |
+| **Google Play** | Mummy Escape › Build › Google Play (AAB signé) — ou `unity command mummy_build_play` | `MummyEscape/Builds/Android/MummyEscape.aab` |
 | iOS | Mummy Escape › Build › iOS (projet Xcode) | `MummyEscape/Builds/iOS/` (à compiler et signer sur un Mac) |
 
 En ligne de commande :
@@ -49,7 +50,9 @@ Installer sur un téléphone Android (options développeur + débogage USB activ
 ADB="C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb.exe"
 "$ADB" install -r MummyEscape/Builds/Android/MummyEscape.apk
 ```
-Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnues »). Les builds Android sont IL2CPP / ARM64, Android 7.1+ (API 25). L'icône est générée par **Mummy Escape › Generate app icon**.
+Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnues »). Les builds Android sont IL2CPP / ARM64, Android 7.1+ (API 25), API cible 36. L'icône est générée par **Mummy Escape › Generate app icon**.
+
+**Google Play.** L'AAB est signé avec la **clé d'envoi**, rangée hors du dépôt public dans `~/.mummyescape/` (`upload-keystore.jks`, `signing.properties`, `upload_certificate.pem`). Elle se crée une fois avec *Build › Créer la clé d'envoi Google Play* (`unity command mummy_signing_create`, qui n'écrase jamais une clé existante). En CI, on la fournit par les variables `MUMMY_KEYSTORE`, `MUMMY_KEYSTORE_PASS`, `MUMMY_KEY_ALIAS` et `MUMMY_KEY_PASS`. **Sauvegarde ce dossier.** Le code de version est dérivé de la version (`1.2.3` → `1020301`) : monte la version avant chaque envoi. Fiche, visuels, déclarations et marche à suivre : [`store/google-play/`](store/google-play/PUBLICATION.md).
 
 ## Contrat de difficulté
 
@@ -179,7 +182,7 @@ Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = m
 ## Avant publication
 
 - Installer les modules de build : `unity install-modules --module android --module ios`.
-- `ShareService.GameUrl` est un lien factice à remplacer par celui du store.
+- `ShareService.GameUrl` pointe vers la fiche Google Play (`com.mummyescape.game`) ; ajouter le lien App Store pour iOS.
 - Le partage Android envoie du texte seulement (pas d'image) ; le bouton Quitter est masqué sur iOS (règle Apple).
 - Graphismes (pixel-art) et sons sont générés par code (`ArtLibrary`, `AudioService`) : placeholders cohérents à remplacer par de vrais assets.
 - Bundle id : `com.mummyescape.game`.

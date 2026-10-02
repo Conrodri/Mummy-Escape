@@ -57,3 +57,9 @@ tools/**/bin/
 tools/**/obj/
 TestResults/
 .utmp/
+
+# --- Signature Android (clé d'envoi Google Play : hors dépôt, dans ~/.mummyescape) ---
+*.jks
+*.keystore
+signing.properties
+upload_certificate.pem

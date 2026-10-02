@@ -44,6 +44,16 @@ namespace MummyEscape.EditorTools
             return "Setup done: " + ProjectSetup.ScenePath;
         }
 
+        [CliCommand("mummy_build_play", "Mummy Escape: build the signed Google Play App Bundle (Builds/Android/MummyEscape.aab).", Tags = new[] { "mummy" })]
+        public static string BuildPlay()
+        {
+            BuildScript.GooglePlay();
+            return "AAB: " + System.IO.Path.GetFullPath(BuildScript.BundlePath);
+        }
+
+        [CliCommand("mummy_signing_create", "Mummy Escape: create the Google Play upload key in ~/.mummyescape (never overwrites).", Tags = new[] { "mummy" })]
+        public static string CreateSigning() => Signing.Create();
+
         [CliCommand("mummy_build_android", "Mummy Escape: build a development APK to Builds/Android/MummyEscape.apk.", Tags = new[] { "mummy" })]
         public static string BuildAndroid()
         {

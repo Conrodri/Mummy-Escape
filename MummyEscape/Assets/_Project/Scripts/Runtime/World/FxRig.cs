@@ -405,7 +405,10 @@ namespace MummyEscape.World
                     emission.rateOverTime = 6f;
                     shape.radius = 0.45f;
                     vel.enabled = true;
+                    // All three axes must share a curve mode (here: random between two constants).
+                    vel.x = new ParticleSystem.MinMaxCurve(0f, 0f);
                     vel.y = new ParticleSystem.MinMaxCurve(0.25f, 0.5f);
+                    vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
                     order = 12;
                     break;
                 case Loop.PortalSwirl:
@@ -416,6 +419,8 @@ namespace MummyEscape.World
                     shape.radius = 0.38f;
                     shape.radiusThickness = 0f;
                     vel.enabled = true;
+                    vel.orbitalX = new ParticleSystem.MinMaxCurve(0f, 0f);
+                    vel.orbitalY = new ParticleSystem.MinMaxCurve(0f, 0f);
                     vel.orbitalZ = new ParticleSystem.MinMaxCurve(2.5f, 3.5f);
                     vel.radial = -0.25f;
                     order = 4;
