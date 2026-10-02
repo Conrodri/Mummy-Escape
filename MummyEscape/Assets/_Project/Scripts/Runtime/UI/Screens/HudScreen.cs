@@ -16,6 +16,10 @@ namespace MummyEscape.UI.Screens
         Text _hint;
         RectTransform _hearts;
         readonly List<Image> _ankhs = new List<Image>();
+        RectTransform _bottomBar;
+        CanvasGroup _preview;
+        Text _previewTitle;
+        Text _previewCount;
         CanvasGroup _intro;
         Text _introText;
         float _introTimer;
@@ -70,6 +74,29 @@ namespace MummyEscape.UI.Screens
 
             _hint = UIKit.Label(bottom, "", 32, UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Italic);
             UIKit.Stretch(_hint.rectTransform, 40, 0, 280, 0);
+            _bottomBar = bottom;
+
+            // Start-of-run map preview: countdown + "ready" to start early. Replaces the bottom bar meanwhile.
+            var pv = UIKit.Rect("Preview", Root);
+            UIKit.BottomBand(pv, 210, 20);
+            var pbg = UIKit.Image(pv, UIKit.Art.White, new Color(0, 0, 0, 0.62f));
+            UIKit.Stretch(pbg.rectTransform);
+            _previewTitle = UIKit.Label(pv, "", 40, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.Stretch(_previewTitle.rectTransform, 40, 0, 420, 0);
+            _previewCount = UIKit.Label(pv, "", 110, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var crt = _previewCount.rectTransform;
+            crt.anchorMin = crt.anchorMax = new Vector2(1, 0.5f);
+            crt.pivot = new Vector2(1, 0.5f);
+            crt.sizeDelta = new Vector2(150, 190);
+            crt.anchoredPosition = new Vector2(-250, 0);
+            var ready = UIKit.Button(pv, "Prêt", () => App.Game.SkipPreview(), 42);
+            var rrt = (RectTransform)ready.transform;
+            rrt.anchorMin = rrt.anchorMax = new Vector2(1, 0.5f);
+            rrt.pivot = new Vector2(1, 0.5f);
+            rrt.sizeDelta = new Vector2(200, 130);
+            rrt.anchoredPosition = new Vector2(-30, 0);
+            _preview = pv.gameObject.AddComponent<CanvasGroup>();
+            SetPreviewVisible(false);
 
             // Level intro card.
             var intro = UIKit.Rect("Intro", Root);
@@ -95,6 +122,7 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             App.Game.Changed += Refresh;
+            App.Game.PreviewChanged += Refresh;
             App.Game.LevelLoading += ShowLoading;
             App.Game.LevelStarted += ShowIntro;
             App.Game.SetPaused(false);
@@ -104,6 +132,7 @@ namespace MummyEscape.UI.Screens
         public override void OnHide()
         {
             App.Game.Changed -= Refresh;
+            App.Game.PreviewChanged -= Refresh;
             App.Game.LevelLoading -= ShowLoading;
             App.Game.LevelStarted -= ShowIntro;
         }
@@ -116,24 +145,32 @@ namespace MummyEscape.UI.Screens
 
         void ShowLoading(LevelId id)
         {
-            _introText.text = $"Niveau {id}\n<size=36>Les dieux scellent le tombeau…</size>";
+            _introText.text = $"Niveau {id}\n<size=36>Les dieux scellent un nouveau tombeau…</size>";
             _intro.alpha = 1f;
             _introTimer = float.MaxValue;
         }
 
         void ShowIntro()
         {
-            var level = App.Game.Session.Level;
-            var act = DifficultyTable.GetAct(level.Id.Act);
-            _introText.text = $"Acte {level.Id.Act} — {act.Name}\nNiveau {level.Id}\n<size=38>{(level.Floors > 1 ? $"{level.Floors} étages · " : "")}Trouve la sortie</size>";
-            _intro.alpha = 1f;
-            _introTimer = 2.2f;
+            // The map preview starts right away: no card over it, the title lives in the preview bar.
+            _intro.alpha = 0f;
+            _introTimer = -1f;
             Refresh();
+        }
+
+        void SetPreviewVisible(bool on)
+        {
+            _preview.alpha = on ? 1f : 0f;
+            _preview.blocksRaycasts = on;
+            _preview.interactable = on;
+            _bottomBar.gameObject.SetActive(!on);
         }
 
         void Update()
         {
-            if (_introTimer == float.MaxValue) return;
+            if (App.Game.Previewing)
+                _previewCount.text = Mathf.Max(1, Mathf.CeilToInt(App.Game.PreviewLeft)).ToString();
+            if (_introTimer == float.MaxValue || _introTimer < 0f) return;
             _introTimer -= Time.deltaTime;
             if (_introTimer < 0.6f) _intro.alpha = Mathf.Clamp01(_introTimer / 0.6f);
         }
@@ -145,7 +182,16 @@ namespace MummyEscape.UI.Screens
             var level = s.Level;
             _level.text = $"Niveau {level.Id}";
             _moves.text = $"Coups : {s.Moves}";
-            _floor.text = level.Floors > 1 ? $"Étage {s.Position.Floor + 1} / {level.Floors}" : "";
+            _floor.text = level.Floors > 1 && !App.Game.Previewing ? $"Étage {s.Position.Floor + 1} / {level.Floors}" : "";
+
+            bool preview = App.Game.Previewing;
+            SetPreviewVisible(preview);
+            if (preview)
+            {
+                var act = DifficultyTable.GetAct(level.Id.Act);
+                string sub = level.Floors > 1 ? $"{level.Floors} étages empilés, le 1er en bas" : $"Acte {level.Id.Act} — {act.Name}";
+                _previewTitle.text = $"Mémorise le tombeau !\n<size=30>{sub}</size>";
+            }
 
             while (_ankhs.Count < level.MaxHp)
             {
@@ -159,10 +205,14 @@ namespace MummyEscape.UI.Screens
                 _ankhs[i].sprite = i < s.Hp ? UIKit.Art.Ankh : UIKit.Art.AnkhEmpty;
             }
 
-            _status.text = s.IsBlind ? $"Aveuglé ! ({s.BlindTurnsLeft})" : "";
-            _hint.text = s.Moves == 0
-                ? "Glisse pour avancer d'une case.\nTouche un piège visible pour le désamorcer."
-                : s.Moves < 4 ? "Maintiens « Carte » pour voir ce que tu as exploré." : "";
+            _status.color = s.IsBlind ? new Color(0.75f, 0.55f, 1f) : new Color(1f, 0.62f, 0.3f);
+            _status.text = preview ? ""
+                : s.IsBlind ? $"Aveuglé ! ({s.BlindTurnsLeft})"
+                : !s.TorchLit ? "Torche éteinte : longe une torche murale"
+                : "";
+            _hint.text = preview ? ""
+                : s.Moves == 0 ? "Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines."
+                : s.Moves < 4 ? "Maintiens « Carte » pour revoir ce que tu as exploré." : "";
         }
     }
 }

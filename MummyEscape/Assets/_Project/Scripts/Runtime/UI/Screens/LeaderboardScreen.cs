@@ -171,7 +171,8 @@ namespace MummyEscape.UI.Screens
             v.Name.text = row.IsMe ? $"{row.PlayerName}  (toi)" : row.PlayerName;
             v.Name.color = row.IsMe ? UIKit.Turquoise : UIKit.Sand;
             v.Country.text = row.Country;
-            v.Score.text = row.HpLost > 0 ? $"{row.Moves} coups <size=26><color=#D65440>-{row.HpLost}♥</color></size>" : $"{row.Moves} coups";
+            string score = LevelResult.FormatOverPar(row.OverPar);
+            v.Score.text = row.HpLost > 0 ? $"{score} <size=26><color=#D65440>-{row.HpLost}♥</color></size>" : score;
             v.Background.color = row.IsMe ? new Color(0.13f, 0.4f, 0.4f, 0.65f)
                                : rank <= 3 ? new Color(1f, 0.85f, 0.4f, 0.12f)
                                : new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.04f : 0.07f);
@@ -185,7 +186,7 @@ namespace MummyEscape.UI.Screens
             {
                 var rec = App.Save.GetRecord(_levels[_index]);
                 _meEmpty.text = !loaded ? ""
-                    : rec != null && rec.BestMoves > 0 ? $"Ton record : {rec.BestMoves} coups (pas encore classé)"
+                    : rec != null && rec.HasBest ? $"Ton record : {LevelResult.FormatOverPar(rec.BestOverPar)} (pas encore classé)"
                     : "Termine ce niveau pour entrer au classement";
                 return;
             }
@@ -195,7 +196,7 @@ namespace MummyEscape.UI.Screens
             _me.Name.text = $"{me.PlayerName}  (toi)";
             _me.Name.color = UIKit.Sand;
             _me.Country.text = me.Country;
-            _me.Score.text = $"{me.Moves} coups";
+            _me.Score.text = LevelResult.FormatOverPar(me.OverPar);
         }
     }
 }

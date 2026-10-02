@@ -71,11 +71,57 @@ namespace MummyEscape.World
             RefreshSprites();
         }
 
+        /// <summary>
+        /// Start-of-run preview: every floor is drawn fully lit (as the player perceives it: hidden portals stay
+        /// hidden), floors stacked bottom to top so the whole tomb fits on screen. Turning it off lets the fog fall back.
+        /// </summary>
+        public bool Preview { get; private set; }
+
+        /// <summary>Vertical gap between stacked floors in the preview, in tiles.</summary>
+        const float PreviewFloorGap = 2f;
+
+        public void SetPreview(bool on)
+        {
+            if (_session == null) return;
+            Preview = on;
+            float step = _session.Level.Height + PreviewFloorGap;
+            for (int f = 0; f < _floorRoots.Count; f++)
+            {
+                _floorRoots[f].transform.localPosition = on ? new Vector3(0f, f * step, 0f) : Vector3.zero;
+                _floorRoots[f].SetActive(on || f == _shownFloor);
+            }
+            if (!on)
+            {
+                // Other floors vanish at once (no fade that would leak them later); the current one sinks slowly.
+                int current = _session.Position.Floor;
+                foreach (var tiles in _floors)
+                    foreach (var tv in tiles)
+                        if (tv.Cell.Floor != current && !_session.IsExplored(tv.Cell))
+                        {
+                            tv.Visibility = 0f;
+                            tv.Renderer.color = Color.clear;
+                            if (tv.Glow != null) tv.Glow.intensity = 0f;
+                        }
+                _shownFloor = -1;
+            }
+            RefreshSprites();
+        }
+
+        /// <summary>World bounds of the stacked preview.</summary>
+        public Bounds PreviewBounds()
+        {
+            var level = _session.Level;
+            float step = level.Height + PreviewFloorGap;
+            float h = level.Floors * step - PreviewFloorGap;
+            return new Bounds(new Vector3((level.Width - 1) * 0.5f, (h - 1) * 0.5f, 0f), new Vector3(level.Width, h, 0f));
+        }
+
         public void Clear()
         {
             foreach (var r in _floorRoots) Destroy(r);
             _floorRoots.Clear();
             _floors.Clear();
+            Preview = false;
             _session = null;
         }
 
@@ -90,7 +136,7 @@ namespace MummyEscape.World
             foreach (var tiles in _floors)
                 foreach (var tv in tiles)
                 {
-                    if (!_session.IsExplored(tv.Cell) && !_session.IsVisible(tv.Cell)) continue;
+                    if (!Preview && !_session.IsExplored(tv.Cell) && !_session.IsVisible(tv.Cell)) continue;
                     var t = _session.PerceivedTile(tv.Cell);
                     bool active = (t.Type == TileType.Door || t.Type == TileType.Button || t.Type == TileType.Teleporter) && _session.IsChannelActive(t.Channel);
                     tv.Renderer.sprite = _art.ForTile(t, tv.Variant, _session.IsDoorOpen(tv.Cell), active, _session.IsTrapArmed(tv.Cell));
@@ -135,7 +181,7 @@ namespace MummyEscape.World
                 tv.Glow = go.AddComponent<Light2D>();
                 tv.Glow.lightType = Light2D.LightType.Point;
                 tv.Glow.pointLightInnerRadius = 0.1f;
-                tv.Glow.pointLightOuterRadius = t.Type == TileType.Exit ? 3.5f : 1.6f;
+                tv.Glow.pointLightOuterRadius = t.Type == TileType.Exit ? 3.5f : t.Type == TileType.WallTorch ? 2.6f : 1.6f;
                 tv.Glow.falloffIntensity = 0.7f;
             }
             tv.Glow.enabled = true;
@@ -146,32 +192,43 @@ namespace MummyEscape.World
         void Update()
         {
             if (_session == null) return;
+            float dt = Time.deltaTime;
+            float pulse = 0.85f + 0.15f * Mathf.Sin(Time.time * 2.2f);
+
+            if (Preview)
+            {
+                foreach (var tiles in _floors)
+                    foreach (var tv in tiles) Paint(tv, true, dt, pulse);
+                return;
+            }
+
             int f = FloorOverride >= 0 ? FloorOverride : _session.Position.Floor;
             if (f != _shownFloor)
             {
                 for (int i = 0; i < _floorRoots.Count; i++) _floorRoots[i].SetActive(i == f);
                 _shownFloor = f;
             }
+            foreach (var tv in _floors[f]) Paint(tv, false, dt, pulse);
+        }
 
-            float dt = Time.deltaTime;
-            float pulse = 0.85f + 0.15f * Mathf.Sin(Time.time * 2.2f);
-            foreach (var tv in _floors[f])
-            {
-                bool visible = _session.IsVisible(tv.Cell);
-                float target = visible ? 1f : _session.IsExplored(tv.Cell) ? 0.5f : 0f;
-                if (Mathf.Approximately(tv.Visibility, target) && tv.Glow == null) continue;
-                tv.Visibility = Mathf.MoveTowards(tv.Visibility, target, dt * FadeSpeed);
+        void Paint(TileView tv, bool preview, float dt, float pulse)
+        {
+            bool visible = preview || _session.IsVisible(tv.Cell);
+            float target = visible ? 1f : _session.IsExplored(tv.Cell) ? 0.5f : 0f;
+            if (Mathf.Approximately(tv.Visibility, target) && tv.Glow == null) return;
+            // The preview fades out slowly so the player sees the tomb sink back into darkness.
+            float speed = target < tv.Visibility && target == 0f ? FadeSpeed * 0.4f : FadeSpeed;
+            tv.Visibility = Mathf.MoveTowards(tv.Visibility, target, dt * speed);
 
-                // 0 = black, 0.5 = remembered (cold, dim), 1 = lit by the torch.
-                float v = tv.Visibility;
-                Color c = v <= 0.5f
-                    ? new Color(MemoryTint.r, MemoryTint.g, MemoryTint.b, v * 2f)
-                    : Color.Lerp(MemoryTint, Color.white, (v - 0.5f) * 2f);
-                tv.Renderer.color = c;
+            // 0 = black, 0.5 = remembered (cold, dim), 1 = lit by the torch.
+            float v = tv.Visibility;
+            Color c = v <= 0.5f
+                ? new Color(MemoryTint.r, MemoryTint.g, MemoryTint.b, v * 2f)
+                : Color.Lerp(MemoryTint, Color.white, (v - 0.5f) * 2f);
+            tv.Renderer.color = c;
 
-                if (tv.Glow != null && tv.Glow.enabled)
-                    tv.Glow.intensity = Mathf.Clamp01(v * 2f) * (visible ? 1.1f : 0.55f) * pulse;
-            }
+            if (tv.Glow != null && tv.Glow.enabled)
+                tv.Glow.intensity = Mathf.Clamp01(v * 2f) * (visible ? 1.1f : 0.55f) * pulse;
         }
     }
 }

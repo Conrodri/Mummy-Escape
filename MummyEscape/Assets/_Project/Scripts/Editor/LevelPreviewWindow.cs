@@ -8,7 +8,7 @@ namespace MummyEscape.EditorTools
     /// <summary>Design tool: generate any level, see its spec, par, optimal path and map, floor by floor.</summary>
     public sealed class LevelPreviewWindow : EditorWindow
     {
-        int _act = 1, _index = 1;
+        int _act = 1, _index = 1, _variant;
         Level _level;
         HashSet<Cell> _path = new HashSet<Cell>();
         Vector2 _scroll;
@@ -23,6 +23,7 @@ namespace MummyEscape.EditorTools
             {
                 _act = EditorGUILayout.IntSlider("Acte", _act, 1, DifficultyTable.ActCount);
                 _index = EditorGUILayout.IntSlider("Niveau", _index, 1, DifficultyTable.GetAct(_act).Levels);
+                _variant = Mathf.Max(0, EditorGUILayout.IntField("Labyrinthe n°", _variant));
                 if (GUILayout.Button("Générer", GUILayout.Width(90))) Generate();
             }
 
@@ -56,7 +57,7 @@ namespace MummyEscape.EditorTools
             _error = null;
             try
             {
-                _level = LevelGenerator.Generate(new LevelId(_act, _index));
+                _level = LevelGenerator.Generate(new LevelId(_act, _index), _variant);
                 _path.Clear();
                 var st = Rules.Initial(_level);
                 foreach (var a in _level.Solution.Actions)
@@ -88,6 +89,8 @@ namespace MummyEscape.EditorTools
                 case TileType.BreakableFloor: return new Color(0.45f, 0.3f, 0.15f);
                 case TileType.LadderUp:
                 case TileType.LadderDown: return new Color(0.6f, 0.4f, 0.2f);
+                case TileType.Dust: return new Color(0.6f, 0.58f, 0.55f);
+                case TileType.WallTorch: return new Color(1f, 0.55f, 0.15f);
             }
             return _path.Contains(c) ? new Color(0.95f, 0.8f, 0.55f) : new Color(0.75f, 0.62f, 0.42f);
         }

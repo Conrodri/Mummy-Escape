@@ -249,8 +249,9 @@ namespace MummyEscape.UI.Screens
             {
                 var theirs = p.Records.Find(r => r.Key == id.Key);
                 var me = App.Save.GetRecord(id);
-                if ((theirs == null || theirs.BestMoves == 0) && (me == null || me.BestMoves == 0)) continue;
-                bool iWin = me != null && me.BestMoves > 0 && (theirs == null || theirs.BestMoves == 0 || me.BestMoves < theirs.BestMoves);
+                bool theyHave = theirs != null && theirs.HasBest, iHave = me != null && me.HasBest;
+                if (!theyHave && !iHave) continue;
+                bool iWin = iHave && (!theyHave || me.BestOverPar < theirs.BestOverPar);
                 var level = id;
                 Row(id.ToString(), Format(theirs), Format(me), iWin, () =>
                 {
@@ -271,7 +272,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Label(h.transform, mine, 34, iWin ? UIKit.Turquoise : UIKit.Dim, TextAnchor.MiddleCenter, iWin ? FontStyle.Bold : FontStyle.Normal), -1, -1, 1);
         }
 
-        static string Format(LevelRecord r) => r == null || r.BestMoves == 0 ? "—" : $"{r.BestMoves} coups";
+        static string Format(LevelRecord r) => r == null || !r.HasBest ? "—" : LevelResult.FormatOverPar(r.BestOverPar);
 
         async void Remove()
         {

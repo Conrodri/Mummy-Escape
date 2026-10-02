@@ -6,7 +6,7 @@ namespace MummyEscape.Tests
     {
         /// <summary>
         /// 1-floor level from ASCII rows (top row first): S start, E exit, # wall, . floor, A-P doors, a-p buttons,
-        /// ^ spikes, ~ darkness.
+        /// ^ spikes, ~ darkness, , dust, ! wall torch.
         /// </summary>
         public static Level FromAscii(params string[] rows)
         {
@@ -26,6 +26,8 @@ namespace MummyEscape.Tests
                     else if (ch >= 'a' && ch <= 'p') { t = new Tile { Type = TileType.Button, Channel = (byte)(ch - 'a') }; channels++; }
                     else if (ch == '^') t = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)traps++ };
                     else if (ch == '~') t = new Tile { Type = TileType.Trap, Trap = TrapKind.Darkness, TrapIndex = (byte)traps++ };
+                    else if (ch == ',') t = new Tile { Type = TileType.Dust };
+                    else if (ch == '!') t = new Tile { Type = TileType.WallTorch };
                     level[c] = t;
                 }
             level.ChannelCount = channels;

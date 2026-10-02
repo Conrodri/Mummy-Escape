@@ -1,56 +1,83 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Text;
+using System.Linq;
 using MummyEscape.Core;
 
-// Usage: dotnet run --project tools/LevelLab            -> table of every level (full search, no baked hints)
-//        dotnet run --project tools/LevelLab -- 2-5     -> ASCII map + optimal path of level 2-5
-//        dotnet run --project tools/LevelLab -- --bake  -> regenerate Core/Generation/LevelAttemptTable.cs
-if (args.Length == 1 && args[0] == "--bake")
-{
-    var sb = new StringBuilder();
-    foreach (var id in DifficultyTable.AllLevels())
-    {
-        var level = LevelGenerator.GenerateFromScratch(id);
-        sb.AppendLine($"            {{ {id.Act * 1000 + id.Index}, {level.Attempt} }}, // {id} par {level.Solution.Moves}");
-    }
-    string path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../MummyEscape/Assets/_Project/Scripts/Core/Generation/LevelAttemptTable.cs"));
-    string src = File.ReadAllText(path);
-    int open = src.IndexOf("        {\n", src.IndexOf("Attempts = new", StringComparison.Ordinal), StringComparison.Ordinal) + "        {\n".Length;
-    int close = src.IndexOf("        };", open, StringComparison.Ordinal);
-    src = src.Substring(0, open) + sb + src.Substring(close);
-    src = System.Text.RegularExpressions.Regex.Replace(src, @"GeneratorVersion = \d+;", $"GeneratorVersion = {DifficultyTable.GeneratorVersion};");
-    File.WriteAllText(path, src);
-    Console.WriteLine($"Baked {path}");
-    return;
-}
-
-if (args.Length == 1 && args[0].Contains("-"))
+// Usage: dotnet run -c Release --project tools/LevelLab              -> stats over 20 mazes (variants) of every level
+//        dotnet run -c Release --project tools/LevelLab -- --variants 100 [--act 2]
+//        dotnet run -c Release --project tools/LevelLab -- 2-5 [variant] -> ASCII map + optimal path of one maze
+if (args.Length >= 1 && args[0].Contains("-") && !args[0].StartsWith("--"))
 {
     var parts = args[0].Split('-');
     var id = new LevelId(int.Parse(parts[0]), int.Parse(parts[1]));
-    var level = LevelGenerator.Generate(id);
+    int variant = args.Length > 1 ? int.Parse(args[1]) : 0;
+    var level = LevelGenerator.Generate(id, variant);
+    var sol = level.Solution;
     Console.WriteLine(DifficultyTable.Spec(id));
-    Console.WriteLine($"par {level.Solution.Moves} | interactions {level.Solution.Interactions} | hp left {level.Solution.HpLeft} | attempt {level.Attempt}");
-    Console.WriteLine("solution: " + string.Join(" ", level.Solution.Actions));
-    var path = new System.Collections.Generic.HashSet<Cell>();
+    Console.WriteLine($"variant {variant} | par {sol.Moves} | buttons {sol.ButtonsPressed} portals {sol.Teleports} disarms {sol.Disarms} | hp left {sol.HpLeft} | attempt {level.Attempt}");
+    Console.WriteLine("solution: " + string.Join(" ", sol.Actions));
+    var path = new HashSet<Cell>();
     var s = Rules.Initial(level);
-    foreach (var a in level.Solution.Actions) { s = Rules.Step(level, s, a).State; path.Add(s.Position); }
+    foreach (var a in sol.Actions) { s = Rules.Step(level, s, a).State; path.Add(s.Position); }
+    Console.WriteLine("legend: S start E exit A-P doors a-p buttons @ portal ? hidden & locked % cursed ^ spikes ~ darkness , dust ! wall torch U/D ladders v hole * route");
     Console.WriteLine(level.ToAscii(path));
     return;
 }
 
-Console.WriteLine("level | par  window  | btn int hp | floors size | tp | attempt | ms");
+if (args.Length >= 2 && args[0] == "--why")
+{
+    var p = args[1].Split('-');
+    var wid = new LevelId(int.Parse(p[0]), int.Parse(p[1]));
+    var wspec = DifficultyTable.Spec(wid);
+    for (int a = 0; a < (args.Length > 3 ? int.Parse(args[3]) : 40); a++)
+    {
+        var l = LevelGenerator.TryAttempt(wspec, DifficultyTable.Seed(wid, 0), a, out string why);
+        Console.WriteLine($"attempt {a}: {(l != null ? "OK par " + l.Solution.Moves : why)}");
+        if (l == null && args.Length > 2 && why.StartsWith(args[2]))
+        {
+            Console.WriteLine(LevelGenerator.BuildUnchecked(wspec, DifficultyTable.Seed(wid, 0), a, out _).ToAscii());
+            return;
+        }
+    }
+    return;
+}
+
+int variants = 20, onlyAct = 0;
+for (int i = 0; i < args.Length - 1; i++)
+{
+    if (args[i] == "--variants") variants = int.Parse(args[i + 1]);
+    if (args[i] == "--act") onlyAct = int.Parse(args[i + 1]);
+}
+
+Console.WriteLine($"{variants} mazes per level");
+Console.WriteLine("level | window  | par min-avg-max | mech | attempts avg/max | ms avg/max | top rejections");
 var total = Stopwatch.StartNew();
 foreach (var id in DifficultyTable.AllLevels())
 {
-    var sw = Stopwatch.StartNew();
+    if (onlyAct != 0 && id.Act != onlyAct) continue;
     var spec = DifficultyTable.Spec(id);
-    Level level;
-    try { level = LevelGenerator.GenerateFromScratch(id); }
-    catch (LevelGenerationException e) { Console.WriteLine($"{id,-5} | FAILED {e.Message}"); continue; }
-    var sol = level.Solution;
-    Console.WriteLine($"{id,-5} | {sol.Moves,3} [{spec.MinMoves,2}-{spec.MaxMoves,2}] | {sol.ButtonsPressed,3} {sol.Interactions,3} {sol.HpLeft,2} | {spec.Floors,6} {spec.Width,2}x{spec.Height,-2} | {spec.Teleporters.Count,2} | {level.Attempt,7} | {sw.ElapsedMilliseconds}");
+    var pars = new List<int>();
+    var attempts = new List<int>();
+    var times = new List<long>();
+    var mech = new List<int>();
+    var failures = new Dictionary<string, int>();
+    int failed = 0;
+    for (int v = 0; v < variants; v++)
+    {
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            var level = LevelGenerator.Generate(spec, DifficultyTable.Seed(id, v), failures);
+            pars.Add(level.Solution.Moves);
+            attempts.Add(level.Attempt + 1);
+            mech.Add(level.Solution.Mechanics);
+        }
+        catch (LevelGenerationException) { failed++; }
+        times.Add(sw.ElapsedMilliseconds);
+    }
+    string top = string.Join(", ", failures.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {kv.Value}"));
+    if (pars.Count == 0) { Console.WriteLine($"{id,-5} | ALL FAILED | {top}"); continue; }
+    Console.WriteLine($"{id,-5} | {spec.MinMoves,2}-{spec.MaxMoves,-3} | {pars.Min(),3} {pars.Average(),5:0.0} {pars.Max(),3}   | {mech.Min()}-{mech.Max()}  | {attempts.Average(),6:0.0} {attempts.Max(),4}   | {times.Average(),5:0} {times.Max(),5} | {(failed > 0 ? $"FAILED {failed} " : "")}{top}");
 }
 Console.WriteLine($"total {total.ElapsedMilliseconds} ms");

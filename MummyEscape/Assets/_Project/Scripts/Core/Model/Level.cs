@@ -16,12 +16,16 @@ namespace MummyEscape.Core
         public LevelId Id { get; internal set; }
         public LevelSpec Spec { get; internal set; }
         public int Seed { get; internal set; }
+        /// <summary>Which maze of this level (a new one is drawn for every run).</summary>
+        public int Variant { get; internal set; }
         /// <summary>Which generation attempt produced this level (debug only).</summary>
         public int Attempt { get; internal set; }
         public Cell Start { get; internal set; }
         public Cell Exit { get; internal set; }
         public int ChannelCount { get; internal set; }
         public int TrapCount { get; internal set; }
+        /// <summary>Channels of decoy doors (optional lures, not part of any required route).</summary>
+        public int DecoyChannels { get; internal set; }
         public int MaxHp { get; internal set; } = 2;
         /// <summary>The optimal (omniscient) solution, i.e. the par of the level.</summary>
         public Solution Solution { get; internal set; }
@@ -120,6 +124,8 @@ namespace MummyEscape.Core
                 case TileType.BreakableFloor: return 'v';
                 case TileType.LadderUp: return 'U';
                 case TileType.LadderDown: return 'D';
+                case TileType.Dust: return ',';
+                case TileType.WallTorch: return '!';
             }
             return highlight != null && highlight.Contains(c) ? '*' : '.';
         }

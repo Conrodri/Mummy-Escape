@@ -40,6 +40,8 @@ namespace MummyEscape.Core
         public int Hp => State.Hp;
         public IReadOnlyList<PlayerAction> History => _history;
         public bool IsBlind => BlindTurnsLeft > 0;
+        /// <summary>False after walking into dust, until the mummy passes a wall torch.</summary>
+        public bool TorchLit => !State.TorchOut;
 
         public StepResult Move(Dir dir) => Apply(PlayerAction.Move(dir));
         public StepResult Disarm(Dir dir) => Apply(PlayerAction.Disarm(dir));
@@ -80,13 +82,13 @@ namespace MummyEscape.Core
             return r;
         }
 
-        /// <summary>Currently lit by the mummy's torch: own tile + 4 neighbours (only own tile when blind).</summary>
+        /// <summary>Currently lit by the mummy's torch: own tile + 4 neighbours (only own tile when blind or when the torch is out).</summary>
         public bool IsVisible(Cell c)
         {
             var p = Position;
             if (c.Floor != p.Floor) return false;
             int d = Math.Abs(c.X - p.X) + Math.Abs(c.Y - p.Y);
-            return d == 0 || (d == 1 && !IsBlind);
+            return d == 0 || (d == 1 && State.SeesNeighbours);
         }
 
         /// <summary>Seen at least once (and not wiped by a curse): drawn dimmed.</summary>
@@ -108,6 +110,7 @@ namespace MummyEscape.Core
         public LevelResult BuildResult() => new LevelResult
         {
             Level = Level.Id,
+            Variant = Level.Variant,
             Won = Status == SessionStatus.Won,
             Moves = Moves,
             Interactions = Interactions,
@@ -120,7 +123,7 @@ namespace MummyEscape.Core
         void RevealAround(Cell p)
         {
             _explored[Level.IndexOf(p)] = true;
-            if (IsBlind) return;
+            if (!State.SeesNeighbours) return;
             foreach (var d in DirExt.All)
             {
                 var n = p.Step(d);

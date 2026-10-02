@@ -32,10 +32,15 @@ namespace MummyEscape.Core
         public int Hp;
         /// <summary>Moves of blindness left (darkness trap). A blind player cannot see, hence cannot disarm.</summary>
         public int Blind;
+        /// <summary>The torch was smothered by dust: only the own tile is lit (and traps cannot be seen to disarm).</summary>
+        public bool TorchOut;
 
-        public bool Equals(RuleState o) => Position == o.Position && Pressed == o.Pressed && Disarmed == o.Disarmed && Hp == o.Hp && Blind == o.Blind;
+        /// <summary>The torch lights the 4 neighbouring tiles: not while blinded, not while it is out.</summary>
+        public bool SeesNeighbours => Blind == 0 && !TorchOut;
+
+        public bool Equals(RuleState o) => Position == o.Position && Pressed == o.Pressed && Disarmed == o.Disarmed && Hp == o.Hp && Blind == o.Blind && TorchOut == o.TorchOut;
         public override bool Equals(object obj) => obj is RuleState s && Equals(s);
-        public override int GetHashCode() => Position.GetHashCode() ^ (Pressed * 397) ^ (Disarmed * 7919) ^ Hp ^ (Blind << 20);
+        public override int GetHashCode() => Position.GetHashCode() ^ (Pressed * 397) ^ (Disarmed * 7919) ^ Hp ^ (Blind << 20) ^ (TorchOut ? 1 << 24 : 0);
     }
 
     [Flags]
@@ -57,6 +62,8 @@ namespace MummyEscape.Core
         Died = 1 << 12,
         PortalSealed = 1 << 13,
         HiddenRevealed = 1 << 14,
+        TorchSmothered = 1 << 15,
+        TorchRelit = 1 << 16,
     }
 
     public struct StepResult
@@ -91,7 +98,7 @@ namespace MummyEscape.Core
         {
             if (!level.InBounds(c)) return false;
             var t = level[c];
-            if (t.Type == TileType.Wall) return false;
+            if (t.IsSolid) return false;
             if (t.Type == TileType.Door && !IsDoorOpen(t, pressed)) return false;
             return true;
         }
@@ -106,7 +113,7 @@ namespace MummyEscape.Core
             if (action.Kind == ActionKind.Disarm)
             {
                 var tt = level.Get(target);
-                if (s.Blind > 0 || !IsTrapArmed(tt, s.Disarmed)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
+                if (!s.SeesNeighbours || !IsTrapArmed(tt, s.Disarmed)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
                 r.State.Disarmed |= 1 << tt.TrapIndex;
                 r.Flags = StepFlags.Disarmed;
                 return r;
@@ -181,7 +188,26 @@ namespace MummyEscape.Core
                     r.Flags |= StepFlags.Climbed;
                     break;
             }
+
+            // Torch: dust smothers it, a wall torch next to where the mummy ends up relights it.
+            if (level[r.State.Position].Type == TileType.Dust)
+            {
+                if (!r.State.TorchOut) r.Flags |= StepFlags.TorchSmothered;
+                r.State.TorchOut = true;
+            }
+            else if (r.State.TorchOut && NextToWallTorch(level, r.State.Position))
+            {
+                r.State.TorchOut = false;
+                r.Flags |= StepFlags.TorchRelit;
+            }
             return r;
+        }
+
+        public static bool NextToWallTorch(Level level, Cell c)
+        {
+            foreach (var d in DirExt.All)
+                if (level.Get(c.Step(d)).Type == TileType.WallTorch) return true;
+            return false;
         }
     }
 }

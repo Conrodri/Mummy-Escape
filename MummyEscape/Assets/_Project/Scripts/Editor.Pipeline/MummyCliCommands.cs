@@ -27,11 +27,12 @@ namespace MummyEscape.EditorTools
         }
 
         [CliCommand("mummy_level", "Mummy Escape: ASCII map and optimal solution of one level (e.g. --id 2-5).", Tags = new[] { "mummy" })]
-        public static string Level([CliArg("id", "Level id act-index, e.g. 1-3")] string id = "1-1")
+        public static string Level([CliArg("id", "Level id act-index, e.g. 1-3")] string id = "1-1",
+                                   [CliArg("variant", "Maze number (every run of a level draws the next one)")] int variant = 0)
         {
             var parts = id.Split('-');
             var lid = new LevelId(int.Parse(parts[0]), int.Parse(parts[1]));
-            var l = LevelGenerator.Generate(lid);
+            var l = LevelGenerator.Generate(lid, variant);
             return $"{l.Spec}\npar {l.Solution.Moves}, interactions {l.Solution.Interactions}, hp left {l.Solution.HpLeft}\n" +
                    $"solution: {string.Join(" ", l.Solution.Actions)}\n\n{l.ToAscii()}";
         }

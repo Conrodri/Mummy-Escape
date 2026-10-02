@@ -87,6 +87,8 @@ namespace MummyEscape.Visual
                 case TileType.BreakableFloor: return Cached("breakable", PaintBreakable);
                 case TileType.LadderUp: return Cached("ladder_up", () => PaintLadder(true));
                 case TileType.LadderDown: return Cached("ladder_down", () => PaintLadder(false));
+                case TileType.Dust: return Cached("dust", PaintDust);
+                case TileType.WallTorch: return Cached("wall_torch", PaintWallTorch);
             }
             return Floor(variant);
         }
@@ -112,6 +114,7 @@ namespace MummyEscape.Visual
             switch (t.Type)
             {
                 case TileType.Exit: return new Color(1f, 0.85f, 0.45f);
+                case TileType.WallTorch: return new Color(1f, 0.62f, 0.25f);
                 case TileType.Button: return channelActive ? new Color(0.3f, 1f, 0.9f) : new Color(0.35f, 0.5f, 1f);
                 case TileType.Door: return channelActive ? new Color(0.3f, 1f, 0.9f) : new Color(1f, 0.35f, 0.25f);
                 case TileType.Teleporter:
@@ -267,6 +270,38 @@ namespace MummyEscape.Visual
             p.Line(16, 17, 16, 10, ring);
             p.Line(13, 16, 19, 16, ring);
             if (sealedBar) { p.Rect(4, 15, 27, 17, MetalDark); p.Rect(4, 16, 27, 16, Metal); }
+            return p;
+        }
+
+        static Px PaintDust()
+        {
+            var p = PaintFloor(1);
+            var dust = new Color32(150, 140, 128, 255);
+            var dustLight = new Color32(186, 176, 160, 255);
+            // Soft grey drifts covering the slabs.
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                {
+                    float d = Mathf.Sin(x * 0.35f + y * 0.12f) * 0.5f + Mathf.Sin(y * 0.41f - x * 0.2f) * 0.5f + Px.Hash(x, y, 77) * 0.6f;
+                    if (d > 0.35f) p.Set(x, y, Px.Lerp(p.Get(x, y), d > 0.8f ? dustLight : dust, 0.85f));
+                }
+            // A few motes.
+            for (int k = 0; k < 10; k++) p.Set((int)(Px.Hash(k, 3, 91) * 31), (int)(Px.Hash(3, k, 91) * 31), dustLight);
+            return p;
+        }
+
+        /// <summary>Wall with a bronze sconce; the flame is painted in (the light comes from a Light2D on the tile).</summary>
+        static Px PaintWallTorch()
+        {
+            var p = PaintWall(1);
+            var bronze = new Color32(150, 98, 42, 255);
+            var bronzeDark = new Color32(96, 60, 24, 255);
+            p.Rect(15, 6, 16, 14, bronzeDark);          // bracket
+            p.Rect(12, 14, 19, 15, bronze);             // cup
+            p.Rect(13, 13, 18, 13, bronzeDark);
+            p.Ellipse(16, 19, 3, 4, new Color32(255, 110, 30, 255));
+            p.Ellipse(16, 18, 2, 3, new Color32(255, 200, 80, 255));
+            p.Rect(16, 16, 16, 18, new Color32(255, 250, 220, 255));
             return p;
         }
 

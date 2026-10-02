@@ -30,7 +30,14 @@ namespace MummyEscape.Game
         MazeView _maze;
         PlayerView _player;
         SwipeInput _input;
-        readonly Dictionary<LevelId, Level> _cache = new Dictionary<LevelId, Level>();
+        readonly Dictionary<(LevelId, int), Task<Level>> _pending = new Dictionary<(LevelId, int), Task<Level>>();
+
+        /// <summary>The whole tomb is shown this long at the start of every run, then the fog falls.</summary>
+        public const float PreviewSeconds = 5f;
+        public bool Previewing { get; private set; }
+        public float PreviewLeft { get; private set; }
+        public event Action PreviewChanged;
+        bool _skipPreview;
 
         bool _busy;
         bool _paused;
@@ -52,24 +59,28 @@ namespace MummyEscape.Game
         {
             int token = ++_loadToken;
             StopAllCoroutines();
+            EndPreviewVisuals();
             _busy = false;
             _buffered = null;
             _input.Enabled = false;
             CurrentLevel = id;
             LevelLoading?.Invoke(id);
 
-            if (!_cache.TryGetValue(id, out var level))
+            // Every run draws a new maze of the level (variant), usually prefetched while the previous run was played.
+            int variant = _app.Save.NextVariant(id);
+            Level level;
+            try
             {
-                try
-                {
-                    level = await Task.Run(() => LevelGenerator.Generate(id));
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"[Game] Could not generate level {id}: {e}");
-                    return;
-                }
-                _cache[id] = level;
+                level = await GetLevel(id, variant);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Game] Could not generate level {id} maze {variant}: {e}");
+                return;
+            }
+            finally
+            {
+                _pending.Remove((id, variant));
             }
             if (token != _loadToken || this == null) return; // another level was requested meanwhile
 
@@ -80,13 +91,70 @@ namespace MummyEscape.Game
             _player.SetSkin(SkinCatalog.Get(_app.Save.Data.SelectedSkin));
             _player.Place(level.Start);
             _player.SetBlind(false);
+            _player.SetTorchLit(true);
             _app.Camera.SnapTo(MazeView.CellToWorld(level.Start));
             _app.Lighting.SetMood(true);
             _paused = false;
-            _input.Enabled = true;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
+            Prefetch(id); // the replay's maze, ready before the player needs it
             LevelStarted?.Invoke();
             Changed?.Invoke();
+            StartCoroutine(PreviewRoutine());
+        }
+
+        /// <summary>Starts generating the maze the next run of <paramref name="id"/> will use (no-op when already done).</summary>
+        public void Prefetch(LevelId id) => _ = GetLevel(id, _app.Save.PeekVariant(id));
+
+        Task<Level> GetLevel(LevelId id, int variant)
+        {
+            if (_pending.TryGetValue((id, variant), out var task)) return task;
+            // Keep the cache tiny: drop finished mazes nobody is going to play.
+            var stale = new List<(LevelId, int)>();
+            foreach (var kv in _pending)
+                if (kv.Value.IsCompleted && _app.Save.PeekVariant(kv.Key.Item1) != kv.Key.Item2) stale.Add(kv.Key);
+            foreach (var k in stale) _pending.Remove(k);
+            task = Task.Run(() => LevelGenerator.Generate(id, variant));
+            _pending[(id, variant)] = task;
+            return task;
+        }
+
+        // ------------------------------------------------------------------ map preview
+
+        IEnumerator PreviewRoutine()
+        {
+            Previewing = true;
+            _skipPreview = false;
+            PreviewLeft = PreviewSeconds;
+            _input.Enabled = false;
+            _maze.SetPreview(true);
+            _app.Lighting.SetPreview(true);
+            _app.Camera.ShowArea(_maze.PreviewBounds());
+            PreviewChanged?.Invoke();
+            // Let the camera settle on the whole tomb before the clock starts.
+            yield return new WaitForSeconds(0.35f);
+            while (PreviewLeft > 0f && !_skipPreview)
+            {
+                PreviewLeft -= Time.deltaTime;
+                yield return null;
+            }
+            PreviewLeft = 0f;
+            EndPreviewVisuals();
+            _app.Audio.Play(Sfx.Darkness);
+            _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
+            PreviewChanged?.Invoke();
+            Changed?.Invoke();
+        }
+
+        /// <summary>Lets the player start before the 5 seconds are over.</summary>
+        public void SkipPreview() => _skipPreview = true;
+
+        void EndPreviewVisuals()
+        {
+            if (!Previewing) return;
+            Previewing = false;
+            _maze.SetPreview(false);
+            _app.Lighting.SetPreview(false);
+            if (Session != null) _app.Camera.EndArea(MazeView.CellToWorld(Session.Position));
         }
 
         public void Restart() => _ = StartLevel(CurrentLevel);
@@ -94,6 +162,7 @@ namespace MummyEscape.Game
         public void Abandon()
         {
             _loadToken++;
+            EndPreviewVisuals();
             StopAllCoroutines();
             Session = null;
             _busy = false;
@@ -107,12 +176,12 @@ namespace MummyEscape.Game
         public void SetPaused(bool paused)
         {
             _paused = paused;
-            _input.Enabled = !paused && Session != null && Session.Status == SessionStatus.Playing;
+            _input.Enabled = !paused && !Previewing && Session != null && Session.Status == SessionStatus.Playing;
         }
 
         public void SetMapView(bool on)
         {
-            if (Session == null) return;
+            if (Session == null || Previewing) return;
             int floor = Session.Position.Floor;
             var b = _maze.ExploredBounds(floor);
             _app.Camera.SetMapView(on, b.center, Mathf.Max(b.extents.x, b.extents.y) + 1f);
@@ -125,7 +194,7 @@ namespace MummyEscape.Game
 
         void OnTap(Vector2 screenPos)
         {
-            if (Session == null) return;
+            if (Session == null || Previewing) return;
             var world = _app.Camera.Cam.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, 10f));
             var cell = MazeView.WorldToCell(world, Session.Position.Floor);
             int dx = cell.X - Session.Position.X, dy = cell.Y - Session.Position.Y;
@@ -138,9 +207,10 @@ namespace MummyEscape.Game
             Submit(disarm ? PlayerAction.Disarm(dir) : PlayerAction.Move(dir));
         }
 
-        void Submit(PlayerAction action)
+        /// <summary>Feeds one action to the game (swipe / tap handlers, and the editor autoplay tool).</summary>
+        public void Submit(PlayerAction action)
         {
-            if (Session == null || _paused || Session.Status != SessionStatus.Playing) return;
+            if (Session == null || _paused || Previewing || Session.Status != SessionStatus.Playing) return;
             if (_busy) { _buffered = action; return; }
             StartCoroutine(Play(action));
         }
@@ -205,6 +275,17 @@ namespace MummyEscape.Game
                     _app.Lighting.Flash(new Color(0.4f, 0.1f, 0.6f));
                 }
                 if (r.Has(StepFlags.PortalSealed)) audio.Play(Sfx.Bump);
+                if (r.Has(StepFlags.TorchSmothered))
+                {
+                    audio.Play(Sfx.Darkness);
+                    _player.SetTorchLit(false);
+                }
+                if (r.Has(StepFlags.TorchRelit))
+                {
+                    audio.Play(Sfx.Teleport, 0.1f);
+                    _player.SetTorchLit(true);
+                    _app.Lighting.Flash(new Color(1f, 0.6f, 0.2f), 0.5f);
+                }
 
                 if (transport)
                 {
@@ -239,6 +320,7 @@ namespace MummyEscape.Game
             }
 
             _player.SetBlind(Session.IsBlind);
+            _player.SetTorchLit(Session.TorchLit);
             _maze.RefreshSprites();
             Changed?.Invoke();
 

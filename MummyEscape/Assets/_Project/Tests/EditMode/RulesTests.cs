@@ -78,6 +78,89 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Torch_LightsNeighbours_DustSmothersIt_WallTorchRelightsIt()
+        {
+            // Dust after one step, a wall torch above the 5th tile.
+            var s = new GameSession(FromAscii(
+                "#####!###",
+                "#S.,...E#",
+                "#########"));
+            Assert.IsTrue(s.TorchLit);
+            Assert.IsTrue(s.IsVisible(s.Position.Step(Dir.Right)), "a lit torch shows the neighbouring tiles");
+
+            s.Move(Dir.Right);
+            var smother = s.Move(Dir.Right);
+            Assert.IsTrue(smother.Has(StepFlags.TorchSmothered));
+            Assert.IsFalse(s.TorchLit);
+            Assert.IsFalse(s.IsVisible(s.Position.Step(Dir.Right)), "without the torch only the own tile is lit");
+            Assert.IsFalse(s.IsExplored(s.Position.Step(Dir.Right)));
+
+            Assert.IsFalse(s.Move(Dir.Right).Has(StepFlags.TorchRelit), "still in the dark");
+            var relit = s.Move(Dir.Right);
+            Assert.IsTrue(relit.Has(StepFlags.TorchRelit), "passing next to the wall torch relights");
+            Assert.IsTrue(s.TorchLit);
+            Assert.IsTrue(s.IsVisible(s.Position.Step(Dir.Right)));
+        }
+
+        [Test]
+        public void Torch_Out_CannotDisarm()
+        {
+            var lvl = FromAscii("########", "#S,^..E#", "########");
+            var s = new GameSession(lvl);
+            s.Move(Dir.Right);
+            Assert.IsTrue(s.Disarm(Dir.Right).Has(StepFlags.Blocked), "a trap you cannot see cannot be disarmed");
+            Assert.IsTrue(Rules.Step(lvl, s.State, PlayerAction.Disarm(Dir.Right)).Has(StepFlags.Blocked), "the rule itself forbids it");
+        }
+
+        [Test]
+        public void WallTorch_IsSolid()
+        {
+            var s = new GameSession(FromAscii("#!#", "#S#", "#E#", "###"));
+            Assert.IsTrue(s.Move(Dir.Up).Has(StepFlags.Blocked));
+        }
+
+        [Test]
+        public void Solver_CanForbidPortals()
+        {
+            // Two halves joined only by a portal pair.
+            var lvl = FromAscii("#######", "#S.#.E#", "#######");
+            var a = new Cell(0, 2, 1);
+            var b = new Cell(0, 4, 1);
+            lvl[a] = new Tile { Type = TileType.Teleporter, Teleporter = TeleporterKind.Visible };
+            lvl[b] = new Tile { Type = TileType.Teleporter, Teleporter = TeleporterKind.Visible };
+            lvl.LinkTeleporters(a, b);
+
+            var sol = Solver.Solve(lvl);
+            Assert.AreEqual(2, sol.Moves);
+            Assert.AreEqual(1, sol.Teleports);
+            Assert.AreEqual(1, sol.Mechanics);
+            var opts = SolverOptions.Default;
+            opts.AllowTeleporters = false;
+            Assert.IsNull(Solver.Solve(lvl, opts));
+        }
+
+        [Test]
+        public void Score_ComparesRunsByMovesOverPar()
+        {
+            var perfect = new LevelResult { Won = true, Moves = 30, Par = 30, MaxHp = 2, HpLeft = 2 };
+            var sloppyShortMaze = new LevelResult { Won = true, Moves = 22, Par = 18, MaxHp = 2, HpLeft = 2 };
+            Assert.AreEqual(0, perfect.OverPar);
+            Assert.AreEqual(4, sloppyShortMaze.OverPar);
+            Assert.Less(perfect.LeaderboardScore, sloppyShortMaze.LeaderboardScore, "a perfect run beats fewer raw moves in an easier maze");
+            Assert.AreEqual((4, 0, 0), LevelResult.DecodeScore(sloppyShortMaze.LeaderboardScore));
+            Assert.AreEqual("parfait", LevelResult.FormatOverPar(0));
+            Assert.AreEqual("+1 coup", LevelResult.FormatOverPar(1));
+            Assert.AreEqual("+4 coups", LevelResult.FormatOverPar(4));
+
+            var rec = new LevelRecord();
+            Assert.IsTrue(rec.Merge(sloppyShortMaze));
+            Assert.IsTrue(rec.Merge(perfect));
+            Assert.AreEqual(0, rec.BestOverPar);
+            Assert.IsFalse(rec.Merge(sloppyShortMaze));
+            Assert.AreEqual(3, rec.Completions);
+        }
+
+        [Test]
         public void Fog_RevealsNeighboursAndRemembersPath()
         {
             var s = new GameSession(FromAscii("#######", "#S...E#", "#######"));

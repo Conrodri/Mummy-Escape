@@ -56,20 +56,27 @@ namespace MummyEscape.UI.Screens
             var stars = UIKit.Stars(_starsSlot, result.Stars, 110);
             UIKit.Stretch(stars);
 
+            string over = result.OverPar == 0
+                ? "<color=#E8C35A><b>Chemin parfait !</b></color>"
+                : $"<b>+{result.OverPar}</b> coup{(result.OverPar > 1 ? "s" : "")} de plus que le chemin idéal";
             _lines.text = result.Won
-                ? $"Tu as fini en <b>{result.Moves}</b> coups\n" +
-                  $"<b>{result.Interactions}</b> interaction{(result.Interactions > 1 ? "s" : "")}\n" +
-                  $"Il te reste <b>{result.HpLeft}</b> point{(result.HpLeft > 1 ? "s" : "")} de vie sur {result.MaxHp}"
-                : $"Les pièges ont eu raison de toi après {result.Moves} coups.\n{result.Interactions} interaction{(result.Interactions > 1 ? "s" : "")}\nRéessaie : le tombeau ne change pas.";
+                ? $"Évadé en <b>{result.Moves}</b> coups\n{over}\n" +
+                  $"<b>{result.Interactions}</b> interaction{(result.Interactions > 1 ? "s" : "")} · " +
+                  $"<b>{result.HpLeft}</b>/{result.MaxHp} PV"
+                : $"Les pièges ont eu raison de toi après {result.Moves} coups.\n{result.Interactions} interaction{(result.Interactions > 1 ? "s" : "")}\nRéessaie : un nouveau tombeau t'attend.";
 
             string extra = "";
-            if (outcome.NewBest && outcome.PreviousBestMoves > 0) extra += $"Nouveau record ! ({outcome.PreviousBestMoves} → {result.Moves})\n";
+            if (outcome.NewBest && outcome.PreviousBestOverPar >= 0)
+                extra += $"Nouveau record ! ({LevelResult.FormatOverPar(outcome.PreviousBestOverPar)} → {LevelResult.FormatOverPar(result.OverPar)})\n";
             else if (outcome.NewBest) extra += "Premier passage !\n";
             if (outcome.CoinsEarned > 0) extra += $"+{outcome.CoinsEarned} scarabées";
             _extra.text = extra;
 
             var next = Progression.Next(result.Level);
             _next.gameObject.SetActive(result.Won && next.HasValue);
+            // Get the next tombs generating while the player reads the recap.
+            App.Game.Prefetch(result.Level);
+            if (result.Won && next.HasValue) App.Game.Prefetch(next.Value);
         }
 
         public void OnBack() => Menu();

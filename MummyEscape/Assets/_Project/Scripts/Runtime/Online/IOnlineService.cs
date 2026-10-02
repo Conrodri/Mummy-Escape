@@ -12,7 +12,8 @@ namespace MummyEscape.Online
         public int Rank;          // 1-based
         public string PlayerId;
         public string PlayerName;
-        public int Moves;
+        /// <summary>Moves above the optimal route of the maze that player drew (0 = perfect run).</summary>
+        public int OverPar;
         public int HpLost;
         public int Interactions;
         public bool IsMe;

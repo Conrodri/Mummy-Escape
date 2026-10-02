@@ -68,6 +68,14 @@ namespace MummyEscape.World
             Apply();
         }
 
+        /// <summary>Start-of-run map preview: the tomb is bathed in light so the whole layout reads at a glance.</summary>
+        public void SetPreview(bool on)
+        {
+            _baseAmbient = on ? 1.05f : 0.5f;
+            _ambient.color = on ? new Color(1f, 0.9f, 0.75f) : new Color(0.5f, 0.58f, 0.85f);
+            Apply();
+        }
+
         /// <summary>Coloured vignette pulse (damage, curse...).</summary>
         public void Flash(Color color, float strength = 1f)
         {

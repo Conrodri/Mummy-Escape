@@ -33,15 +33,20 @@ namespace MummyEscape.Core
         public Ramp MaxMoves;
         public Ramp Floors = 1;
         public Ramp Cells;
-        public Ramp Rooms;
-        public Ramp LoopChance = 50;
-        public Ramp RequiredButtons;
+        /// <summary>Short loops added on top of braiding: alternative routes the player has to remember.</summary>
+        public Ramp ExtraLoops;
+        /// <summary>Mandatory obstacles on the route (at least 1: every level asks for a button or a portal).</summary>
+        public Ramp Gates = 1;
+        /// <summary>Gate kinds, cycled through by level and gate index so consecutive levels alternate.</summary>
+        public GateKind[] GateKinds = { GateKind.Door, GateKind.Portal };
         public Ramp DecoyDoors;
         public Ramp SpikeTraps;
         public Ramp DarknessTraps;
+        public Ramp DustPatches;
+        /// <summary>Optional teleporter pairs on top of the portal gates.</summary>
         public Ramp TeleporterCount;
         /// <summary>Teleporter kinds unlocked in this act, cycled through as the count grows.</summary>
-        public TeleporterKind[] TeleporterKinds = Array.Empty<TeleporterKind>();
+        public TeleporterKind[] TeleporterKinds = { TeleporterKind.Visible };
         public Ramp BreakableFloors;
         public int MinPoiSpacing = 4;
         public int MinHpLeftForPar = 1;
@@ -51,60 +56,60 @@ namespace MummyEscape.Core
     {
         /// <summary>
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
-        /// and of the leaderboard ids, so scores from different layouts never get compared.
+        /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 1;
+        public const int GeneratorVersion = 2;
 
         public static readonly IReadOnlyList<ActDefinition> Acts = new[]
         {
             new ActDefinition
             {
-                Name = "L'Antichambre", MinMoves = 10, MaxMoves = new Ramp(14, 18),
-                Floors = 1, Cells = new Ramp(5, 7), Rooms = new Ramp(0, 1), LoopChance = new Ramp(30, 80),
-                RequiredButtons = new Ramp(0, 1), DecoyDoors = new Ramp(0, 1),
-                SpikeTraps = 0, DarknessTraps = new Ramp(0, 1),
-                TeleporterCount = new Ramp(0, 1), TeleporterKinds = new[] { TeleporterKind.Visible },
+                Name = "L'Antichambre", MinMoves = 15, MaxMoves = new Ramp(24, 30),
+                Floors = 1, Cells = new Ramp(6, 7), ExtraLoops = new Ramp(0, 2),
+                Gates = new Ramp(1, 2), GateKinds = new[] { GateKind.Door, GateKind.Portal },
+                DecoyDoors = new Ramp(0, 1), DarknessTraps = new Ramp(0, 1),
+                TeleporterKinds = new[] { TeleporterKind.Visible },
                 MinPoiSpacing = 4,
             },
             new ActDefinition
             {
-                Name = "Les Galeries", MinMoves = 15, MaxMoves = new Ramp(21, 26),
-                Floors = new Ramp(1, 2), Cells = new Ramp(6, 8), Rooms = new Ramp(1, 2), LoopChance = new Ramp(60, 120),
-                RequiredButtons = new Ramp(1, 2), DecoyDoors = new Ramp(1, 2),
-                SpikeTraps = new Ramp(0, 1), DarknessTraps = new Ramp(1, 2),
-                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Visible, TeleporterKind.Hidden },
+                Name = "Les Galeries", MinMoves = 22, MaxMoves = new Ramp(32, 38),
+                Floors = new Ramp(1, 2), Cells = new Ramp(7, 8), ExtraLoops = new Ramp(1, 3),
+                Gates = new Ramp(2, 3), GateKinds = new[] { GateKind.Door, GateKind.Portal, GateKind.Door },
+                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(0, 1), DarknessTraps = new Ramp(1, 2), DustPatches = new Ramp(0, 1),
+                TeleporterCount = new Ramp(0, 1), TeleporterKinds = new[] { TeleporterKind.Visible, TeleporterKind.Hidden },
                 BreakableFloors = new Ramp(0, 1), MinPoiSpacing = 4,
             },
             new ActDefinition
             {
-                Name = "La Chambre des Pièges", MinMoves = 20, MaxMoves = new Ramp(28, 33),
-                Floors = 2, Cells = new Ramp(7, 9), Rooms = new Ramp(2, 3), LoopChance = new Ramp(80, 140),
-                RequiredButtons = new Ramp(2, 3), DecoyDoors = new Ramp(1, 3),
-                SpikeTraps = new Ramp(1, 3), DarknessTraps = new Ramp(1, 2),
-                TeleporterCount = new Ramp(1, 2), TeleporterKinds = new[] { TeleporterKind.Hidden, TeleporterKind.Locked, TeleporterKind.Visible },
+                Name = "La Chambre des Pièges", MinMoves = 28, MaxMoves = new Ramp(44, 50),
+                Floors = 2, Cells = new Ramp(8, 9), ExtraLoops = new Ramp(2, 4),
+                Gates = 3, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
+                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(1, 3), DarknessTraps = new Ramp(1, 2), DustPatches = 1,
+                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Hidden, TeleporterKind.Locked, TeleporterKind.Visible },
                 BreakableFloors = 1, MinPoiSpacing = 4,
             },
             new ActDefinition
             {
-                Name = "Le Labyrinthe d'Anubis", MinMoves = 25, MaxMoves = new Ramp(35, 41),
-                Floors = new Ramp(2, 3), Cells = new Ramp(8, 10), Rooms = new Ramp(2, 4), LoopChance = new Ramp(100, 160),
-                RequiredButtons = new Ramp(2, 3), DecoyDoors = new Ramp(2, 3),
-                SpikeTraps = new Ramp(2, 3), DarknessTraps = new Ramp(2, 3),
-                TeleporterCount = 2, TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Locked, TeleporterKind.Hidden },
-                BreakableFloors = new Ramp(1, 2), MinPoiSpacing = 5,
+                Name = "Le Labyrinthe d'Anubis", MinMoves = 34, MaxMoves = new Ramp(52, 60),
+                Floors = new Ramp(2, 3), Cells = new Ramp(8, 10), ExtraLoops = new Ramp(3, 5),
+                Gates = new Ramp(3, 4), GateKinds = new[] { GateKind.Door, GateKind.Portal, GateKind.Door, GateKind.Portal },
+                DecoyDoors = 2, SpikeTraps = new Ramp(2, 3), DarknessTraps = new Ramp(2, 3), DustPatches = new Ramp(1, 2),
+                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Locked, TeleporterKind.Hidden },
+                BreakableFloors = new Ramp(1, 2), MinPoiSpacing = 4,
             },
             new ActDefinition
             {
-                Name = "Le Sanctuaire d'Osiris", MinMoves = 30, MaxMoves = new Ramp(44, 52),
-                Floors = 3, Cells = new Ramp(9, 11), Rooms = new Ramp(2, 3), LoopChance = new Ramp(100, 140),
-                RequiredButtons = new Ramp(3, 4), DecoyDoors = 3,
-                SpikeTraps = new Ramp(3, 4), DarknessTraps = new Ramp(2, 3),
-                TeleporterCount = new Ramp(2, 3), TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Hidden, TeleporterKind.Locked },
-                BreakableFloors = 2, MinPoiSpacing = 5, MinHpLeftForPar = 1,
+                Name = "Le Sanctuaire d'Osiris", MinMoves = 40, MaxMoves = new Ramp(62, 70),
+                Floors = 3, Cells = new Ramp(9, 11), ExtraLoops = new Ramp(4, 6),
+                Gates = 4, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
+                DecoyDoors = new Ramp(2, 3), SpikeTraps = new Ramp(3, 4), DarknessTraps = new Ramp(2, 3), DustPatches = 2,
+                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Hidden, TeleporterKind.Locked },
+                BreakableFloors = 2, MinPoiSpacing = 4,
             },
         };
 
-        public const int ExtraMovesPerFloor = 5;
+        public const int ExtraMovesPerFloor = 6;
 
         public static int ActCount => Acts.Count;
 
@@ -128,33 +133,47 @@ namespace MummyEscape.Core
             if (i < 1 || i > n) throw new ArgumentOutOfRangeException(nameof(id));
 
             int cells = act.Cells.At(i, n);
+            int floors = act.Floors.At(i, n);
             var spec = new LevelSpec
             {
                 Id = id,
                 MinMoves = act.MinMoves,
                 // Each extra floor adds a climb: give the par window room for it (the minimum stays the act contract).
-                MaxMoves = act.MaxMoves.At(i, n) + (act.Floors.At(i, n) - 1) * ExtraMovesPerFloor,
-                Floors = act.Floors.At(i, n),
+                MaxMoves = act.MaxMoves.At(i, n) + (floors - 1) * ExtraMovesPerFloor,
+                Floors = floors,
                 CellsX = cells,
                 CellsY = cells,
-                Rooms = act.Rooms.At(i, n),
-                LoopChance = act.LoopChance.At(i, n),
-                RequiredButtons = act.RequiredButtons.At(i, n),
+                ExtraLoops = act.ExtraLoops.At(i, n),
                 DecoyDoors = act.DecoyDoors.At(i, n),
                 SpikeTraps = act.SpikeTraps.At(i, n),
                 DarknessTraps = act.DarknessTraps.At(i, n),
-                BreakableFloors = act.Floors.At(i, n) > 1 ? act.BreakableFloors.At(i, n) : 0,
+                DustPatches = act.DustPatches.At(i, n),
+                BreakableFloors = floors > 1 ? act.BreakableFloors.At(i, n) : 0,
                 MinPoiSpacing = act.MinPoiSpacing,
                 MinHpLeftForPar = act.MinHpLeftForPar,
+                // "Far from the entrance": two thirds of the tomb's side, as the crow flies.
+                MinExitDistance = (cells * 2 + 1) * 2 / 3,
+                MinMechanics = 1,
             };
+
+            int kinds = act.TeleporterKinds.Length, portal = 0;
+            int gates = Math.Max(1, act.Gates.At(i, n));
+            for (int k = 0; k < gates; k++)
+            {
+                var kind = act.GateKinds[(i - 1 + k) % act.GateKinds.Length];
+                spec.Gates.Add(kind == GateKind.Door ? Gate.Door : Gate.Teleporter(act.TeleporterKinds[(i + portal++) % kinds]));
+            }
             int tp = act.TeleporterCount.At(i, n);
-            for (int k = 0; k < tp && act.TeleporterKinds.Length > 0; k++)
-                spec.Teleporters.Add(act.TeleporterKinds[(i + k) % act.TeleporterKinds.Length]);
+            for (int k = 0; k < tp; k++)
+                spec.Teleporters.Add(act.TeleporterKinds[(i + portal + k) % kinds]);
             return spec;
         }
 
-        /// <summary>Seed shared by every player for this level (fairness for the leaderboard).</summary>
+        /// <summary>Base seed of a level; every run mixes in its own variant number to draw a new maze.</summary>
         public static ulong Seed(LevelId id) =>
             Pcg32.Hash(Pcg32.Hash(0x4D554D4D59UL /* "MUMMY" */, (ulong)GeneratorVersion), (ulong)(id.Act * 1000 + id.Index));
+
+        /// <summary>Seed of one maze of a level: (level, variant) always rebuilds the same tomb on every device.</summary>
+        public static ulong Seed(LevelId id, int variant) => Pcg32.Hash(Seed(id), (ulong)(uint)variant);
     }
 }

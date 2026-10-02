@@ -17,6 +17,10 @@ namespace MummyEscape.Core
         LadderUp,
         /// <summary>Climbs to floor-1 (same x,y), landing on the matching LadderUp.</summary>
         LadderDown,
+        /// <summary>Thick dust: walking onto it smothers the mummy's torch (vision shrinks to its own tile).</summary>
+        Dust,
+        /// <summary>A wall with a burning sconce: passing next to it relights the mummy's torch. Solid like a wall.</summary>
+        WallTorch,
     }
 
     public enum TrapKind : byte
@@ -51,7 +55,9 @@ namespace MummyEscape.Core
         public byte TrapIndex;
         public TeleporterKind Teleporter;
 
-        public bool IsWalkableTerrain => Type != TileType.Wall;
+        public bool IsWalkableTerrain => !IsSolid;
+        /// <summary>Blocks movement (plain wall or wall torch).</summary>
+        public bool IsSolid => Type == TileType.Wall || Type == TileType.WallTorch;
 
         /// <summary>True for every tile the generator treats as a point of interest.</summary>
         public bool IsPointOfInterest =>

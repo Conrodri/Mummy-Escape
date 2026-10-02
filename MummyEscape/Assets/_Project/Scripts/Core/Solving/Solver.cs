@@ -8,22 +8,28 @@ namespace MummyEscape.Core
         public int ButtonsPressed;
         public int Disarms;
         public int HpLeft;
+        /// <summary>Teleporters taken by the optimal route.</summary>
+        public int Teleports;
         public List<PlayerAction> Actions = new List<PlayerAction>();
         public int Interactions => ButtonsPressed + Disarms;
+        /// <summary>Mechanics the optimal route relies on (buttons pressed + portals taken): the "1 interaction minimum" contract.</summary>
+        public int Mechanics => ButtonsPressed + Teleports;
     }
 
     public struct SolverOptions
     {
         /// <summary>When false, buttons never activate: used to prove that doors are mandatory.</summary>
         public bool AllowButtons;
+        /// <summary>When false, teleporters never transport: used to prove that a portal is mandatory.</summary>
+        public bool AllowTeleporters;
         /// <summary>Safety cap on explored states.</summary>
         public int MaxStates;
 
-        public static SolverOptions Default => new SolverOptions { AllowButtons = true, MaxStates = 2_000_000 };
+        public static SolverOptions Default => new SolverOptions { AllowButtons = true, AllowTeleporters = true, MaxStates = 2_000_000 };
     }
 
     /// <summary>
-    /// Exact breadth-first search over (position, activated channels, disarmed traps, hp).
+    /// Exact breadth-first search over (position, activated channels, disarmed traps, hp, blindness, torch).
     /// Every action costs one move, so BFS gives the true minimum number of moves for an omniscient player.
     /// Darkness traps are never worth disarming for an omniscient player (blindness has no cost), so the solver
     /// only considers disarming spikes; this keeps the state space small without changing the optimum.
@@ -63,6 +69,7 @@ namespace MummyEscape.Core
                 {
                     var r = Rules.Step(level, s, a);
                     if (r.Has(StepFlags.Blocked) || r.Has(StepFlags.Died)) continue;
+                    if (!options.AllowTeleporters && r.Has(StepFlags.Teleported)) r.State.Position = r.SteppedOn; // stand on the pad, no transport
                     var ns = r.State;
                     if (!options.AllowButtons) ns.Pressed = s.Pressed;
                     long nk = Pack(level, ns);
@@ -93,6 +100,8 @@ namespace MummyEscape.Core
                 if (!options.AllowButtons) r.State.Pressed = s.Pressed;
                 else if (r.Has(StepFlags.ButtonPressed)) sol.ButtonsPressed++;
                 if (r.Has(StepFlags.Disarmed)) sol.Disarms++;
+                if (!options.AllowTeleporters && r.Has(StepFlags.Teleported)) r.State.Position = r.SteppedOn;
+                else if (r.Has(StepFlags.Teleported)) sol.Teleports++;
                 sol.Moves++;
                 s = r.State;
             }
@@ -106,7 +115,8 @@ namespace MummyEscape.Core
                    | ((long)(s.Pressed & 0xFFFF) << 16)
                    | ((long)(s.Disarmed & 0xFFFF) << 32)
                    | ((long)(s.Hp & 0xF) << 48)
-                   | ((long)(s.Blind & 0xF) << 52);
+                   | ((long)(s.Blind & 0xF) << 52)
+                   | (s.TorchOut ? 1L << 56 : 0);
         }
     }
 }

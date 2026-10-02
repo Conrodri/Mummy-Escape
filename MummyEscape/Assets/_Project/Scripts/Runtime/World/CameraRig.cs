@@ -52,6 +52,26 @@ namespace MummyEscape.World
             if (on) _target = new Vector3(center.x, center.y, -10f);
         }
 
+        /// <summary>
+        /// Frames a whole area (the start-of-run map preview). The HUD bands cover the top and bottom of the screen,
+        /// so only ~78% of the height is usable.
+        /// </summary>
+        public void ShowArea(Bounds area)
+        {
+            const float usableHeight = 0.78f;
+            float halfH = (area.extents.y + 0.6f) / usableHeight;
+            float halfW = (area.extents.x + 0.6f) / Mathf.Max(0.1f, Cam.aspect);
+            _mapView = true;
+            _mapSize = Mathf.Max(halfH, halfW);
+            _target = new Vector3(area.center.x, area.center.y + _mapSize * 0.02f, -10f);
+        }
+
+        public void EndArea(Vector3 follow)
+        {
+            _mapView = false;
+            Follow(follow);
+        }
+
         public void Shake(float amount)
         {
             if (_settings.ScreenShake) _trauma = Mathf.Clamp01(_trauma + amount);

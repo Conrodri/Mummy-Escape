@@ -2,6 +2,26 @@ using System.Collections.Generic;
 
 namespace MummyEscape.Core
 {
+    /// <summary>What blocks the route to the exit until the player uses a mechanic.</summary>
+    public enum GateKind : byte
+    {
+        /// <summary>A door across the route; its button waits at the end of a dead end, away from the route.</summary>
+        Door,
+        /// <summary>The route is cut by a wall; the only way on is a teleporter hidden at the end of a dead end.</summary>
+        Portal,
+    }
+
+    public struct Gate
+    {
+        public GateKind Kind;
+        /// <summary>Teleporter kind for portal gates (a Locked portal also needs its lever).</summary>
+        public TeleporterKind Portal;
+
+        public static Gate Door => new Gate { Kind = GateKind.Door };
+        public static Gate Teleporter(TeleporterKind kind) => new Gate { Kind = GateKind.Portal, Portal = kind };
+        public override string ToString() => Kind == GateKind.Door ? "Door" : "Portal:" + Portal;
+    }
+
     /// <summary>
     /// The strict "cahier des charges" of one level. The generator retries until the produced tomb satisfies every
     /// constraint, and the solver proves it. Everything is integer based so generation is identical on all devices.
@@ -19,21 +39,33 @@ namespace MummyEscape.Core
         /// <summary>Maze cells per side; the tile grid is (2 * cells + 1) wide.</summary>
         public int CellsX = 5;
         public int CellsY = 5;
-        public int Rooms;
-        /// <summary>Chance (per mille) to knock out a dead end and create a loop.</summary>
-        public int LoopChance = 50;
         /// <summary>Chance (per mille) the maze carver keeps going straight-ish (newest cell) vs branching.</summary>
-        public int Windiness = 750;
+        public int Windiness = 600;
+        /// <summary>Extra short loops knocked into the maze (alternative routes to remember), on top of braiding.</summary>
+        public int ExtraLoops;
+        /// <summary>
+        /// Chance (per mille) that a pointless dead end becomes a loop; otherwise it is filled back with rock. Either way no
+        /// dead end is left without a purpose. More loops = more routes to tell apart, more rock = narrower galleries.
+        /// </summary>
+        public int BraidChance = 750;
 
-        // ---- Interactions ----
-        /// <summary>Doors that block every route to the exit; their buttons must be pressed.</summary>
-        public int RequiredButtons;
+        // ---- Route structure ----
+        /// <summary>Mandatory obstacles along the route to the exit, in order (at least one per level).</summary>
+        public List<Gate> Gates = new List<Gate>();
+        /// <summary>The exit must be at least this far from the start (Manhattan, a floor counts as 4).</summary>
+        public int MinExitDistance = 8;
+        /// <summary>Mechanics (buttons pressed + portals taken) the optimal route must use.</summary>
+        public int MinMechanics = 1;
+
+        // ---- Optional content ----
         /// <summary>Optional doors on side branches (with their buttons somewhere) to mislead the player.</summary>
         public int DecoyDoors;
         public int SpikeTraps;
         public int DarknessTraps;
+        /// <summary>Dust patches on the route (torch goes out), each followed by a wall torch further on.</summary>
+        public int DustPatches;
+        /// <summary>Optional teleporter pairs (shortcuts or lures), on top of the portal gates.</summary>
         public List<TeleporterKind> Teleporters = new List<TeleporterKind>();
-        public int LaddersPerLink = 1;
         public int BreakableFloors;
 
         // ---- Feel ----
@@ -46,8 +78,29 @@ namespace MummyEscape.Core
         public int Width => CellsX * 2 + 1;
         public int Height => CellsY * 2 + 1;
 
+        /// <summary>Buttons the optimal route must press: one per door gate and per locked portal gate.</summary>
+        public int RequiredButtons
+        {
+            get
+            {
+                int n = 0;
+                foreach (var g in Gates) if (g.Kind == GateKind.Door || g.Portal == TeleporterKind.Locked) n++;
+                return n;
+            }
+        }
+
+        public int RequiredPortals
+        {
+            get
+            {
+                int n = 0;
+                foreach (var g in Gates) if (g.Kind == GateKind.Portal) n++;
+                return n;
+            }
+        }
+
         public override string ToString() =>
-            $"{Id} moves[{MinMoves}-{MaxMoves}] floors:{Floors} cells:{CellsX}x{CellsY} rooms:{Rooms} btn:{RequiredButtons} decoy:{DecoyDoors} " +
-            $"spikes:{SpikeTraps} dark:{DarknessTraps} tp:[{string.Join(",", Teleporters)}] breakable:{BreakableFloors}";
+            $"{Id} moves[{MinMoves}-{MaxMoves}] floors:{Floors} cells:{CellsX}x{CellsY} gates:[{string.Join(",", Gates)}] decoy:{DecoyDoors} " +
+            $"spikes:{SpikeTraps} dark:{DarknessTraps} dust:{DustPatches} tp:[{string.Join(",", Teleporters)}] breakable:{BreakableFloors} loops:{ExtraLoops}";
     }
 }
