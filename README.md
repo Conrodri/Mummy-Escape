@@ -60,15 +60,17 @@ Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnu
 
 Tout est déterministe : un couple (niveau, variante) produit **la même carte sur tous les appareils** (graine = hash(version du générateur, niveau, variante), PRNG PCG32 maison). Chaque labyrinthe est validé par un solveur BFS exact (position, boutons, pièges désamorcés, PV, cécité, torche).
 
-**On joue sur la mémoire et la logique, pas sur la longueur.** Un humain fait environ 2× le chemin idéal (simulation `LevelLab --human`) : le par reste donc court (≈ 30 coups au plus, un niveau dure ~2 minutes) et la difficulté monte par les **mécaniques à enchaîner** (portes, portails verrouillés ou maudits, mécanique de l'acte, pièges, poussière, 2 étages), jamais par la distance.
+**On joue sur la mémoire et la logique, pas sur la longueur.** Un joueur moyen fait 1,2 à 1,5× le chemin idéal (simulation `LevelLab --human`) : le par reste court (≈ 30 coups, 38 au plus avec 2 étages et un portail verrouillé, un niveau dure ~1 à 1,5 minute en médiane) et la difficulté monte par les **mécaniques à enchaîner** (portes, portails verrouillés ou maudits, mécanique de l'acte, pièges, poussière, 2 étages), jamais par la distance.
+
+**Des allers-retours, pas un couloir.** Les mécanismes forment une chaîne construite à rebours depuis la sortie : le dernier coupe le chemin de la sortie, son bouton (ou son portail) est placé là où l'atteindre oblige à revenir sur ses pas, la porte précédente verrouille le chemin vers ce bouton, et ainsi de suite. On va à gauche pour la porte de droite, derrière laquelle attend le bouton de la porte de gauche, derrière laquelle un portail mène à la sortie. Autour de ce parcours, des **chemins courts et longs** (boucles, contournements creusés dans la roche) à distinguer de mémoire.
 
 | Acte | Par min. | Plafond | Étages | Taille | Mécaniques obligatoires | Mécanique de l'acte |
 |------|---------|---------|--------|--------|-------------------------|---------------------|
-| 1 | 14 | 20 → 24 | 1 | 5 → 6 | 1 → 2 (porte / portail) | — |
-| 2 | 16 | 24 → 28 | 1 | 6 | 2 (porte + portail) | 1 → 2 courants |
-| 3 | 18 | 26 → 30 | 1 | 6 | 2 (portail verrouillé ou non + porte) | 1 → 2 dalles fragiles |
-| 4 | 20 | 28 → 29 | 1 → 2 | 6 → 5 | 2 (laser + portail / porte) | barrières rouges et bleues |
-| 5 | 22 | 26 → 28 | 2 | 4 | 2 (portail maudit ou non, porte, laser) | 2 jets de flammes + 1 dalle |
+| 1 | 16 | 22 → 28 | 1 | 5 → 6 | 1 → 2 (porte / portail) | — |
+| 2 | 20 | 28 → 32 | 1 | 6 | 2 (porte + portail) | 1 → 2 courants |
+| 3 | 22 | 30 → 34 | 1 | 6 | 2 (portail verrouillé ou non + porte) | 1 → 2 dalles fragiles |
+| 4 | 23 | 30 → 31 | 1 → 2 | 6 → 4 | 2 (laser + portail / porte) | barrières rouges et bleues |
+| 5 | 24 | 28 → 30 | 2 | 4 | 2 (portail maudit ou non, porte, laser) | 2 jets de flammes + 1 dalle |
 
 (+4 coups de plafond par étage supplémentaire, +3 pour un portail verrouillé, qui demande son levier. Si une graine ne donne aucun tombeau valide, la recherche reprend avec +3 puis +6 coups de marge, de façon déterministe.)
 
@@ -95,7 +97,7 @@ Courants, dalles et barrières coûtent au pire un détour, **jamais la partie**
 
 Pour utiliser de vraies pistes (Suno…), déposer `menu`, `act1` … `act5` (.mp3/.ogg/.wav) dans `Assets/_Project/Resources/Music/` : elles remplacent automatiquement les thèmes codés. `act2_f2` = musique propre à l’étage 2, `act2_b` (tout suffixe) = variante tirée au hasard à chaque partie (`Services/MusicCatalog.cs`). Le **Juke-box** de l’accueil liste toutes les pistes par thème et par étage pour les écouter.
 
-**Interface** (`UI/UIKit.cs`, `UI/UISprites.cs`) : polices Cinzel (titres) et Nunito (texte) sous licence OFL dans `Resources/Fonts`, formes arrondies et icônes dessinées en SDF au démarrage, trois styles de bouton (principal doré, secondaire, discret).
+**Interface** (`UI/UIKit.cs`, `UI/UISprites.cs`) : polices Cinzel (titres) et Nunito (texte) sous licence OFL dans `Resources/Fonts`, formes arrondies et icônes dessinées en SDF au démarrage, trois styles de bouton (principal doré, secondaire, discret). Tout est construit pour un écran de référence 1080×1920 ; sur les téléphones allongés, `UIKit.FitInParent` réduit les modales pour qu'elles tiennent dans la zone sûre (encoche, coins arrondis) et `UIKit.FittedGrid` fait de même pour les grilles (sélection des niveaux, boutique).
 
 **Anti-capture de la carte** (`Services/ScreenGuard.cs`, `Plugins/iOS/MummyScreenGuard.mm`), active seulement pendant l’aperçu :
 - Android : `FLAG_SECURE` sur la fenêtre (captures et enregistrements noirs) ;
@@ -107,11 +109,12 @@ Garanties du générateur (`Core/Generation/LevelGenerator.cs`, vérifiées par 
 - **chaque élément sert** (`CheckEverythingUsed`) : chaque bouton / levier est actionné, chaque portail et échelle emprunté, chaque porte, barrière, courant, dalle, piège, poussière et jet de flammes est sur le chemin idéal, chaque torche murale rallume la torche. Plus de fausse porte, de portail leurre ni de portail caché (tous visibles à l'aperçu) ;
 - **jamais bloqué** (`CheckNoDeadLock`) : depuis **toute** situation atteignable (position, leviers, dalles effondrées, PV, torche, cécité, pièges désamorcés, rythme des flammes), il reste un chemin vers la sortie sans mourir. Exemple rejeté : 1 PV, torche éteinte par la poussière et des pics impossibles à désamorcer sur le seul chemin du retour ;
 - les **culs-de-sac servent** : bouton, téléporteur, échelle, point de chute… les impasses vides sont rebouclées ou comblées ;
+- **aucune partie inutile** : le sol hors du chemin idéal relie toujours deux points distincts de ce chemin (un chemin court ou long à choisir). Les poches où l'on entre et ressort par le même endroit redeviennent de la roche, un bloc de labyrinthe entre deux points est réduit à un seul couloir, et le tombeau est recadré sur son sol ;
 - **2 étages maximum** (tout doit tenir en mémoire après l'aperçu) ; chaque téléporteur est au fond d'un cul-de-sac : une seule sortie à l'arrivée, un pas en arrière pour repartir ;
 - la **sortie est loin** de l'entrée (≥ 2/3 du côté du tombeau), ou derrière une porte dont le bouton est lui-même loin ;
 - espacement minimal entre points d'intérêt, PV suffisants pour le par.
 
-Les tests vérifient pour **chaque** niveau et plusieurs variantes (60 par niveau dans le balayage `Slow`) : spec respectée, déterminisme par variante, nouvelle carte à chaque partie, par rejoué à l'identique dans `GameSession`, mécaniques réellement obligatoires, éléments tous utiles, aucun blocage possible, impasses utiles, sortie lointaine, par plafonné.
+Les tests vérifient pour **chaque** niveau et plusieurs variantes (60 par niveau dans le balayage `Slow`) : spec respectée, déterminisme par variante, nouvelle carte à chaque partie, par rejoué à l'identique dans `GameSession`, mécaniques réellement obligatoires, éléments tous utiles, aucun blocage possible, impasses utiles, aucune partie inutile, sortie lointaine, par plafonné.
 
 ## Langues
 
@@ -125,7 +128,7 @@ Français et anglais, au choix dans **Paramètres › Langue** (par défaut : la
 ## Tests
 
 ```bash
-cd tools/CoreTests && dotnet test                       # ~1480 tests
+cd tools/CoreTests && dotnet test                       # ~1630 tests
 dotnet test --filter "TestCategory!=Slow"               # sans le balayage de 60 variantes par niveau
 ```
 Dans Unity : Window › General › Test Runner › EditMode.
@@ -140,6 +143,7 @@ dotnet run -- 2-7 [variante]               # carte ASCII + solution optimale d'u
 dotnet run -- --why 1-7 [préfixe] [n]      # raisons de rejet des tentatives (+ carte partielle du 1er rejet au préfixe donné)
 dotnet run -c Release -- --human [--sessions 30] [--act 2] [--profile moyen]   # joueurs humains simulés : mémoire imparfaite, erreurs, chrono
 dotnet run -c Release -- --human-why 3-8 attentif [n]   # issue de chaque partie simulée (morts, emmurée, abandon)
+dotnet run -c Release -- --compact [n]    # part du sol utilisée par le chemin idéal, carrefours, zones éloignées, par acte
 ```
 
 **Modifier la génération** : toute modification de `LevelGenerator` / `DifficultyTable` / `Rules` change les labyrinthes. Il faut alors
