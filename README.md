@@ -1,6 +1,6 @@
 # Mummy Escape
 
-Puzzle-labyrinthe mobile (Unity 6000.3 LTS, URP 2D). Une momie s'échappe d'un tombeau plongé dans le noir : la carte est montrée au début (10 s par étage), puis la momie ne voit plus que les cases voisines grâce à sa torche. Chaque swipe = 1 case, objectif = sortir en un minimum de coups. Chaque partie tire un nouveau labyrinthe.
+Puzzle-labyrinthe mobile (Unity 6000.3 LTS, URP 2D). Une momie s'échappe d'un tombeau plongé dans le noir : la carte est montrée au début (4 à 10 s par étage selon ce qu’il y a à retenir), puis la momie ne voit plus que les cases voisines grâce à sa torche. Chaque swipe = 1 case, objectif = sortir en un minimum de coups. Chaque partie tire un nouveau labyrinthe.
 
 ```
 Escape/
@@ -56,23 +56,25 @@ Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnu
 
 ## Contrat de difficulté
 
-**Déroulé d'une partie** : chaque étage est affiché tour à tour pendant 10 s, l’étage de départ en dernier (bouton « Étage suivant » / « Prêt » pour passer ; le temps s’arrête dans le menu pause ; aperçu désactivable dans les Paramètres), puis le brouillard tombe. La torche éclaire les cases voisines ; la **poussière** l'éteint (on ne voit plus que sa propre case, impossible de désamorcer) et longer une **torche murale** la rallume (à partir de l'acte 2). Chaque nouvelle partie d'un niveau tire un **nouveau labyrinthe** (variante n° = nombre de parties jouées) : il faut à la fois de la logique et de la mémoire.
+**Déroulé d'une partie** : chaque étage est affiché tour à tour, du premier au dernier, d’autant plus longtemps qu’il y a à retenir (`Level.PreviewSeconds` : 4 à 10 s selon le sol et les éléments, ≈ 6 s pour un tombeau de l’acte 1, 15 s pour les 3 étages de l’acte 5) (bouton « Étage suivant » / « Prêt » pour passer, ou un swipe : il passe à l’étage suivant, et sur le dernier il lance la partie en jouant ce déplacement ; le temps s’arrête dans le menu pause ; aperçu désactivable dans les Paramètres), puis le brouillard tombe. La torche éclaire les cases voisines ; la **poussière** l'éteint (on ne voit plus que sa propre case, impossible de désamorcer) et longer une **torche murale** la rallume (à partir de l'acte 2). Chaque nouvelle partie d'un niveau tire un **nouveau labyrinthe** (variante n° = nombre de parties jouées) : il faut à la fois de la logique et de la mémoire.
 
 Tout est déterministe : un couple (niveau, variante) produit **la même carte sur tous les appareils** (graine = hash(version du générateur, niveau, variante), PRNG PCG32 maison). Chaque labyrinthe est validé par un solveur BFS exact (position, boutons, pièges désamorcés, PV, cécité, torche).
 
-**On joue sur la mémoire et la logique, pas sur la longueur.** Un joueur moyen fait 1,2 à 1,5× le chemin idéal (simulation `LevelLab --human`) : le par reste court (≈ 30 coups, 38 au plus avec 2 étages et un portail verrouillé, un niveau dure ~1 à 1,5 minute en médiane) et la difficulté monte par les **mécaniques à enchaîner** (portes, portails verrouillés ou maudits, mécanique de l'acte, pièges, poussière, 2 étages), jamais par la distance.
+**On joue sur la mémoire et la logique, pas sur la longueur.** La difficulté monte par les **mécaniques à enchaîner** (portes, portails verrouillés ou maudits, mécanique de l'acte, pièges, étages), jamais en perdant le joueur.
 
 **Des allers-retours, pas un couloir.** Les mécanismes forment une chaîne construite à rebours depuis la sortie : le dernier coupe le chemin de la sortie, son bouton (ou son portail) est placé là où l'atteindre oblige à revenir sur ses pas, la porte précédente verrouille le chemin vers ce bouton, et ainsi de suite. On va à gauche pour la porte de droite, derrière laquelle attend le bouton de la porte de gauche, derrière laquelle un portail mène à la sortie. Autour de ce parcours, des **chemins courts et longs** (boucles, contournements creusés dans la roche) à distinguer de mémoire.
 
-| Acte | Par min. | Plafond | Étages | Taille | Mécaniques obligatoires | Mécanique de l'acte |
-|------|---------|---------|--------|--------|-------------------------|---------------------|
-| 1 | 16 | 22 → 28 | 1 | 5 → 6 | 1 → 2 (porte / portail) | — |
-| 2 | 20 | 28 → 32 | 1 | 6 | 2 (porte + portail) | 1 → 2 courants |
-| 3 | 22 | 30 → 34 | 1 | 6 | 2 (portail verrouillé ou non + porte) | 1 → 2 dalles fragiles |
-| 4 | 23 | 30 → 31 | 1 → 2 | 6 → 4 | 2 (laser + portail / porte) | barrières rouges et bleues |
-| 5 | 24 | 28 → 30 | 2 | 4 | 2 (portail maudit ou non, porte, laser) | 2 jets de flammes + 1 dalle |
+**Chaque acte suit trois paliers** (`DifficultyTable.Tier`) : niveaux 1 à 3 = **1 mécanisme et 1 piège**, niveaux 4 à 7 = **2 et 2**, niveaux 8 à 10 = **3 et 3** (les pièges de l'acte à tour de rôle). Les étages s'empilent : **2 étages à partir du niveau 3-5** et pour tout l'acte 4, **3 étages pour tout l'acte 5**.
 
-(+4 coups de plafond par étage supplémentaire, +3 pour un portail verrouillé, qui demande son levier. Si une graine ne donne aucun tombeau valide, la recherche reprend avec +3 puis +6 coups de marge, de façon déterministe.)
+| Acte | Par (palier 1 → 3) | Étages | Taille | Mécanismes | Pièges | Mécanique de l'acte |
+|------|-------------------|--------|--------|------------|--------|---------------------|
+| 1 | 14-22 → 18-34 | 1 | 6×6 | porte / portail | ombre, pics | — |
+| 2 | 16-24 → 20-36 | 1 | 6×6 | porte / portail | pics, poussière, ombre | 1 → 2 courants |
+| 3 | 18-26 → 22-45 | 1, puis 2 dès 3-5 | 6×6, puis 5×5 | portail (verrouillé ou non) / porte | poussière, pics, ombre | 1 → 2 dalles fragiles |
+| 4 | 20-30 → 24-45 | 2 | 5×5 | laser dans chaque niveau, portail / porte | ombre, pics, poussière | barrières rouges et bleues |
+| 5 | 22-34 → 26-46 | 3 | 4×4 | portail (maudit ou non), porte, laser | poussière, ombre, pics | 2 jets de flammes + 1 dalle |
+
+(Plafond du par : base de l'acte, +6 coups par mécanisme supplémentaire, +4 par étage supplémentaire, +3 pour un portail verrouillé, qui demande son levier ; le minimum monte de 2 par palier. Si une graine ne donne aucun tombeau valide, la recherche reprend avec +3 puis +6 coups de marge, de façon déterministe.)
 
 **Un thème et une mécanique par acte** (`Runtime/Visual/TombTheme.cs` pour l'ambiance, `DifficultyTable` pour les règles) :
 
@@ -97,7 +99,7 @@ Courants, dalles et barrières coûtent au pire un détour, **jamais la partie**
 
 Pour utiliser de vraies pistes (Suno…), déposer `menu`, `act1` … `act5` (.mp3/.ogg/.wav) dans `Assets/_Project/Resources/Music/` : elles remplacent automatiquement les thèmes codés. `act2_f2` = musique propre à l’étage 2, `act2_b` (tout suffixe) = variante tirée au hasard à chaque partie (`Services/MusicCatalog.cs`). Le **Juke-box** de l’accueil liste toutes les pistes par thème et par étage pour les écouter.
 
-**Interface** (`UI/UIKit.cs`, `UI/UISprites.cs`) : polices Cinzel (titres) et Nunito (texte) sous licence OFL dans `Resources/Fonts`, formes arrondies et icônes dessinées en SDF au démarrage, trois styles de bouton (principal doré, secondaire, discret). Tout est construit pour un écran de référence 1080×1920 ; sur les téléphones allongés, `UIKit.FitInParent` réduit les modales pour qu'elles tiennent dans la zone sûre (encoche, coins arrondis) et `UIKit.FittedGrid` fait de même pour les grilles (sélection des niveaux, boutique).
+**Interface** (`UI/UIKit.cs`, `UI/UISprites.cs`) : polices Cinzel (titres) et Nunito (texte) sous licence OFL dans `Resources/Fonts`, formes arrondies et icônes dessinées en SDF au démarrage, trois styles de bouton (principal doré, secondaire, discret). Tout est construit pour un écran de référence 1080×1920 ; sur les téléphones allongés, `UIKit.FitInParent` réduit les modales pour qu'elles tiennent dans la zone sûre (encoche, coins arrondis) et `UIKit.FittedGrid` fait de même pour la grille de sélection des niveaux.
 
 **Anti-capture de la carte** (`Services/ScreenGuard.cs`, `Plugins/iOS/MummyScreenGuard.mm`), active seulement pendant l’aperçu :
 - Android : `FLAG_SECURE` sur la fenêtre (captures et enregistrements noirs) ;
@@ -110,7 +112,7 @@ Garanties du générateur (`Core/Generation/LevelGenerator.cs`, vérifiées par 
 - **jamais bloqué** (`CheckNoDeadLock`) : depuis **toute** situation atteignable (position, leviers, dalles effondrées, PV, torche, cécité, pièges désamorcés, rythme des flammes), il reste un chemin vers la sortie sans mourir. Exemple rejeté : 1 PV, torche éteinte par la poussière et des pics impossibles à désamorcer sur le seul chemin du retour ;
 - les **culs-de-sac servent** : bouton, téléporteur, échelle, point de chute… les impasses vides sont rebouclées ou comblées ;
 - **aucune partie inutile** : le sol hors du chemin idéal relie toujours deux points distincts de ce chemin (un chemin court ou long à choisir). Les poches où l'on entre et ressort par le même endroit redeviennent de la roche, un bloc de labyrinthe entre deux points est réduit à un seul couloir, et le tombeau est recadré sur son sol ;
-- **2 étages maximum** (tout doit tenir en mémoire après l'aperçu) ; chaque téléporteur est au fond d'un cul-de-sac : une seule sortie à l'arrivée, un pas en arrière pour repartir ;
+- **3 étages maximum** (tout doit tenir en mémoire après l'aperçu) ; chaque téléporteur est au fond d'un cul-de-sac : une seule sortie à l'arrivée, un pas en arrière pour repartir ;
 - la **sortie est loin** de l'entrée (≥ 2/3 du côté du tombeau), ou derrière une porte dont le bouton est lui-même loin ;
 - espacement minimal entre points d'intérêt, PV suffisants pour le par.
 
@@ -144,6 +146,8 @@ dotnet run -- --why 1-7 [préfixe] [n]      # raisons de rejet des tentatives (+
 dotnet run -c Release -- --human [--sessions 30] [--act 2] [--profile moyen]   # joueurs humains simulés : mémoire imparfaite, erreurs, chrono
 dotnet run -c Release -- --human-why 3-8 attentif [n]   # issue de chaque partie simulée (morts, emmurée, abandon)
 dotnet run -c Release -- --compact [n]    # part du sol utilisée par le chemin idéal, carrefours, zones éloignées, par acte
+dotnet run -c Release -- --specs              # contrat de difficulté de chaque niveau (par, étages, taille, mécanismes, pièges)
+dotnet run -c Release -- --preview [n]      # durée d'aperçu par étage et par acte
 ```
 
 **Modifier la génération** : toute modification de `LevelGenerator` / `DifficultyTable` / `Rules` change les labyrinthes. Il faut alors

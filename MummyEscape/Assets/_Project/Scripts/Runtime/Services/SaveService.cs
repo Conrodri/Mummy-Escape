@@ -14,8 +14,14 @@ namespace MummyEscape.Services
         public int Version = 2;
         public List<LevelRecord> Records = new List<LevelRecord>();
         public int Coins;
-        public List<string> OwnedSkins = new List<string> { SkinCatalog.DefaultSkinId };
+        /// <summary>Every shop item owned, whatever its slot (mummy, colour, torch, hat, shoes).</summary>
+        public List<string> OwnedSkins = new List<string>(SkinCatalog.Defaults);
+        /// <summary>Selected colour (the name predates the other slots, kept for old saves).</summary>
         public string SelectedSkin = SkinCatalog.DefaultSkinId;
+        public string SelectedMummy = SkinCatalog.DefaultMummyId;
+        public string SelectedTorch = SkinCatalog.DefaultTorchId;
+        public string SelectedHat = SkinCatalog.NoHatId;
+        public string SelectedShoes = SkinCatalog.NoShoesId;
         /// <summary>Country shown in the rankings (ISO alpha-2). Empty = detect from the device.</summary>
         public string Country = "";
     }
@@ -49,7 +55,13 @@ namespace MummyEscape.Services
                 Debug.LogWarning($"[Save] Corrupted save, starting fresh: {e.Message}");
                 Data = new SaveData();
             }
-            if (Data.OwnedSkins.Count == 0) Data.OwnedSkins.Add(SkinCatalog.DefaultSkinId);
+            // Saves from before the torches, hats and shoes: own every slot's free item, wear the defaults.
+            foreach (var id in SkinCatalog.Defaults) if (!Data.OwnedSkins.Contains(id)) Data.OwnedSkins.Add(id);
+            Data.SelectedMummy = SkinCatalog.Get(Data.SelectedMummy, CosmeticSlot.Mummy).Id;
+            Data.SelectedSkin = SkinCatalog.Get(Data.SelectedSkin, CosmeticSlot.Color).Id;
+            Data.SelectedTorch = SkinCatalog.Get(Data.SelectedTorch, CosmeticSlot.Torch).Id;
+            Data.SelectedHat = SkinCatalog.Get(Data.SelectedHat, CosmeticSlot.Hat).Id;
+            Data.SelectedShoes = SkinCatalog.Get(Data.SelectedShoes, CosmeticSlot.Shoes).Id;
             if (Data.Version < 2)
             {
                 // v1 records counted raw moves on a fixed maze: only a 3-star run is known to be perfect.
@@ -157,19 +169,53 @@ namespace MummyEscape.Services
 
         public bool TryBuySkin(string id, int price)
         {
-            if (Data.OwnedSkins.Contains(id) || Data.Coins < price) return false;
+            if (Data.OwnedSkins.Contains(id) || Data.Coins < price || TotalStars < SkinCatalog.Get(id).MinStars) return false;
             Data.Coins -= price;
             Data.OwnedSkins.Add(id);
             Save();
             return true;
         }
 
+        /// <summary>Buys every missing piece of a collection at once, for the given price.</summary>
+        public bool TryBuyAll(IEnumerable<SkinDef> items, int price)
+        {
+            var missing = new List<string>();
+            foreach (var s in items)
+            {
+                if (TotalStars < s.MinStars) return false;
+                if (!Data.OwnedSkins.Contains(s.Id)) missing.Add(s.Id);
+            }
+            if (missing.Count == 0 || Data.Coins < price) return false;
+            Data.Coins -= price;
+            Data.OwnedSkins.AddRange(missing);
+            Save();
+            return true;
+        }
+
+        /// <summary>Wears an owned item in its slot.</summary>
         public void SelectSkin(string id)
         {
             if (!Data.OwnedSkins.Contains(id)) return;
-            Data.SelectedSkin = id;
+            var item = SkinCatalog.Get(id);
+            switch (item.Slot)
+            {
+                case CosmeticSlot.Mummy: Data.SelectedMummy = id; break;
+                case CosmeticSlot.Color: Data.SelectedSkin = id; break;
+                case CosmeticSlot.Torch: Data.SelectedTorch = id; break;
+                case CosmeticSlot.Hat: Data.SelectedHat = id; break;
+                default: Data.SelectedShoes = id; break;
+            }
             Save();
         }
+
+        public bool IsWorn(string id) =>
+            id == Data.SelectedMummy || id == Data.SelectedSkin || id == Data.SelectedTorch || id == Data.SelectedHat || id == Data.SelectedShoes;
+
+        /// <summary>Everything the player wears.</summary>
+        public Loadout Loadout => new Loadout(
+            SkinCatalog.Get(Data.SelectedMummy, CosmeticSlot.Mummy), SkinCatalog.Get(Data.SelectedSkin, CosmeticSlot.Color),
+            SkinCatalog.Get(Data.SelectedTorch, CosmeticSlot.Torch), SkinCatalog.Get(Data.SelectedHat, CosmeticSlot.Hat),
+            SkinCatalog.Get(Data.SelectedShoes, CosmeticSlot.Shoes));
 
         /// <summary>Stored in <see cref="SaveData.Country"/> when the player asks to use the device region.</summary>
         public const string AutoCountry = "auto";

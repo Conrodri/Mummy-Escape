@@ -53,6 +53,7 @@ namespace MummyEscape.UI.Screens
 
             _glow = UIKit.Image(_stage, UIKit.Art.Glow, new Color(1f, 0.75f, 0.4f, 0.55f));
             _mummy = UIKit.Image(_stage, null, Color.white);
+            _mummy.preserveAspect = true; // the outfit sprite is 32x40
             foreach (var rt in new[] { _glow.rectTransform, _mummy.rectTransform })
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
 
@@ -85,7 +86,7 @@ namespace MummyEscape.UI.Screens
             FitMummy();
             _stars.text = App.Save.TotalStars.ToString();
             _coins.text = App.Save.Data.Coins.ToString();
-            _mummy.sprite = App.Art.MummyPortrait(SkinCatalog.Get(App.Save.Data.SelectedSkin));
+            _mummy.sprite = App.Art.MummyPortrait(App.Save.Loadout);
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)
                 : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName) : Loc.F("Invité : {0}", online.PlayerName);
@@ -102,7 +103,8 @@ namespace MummyEscape.UI.Screens
         void FitMummy()
         {
             if (_mummy == null) return;
-            float size = Mathf.Min(260f, _stage.rect.height - 30f);
+            // Grows with the room left (tall phones), never past a size where the pixel art turns into a poster.
+            float size = Mathf.Min(620f, _stage.rect.height * 0.8f, _stage.rect.width * 0.7f);
             bool show = size >= 100f;
             _mummy.enabled = _glow.enabled = show;
             if (!show) return;

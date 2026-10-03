@@ -33,6 +33,7 @@ namespace MummyEscape.UI.Screens
             var card = UIKit.Card(body, 30, 20);
             var who = UIKit.Row(card, 130, 26);
             _portrait = UIKit.Image(who.transform, null, Color.white);
+            _portrait.preserveAspect = true; // the outfit sprite is 32x40
             UIKit.Size(_portrait, 130, 130);
             var texts = UIKit.Rect("Texts", who.transform);
             UIKit.Size(texts, -1, -1, 1);
@@ -59,7 +60,7 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
-            _portrait.sprite = App.Art.MummyPortrait(SkinCatalog.Get(App.Save.Data.SelectedSkin));
+            _portrait.sprite = App.Art.MummyPortrait(App.Save.Loadout);
             _name.text = App.Online.PlayerName;
             _code.text = Loc.T(App.Online.IsAvailable ? "Ton code ami : donne-le à tes amis"
                        : App.Online.IsDemo ? "Démo hors ligne (amis fictifs)" : "Hors ligne");

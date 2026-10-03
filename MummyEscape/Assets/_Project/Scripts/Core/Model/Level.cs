@@ -66,6 +66,30 @@ namespace MummyEscape.Core
 
         public bool TryGetTeleportTarget(Cell from, out Cell to) => _teleportTargets.TryGetValue(IndexOf(from), out to);
 
+        public const int MinPreviewSeconds = 4;
+        public const int MaxPreviewSeconds = 10;
+
+        /// <summary>
+        /// How long one floor is shown before the fog falls: the more ground and elements (buttons, doors, portals,
+        /// ladders, traps, hazards, torches) there are to remember, the longer, in whole seconds between
+        /// <see cref="MinPreviewSeconds"/> and <see cref="MaxPreviewSeconds"/>. A first tomb takes a glance, a burning
+        /// sanctuary a real look.
+        /// </summary>
+        public int PreviewSeconds(int floor)
+        {
+            int ground = 0, elements = 0;
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                {
+                    var t = this[new Cell(floor, x, y)].Type;
+                    if (t == TileType.Wall) continue;
+                    if (t != TileType.WallTorch) ground++;
+                    if (t != TileType.Floor) elements++;
+                }
+            float seconds = 1.5f + ground * 0.05f + elements * 0.5f;
+            return Math.Max(MinPreviewSeconds, Math.Min(MaxPreviewSeconds, (int)Math.Round(seconds)));
+        }
+
         /// <summary>
         /// The same tomb trimmed to the bounding box of its ground (every floor alike, so ladders stay aligned), with a
         /// one-tile rock border. The offset is kept even so maze cells stay on odd coordinates.

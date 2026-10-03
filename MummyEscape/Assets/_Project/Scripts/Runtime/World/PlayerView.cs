@@ -12,7 +12,8 @@ namespace MummyEscape.World
     {
         SpriteRenderer _sprite;
         SpriteRenderer _flame;
-        SkinDef _skin;
+        Loadout _look;
+        bool _dressed;
         Transform _body;
         Light2D _torch;
         ParticleSystem _dust;
@@ -58,11 +59,12 @@ namespace MummyEscape.World
             ApplySettings();
         }
 
-        public void SetSkin(SkinDef skin)
+        public void SetSkin(Loadout look)
         {
-            _skin = skin;
-            _sprite.sprite = _art.Mummy(skin);
-            _torchColor = skin.Torch;
+            _look = look;
+            _dressed = true;
+            _sprite.sprite = _art.Mummy(look);
+            _torchColor = look.Light;
             _torch.color = _torchColor;
         }
 
@@ -235,8 +237,8 @@ namespace MummyEscape.World
             _flame.color = new Color(1f, 1f, 1f, _sprite.color.a);
             var offset = ArtLibrary.TorchFlameOffset;
             _torch.transform.localPosition = new Vector3(_sprite.flipX ? -offset.x : offset.x, offset.y, 0f);
-            if (TorchLit && _skin != null)
-                _flame.sprite = _art.TorchFlame(_skin, (int)(Time.time * 9f) % ArtLibrary.TorchFlameFrames);
+            if (TorchLit && _dressed)
+                _flame.sprite = _art.TorchFlame(_look.Light, (int)(Time.time * 9f) % ArtLibrary.TorchFlameFrames);
         }
 
         ParticleSystem CreateDust(Material spriteMaterial)

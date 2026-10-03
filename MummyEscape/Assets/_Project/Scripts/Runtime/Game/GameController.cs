@@ -32,8 +32,6 @@ namespace MummyEscape.Game
         SwipeInput _input;
         readonly Dictionary<(LevelId, int), Task<Level>> _pending = new Dictionary<(LevelId, int), Task<Level>>();
 
-        /// <summary>Each floor of the tomb is shown this long at the start of every run (one after the other), then the fog falls.</summary>
-        public const float PreviewSecondsPerFloor = 10f;
         public bool Previewing { get; private set; }
         public float PreviewLeft { get; private set; }
         /// <summary>Floor shown by the preview right now (0 = bottom), and how many floors are still to come.</summary>
@@ -42,6 +40,8 @@ namespace MummyEscape.Game
         public bool PreviewOnLastFloor => PreviewFloorsLeft <= 0;
         public event Action PreviewChanged;
         bool _skipPreview;
+        /// <summary>Swipe made on the last floor of the preview: played as soon as the fog falls.</summary>
+        Dir? _pendingMove;
 
         bool _busy;
         bool _paused;
@@ -97,7 +97,7 @@ namespace MummyEscape.Game
             _maze.Build(Session);
             _player.gameObject.SetActive(true);
             _player.ResetVisual();
-            _player.SetSkin(SkinCatalog.Get(_app.Save.Data.SelectedSkin));
+            _player.SetSkin(_app.Save.Loadout);
             _player.Place(level.Start);
             _player.SetBlind(false);
             _player.SetTorchLit(true);
@@ -153,8 +153,10 @@ namespace MummyEscape.Game
         // ------------------------------------------------------------------ map preview
 
         /// <summary>
-        /// Shows the floors one after the other (the start floor last), <see cref="PreviewSecondsPerFloor"/> each; "Ready" moves on
-        /// to the next floor (or starts on the last one). Turned off for good in the settings, the run starts at once.
+        /// Shows the floors one after the other, from the first one up, each as long as its content asks for
+        /// (<see cref="Level.PreviewSeconds"/>: a few seconds for a first tomb, up to 10 s); "Ready" moves on
+        /// to the next floor (or starts on the last one), and so does a swipe: on the last floor the swipe also makes
+        /// the first move. Turned off for good in the settings, the run starts at once.
         /// </summary>
         IEnumerator PreviewRoutine()
         {
@@ -165,20 +167,20 @@ namespace MummyEscape.Game
                 yield break;
             }
             Previewing = true;
-            _input.Enabled = false;
+            _pendingMove = null;
+            _input.Enabled = !_paused; // a swipe moves the preview on
             _app.Guard.Arm(true); // the map must not leave the phone (screenshot / recording)
             _app.Lighting.SetPreview(true);
-            // The start floor comes last: the preview ends where the mummy stands, and that floor sinks into the dark.
+            // Floors in order, the first one first (the mummy wakes up on it).
             var order = new List<int>();
             int startFloor = Session.Level.Start.Floor;
-            for (int f = 0; f < Session.Level.Floors; f++) if (f != startFloor) order.Add(f);
-            order.Add(startFloor);
+            for (int f = 0; f < Session.Level.Floors; f++) order.Add(f);
             for (int step = 0; step < order.Count; step++)
             {
                 PreviewFloor = order[step];
                 PreviewFloorsLeft = order.Count - 1 - step;
                 _skipPreview = false;
-                PreviewLeft = PreviewSecondsPerFloor;
+                PreviewLeft = Session.Level.PreviewSeconds(PreviewFloor);
                 _maze.SetPreview(true, PreviewFloor);
                 _player.gameObject.SetActive(PreviewFloor == startFloor); // the mummy stands on the start floor only
                 _app.Camera.ShowArea(_maze.PreviewBounds());
@@ -205,6 +207,9 @@ namespace MummyEscape.Game
             _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
             PreviewChanged?.Invoke();
             Changed?.Invoke();
+            // The swipe that ended the preview on its last floor is the first move of the run.
+            if (_pendingMove.HasValue) Submit(PlayerAction.Move(_pendingMove.Value));
+            _pendingMove = null;
         }
 
         /// <summary>Set when the last tomb was thrown away because of a screenshot (the HUD tells the player why).</summary>
@@ -273,7 +278,7 @@ namespace MummyEscape.Game
         public void SetPaused(bool paused)
         {
             _paused = paused;
-            _input.Enabled = !paused && !Previewing && Session != null && Session.Status == SessionStatus.Playing;
+            _input.Enabled = !paused && Session != null && Session.Status == SessionStatus.Playing;
         }
 
         public void SetMapView(bool on)
@@ -287,7 +292,17 @@ namespace MummyEscape.Game
 
         // ------------------------------------------------------------------ input
 
-        void OnSwipe(Dir d) => Submit(PlayerAction.Move(d));
+        void OnSwipe(Dir d)
+        {
+            // During the map preview, a swipe skips to the next floor, or on the last one starts the run with that move.
+            if (Previewing)
+            {
+                if (PreviewFloorsLeft == 0) _pendingMove = d;
+                SkipPreview();
+                return;
+            }
+            Submit(PlayerAction.Move(d));
+        }
 
         void OnTap(Vector2 screenPos)
         {

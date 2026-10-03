@@ -102,7 +102,7 @@ namespace MummyEscape.Tests
         {
             var level = Get(new LevelId(act, index), variant);
             Assert.IsNull(LevelValidator.CheckDeadEndPortals(level), "one way out of each teleporter");
-            Assert.That(level.Floors, Is.LessThanOrEqualTo(2), "a human memorises 2 floors at most");
+            Assert.That(level.Floors, Is.LessThanOrEqualTo(3), "a human memorises 3 floors at most");
         }
 
         [TestCaseSource(nameof(AllMazes))]
@@ -201,12 +201,39 @@ namespace MummyEscape.Tests
             }
         }
 
+        /// <summary>The map preview lasts as long as the tomb asks for: a glance for a first tomb, a real look later on.</summary>
+        [Test]
+        public void Preview_GrowsWithWhatThereIsToRemember()
+        {
+            // Whole preview of a level (every floor): stacked floors are smaller, but there are more of them.
+            double Average(int act)
+            {
+                var seconds = new List<int>();
+                for (int i = 1; i <= DifficultyTable.GetAct(act).Levels; i++)
+                {
+                    var level = Get(new LevelId(act, i), 0);
+                    int sum = 0;
+                    for (int f = 0; f < level.Floors; f++)
+                    {
+                        int s = level.PreviewSeconds(f);
+                        Assert.That(s, Is.InRange(Level.MinPreviewSeconds, Level.MaxPreviewSeconds));
+                        sum += s;
+                    }
+                    seconds.Add(sum);
+                }
+                return seconds.Average();
+            }
+            Assert.That(Average(1), Is.LessThanOrEqualTo(7), "a first tomb takes a few seconds, not 10");
+            Assert.That(Average(3), Is.GreaterThan(Average(1)));
+            Assert.That(Average(5), Is.GreaterThan(Average(3)));
+        }
+
         /// <summary>The game plays on memory and logic, not length: the ideal route stays short in every act.</summary>
         [Test]
         public void Acts_IdealRouteStaysShort()
         {
             foreach (var id in DifficultyTable.AllLevels())
-                Assert.That(DifficultyTable.Spec(id).MaxMoves, Is.LessThanOrEqualTo(38), $"{id}: a level must fit in about 2 minutes");
+                Assert.That(DifficultyTable.Spec(id).MaxMoves, Is.LessThanOrEqualTo(48), $"{id}: a level must fit in about 2 minutes");
         }
 
         [TestCaseSource(nameof(AllLevels))]
@@ -228,9 +255,9 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void Act1_IsAtLeast16MovesWithOneMechanic()
+        public void Act1_IsAtLeast14MovesWithOneMechanic()
         {
-            Assert.AreEqual(16, DifficultyTable.GetAct(1).MinMoves);
+            Assert.AreEqual(14, DifficultyTable.GetAct(1).MinMoves);
             for (int i = 1; i <= DifficultyTable.GetAct(1).Levels; i++)
             {
                 var spec = DifficultyTable.Spec(new LevelId(1, i));

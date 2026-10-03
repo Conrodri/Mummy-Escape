@@ -242,7 +242,9 @@ namespace MummyEscape.UI
                     _buttons[i] = Button(track.transform, labels[i], () => { Select(index); onSelect?.Invoke(index); }, 30, ButtonStyle.Ghost);
                     Rounded(_buttons[i].image, (height - 12) / 2f);
                     _labels[i] = _buttons[i].GetComponentInChildren<Text>();
-                    Size(_buttons[i], -1, -1, 1);
+                    FitText(_labels[i], 18);
+                    // Equal shares of the track whatever the label lengths (shrinking the text if needed).
+                    Size(_buttons[i], -1, 0, 1);
                 }
             }
 
