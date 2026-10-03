@@ -24,8 +24,6 @@ namespace MummyEscape.Core
         public Cell Exit { get; internal set; }
         public int ChannelCount { get; internal set; }
         public int TrapCount { get; internal set; }
-        /// <summary>Channels of decoy doors (optional lures, not part of any required route).</summary>
-        public int DecoyChannels { get; internal set; }
         public int MaxHp { get; internal set; } = 2;
         /// <summary>The optimal (omniscient) solution, i.e. the par of the level.</summary>
         public Solution Solution { get; internal set; }

@@ -125,7 +125,13 @@ namespace MummyEscape.UI.Screens
                 badge.transform.parent.GetComponent<Image>().color = new Color(0.91f, 0.76f, 0.35f, 0.16f);
             }
             else if (result.Won)
-                _verdict.text = Loc.P(result.OverPar, "<b>+{0}</b> coup de plus que le chemin idéal", "<b>+{0}</b> coups de plus que le chemin idéal");
+            {
+                // A tier name, then what the next star asks for: humans rarely walk the ideal path, so no "+40 moves" verdict.
+                string tier = Loc.T(result.Stars >= 3 ? "Excellent !" : result.Stars == 2 ? "Bien joué !" : "Évadée de justesse !");
+                string next = result.Stars >= 3 ? Loc.F("chemin idéal : {0} coups", result.Par)
+                                                : Loc.F("{0} coups ou moins pour l'étoile suivante", result.MaxMovesFor(result.Stars + 1));
+                _verdict.text = $"<b>{tier}</b> · {next}";
+            }
             else
                 _verdict.text = walledIn ? Loc.T("Courants, dalles effondrées et barrières ne pardonnent pas.")
                                          : Loc.T("Les pièges ont eu raison de toi.");

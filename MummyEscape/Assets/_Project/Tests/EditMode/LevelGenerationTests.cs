@@ -35,9 +35,10 @@ namespace MummyEscape.Tests
         public void Maze_RespectsItsSpec(int act, int index, int variant)
         {
             var id = new LevelId(act, index);
-            var spec = DifficultyTable.Spec(id);
             var level = Get(id, variant);
+            var spec = level.Spec; // the act spec, or its slightly wider fallback for a rare unlucky seed
             var sol = level.Solution;
+            Assert.That(spec.MaxMoves, Is.LessThanOrEqualTo(DifficultyTable.Spec(id).MaxMoves + LevelGenerator.MaxRelaxSteps * LevelGenerator.RelaxMoves));
 
             Assert.NotNull(sol, "level must be solvable");
             Assert.AreEqual(variant, level.Variant);
@@ -97,10 +98,10 @@ namespace MummyEscape.Tests
         }
 
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_EasyActsPutPortalsInDeadEnds(int act, int index, int variant)
+        public void Maze_PutsPortalsInDeadEnds(int act, int index, int variant)
         {
             var level = Get(new LevelId(act, index), variant);
-            if (act <= 2) Assert.IsNull(LevelValidator.CheckDeadEndPortals(level), "acts 1-2: one way out of each teleporter");
+            Assert.IsNull(LevelValidator.CheckDeadEndPortals(level), "one way out of each teleporter");
             Assert.That(level.Floors, Is.LessThanOrEqualTo(2), "a human memorises 2 floors at most");
         }
 
@@ -111,9 +112,7 @@ namespace MummyEscape.Tests
             var spec = DifficultyTable.Spec(id);
             var level = Get(id, variant);
             bool far = level.Start.Manhattan(level.Exit) >= spec.MinExitDistance;
-            bool farButton = level.AllCells().Any(c => level[c].IsTrigger
-                                                     && (level.DecoyChannels & (1 << level[c].Channel)) == 0
-                                                     && level.Start.Manhattan(c) >= spec.MinExitDistance);
+            bool farButton = level.AllCells().Any(c => level[c].IsTrigger && level.Start.Manhattan(c) >= spec.MinExitDistance);
             Assert.IsTrue(far || farButton, $"exit {level.Start.Manhattan(level.Exit)} tiles from the start");
         }
 
@@ -126,7 +125,7 @@ namespace MummyEscape.Tests
             switch (act)
             {
                 case 2: Assert.That(Count(TileType.Current), Is.GreaterThanOrEqualTo(2), "flooded galleries: currents"); break;
-                case 3: Assert.That(Count(TileType.Crumbling), Is.GreaterThanOrEqualTo(2), "ruins: fragile slabs"); break;
+                case 3: Assert.That(Count(TileType.Crumbling), Is.GreaterThanOrEqualTo(1), "ruins: fragile slabs"); break;
                 case 4:
                     Assert.That(Count(TileType.Switch), Is.GreaterThanOrEqualTo(1), "city of Anubis: switches");
                     Assert.That(level.AllCells().Count(c => level[c].Type == TileType.Barrier && level[c].Param == 0), Is.GreaterThanOrEqualTo(1), "red barriers");
@@ -138,6 +137,30 @@ namespace MummyEscape.Tests
                 // The omniscient route never gets trapped (it reaches the exit), and the start is never a dead lock.
                 Assert.IsTrue(Solver.CanEscape(level, Rules.Initial(level)));
             }
+        }
+
+        /// <summary>Currents, fragile slabs and barriers may cost a detour, never the run: no move sequence walls the mummy in.</summary>
+        [TestCaseSource(nameof(AllMazes))]
+        public void Maze_NeverWallsThePlayerIn(int act, int index, int variant)
+        {
+            Assert.IsNull(LevelValidator.CheckNoDeadLock(Get(new LevelId(act, index), variant)));
+        }
+
+        /// <summary>No lure: every button, door, portal, ladder, hazard and wall torch serves the ideal route.</summary>
+        [TestCaseSource(nameof(AllMazes))]
+        public void Maze_EveryElementServesTheRoute(int act, int index, int variant)
+        {
+            var level = Get(new LevelId(act, index), variant);
+            Assert.IsNull(LevelValidator.CheckEverythingUsed(level, level.Solution));
+            Assert.IsFalse(level.AllCells().Any(c => level[c].Teleporter == TeleporterKind.Hidden), "every portal shows on the preview");
+        }
+
+        /// <summary>The game plays on memory and logic, not length: the ideal route stays short in every act.</summary>
+        [Test]
+        public void Acts_IdealRouteStaysShort()
+        {
+            foreach (var id in DifficultyTable.AllLevels())
+                Assert.That(DifficultyTable.Spec(id).MaxMoves, Is.LessThanOrEqualTo(36), $"{id}: a level must fit in about 2 minutes");
         }
 
         [TestCaseSource(nameof(AllLevels))]
@@ -159,9 +182,9 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void Act1_IsAtLeast15MovesWithOneMechanic()
+        public void Act1_IsAtLeast14MovesWithOneMechanic()
         {
-            Assert.AreEqual(15, DifficultyTable.GetAct(1).MinMoves);
+            Assert.AreEqual(14, DifficultyTable.GetAct(1).MinMoves);
             for (int i = 1; i <= DifficultyTable.GetAct(1).Levels; i++)
             {
                 var spec = DifficultyTable.Spec(new LevelId(1, i));
@@ -185,7 +208,7 @@ namespace MummyEscape.Tests
                 int Load(int i)
                 {
                     var s = DifficultyTable.Spec(new LevelId(act, i));
-                    return s.Gates.Count + s.DecoyDoors + s.SpikeTraps + s.DarknessTraps + s.DustPatches + s.Teleporters.Count + s.BreakableFloors;
+                    return s.Gates.Count + s.SpikeTraps + s.DarknessTraps + s.DustPatches + s.Currents + s.CrumblingTiles + s.FireJets;
                 }
                 Assert.That(Load(levels), Is.GreaterThanOrEqualTo(Load(1)), $"act {act} should end harder than it starts");
                 for (int i = 2; i <= levels; i++)
@@ -198,10 +221,10 @@ namespace MummyEscape.Tests
         public void ManyVariants_AllGenerateAndValidate()
         {
             foreach (var id in DifficultyTable.AllLevels())
-                for (int v = 0; v < 25; v++)
+                for (int v = 0; v < 60; v++)
                 {
                     var level = LevelGenerator.Generate(id, v);
-                    Assert.IsNull(LevelValidator.Validate(level, DifficultyTable.Spec(id), level.Solution), $"{id} maze {v}");
+                    Assert.IsNull(LevelValidator.Validate(level, level.Spec, level.Solution), $"{id} maze {v}");
                 }
         }
     }

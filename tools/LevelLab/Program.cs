@@ -51,6 +51,30 @@ if (args.Length >= 2 && args[0] == "--why")
     return;
 }
 
+if (args.Length >= 3 && args[0] == "--human-why")
+{
+    // --human-why 3-8 attentif [runs]: outcome of each run of one level, to look into losses and give-ups.
+    var hp = args[1].Split('-');
+    var hid = new LevelId(int.Parse(hp[0]), int.Parse(hp[1]));
+    var prof = args[2] == "omniscient" ? LevelLab.HumanProfile.Omniscient : LevelLab.HumanProfile.All.First(x => x.Name == args[2]);
+    var rng = new Random(1);
+    for (int v = 0; v < (args.Length > 3 ? int.Parse(args[3]) : 20); v++)
+    {
+        var level = LevelGenerator.Generate(hid, v);
+        var r = LevelLab.HumanSim.Play(level, prof, rng);
+        if (!r.Won && args.Length > 4) // --human-why 4-6 moyen 20 map: where the run ended
+            Console.WriteLine($"ended at {r.Final.Position} pressed {r.Final.Pressed} crumbled {r.Final.Crumbled} hp {r.Final.Hp}\n" + level.ToAscii(new[] { r.Final.Position }));
+        Console.WriteLine($"variant {v,3} par {level.Solution.Moves,3}: {(r.Won ? "won" : r.GaveUp ? "gave up (" + r.Reason + ")" : r.Defeat.ToString()),-20} moves {r.Moves,4} {r.Seconds,5:0} s wrong turns {r.WrongTurns} bumps {r.Bumps}");
+    }
+    return;
+}
+
+if (args.Length >= 1 && args[0] == "--human")
+{
+    LevelLab.HumanReport.Run(args);
+    return;
+}
+
 int variants = 20, onlyAct = 0;
 for (int i = 0; i < args.Length - 1; i++)
 {

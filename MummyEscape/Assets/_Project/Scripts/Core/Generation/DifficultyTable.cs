@@ -39,18 +39,11 @@ namespace MummyEscape.Core
         public Ramp Gates = 1;
         /// <summary>Gate kinds, cycled through by level and gate index so consecutive levels alternate.</summary>
         public GateKind[] GateKinds = { GateKind.Door, GateKind.Portal };
-        public Ramp DecoyDoors;
         public Ramp SpikeTraps;
         public Ramp DarknessTraps;
         public Ramp DustPatches;
-        /// <summary>Optional teleporter pairs on top of the portal gates.</summary>
-        public Ramp TeleporterCount;
-        /// <summary>Teleporter kinds unlocked in this act, cycled through as the count grows.</summary>
+        /// <summary>Kinds of the portal gates, cycled through level after level (never hidden: the preview shows every pad).</summary>
         public TeleporterKind[] TeleporterKinds = { TeleporterKind.Visible };
-        /// <summary>Every teleporter sits at the end of a dead end: one way out on arrival, one step back to return.
-        /// A pad in the middle of a corridor forces a double trip through the portal to change direction.</summary>
-        public bool DeadEndPortals;
-        public Ramp BreakableFloors;
         /// <summary>Signature mechanics of the act's theme.</summary>
         public Ramp Currents;
         public Ramp CrumblingTiles;
@@ -66,68 +59,73 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 4;
+        public const int GeneratorVersion = 5;
 
         /// <summary>
         /// One theme and one signature mechanic per act: the intact antechamber (doors, portals), the flooded galleries
         /// (currents), the collapsed ruins (fragile slabs), the high-tech city of Anubis (laser barriers and switches)
         /// and the burning sanctuary (flame jets on a beat, over crumbling ground).
-        /// Never more than 2 floors: the whole tomb has to be memorised during the preview, floor by floor.
+        ///
+        /// The game plays on memory and logic, not on getting lost: a human makes ~2.5× the ideal moves (tools/LevelLab
+        /// --human), so the ideal route stays short (about 30 moves at most, a level lasts ~2 minutes) and acts get
+        /// harder through the mechanics to chain, never through length. Every element serves the route, and no tomb can
+        /// wall the player in for good. Never more than 2 floors: the whole tomb is memorised during the preview.
         /// </summary>
         public static readonly IReadOnlyList<ActDefinition> Acts = new[]
         {
             new ActDefinition
             {
-                Name = "L'Antichambre", MinMoves = 15, MaxMoves = new Ramp(24, 30),
-                Floors = 1, Cells = new Ramp(6, 7), ExtraLoops = new Ramp(0, 2),
+                Name = "L'Antichambre", MinMoves = 14, MaxMoves = new Ramp(20, 24),
+                Floors = 1, Cells = new Ramp(5, 6), ExtraLoops = new Ramp(0, 1),
                 Gates = new Ramp(1, 2), GateKinds = new[] { GateKind.Door, GateKind.Portal },
-                DecoyDoors = new Ramp(0, 1), DarknessTraps = new Ramp(0, 1),
-                TeleporterKinds = new[] { TeleporterKind.Visible }, DeadEndPortals = true,
+                DarknessTraps = new Ramp(0, 1),
+                TeleporterKinds = new[] { TeleporterKind.Visible },
                 MinPoiSpacing = 4,
             },
             new ActDefinition
             {
-                Name = "Les Galeries inondées", MinMoves = 22, MaxMoves = new Ramp(32, 38),
-                Floors = new Ramp(1, 2), Cells = new Ramp(7, 8), ExtraLoops = new Ramp(1, 3),
-                Gates = new Ramp(2, 3), GateKinds = new[] { GateKind.Door, GateKind.Portal, GateKind.Door },
-                Currents = new Ramp(1, 3),
-                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(0, 1), DarknessTraps = new Ramp(0, 1), DustPatches = new Ramp(0, 1),
-                TeleporterCount = new Ramp(0, 1), TeleporterKinds = new[] { TeleporterKind.Visible, TeleporterKind.Hidden }, DeadEndPortals = true,
-                BreakableFloors = new Ramp(0, 1), MinPoiSpacing = 4,
+                Name = "Les Galeries inondées", MinMoves = 16, MaxMoves = new Ramp(24, 28),
+                Floors = 1, Cells = 6, ExtraLoops = new Ramp(2, 3),
+                Gates = 2, GateKinds = new[] { GateKind.Door, GateKind.Portal },
+                Currents = new Ramp(1, 2),
+                SpikeTraps = new Ramp(0, 1), DarknessTraps = new Ramp(0, 1), DustPatches = new Ramp(0, 1),
+                TeleporterKinds = new[] { TeleporterKind.Visible },
+                MinPoiSpacing = 3,
             },
             new ActDefinition
             {
-                Name = "Les Ruines effondrées", MinMoves = 28, MaxMoves = new Ramp(44, 50),
-                Floors = 2, Cells = new Ramp(8, 9), ExtraLoops = new Ramp(2, 4),
-                Gates = 3, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
-                CrumblingTiles = new Ramp(2, 4),
-                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(1, 2), DarknessTraps = 1, DustPatches = 1,
-                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Hidden, TeleporterKind.Locked, TeleporterKind.Visible },
-                BreakableFloors = new Ramp(1, 2), MinPoiSpacing = 4,
+                Name = "Les Ruines effondrées", MinMoves = 18, MaxMoves = new Ramp(26, 30),
+                Floors = 1, Cells = 6, ExtraLoops = new Ramp(2, 3),
+                Gates = 2, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
+                CrumblingTiles = new Ramp(1, 2),
+                SpikeTraps = 1, DarknessTraps = 1, DustPatches = 1,
+                TeleporterKinds = new[] { TeleporterKind.Locked, TeleporterKind.Visible },
+                MinPoiSpacing = 3,
             },
             new ActDefinition
             {
-                Name = "La Cité d'Anubis", MinMoves = 34, MaxMoves = new Ramp(52, 60),
-                Floors = 2, Cells = new Ramp(8, 10), ExtraLoops = new Ramp(3, 5),
-                Gates = new Ramp(3, 4), GateKinds = new[] { GateKind.Laser, GateKind.Portal, GateKind.Laser, GateKind.Door },
+                Name = "La Cité d'Anubis", MinMoves = 20, MaxMoves = new Ramp(28, 29),
+                Floors = new Ramp(1, 2), Cells = new Ramp(6, 5), ExtraLoops = new Ramp(2, 3),
+                Gates = 2, GateKinds = new[] { GateKind.Laser, GateKind.Portal, GateKind.Laser, GateKind.Door },
                 BlueBarriers = true,
-                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(1, 2), DarknessTraps = new Ramp(1, 2), DustPatches = new Ramp(1, 2),
-                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Locked, TeleporterKind.Hidden },
-                BreakableFloors = 1, MinPoiSpacing = 4,
+                SpikeTraps = 1, DarknessTraps = 1, DustPatches = 1,
+                TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Locked, TeleporterKind.Visible },
+                MinPoiSpacing = 3,
             },
             new ActDefinition
             {
-                Name = "Le Sanctuaire embrasé", MinMoves = 40, MaxMoves = new Ramp(62, 70),
-                Floors = 2, Cells = new Ramp(9, 11), ExtraLoops = new Ramp(4, 6),
-                Gates = 4, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Laser, GateKind.Door },
-                FireJets = new Ramp(2, 4), CrumblingTiles = new Ramp(1, 2),
-                DecoyDoors = new Ramp(1, 2), SpikeTraps = new Ramp(1, 2), DarknessTraps = 1, DustPatches = 1,
-                TeleporterCount = 1, TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Hidden, TeleporterKind.Locked },
-                BreakableFloors = 2, MinPoiSpacing = 4,
+                Name = "Le Sanctuaire embrasé", MinMoves = 22, MaxMoves = new Ramp(26, 28),
+                Floors = 2, Cells = 4, ExtraLoops = new Ramp(3, 4),
+                Gates = 2, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Laser, GateKind.Door },
+                FireJets = 2, CrumblingTiles = 1,
+                DarknessTraps = new Ramp(0, 1), DustPatches = 1,
+                TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Visible },
+                MinPoiSpacing = 3,
             },
         };
 
-        public const int ExtraMovesPerFloor = 6;
+        public const int ExtraMovesPerFloor = 4;
+        public const int LockedPortalExtraMoves = 3;
 
         public static int ActCount => Acts.Count;
 
@@ -162,16 +160,13 @@ namespace MummyEscape.Core
                 CellsX = cells,
                 CellsY = cells,
                 ExtraLoops = act.ExtraLoops.At(i, n),
-                DecoyDoors = act.DecoyDoors.At(i, n),
                 SpikeTraps = act.SpikeTraps.At(i, n),
                 DarknessTraps = act.DarknessTraps.At(i, n),
                 DustPatches = act.DustPatches.At(i, n),
-                BreakableFloors = floors > 1 ? act.BreakableFloors.At(i, n) : 0,
                 Currents = act.Currents.At(i, n),
                 CrumblingTiles = act.CrumblingTiles.At(i, n),
                 FireJets = act.FireJets.At(i, n),
                 BlueBarriers = act.BlueBarriers,
-                DeadEndPortals = act.DeadEndPortals,
                 MinPoiSpacing = act.MinPoiSpacing,
                 MinHpLeftForPar = act.MinHpLeftForPar,
                 // "Far from the entrance": two thirds of the tomb's side, as the crow flies.
@@ -186,10 +181,9 @@ namespace MummyEscape.Core
                 var kind = act.GateKinds[(i - 1 + k) % act.GateKinds.Length];
                 spec.Gates.Add(kind == GateKind.Door ? Gate.Door : kind == GateKind.Laser ? Gate.Laser
                                : Gate.Teleporter(act.TeleporterKinds[(i + portal++) % kinds]));
+                // A locked portal is two mechanics (its lever, then the portal): room for the lever's detour.
+                if (spec.Gates[k].Kind == GateKind.Portal && spec.Gates[k].Portal == TeleporterKind.Locked) spec.MaxMoves += LockedPortalExtraMoves;
             }
-            int tp = act.TeleporterCount.At(i, n);
-            for (int k = 0; k < tp; k++)
-                spec.Teleporters.Add(act.TeleporterKinds[(i + portal + k) % kinds]);
             return spec;
         }
 

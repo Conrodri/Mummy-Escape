@@ -161,6 +161,21 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Stars_LeaveRoomForHumanWrongTurns()
+        {
+            LevelResult Run(int moves, bool won = true) => new LevelResult { Won = won, Moves = moves, Par = 24, MaxHp = 2, HpLeft = 2 };
+            Assert.AreEqual(3, Run(24).Stars, "ideal path");
+            Assert.AreEqual(3, Run(36).Stars, "1.5x the ideal path");
+            Assert.AreEqual(2, Run(37).Stars);
+            Assert.AreEqual(2, Run(60).Stars, "2.5x the ideal path");
+            Assert.AreEqual(1, Run(61).Stars);
+            Assert.AreEqual(1, Run(400).Stars, "escaping always earns a star");
+            Assert.AreEqual(0, Run(30, false).Stars);
+            Assert.AreEqual(36, Run(50).MaxMovesFor(3));
+            Assert.AreEqual(60, Run(50).MaxMovesFor(2));
+        }
+
+        [Test]
         public void Score_TiesOnMovesAreBrokenByTime()
         {
             var fastSloppy = new LevelResult { Won = true, Moves = 26, Par = 24, MaxHp = 2, HpLeft = 2, TimeMs = 9_000 };

@@ -61,28 +61,22 @@ namespace MummyEscape.Core
         /// <summary>Mechanics (buttons pressed + portals taken) the optimal route must use.</summary>
         public int MinMechanics = 1;
 
-        // ---- Optional content ----
-        /// <summary>Optional doors on side branches (with their buttons somewhere) to mislead the player.</summary>
-        public int DecoyDoors;
+        // ---- Hazards, all on the route (nothing is placed just to mislead) ----
         public int SpikeTraps;
         public int DarknessTraps;
         /// <summary>Dust patches on the route (torch goes out), each followed by a wall torch further on.</summary>
         public int DustPatches;
-        /// <summary>Optional teleporter pairs (shortcuts or lures), on top of the portal gates.</summary>
-        public List<TeleporterKind> Teleporters = new List<TeleporterKind>();
-        public int BreakableFloors;
 
         // ---- Act mechanics ----
-        /// <summary>Streams of current (2-4 tiles) laid along the route, flowing towards the exit: one-way passages.</summary>
+        /// <summary>Streams of current (2-4 tiles) on the route, flowing towards the exit: one-way shortcuts, with a way
+        /// back around so they never wall the player in.</summary>
         public int Currents;
-        /// <summary>Fragile slabs on the route: crossed once, then rubble.</summary>
+        /// <summary>Fragile slabs on the route: a one-time crossing, with a longer way around once they are rubble.</summary>
         public int CrumblingTiles;
         /// <summary>Flame jets on the route, each with its own beat.</summary>
         public int FireJets;
         /// <summary>Laser gates also raise a blue barrier on the way back when their switch is flipped.</summary>
         public bool BlueBarriers;
-        /// <summary>Teleporters only at the end of dead ends (see <see cref="ActDefinition.DeadEndPortals"/>).</summary>
-        public bool DeadEndPortals;
 
         // ---- Feel ----
         /// <summary>Minimum Manhattan distance between two points of interest.</summary>
@@ -93,6 +87,15 @@ namespace MummyEscape.Core
 
         public int Width => CellsX * 2 + 1;
         public int Height => CellsY * 2 + 1;
+
+        /// <summary>The same spec with a wider par window (generator safety net, see <see cref="LevelGenerator"/>).</summary>
+        public LevelSpec WithMoreMoves(int extra)
+        {
+            var copy = (LevelSpec)MemberwiseClone();
+            copy.Gates = new List<Gate>(Gates);
+            copy.MaxMoves += extra;
+            return copy;
+        }
 
         /// <summary>Buttons the optimal route must press: one per door gate and per locked portal gate.</summary>
         public int RequiredButtons
@@ -116,8 +119,8 @@ namespace MummyEscape.Core
         }
 
         public override string ToString() =>
-            $"{Id} moves[{MinMoves}-{MaxMoves}] floors:{Floors} cells:{CellsX}x{CellsY} gates:[{string.Join(",", Gates)}] decoy:{DecoyDoors} " +
-            $"spikes:{SpikeTraps} dark:{DarknessTraps} dust:{DustPatches} tp:[{string.Join(",", Teleporters)}] breakable:{BreakableFloors} loops:{ExtraLoops}" +
+            $"{Id} moves[{MinMoves}-{MaxMoves}] floors:{Floors} cells:{CellsX}x{CellsY} gates:[{string.Join(",", Gates)}] " +
+            $"spikes:{SpikeTraps} dark:{DarknessTraps} dust:{DustPatches} loops:{ExtraLoops}" +
             $" currents:{Currents} crumbling:{CrumblingTiles} fire:{FireJets}{(BlueBarriers ? " blue" : "")}";
     }
 }

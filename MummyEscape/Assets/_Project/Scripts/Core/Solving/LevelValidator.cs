@@ -39,12 +39,139 @@ namespace MummyEscape.Core
             if (far != null) return far;
             var deadEnd = CheckDeadEnds(level);
             if (deadEnd != null) return deadEnd;
-            if (spec.DeadEndPortals)
+            var pads = CheckDeadEndPortals(level);
+            if (pads != null) return pads;
+            var unused = CheckEverythingUsed(level, solution);
+            if (unused != null) return unused;
+            var spacing = CheckSpacing(level, spec);
+            if (spacing != null) return spacing;
+            return CheckNoDeadLock(level, hazards: true);
+        }
+
+        /// <summary>
+        /// Every element of the tomb serves the ideal route: each button / switch is pressed, each portal and ladder
+        /// taken, each door, barrier, current, fragile slab, trap, dust patch and flame jet lies on the way, and each
+        /// wall torch relights the torch. A button with a door that leads nowhere is a design error, not a lure.
+        /// </summary>
+        public static string CheckEverythingUsed(Level level, Solution solution)
+        {
+            var used = new HashSet<Cell>();
+            var relit = new HashSet<Cell>();
+            var s = Rules.Initial(level);
+            used.Add(s.Position);
+            foreach (var a in solution.Actions)
             {
-                var pads = CheckDeadEndPortals(level);
-                if (pads != null) return pads;
+                var r = Rules.Step(level, s, a);
+                used.Add(s.Position.Step(a.Dir)); // tile walked into (or trap disarmed)
+                used.Add(r.SteppedOn);
+                used.Add(r.State.Position);
+                if (r.Has(StepFlags.TorchRelit)) relit.Add(r.State.Position);
+                s = r.State;
             }
-            return CheckSpacing(level, spec);
+            // A stream of current is ridden as a whole: entering it counts for every tile it carries the player along.
+            var queue = new Queue<Cell>();
+            foreach (var c in used) if (level.InBounds(c) && level[c].Type == TileType.Current) queue.Enqueue(c);
+            while (queue.Count > 0)
+            {
+                var c = queue.Dequeue();
+                var next = c.Step((Dir)level[c].Param);
+                if (level.InBounds(next) && level[next].Type == TileType.Current && used.Add(next)) queue.Enqueue(next);
+            }
+
+            foreach (var c in level.AllCells())
+            {
+                var t = level[c];
+                switch (t.Type)
+                {
+                    case TileType.Wall:
+                    case TileType.Floor:
+                        continue;
+                    case TileType.WallTorch:
+                        bool lit = false;
+                        foreach (var d in DirExt.All) lit |= relit.Contains(c.Step(d));
+                        if (!lit) return $"unused: wall torch {c} never relights the torch";
+                        continue;
+                    default:
+                        if (!used.Contains(c)) return $"unused: {t.Type} {c} is off the ideal route";
+                        continue;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The tomb can never wall the player in: from every situation a player can reach (position, channels on,
+        /// collapsed slabs), whatever the moves that led there, a way to the exit is left. Currents, fragile slabs and
+        /// barriers may cost a detour, never the run.
+        /// With <paramref name="hazards"/>, life, torch, blindness, disarmed traps and the flame beat count too: no
+        /// situation may leave death as the only way on (say 1 life left, the torch smothered by dust, and spikes that
+        /// can't be seen to disarm across the only way back).
+        /// </summary>
+        public static string CheckNoDeadLock(Level level, bool hazards = false, int maxStates = 400_000)
+        {
+            bool tick = false;
+            if (hazards)
+                foreach (var c in level.AllCells()) tick |= level[c].Type == TileType.FireJet;
+            var ids = new Dictionary<long, int>();
+            var states = new List<RuleState>();
+            var preds = new List<List<int>>();
+            var canWin = new List<bool>();
+            RuleState Norm(RuleState x)
+            {
+                if (!hazards) return new RuleState { Position = x.Position, Pressed = x.Pressed, Crumbled = x.Crumbled, Disarmed = -1, Hp = 7 };
+                if (!tick) x.Tick = 0;
+                return x;
+            }
+            long Key(RuleState x) =>
+                (long)level.IndexOf(x.Position) | ((long)(x.Pressed & 0xFFF) << 12) | ((long)(x.Crumbled & 0xFFF) << 24)
+                | (hazards ? ((long)(x.Disarmed & 0xFFF) << 36) | ((long)(x.Hp & 0x7) << 48) | ((long)(x.Blind & 0x3) << 51)
+                             | (x.TorchOut ? 1L << 53 : 0) | ((long)(x.Tick & 0x3) << 54) : 0);
+            int Id(RuleState x)
+            {
+                long k = Key(x);
+                if (ids.TryGetValue(k, out int id)) return id;
+                id = states.Count;
+                ids[k] = id;
+                states.Add(x);
+                preds.Add(new List<int>());
+                canWin.Add(false);
+                return id;
+            }
+
+            Id(Norm(Rules.Initial(level)));
+            var actions = new List<PlayerAction>(8);
+            for (int i = 0; i < states.Count; i++)
+            {
+                if (states.Count > maxStates) return null; // too big to prove: let the other checks decide
+                var st = states[i];
+                actions.Clear();
+                foreach (var d in DirExt.All)
+                {
+                    actions.Add(PlayerAction.Move(d));
+                    var adj = level.Get(st.Position.Step(d));
+                    if (hazards && adj.Type == TileType.Trap && adj.Trap == TrapKind.Spikes && Rules.IsTrapArmed(adj, st.Disarmed))
+                        actions.Add(PlayerAction.Disarm(d));
+                }
+                foreach (var a in actions)
+                {
+                    var r = Rules.Step(level, st, a);
+                    if (r.Has(StepFlags.Blocked) || r.Has(StepFlags.Died)) continue;
+                    if (r.Has(StepFlags.Won)) { canWin[i] = true; continue; }
+                    preds[Id(Norm(r.State))].Add(i);
+                }
+            }
+
+            var queue = new Queue<int>();
+            for (int i = 0; i < states.Count; i++) if (canWin[i]) queue.Enqueue(i);
+            while (queue.Count > 0)
+                foreach (int p in preds[queue.Dequeue()])
+                    if (!canWin[p]) { canWin[p] = true; queue.Enqueue(p); }
+            for (int i = 0; i < states.Count; i++)
+                if (!canWin[i])
+                    return hazards && CheckNoDeadLock(level) == null
+                        ? $"dead-end-hazard: only death left at {states[i].Position} ({states[i].Hp} hp{(states[i].TorchOut ? ", torch out" : "")})"
+                        : $"dead-lock: walled in at {states[i].Position}";
+            return null;
         }
 
         /// <summary>The exit is far from the entrance, or else behind a door whose button lies far away.</summary>
@@ -54,22 +181,20 @@ namespace MummyEscape.Core
             if (d >= spec.MinExitDistance) return null;
             if (spec.RequiredButtons > 0)
                 foreach (var c in level.AllCells())
-                    if (level[c].IsTrigger && (level.DecoyChannels & (1 << level[c].Channel)) == 0
-                        && level.Start.Manhattan(c) >= spec.MinExitDistance)
+                    if (level[c].IsTrigger && level.Start.Manhattan(c) >= spec.MinExitDistance)
                         return null;
             return $"too-close: exit {d} from start (< {spec.MinExitDistance})";
         }
 
         /// <summary>
-        /// Dead ends must mean something: a button, a portal, a ladder, a hole, the exit or the start. Pointless ones are
-        /// only tolerated behind a decoy door (the decoy is the lure).
+        /// Dead ends must mean something: a button, a portal, a ladder, a hole, the exit or the start.
         /// </summary>
         public static string CheckDeadEnds(Level level)
         {
             foreach (var c in level.AllCells())
                 if (level[c].Type == TileType.BreakableFloor && (c.Floor == 0 || level[c.WithFloor(c.Floor - 1)].IsSolid))
                     return $"hole: {c} lands in rock";
-            var reach = Reachable(level, ~level.DecoyChannels);
+            var reach = Reachable(level, -1);
             foreach (var c in level.AllCells())
             {
                 var t = level[c];

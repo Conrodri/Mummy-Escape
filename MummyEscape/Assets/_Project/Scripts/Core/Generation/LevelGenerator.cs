@@ -13,7 +13,7 @@ namespace MummyEscape.Core
     ///  2. start, ladders and a far exit picked by distance along the tree;
     ///  3. gates cut the route in order: a door (its button at the end of a side dead end) or a wall (the only way on
     ///     is a teleporter at the end of a dead end, landing beyond the cut);
-    ///  4. decoys, optional portals and breakable floors, never able to skip a gate;
+    ///  4. nothing optional: no decoy door, no lure portal: every element serves the route;
     ///  5. braiding: every dead end that holds nothing gets a wall knocked out (inside its region only, so gates stay
     ///     mandatory). Remaining dead ends always mean something: a button, a portal, a ladder, the exit;
     ///  6. dust + wall torches, then traps, on the route.
@@ -21,6 +21,8 @@ namespace MummyEscape.Core
     public static class LevelGenerator
     {
         public const int MaxAttempts = 3000;
+        /// <summary>Fallback searches with a wider par window when the spec itself finds no tomb.</summary>
+        public const int MaxRelaxSteps = 2, RelaxMoves = 3;
 
         /// <summary>Generates maze number <paramref name="variant"/> of a campaign level (a new variant per run).</summary>
         public static Level Generate(LevelId id, int variant = 0)
@@ -36,12 +38,19 @@ namespace MummyEscape.Core
         public static Level Generate(LevelSpec spec, ulong seed, Dictionary<string, int> failures)
         {
             failures = failures ?? new Dictionary<string, int>();
-            for (int attempt = 0; attempt < MaxAttempts; attempt++)
+            // Safety net for the rare unlucky seed: the same search again with a little more room for the par
+            // (still deterministic, so every device lands on the same tomb). Short routes keep 2 minutes per level.
+            for (int relax = 0; relax <= MaxRelaxSteps; relax++)
             {
-                var level = TryAttempt(spec, seed, attempt, out string failure);
-                if (level != null) return level;
-                string bucket = failure.Split(':')[0];
-                failures[bucket] = failures.TryGetValue(bucket, out int n) ? n + 1 : 1;
+                var s = relax == 0 ? spec : spec.WithMoreMoves(relax * RelaxMoves);
+                int attempts = relax == 0 ? MaxAttempts : MaxAttempts / 2;
+                for (int attempt = 0; attempt < attempts; attempt++)
+                {
+                    var level = TryAttempt(s, seed, attempt, out string failure);
+                    if (level != null) return level;
+                    string bucket = failure.Split(':')[0];
+                    failures[bucket] = failures.TryGetValue(bucket, out int n) ? n + 1 : 1;
+                }
             }
 
             var summary = new List<string>();
@@ -80,7 +89,6 @@ namespace MummyEscape.Core
             readonly List<Cell> _pois = new List<Cell>();
             readonly List<Cell> _traps = new List<Cell>();
             int _channels;
-            int _decoyMask;
             int _crumbling;
             readonly List<Cell> _hazards = new List<Cell>();
             /// <summary>Laser gates placed: barrier, switch and channel (blue barriers are added behind them later).</summary>
@@ -90,8 +98,6 @@ namespace MummyEscape.Core
             readonly List<int> _gateChannels = new List<int>();
             readonly Dictionary<Cell, int> _gatePads = new Dictionary<Cell, int>();
             Cell? _lastGate;
-            /// <summary>Gates the player must have passed to stand on a tile (int.MaxValue = unreachable).</summary>
-            int[] _stage;
 
             public Builder(LevelSpec spec, Pcg32 rng)
             {
@@ -115,15 +121,6 @@ namespace MummyEscape.Core
                 for (int k = 0; k < _spec.Gates.Count; k++)
                     if (!PlaceGate(k, out failure)) return null;
 
-                for (int k = 0; k < _spec.DecoyDoors; k++)
-                    if (!PlaceDecoyDoor()) { failure = "decoy: no spot"; return null; }
-
-                ComputeStages();
-                foreach (var kind in _spec.Teleporters)
-                    if (!PlaceOptionalTeleporter(kind)) { failure = "teleporter: no spot"; return null; }
-                for (int k = 0; k < _spec.BreakableFloors; k++)
-                    if (!PlaceBreakable()) { failure = "breakable: no spot"; return null; }
-
                 BraidDeadEnds();
 
                 AddLoops(_spec.ExtraLoops);
@@ -133,24 +130,25 @@ namespace MummyEscape.Core
                 // Cheap early reject: the route with every door open is a lower bound of the par.
                 if (route.Count - 1 > _spec.MaxMoves) { failure = $"too-long: open route {route.Count - 1} > {_spec.MaxMoves}"; return null; }
 
-                // Act mechanics, laid on the route once the layout is final.
+                // Act mechanics, laid on the route once the layout is final. Each one is kept only where no sequence of
+                // moves can wall the player in (see LevelValidator.CheckNoDeadLock).
                 if (_spec.BlueBarriers)
                     foreach (var laser in _lasers) PlaceBlueBarrier(route, laser);
                 for (int k = 0; k < _spec.Currents; k++)
-                    if (!PlaceCurrent(route)) { failure = "current: no spot"; return null; }
+                    if (!PlaceCurrent(route)) { failure = "current: no spot that cannot wall the player in"; return null; }
                 for (int k = 0; k < _spec.CrumblingTiles; k++)
-                    if (!PlaceCrumbling(route)) { failure = "crumbling: no spot"; return null; }
+                    if (!PlaceCrumbling(route)) { failure = "crumbling: no spot that cannot wall the player in"; return null; }
                 for (int k = 0; k < _spec.FireJets; k++)
                     if (!PlaceFireJet(route)) { failure = "fire: no spot"; return null; }
 
                 for (int k = 0; k < _spec.DustPatches; k++)
                     if (!PlaceDust(route)) { failure = "dust: no spot"; return null; }
 
-                int spikesOnPath = (_spec.SpikeTraps + 1) / 2;
+                // Traps sit on the route only: something to remember and get past, never a pointless side hazard.
                 for (int k = 0; k < _spec.SpikeTraps; k++)
-                    if (!PlaceTrap(TrapKind.Spikes, k < spikesOnPath ? route : null)) { failure = "spikes: no spot"; return null; }
+                    if (!PlaceTrap(TrapKind.Spikes, route)) { failure = "spikes: no spot"; return null; }
                 for (int k = 0; k < _spec.DarknessTraps; k++)
-                    if (!PlaceTrap(TrapKind.Darkness, k % 2 == 0 ? route : null)) { failure = "darkness: no spot"; return null; }
+                    if (!PlaceTrap(TrapKind.Darkness, route)) { failure = "darkness: no spot"; return null; }
 
                 if (_channels > Solver.MaxChannels || _traps.Count > Solver.MaxTraps || _crumbling > Solver.MaxCrumbling)
                 {
@@ -159,7 +157,6 @@ namespace MummyEscape.Core
                 }
                 _level.ChannelCount = _channels;
                 _level.TrapCount = _traps.Count;
-                _level.DecoyChannels = _decoyMask;
                 failure = null;
                 return _level;
             }
@@ -281,9 +278,10 @@ namespace MummyEscape.Core
             void RouteWindow(out int lo, out int hi)
             {
                 int g = _spec.Gates.Count;
-                hi = _spec.MaxMoves - 5 * g;
-                lo = Math.Max(_spec.MinMoves - 2 * g, (g + 1) * 4);
-                lo = Math.Min(lo, hi);
+                hi = _spec.MaxMoves - 4 * g;
+                lo = Math.Max(_spec.MinMoves - 2 * g, (g + 1) * 3);
+                // Keep the window at least 3 wide: maze cells sit 2 tiles apart, a single odd distance has no cell.
+                lo = Math.Min(lo, hi - 3);
             }
 
             bool PlaceStartLaddersExit(out string failure)
@@ -406,7 +404,7 @@ namespace MummyEscape.Core
 
                 // Portal gate: wall the route off; a teleporter at the end of a dead end is the only way on.
                 _level[cut] = Tile.Wall;
-                var a = PickSideSpot(before, AllOpen, maxDetour, cut, null, earlier, deadEndOnly: _spec.DeadEndPortals);
+                var a = PickSideSpot(before, AllOpen, maxDetour, cut, null, earlier, deadEndOnly: true);
                 if (!a.HasValue) { _level[cut] = Tile.Floor; return false; }
 
                 var reachA = Distances(_level.Start, AllOpen, out _);
@@ -429,7 +427,7 @@ namespace MummyEscape.Core
                         int est = toPad + toExit[i];
                         return IsCell(c) && reachA[i] < 0 && fromCut[i] >= 2 && fromCut[i] <= mfc && toExit[i] >= 0
                                && est >= lower && est <= upper && c.Manhattan(a.Value) >= apart && FarFromPois(c);
-                    }, deadEndsOnly: _spec.DeadEndPortals);
+                    }, deadEndsOnly: true);
                     if (list.Count > 0) { b = list[0]; break; }
                 }
                 if (!b.HasValue) { _level[cut] = Tile.Floor; return false; }
@@ -489,130 +487,6 @@ namespace MummyEscape.Core
                     if (any.Count > 0) return any[0];
                 }
                 return null;
-            }
-
-            // ------------------------------------------------------------------ stages
-
-            void ComputeStages()
-            {
-                int g = _gateChannels.Count;
-                _stage = new int[_level.CellCount];
-                for (int i = 0; i < _stage.Length; i++) _stage[i] = int.MaxValue;
-                int mask = _decoyMask;
-                for (int k = 0; k <= g; k++)
-                {
-                    if (k > 0 && _gateChannels[k - 1] >= 0) mask |= 1 << _gateChannels[k - 1];
-                    int passed = k;
-                    var dist = Distances(_level.Start, mask, out _, null, pad => !_gatePads.TryGetValue(pad, out int j) || j < passed);
-                    for (int i = 0; i < dist.Length; i++)
-                        if (dist[i] >= 0 && _stage[i] > k) _stage[i] = k;
-                }
-            }
-
-            int StageOf(Cell c) => _stage[_level.IndexOf(c)];
-
-            // ------------------------------------------------------------------ optional content
-
-            bool PlaceDecoyDoor()
-            {
-                var route = ShortestPath(_level.Start, _level.Exit, AllOpen);
-                if (route == null) return false;
-                var onRoute = new HashSet<Cell>(route);
-                var reach = Distances(_level.Start, AllOpen, out _);
-                int f = _rng.Range(0, _spec.Floors);
-                for (int df = 0; df < _spec.Floors; df++)
-                {
-                    int floor = (f + df) % _spec.Floors;
-                    var doors = Candidates(floor, c => !IsCell(c) && !onRoute.Contains(c) && Degree(c) == 2
-                                                      && FarFromPois(c, _spec.MinPoiSpacing - 1) && reach[_level.IndexOf(c)] >= 0, deadEndsFirst: false);
-                    foreach (var door in doors)
-                    {
-                        // The pocket behind the door must be empty of anything the route needs.
-                        var cutOff = Distances(_level.Start, AllOpen, out _, door);
-                        bool pocketOk = true;
-                        int pocket = 0;
-                        for (int i = 0; i < reach.Length && pocketOk; i++)
-                        {
-                            if (reach[i] < 0 || cutOff[i] >= 0 || i == _level.IndexOf(door)) continue;
-                            pocket++;
-                            var t = _level[_level.CellAt(i)];
-                            if (t.Type != TileType.Floor) pocketOk = false;
-                        }
-                        if (!pocketOk || pocket < 2) continue;
-
-                        int channel = _channels++;
-                        _level[door] = new Tile { Type = TileType.Door, Channel = (byte)channel };
-                        var reachClosed = Distances(_level.Start, AllOpen & ~(1 << channel), out _);
-                        var buttons = CandidatesAllFloors(c => IsCell(c) && !onRoute.Contains(c) && reachClosed[_level.IndexOf(c)] >= 0
-                                                               && FarFromPois(c) && c.Manhattan(door) >= _spec.MinPoiSpacing, deadEndsOnly: true);
-                        if (buttons.Count == 0)
-                        {
-                            _level[door] = Tile.Floor;
-                            _channels--;
-                            continue;
-                        }
-                        Reserve(door);
-                        _level[buttons[0]] = new Tile { Type = TileType.Button, Channel = (byte)channel };
-                        Reserve(buttons[0]);
-                        _decoyMask |= 1 << channel;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            /// <summary>An extra portal pair between two dead ends of the same stage: a shortcut or a lure, never a skip.</summary>
-            bool PlaceOptionalTeleporter(TeleporterKind kind)
-            {
-                int minApart = Math.Max(6, (_spec.Width + _spec.Height) / 3);
-                var aList = CandidatesAllFloors(c => IsCell(c) && StageOf(c) != int.MaxValue && FarFromPois(c), deadEndsOnly: true);
-                foreach (var a in aList)
-                {
-                    int stage = StageOf(a);
-                    var bList = CandidatesAllFloors(c => IsCell(c) && StageOf(c) == stage && c.Manhattan(a) >= minApart && FarFromPois(c) && c != a,
-                                                    deadEndsOnly: true);
-                    if (bList.Count == 0) continue;
-                    var b = bList[0];
-                    byte channel = 0;
-                    if (kind == TeleporterKind.Locked)
-                    {
-                        var levers = CandidatesAllFloors(c => IsCell(c) && StageOf(c) == stage && FarFromPois(c)
-                                                              && c.Manhattan(a) > 2 && c.Manhattan(b) > 2, deadEndsOnly: false);
-                        if (levers.Count == 0) continue;
-                        channel = (byte)_channels++;
-                        _level[levers[0]] = new Tile { Type = TileType.Button, Channel = channel };
-                        Reserve(levers[0]);
-                    }
-                    _level[a] = new Tile { Type = TileType.Teleporter, Teleporter = kind, Channel = channel };
-                    _level[b] = new Tile { Type = TileType.Teleporter, Teleporter = kind, Channel = channel };
-                    _level.LinkTeleporters(a, b);
-                    Reserve(a);
-                    Reserve(b);
-                    return true;
-                }
-                return false;
-            }
-
-            /// <summary>A cracked floor: falling through it must never land beyond a gate not yet passed.</summary>
-            bool PlaceBreakable()
-            {
-                int f0 = _rng.Range(1, _spec.Floors);
-                for (int df = 0; df < _spec.Floors - 1; df++)
-                {
-                    int f = 1 + (f0 - 1 + df) % (_spec.Floors - 1);
-                    var list = Candidates(f, c =>
-                    {
-                        var land = c.WithFloor(f - 1);
-                        return StageOf(c) != int.MaxValue && IsFree(land) && StageOf(land) <= StageOf(c) && FarFromPois(c);
-                    }, deadEndsFirst: false);
-                    if (list.Count == 0) continue;
-                    var c0 = list[0];
-                    _level[c0] = new Tile { Type = TileType.BreakableFloor };
-                    Reserve(c0);
-                    Reserve(c0.WithFloor(f - 1), poi: false); // landing spot stays plain floor
-                    return true;
-                }
-                return false;
             }
 
             // ------------------------------------------------------------------ braiding
@@ -746,7 +620,7 @@ namespace MummyEscape.Core
                 {
                     Cell next = c;
                     foreach (var d in DirExt.All) if (Walkable(c.Step(d))) next = c.Step(d);
-                    if (_level[next].IsGate) break; // a decoy door keeps its (empty) pocket
+                    if (_level[next].IsGate) break;
                     bool junction = Degree(next) >= 3;
                     _level[c] = Tile.Wall;
                     if (junction) break; // stop at the junction this branch hangs from (no cascade)
@@ -815,30 +689,48 @@ namespace MummyEscape.Core
                 var spots = new List<int>();
                 for (int i = 2; i < junction - 1; i++)
                     if (IsRouteCorridor(route, i) && !IsCell(route[i]) && FarFromPois(route[i], _spec.MinPoiSpacing - 1)) spots.Add(i);
-                if (spots.Count == 0) return;
-                // The closest spot to the junction: the player sees it close right behind them.
-                var c = route[spots[spots.Count - 1]];
-                _level[c] = new Tile { Type = TileType.Barrier, Channel = (byte)laser.channel, Param = 1 };
-                Reserve(c);
+                // The closest spot to the junction first: the player sees it close right behind them.
+                for (int k = spots.Count - 1; k >= 0; k--)
+                {
+                    var c = route[spots[k]];
+                    _level[c] = new Tile { Type = TileType.Barrier, Channel = (byte)laser.channel, Param = 1 };
+                    if (LevelValidator.CheckNoDeadLock(_level) != null) { _level[c] = Tile.Floor; continue; }
+                    Reserve(c);
+                    return;
+                }
             }
 
-            /// <summary>A stream of 2-4 current tiles along the route, flowing towards the exit: a one-way passage.</summary>
+            /// <summary>
+            /// A stream of 2-4 current tiles along the route, flowing towards the exit: a one-way shortcut. Kept only
+            /// where the player can always walk back around it (it never strands them away from a button they need).
+            /// </summary>
             bool PlaceCurrent(List<Cell> route)
             {
+                // Every start along the route, each with the 3 stream lengths (a random one first).
                 var starts = new List<int>();
                 for (int i = 2; i < route.Count - 4; i++) starts.Add(i);
                 _rng.Shuffle(starts);
+                int first = _rng.Range(0, 3);
+                var streams = new List<(int start, int len)>();
                 foreach (int i in starts)
+                    for (int l = 0; l < 3; l++) streams.Add((i, 2 + (first + l) % 3));
+
+                foreach (var (i, len) in streams)
                 {
-                    int len = _rng.Range(2, 5);
                     if (i + len >= route.Count - 1 || _level[route[i - 1]].Type == TileType.Current) continue;
                     bool ok = true;
                     for (int j = i; j < i + len && ok; j++) ok = IsRouteCorridor(route, j);
                     var end = route[i + len];
                     if (!ok || end.Floor != route[i].Floor || !(IsFloorType(end) || _level[end].Type == TileType.Exit)) continue;
                     for (int j = i; j < i + len; j++)
-                    {
                         _level[route[j]] = new Tile { Type = TileType.Current, Param = (byte)DirTo(route[j], route[j + 1]) };
+                    if (LevelValidator.CheckNoDeadLock(_level) != null)
+                    {
+                        for (int j = i; j < i + len; j++) _level[route[j]] = Tile.Floor;
+                        continue;
+                    }
+                    for (int j = i; j < i + len; j++)
+                    {
                         _reserved[_level.IndexOf(route[j])] = true;
                         _hazards.Add(route[j]);
                     }
@@ -848,17 +740,26 @@ namespace MummyEscape.Core
                 return false;
             }
 
-            /// <summary>A fragile slab on the route: the optimal route crosses it once, a careless player maybe twice.</summary>
+            /// <summary>
+            /// A fragile slab on the route: a one-time shortcut. Kept only where a longer way around exists, so that
+            /// crossing it at the wrong time (or stepping back off it) costs moves, never the run.
+            /// </summary>
             bool PlaceCrumbling(List<Cell> route)
             {
                 var spots = new List<int>();
                 for (int i = 2; i < route.Count - 2; i++) if (IsRouteCorridor(route, i)) spots.Add(i);
-                if (spots.Count == 0) return false;
-                var c = route[_rng.Pick(spots)];
-                _level[c] = new Tile { Type = TileType.Crumbling, Param = (byte)_crumbling++ };
-                _reserved[_level.IndexOf(c)] = true;
-                _hazards.Add(c);
-                return true;
+                _rng.Shuffle(spots);
+                foreach (int i in spots)
+                {
+                    var c = route[i];
+                    _level[c] = new Tile { Type = TileType.Crumbling, Param = (byte)_crumbling };
+                    if (LevelValidator.CheckNoDeadLock(_level) != null) { _level[c] = Tile.Floor; continue; }
+                    _crumbling++;
+                    _reserved[_level.IndexOf(c)] = true;
+                    _hazards.Add(c);
+                    return true;
+                }
+                return false;
             }
 
             /// <summary>A flame jet on the route with a random beat: the route has to be walked in rhythm.</summary>

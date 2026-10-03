@@ -24,17 +24,28 @@ namespace MummyEscape.Core
         /// <summary>Moves spent above the optimal route of this maze (0 = perfect run).</summary>
         public int OverPar => Math.Max(0, Moves - Par);
 
-        /// <summary>3 stars at par, 2 stars within +50%, 1 star for escaping at all.</summary>
+        /// <summary>
+        /// Moves allowed for 3 and 2 stars, in % of the ideal path. The tomb is played from memory in the dark, so a
+        /// human hardly ever walks the ideal path: simulated players (tools/LevelLab --human) need 1.6× (attentive) to
+        /// 2.3× (average) the ideal moves on act 1. 3 stars = a well-remembered tomb, 2 = a few wrong turns.
+        /// </summary>
+        public const int ThreeStarsPercent = 150, TwoStarsPercent = 250;
+
+        /// <summary>3 stars within 1.5× the ideal path, 2 stars within 2.5×, 1 star for escaping at all.</summary>
         public int Stars
         {
             get
             {
                 if (!Won) return 0;
-                if (Moves <= Par) return 3;
-                if (Moves * 2 <= Par * 3) return 2;
+                if (Moves <= MaxMovesFor(3)) return 3;
+                if (Moves <= MaxMovesFor(2)) return 2;
                 return 1;
             }
         }
+
+        /// <summary>Most moves that still earn this many stars in this maze (never below the ideal path).</summary>
+        public int MaxMovesFor(int stars) =>
+            stars >= 3 ? Par * ThreeStarsPercent / 100 : stars == 2 ? Par * TwoStarsPercent / 100 : int.MaxValue;
 
         /// <summary>Bump when the score encoding changes: it is part of the leaderboard ids.</summary>
         public const int ScoreFormat = 2;

@@ -10,5 +10,7 @@
   <ItemGroup>
     <Compile Include="../../MummyEscape/Assets/_Project/Scripts/Core/**/*.cs" Exclude="../../MummyEscape/Assets/_Project/Scripts/Core/AssemblyInfo.cs" LinkBase="Core" />
     <Compile Include="Program.cs" />
+    <Compile Include="HumanSim.cs" />
+    <Compile Include="HumanReport.cs" />
   </ItemGroup>
 </Project>

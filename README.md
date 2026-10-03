@@ -58,17 +58,19 @@ Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnu
 
 **Déroulé d'une partie** : chaque étage est affiché tour à tour pendant 10 s, l’étage de départ en dernier (bouton « Étage suivant » / « Prêt » pour passer ; le temps s’arrête dans le menu pause ; aperçu désactivable dans les Paramètres), puis le brouillard tombe. La torche éclaire les cases voisines ; la **poussière** l'éteint (on ne voit plus que sa propre case, impossible de désamorcer) et longer une **torche murale** la rallume (à partir de l'acte 2). Chaque nouvelle partie d'un niveau tire un **nouveau labyrinthe** (variante n° = nombre de parties jouées) : il faut à la fois de la logique et de la mémoire.
 
-Tout est déterministe : un couple (niveau, variante) produit **la même carte sur tous les appareils** (graine = hash(version du générateur, niveau, variante), PRNG PCG32 maison). Chaque labyrinthe est validé par un solveur BFS exact (position, boutons, pièges désamorcés, PV, cécité, torche) :
+Tout est déterministe : un couple (niveau, variante) produit **la même carte sur tous les appareils** (graine = hash(version du générateur, niveau, variante), PRNG PCG32 maison). Chaque labyrinthe est validé par un solveur BFS exact (position, boutons, pièges désamorcés, PV, cécité, torche).
 
-| Acte | Coups min. (par) | Plafond | Étages | Obstacles obligatoires (portes / portails) |
-|------|-----------------|---------|--------|-------------------------------------------|
-| 1 | 15 | 24 → 30 | 1 | 1 → 2 |
-| 2 | 22 | 32 → 38 | 1 → 2 | 2 → 3 |
-| 3 | 28 | 44 → 50 | 2 | 3 |
-| 4 | 34 | 52 → 60 | 2 → 3 | 3 → 4 |
-| 5 | 40 | 62 → 70 | 3 | 4 |
+**On joue sur la mémoire et la logique, pas sur la longueur.** Un humain fait environ 2× le chemin idéal (simulation `LevelLab --human`) : le par reste donc court (≈ 30 coups au plus, un niveau dure ~2 minutes) et la difficulté monte par les **mécaniques à enchaîner** (portes, portails verrouillés ou maudits, mécanique de l'acte, pièges, poussière, 2 étages), jamais par la distance.
 
-(+6 coups de plafond par étage supplémentaire.)
+| Acte | Par min. | Plafond | Étages | Taille | Mécaniques obligatoires | Mécanique de l'acte |
+|------|---------|---------|--------|--------|-------------------------|---------------------|
+| 1 | 14 | 20 → 24 | 1 | 5 → 6 | 1 → 2 (porte / portail) | — |
+| 2 | 16 | 24 → 28 | 1 | 6 | 2 (porte + portail) | 1 → 2 courants |
+| 3 | 18 | 26 → 30 | 1 | 6 | 2 (portail verrouillé ou non + porte) | 1 → 2 dalles fragiles |
+| 4 | 20 | 28 → 29 | 1 → 2 | 6 → 5 | 2 (laser + portail / porte) | barrières rouges et bleues |
+| 5 | 22 | 26 → 28 | 2 | 4 | 2 (portail maudit ou non, porte, laser) | 2 jets de flammes + 1 dalle |
+
+(+4 coups de plafond par étage supplémentaire, +3 pour un portail verrouillé, qui demande son levier. Si une graine ne donne aucun tombeau valide, la recherche reprend avec +3 puis +6 coups de marge, de façon déterministe.)
 
 **Un thème et une mécanique par acte** (`Runtime/Visual/TombTheme.cs` pour l'ambiance, `DifficultyTable` pour les règles) :
 
@@ -80,7 +82,7 @@ Tout est déterministe : un couple (niveau, variante) produit **la même carte s
 | 4 | La Cité d'Anubis : métal, néons cyan | **leviers + barrières laser** : un levier inverse rouges (ouvertes) et bleues (fermées) | `$` levier, `|` rouge, `=` bleue |
 | 5 | Le Sanctuaire embrasé : basalte, lave | **jets de flammes** : crachent un pas sur trois (déphasés), touchent comme des pics | `0` `1` `2` (phase) |
 
-Courants, dalles et leviers peuvent enfermer la momie : après chaque glissade, effondrement ou levier, un BFS (`Solver.CanEscape`) vérifie qu'une sortie reste atteignable ; sinon la partie est perdue (« Emmurée ! »). Le générateur garantit que le chemin optimal ne s'enferme jamais.
+Courants, dalles et barrières coûtent au pire un détour, **jamais la partie** : le générateur ne garde un courant, une dalle ou une barrière bleue que là où il reste toujours un chemin de retour (un courant ou une dalle est un raccourci à sens unique, doublé d'un chemin plus long). Le jeu garde par sécurité la détection « Emmurée ! » (`Solver.CanEscape`), qui ne doit plus jamais se déclencher.
 
 **Ambiance** : chaque acte a sa palette, ses décors rares (os, cartouches, flaques, câbles, lave…), son éclairage (ambiance, bloom, couleur des torches murales) et ses particules flottantes. `World/FxRig.cs` joue les effets : poussière des pas, étincelles et flash de lumière des boutons/leviers, portes qui s'ouvrent, implosion/explosion des portails, gerbes d'eau, éboulis, flammes, fumée de cécité, flamme qui saute de la torche murale à celle de la momie, victoire et mort. Les effets en boucle (braises des torches, tourbillon des portails, écume des courants, rayon de la sortie) ne tournent que sur les cases visibles ; l'option « Effets lumineux avancés » coupe les effets décoratifs.
 
@@ -102,12 +104,14 @@ Pour utiliser de vraies pistes (Suno…), déposer `menu`, `act1` … `act5` (.m
 
 Garanties du générateur (`Core/Generation/LevelGenerator.cs`, vérifiées par `Core/Solving/LevelValidator.cs`) :
 - au moins **1 interaction obligatoire** (bouton ou téléporteur) sur le chemin optimal ; sans elle, la sortie est inatteignable ;
-- les **culs-de-sac servent** : bouton, téléporteur, échelle, point de chute… les impasses vides sont rebouclées ou comblées (seule exception : derrière une fausse porte, qui est le leurre) ;
-- **2 étages maximum** (tout doit tenir en mémoire après l’aperçu) ; aux **actes 1 et 2**, chaque téléporteur est au fond d’un cul-de-sac : une seule sortie à l’arrivée, un pas en arrière pour repartir (jamais de double passage pour changer de direction) ;
+- **chaque élément sert** (`CheckEverythingUsed`) : chaque bouton / levier est actionné, chaque portail et échelle emprunté, chaque porte, barrière, courant, dalle, piège, poussière et jet de flammes est sur le chemin idéal, chaque torche murale rallume la torche. Plus de fausse porte, de portail leurre ni de portail caché (tous visibles à l'aperçu) ;
+- **jamais bloqué** (`CheckNoDeadLock`) : depuis **toute** situation atteignable (position, leviers, dalles effondrées, PV, torche, cécité, pièges désamorcés, rythme des flammes), il reste un chemin vers la sortie sans mourir. Exemple rejeté : 1 PV, torche éteinte par la poussière et des pics impossibles à désamorcer sur le seul chemin du retour ;
+- les **culs-de-sac servent** : bouton, téléporteur, échelle, point de chute… les impasses vides sont rebouclées ou comblées ;
+- **2 étages maximum** (tout doit tenir en mémoire après l'aperçu) ; chaque téléporteur est au fond d'un cul-de-sac : une seule sortie à l'arrivée, un pas en arrière pour repartir ;
 - la **sortie est loin** de l'entrée (≥ 2/3 du côté du tombeau), ou derrière une porte dont le bouton est lui-même loin ;
 - espacement minimal entre points d'intérêt, PV suffisants pour le par.
 
-Les tests vérifient pour **chaque** niveau et plusieurs variantes : spec respectée, déterminisme par variante, nouvelle carte à chaque partie, par rejoué à l'identique dans `GameSession`, mécaniques réellement obligatoires, impasses utiles, sortie lointaine.
+Les tests vérifient pour **chaque** niveau et plusieurs variantes (60 par niveau dans le balayage `Slow`) : spec respectée, déterminisme par variante, nouvelle carte à chaque partie, par rejoué à l'identique dans `GameSession`, mécaniques réellement obligatoires, éléments tous utiles, aucun blocage possible, impasses utiles, sortie lointaine, par plafonné.
 
 ## Langues
 
@@ -121,8 +125,8 @@ Français et anglais, au choix dans **Paramètres › Langue** (par défaut : la
 ## Tests
 
 ```bash
-cd tools/CoreTests && dotnet test                       # ~860 tests
-dotnet test --filter "TestCategory!=Slow"               # sans le balayage de 25 variantes par niveau
+cd tools/CoreTests && dotnet test                       # ~1480 tests
+dotnet test --filter "TestCategory!=Slow"               # sans le balayage de 60 variantes par niveau
 ```
 Dans Unity : Window › General › Test Runner › EditMode.
 
@@ -134,6 +138,8 @@ dotnet run -c Release                      # stats sur 20 variantes de chaque ni
 dotnet run -c Release -- --variants 100 --act 2
 dotnet run -- 2-7 [variante]               # carte ASCII + solution optimale d'un labyrinthe
 dotnet run -- --why 1-7 [préfixe] [n]      # raisons de rejet des tentatives (+ carte partielle du 1er rejet au préfixe donné)
+dotnet run -c Release -- --human [--sessions 30] [--act 2] [--profile moyen]   # joueurs humains simulés : mémoire imparfaite, erreurs, chrono
+dotnet run -c Release -- --human-why 3-8 attentif [n]   # issue de chaque partie simulée (morts, emmurée, abandon)
 ```
 
 **Modifier la génération** : toute modification de `LevelGenerator` / `DifficultyTable` / `Rules` change les labyrinthes. Il faut alors
