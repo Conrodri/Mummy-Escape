@@ -469,6 +469,7 @@ namespace MummyEscape.UI.Screens
             _panel.pivot = new Vector2(0.5f, 1);
             _panel.anchoredPosition = new Vector2(0, -150);
             _panel.sizeDelta = new Vector2(980, 0);
+            UIKit.FitInParent(_panel);
             _panel.GetComponent<Image>().raycastTarget = true;
             _panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
@@ -549,6 +550,7 @@ namespace MummyEscape.UI.Screens
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
             panel.pivot = new Vector2(0.5f, 0.5f);
             panel.sizeDelta = new Vector2(960, 0);
+            UIKit.FitInParent(panel);
             panel.GetComponent<Image>().raycastTarget = true;
             panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             _title = UIKit.Label(panel, "", 48, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);

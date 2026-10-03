@@ -14,7 +14,7 @@ namespace MummyEscape.UI.Screens
             shade.gameObject.AddComponent<Button>().onClick.AddListener(Resume); // tap outside = resume
 
             var panel = UIKit.Card(Root, 44, 18);
-            UIKit.Place(panel, 0.5f, 0.5f, 760, 0);
+            UIKit.FitInParent(UIKit.Place(panel, 0.5f, 0.5f, 760, 0));
             panel.GetComponent<Image>().raycastTarget = true;
             panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 

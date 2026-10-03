@@ -11,12 +11,13 @@ namespace MummyEscape.Core
     /// Construction, in short:
     ///  1. a perfect maze per floor (a tree: every tile of the route to the exit is a cut);
     ///  2. start, ladders and a far exit picked by distance along the tree;
-    ///  3. gates cut the route in order: a door (its button at the end of a side dead end) or a wall (the only way on
-    ///     is a teleporter at the end of a dead end, landing beyond the cut);
-    ///  4. nothing optional: no decoy door, no lure portal: every element serves the route;
+    ///  3. gates form a chain built back from the exit: the last one cuts the way out, the one before locks the way
+    ///     to its button or portal, and so on, with each button placed where reaching it means backtracking;
+    ///  4. nothing optional: no decoy door, no lure portal: every element serves the walk;
     ///  5. braiding: every dead end that holds nothing gets a wall knocked out (inside its region only, so gates stay
     ///     mandatory). Remaining dead ends always mean something: a button, a portal, a ladder, the exit;
-    ///  6. dust + wall torches, then traps, on the route.
+    ///     Wings the walk never comes near go back to rock, short loops beside it stay (short and long ways);
+    ///  6. dust + wall torches, then traps, on the walk.
     /// </summary>
     public static class LevelGenerator
     {
@@ -55,7 +56,7 @@ namespace MummyEscape.Core
 
             var summary = new List<string>();
             foreach (var kv in failures) summary.Add($"{kv.Key} x{kv.Value}");
-            throw new LevelGenerationException($"Level {spec.Id}: no valid tomb after {MaxAttempts} attempts ({string.Join(", ", summary)}). Spec: {spec}");
+            throw new LevelGenerationException($"Level {spec.Id}: no valid tomb after {MaxAttempts + MaxRelaxSteps * (MaxAttempts / 2)} attempts ({string.Join(", ", summary)}). Spec: {spec}");
         }
 
         /// <summary>Builds one attempt without solving it (debug tooling: shows what a rejected attempt looked like).</summary>
@@ -94,10 +95,8 @@ namespace MummyEscape.Core
             /// <summary>Laser gates placed: barrier, switch and channel (blue barriers are added behind them later).</summary>
             readonly List<(Cell barrier, Cell toggle, int channel)> _lasers = new List<(Cell, Cell, int)>();
 
-            // Gate bookkeeping: channel to open each gate (-1 = none) and which gate each portal pad belongs to.
-            readonly List<int> _gateChannels = new List<int>();
+            // Which gate each portal pad belongs to.
             readonly Dictionary<Cell, int> _gatePads = new Dictionary<Cell, int>();
-            Cell? _lastGate;
 
             public Builder(LevelSpec spec, Pcg32 rng)
             {
@@ -118,17 +117,24 @@ namespace MummyEscape.Core
                 for (int f = 0; f < _spec.Floors; f++) CarveMaze(f);
                 if (!PlaceStartLaddersExit(out failure)) return null;
 
-                for (int k = 0; k < _spec.Gates.Count; k++)
-                    if (!PlaceGate(k, out failure)) return null;
+                if (!PlaceGates(out failure)) return null;
 
                 BraidDeadEnds();
+                var walk = PlannedWalk();
+                if (walk == null) { failure = "route: chain lost after braiding"; return null; }
+                PruneWings(walk);
 
                 AddLoops(_spec.ExtraLoops);
+                AddBypasses(_spec.ExtraLoops + 3);
 
-                var route = ShortestPath(_level.Start, _level.Exit, AllOpen);
+                // Mechanics and traps go on the walk the chain asks for (backtracking included).
+                var route = PlannedWalk();
                 if (route == null) { failure = "route: lost after braiding"; return null; }
-                // Cheap early reject: the route with every door open is a lower bound of the par.
-                if (route.Count - 1 > _spec.MaxMoves) { failure = $"too-long: open route {route.Count - 1} > {_spec.MaxMoves}"; return null; }
+                // New loops can shift the walk: drop any pocket it no longer needs.
+                PruneWings(route);
+                // Cheap early reject: the planned walk is close to the par (each portal pad jump counts as no move).
+                int planned = route.Count - 1 - _spec.RequiredPortals;
+                if (planned > _spec.MaxMoves) { failure = $"too-long: planned walk {planned} > {_spec.MaxMoves}"; return null; }
 
                 // Act mechanics, laid on the route once the layout is final. Each one is kept only where no sequence of
                 // moves can wall the player in (see LevelValidator.CheckNoDeadLock).
@@ -158,7 +164,8 @@ namespace MummyEscape.Core
                 _level.ChannelCount = _channels;
                 _level.TrapCount = _traps.Count;
                 failure = null;
-                return _level;
+                // Pruned wings leave rock around the tomb: frame only the ground.
+                return _level.CroppedToGround();
             }
 
             // ------------------------------------------------------------------ terrain
@@ -278,8 +285,9 @@ namespace MummyEscape.Core
             void RouteWindow(out int lo, out int hi)
             {
                 int g = _spec.Gates.Count;
-                hi = _spec.MaxMoves - 4 * g;
-                lo = Math.Max(_spec.MinMoves - 2 * g, (g + 1) * 3);
+                // The way out is only part of the walk: the gate chain adds a backtracking detour per gate.
+                hi = _spec.MaxMoves - 7 * g;
+                lo = Math.Max(_spec.MinMoves - 10 * g, (g + 1) * 3);
                 // Keep the window at least 3 wide: maze cells sit 2 tiles apart, a single odd distance has no cell.
                 lo = Math.Min(lo, hi - 3);
             }
@@ -337,106 +345,159 @@ namespace MummyEscape.Core
 
             // ------------------------------------------------------------------ gates
 
-            bool PlaceGate(int k, out string failure)
-            {
-                failure = null;
-                var route = ShortestPath(_level.Start, _level.Exit, AllOpen);
-                if (route == null) { failure = $"route: lost before gate {k}"; return false; }
-                int from = _lastGate.HasValue ? route.IndexOf(_lastGate.Value) : 0;
-                if (from < 0) { failure = $"route: previous gate off route at gate {k}"; return false; }
+            /// <summary>Least moves each gate still to place keeps for its own detour.</summary>
+            const int MinGateDetour = 4;
 
-                // Cut tiles of the route, closest to the ideal spot first; the first one that also offers a good
-                // button / portal spot wins.
-                int remaining = _spec.Gates.Count - k;
-                int target = from + (route.Count - from) / (remaining + 1) + _rng.Range(-1, 2);
-                int maxDetour = Math.Max(3, (_spec.MaxMoves - route.Count) / (2 * remaining) + 1);
-                // Tiles reachable while the previous gate is still shut: no spot for this gate may sit there.
-                int[] earlier = null;
-                if (k > 0)
-                {
-                    int prev = k - 1, ch = _gateChannels[prev];
-                    earlier = Distances(_level.Start, ch >= 0 ? AllOpen & ~(1 << ch) : AllOpen, out _, null,
-                                        pad => !_gatePads.TryGetValue(pad, out int j) || j != prev);
-                }
-                var tried = new HashSet<int>();
+            // The chain in play order: what the player triggers for each gate (button, switch or lever) and its portal pads.
+            Cell?[] _mech, _padA, _padB;
+            int[] _mechChannel;
+
+            bool NoPlacedPads(Cell pad) => !_gatePads.ContainsKey(pad);
+
+            /// <summary>
+            /// The gates form a chain built backwards from the exit. The last gate cuts the way to the exit; its button
+            /// (or portal) goes somewhere else in the tomb, ideally where reaching it means walking back the other way.
+            /// The gate before it then locks the way to that button, and so on: go left for the button that opens the
+            /// door on the right, behind which waits the button for the door on the left, behind which a portal leads
+            /// to the exit. Every gate shares out the moves left in the par window, so the backtracking stays short.
+            /// </summary>
+            bool PlaceGates(out string failure)
+            {
+                int n = _spec.Gates.Count;
+                _mech = new Cell?[n]; _padA = new Cell?[n]; _padB = new Cell?[n]; _mechChannel = new int[n];
+                Cell target = _level.Exit;
+                int tail = 0;
+                for (int i = n - 1; i >= 0; i--)
+                    if (!PlaceGate(i, ref target, ref tail, out failure)) return false;
+                failure = null;
+                return true;
+            }
+
+            bool PlaceGate(int i, ref Cell target, ref int tail, out string failure)
+            {
+                var dist = Distances(_level.Start, 0, out var parent, null, NoPlacedPads);
+                if (dist[_level.IndexOf(target)] < 0) { failure = $"chain: target of gate {i} unreachable"; return false; }
+                var path = BuildPath(parent, target);
+
+                // Cut tiles: in the second half of the way first (the door closes a wing, not the hub), then the rest.
+                var late = new List<int>();
+                var early = new List<int>();
+                for (int idx = 2; idx < path.Count - 2; idx++) (idx >= path.Count / 2 ? late : early).Add(idx);
+                _rng.Shuffle(late);
+                _rng.Shuffle(early);
+                late.AddRange(early);
                 int cuts = 0;
-                for (int off = 0; off < route.Count; off++)
-                    foreach (int idx in new[] { target + off, target - off })
-                    {
-                        if (!tried.Add(idx) || idx < from + 2 || idx >= route.Count - 2) continue;
-                        var c = route[idx];
-                        // A passage tile of the route (between two maze cells), in a plain corridor.
-                        if (IsCell(c) || !IsFree(c) || Degree(c) != 2 || !FarFromPois(c, _spec.MinPoiSpacing - 1)) continue;
-                        if (route[idx - 1].Floor != c.Floor || route[idx + 1].Floor != c.Floor) continue;
-                        cuts++;
-                        if (TryGateAt(k, route, from, idx, maxDetour, earlier)) return true;
-                        if (cuts >= 16) break;
-                    }
-                failure = cuts == 0 ? $"gate: no cut on route k{k}" : $"gate: no button or portal spot k{k} ({_spec.Gates[k]})";
+                foreach (int idx in late)
+                {
+                    var c = path[idx];
+                    if (IsCell(c) || !IsFree(c) || Degree(c) != 2 || !FarFromPois(c, _spec.MinPoiSpacing - 1)) continue;
+                    if (path[idx - 1].Floor != c.Floor || path[idx + 1].Floor != c.Floor) continue;
+                    if (++cuts > 12) break;
+                    if (TryGate(i, c, path.Count - 1 + tail, ref target, ref tail)) { failure = null; return true; }
+                }
+                failure = cuts == 0 ? $"gate: no cut on the way k{i}" : $"gate: no spot for the mechanism k{i} ({_spec.Gates[i]})";
                 return false;
             }
 
-            bool TryGateAt(int k, List<Cell> route, int from, int cutIndex, int maxDetour, int[] earlier)
+            /// <summary>
+            /// Picks among <paramref name="spots"/> the one whose detour (moves added to the walk) best matches this gate's
+            /// share of the moves left, staying inside the par window.
+            /// </summary>
+            Cell? PickBySharedDetour(List<Cell> spots, Func<Cell, int> total, int i, int current)
             {
-                var gate = _spec.Gates[k];
-                var cut = route[cutIndex];
-                // Detours are measured from the stretch since the previous gate; spots must lie beyond that gate too.
-                var before = route.GetRange(from, cutIndex - from);
+                int max = _spec.MaxMoves - MinGateDetour * i;
+                int room = max - current;
+                int need = i == 0 ? _spec.MinMoves - current : 0;
+                int want = i == 0 ? (Math.Max(need, MinGateDetour) + room + 1) / 2 : room / (i + 1);
+                Cell? best = null;
+                int bestScore = int.MaxValue;
+                foreach (var c in spots)
+                {
+                    int t = total(c);
+                    if (t < 0 || t > max || t - current < need || t - current < 2) continue;
+                    int score = Math.Abs(t - current - want) * 4 + _rng.Range(0, 6);
+                    if (score < bestScore) { bestScore = score; best = c; }
+                }
+                return best;
+            }
+
+            /// <summary>Mechanism spots on this side of the gates: dead ends first, any maze cell when none fits.</summary>
+            Cell? PickMechanism(Func<Cell, bool> ok, Func<Cell, int> total, int i, int current, bool deadEndOnly)
+            {
+                var spot = PickBySharedDetour(CandidatesAllFloors(c => IsCell(c) && ok(c), deadEndsOnly: true), total, i, current);
+                if (spot.HasValue || deadEndOnly) return spot;
+                return PickBySharedDetour(CandidatesAllFloors(c => IsCell(c) && ok(c), deadEndsOnly: false), total, i, current);
+            }
+
+            bool TryGate(int i, Cell cut, int current, ref Cell target, ref int tail)
+            {
+                var gate = _spec.Gates[i];
+                var t = target;
+                int spacing = _spec.MinPoiSpacing;
 
                 if (gate.Kind == GateKind.Door || gate.Kind == GateKind.Laser)
                 {
                     bool laser = gate.Kind == GateKind.Laser;
                     int channel = _channels;
-                    // A red barrier behaves like a door: open once its channel is on.
                     _level[cut] = new Tile { Type = laser ? TileType.Barrier : TileType.Door, Channel = (byte)channel };
-                    // The new gate is still closed: its channel is not in AllOpen yet.
-                    var button = PickSideSpot(before, AllOpen, maxDetour, cut, null, earlier);
+                    var d0 = Distances(_level.Start, 0, out _, null, NoPlacedPads);
+                    var dT = Distances(t, 1 << channel, out _, null, NoPlacedPads);
+                    int tl = tail;
+                    Cell? button = d0[_level.IndexOf(t)] >= 0 ? null : PickMechanism(
+                        c => d0[_level.IndexOf(c)] >= 0 && dT[_level.IndexOf(c)] >= 0 && c.Manhattan(cut) >= spacing && FarFromPois(c),
+                        c => d0[_level.IndexOf(c)] + dT[_level.IndexOf(c)] + tl, i, current, deadEndOnly: false);
                     if (!button.HasValue) { _level[cut] = Tile.Floor; return false; }
                     _channels++;
                     Reserve(cut);
                     _level[button.Value] = new Tile { Type = laser ? TileType.Switch : TileType.Button, Channel = (byte)channel };
                     Reserve(button.Value);
-                    _gateChannels.Add(channel);
                     if (laser) _lasers.Add((cut, button.Value, channel));
-                    _lastGate = cut;
+                    _mech[i] = button;
+                    _mechChannel[i] = channel;
+                    tail += dT[_level.IndexOf(button.Value)];
+                    target = button.Value;
                     return true;
                 }
 
-                // Portal gate: wall the route off; a teleporter at the end of a dead end is the only way on.
+                // Portal gate: the way is walled off; a teleporter at the end of a dead end on this side lands beyond.
                 _level[cut] = Tile.Wall;
-                var a = PickSideSpot(before, AllOpen, maxDetour, cut, null, earlier, deadEndOnly: true);
-                if (!a.HasValue) { _level[cut] = Tile.Floor; return false; }
-
-                var reachA = Distances(_level.Start, AllOpen, out _);
-                var beyond = route[cutIndex + 1];
-                var fromCut = Distances(beyond, AllOpen, out _);
-                var toExit = Distances(_level.Exit, AllOpen, out _);
-                // The jump must not shrink the tomb: start -> pad + landing -> exit has to stay in the par window
-                // (later gates still add a detour each).
-                int later = _spec.Gates.Count - 1 - k;
-                int lower = _spec.MinMoves + 2 - 3 * later, upper = _spec.MaxMoves - 2 - 3 * later;
-                int toPad = reachA[_level.IndexOf(a.Value)];
-                int apart = _spec.MinPoiSpacing + 2;
+                var reach = Distances(_level.Start, 0, out _, null, NoPlacedPads);
+                if (reach[_level.IndexOf(t)] >= 0) { _level[cut] = Tile.Floor; return false; }
+                var beyond = Distances(t, 0, out _, null, NoPlacedPads);
                 Cell? b = null;
-                foreach (int maxFromCut in new[] { 6, 12, 99 })
+                foreach (int maxFromTarget in new[] { 8, 14, 99 })
                 {
-                    int mfc = maxFromCut;
+                    int m = maxFromTarget;
                     var list = CandidatesAllFloors(c =>
                     {
-                        int i = _level.IndexOf(c);
-                        int est = toPad + toExit[i];
-                        return IsCell(c) && reachA[i] < 0 && fromCut[i] >= 2 && fromCut[i] <= mfc && toExit[i] >= 0
-                               && est >= lower && est <= upper && c.Manhattan(a.Value) >= apart && FarFromPois(c);
+                        int k = _level.IndexOf(c);
+                        return IsCell(c) && reach[k] < 0 && beyond[k] >= 1 && beyond[k] <= m && FarFromPois(c);
                     }, deadEndsOnly: true);
                     if (list.Count > 0) { b = list[0]; break; }
                 }
                 if (!b.HasValue) { _level[cut] = Tile.Floor; return false; }
+                int landing = beyond[_level.IndexOf(b.Value)] + tail;
+                var pb = b.Value;
+                bool locked = gate.Portal == TeleporterKind.Locked;
+                // A locked portal also needs its lever: keep room for that detour too.
+                int leverRoom = locked ? MinGateDetour : 0;
+                var a = PickMechanism(
+                    c => reach[_level.IndexOf(c)] >= 0 && c.Manhattan(cut) >= spacing && c.Manhattan(pb) >= spacing + 2 && FarFromPois(c),
+                    c => reach[_level.IndexOf(c)] + landing + leverRoom, i, current, deadEndOnly: true);
+                if (!a.HasValue) { _level[cut] = Tile.Floor; return false; }
 
                 Cell? leverSpot = null;
-                if (gate.Portal == TeleporterKind.Locked)
+                int toPad = 0;
+                if (locked)
                 {
-                    leverSpot = PickSideSpot(before, AllOpen, maxDetour, a.Value, new[] { b.Value }, earlier);
+                    var fromA = Distances(a.Value, 0, out _, null, NoPlacedPads);
+                    var pa = a.Value;
+                    leverSpot = PickMechanism(
+                        c => reach[_level.IndexOf(c)] >= 0 && fromA[_level.IndexOf(c)] >= 0 && c.Manhattan(pa) >= spacing && c.Manhattan(pb) >= spacing
+                             && c.Manhattan(cut) >= spacing && FarFromPois(c),
+                        c => reach[_level.IndexOf(c)] + fromA[_level.IndexOf(c)] + landing, i, current, deadEndOnly: false);
                     if (!leverSpot.HasValue) { _level[cut] = Tile.Floor; return false; }
+                    toPad = fromA[_level.IndexOf(leverSpot.Value)];
                 }
 
                 Reserve(cut, poi: false);
@@ -446,48 +507,58 @@ namespace MummyEscape.Core
                     lever = (byte)_channels++;
                     _level[leverSpot.Value] = new Tile { Type = TileType.Button, Channel = lever };
                     Reserve(leverSpot.Value);
+                    _mech[i] = leverSpot;
+                    _mechChannel[i] = lever;
                 }
                 _level[a.Value] = new Tile { Type = TileType.Teleporter, Teleporter = gate.Portal, Channel = lever };
-                _level[b.Value] = new Tile { Type = TileType.Teleporter, Teleporter = gate.Portal, Channel = lever };
-                _level.LinkTeleporters(a.Value, b.Value);
+                _level[pb] = new Tile { Type = TileType.Teleporter, Teleporter = gate.Portal, Channel = lever };
+                _level.LinkTeleporters(a.Value, pb);
                 Reserve(a.Value);
-                Reserve(b.Value);
-                _gatePads[a.Value] = k;
-                _gatePads[b.Value] = k;
-                _gateChannels.Add(leverSpot.HasValue ? lever : -1);
-                _lastGate = b.Value;
+                Reserve(pb);
+                _gatePads[a.Value] = i;
+                _gatePads[pb] = i;
+                _padA[i] = a;
+                _padB[i] = pb;
+                tail = toPad + landing;
+                target = leverSpot ?? a.Value;
                 return true;
             }
 
             /// <summary>
-            /// A spot for a button or a portal, reachable with <paramref name="pressed"/>, off the route: ideally the end
-            /// of a dead end a few steps away from it (a real detour to remember), never right next to the gate.
+            /// The walk the chain asks for, in play order: each button / lever, each portal jump, then the exit, along
+            /// shortest paths with what is open at that point. Mechanics and pruning work on this walk.
             /// </summary>
-            Cell? PickSideSpot(List<Cell> route, int pressed, int maxDetour, Cell awayFrom, Cell[] avoid, int[] earlier, bool deadEndOnly = false)
+            List<Cell> PlannedWalk()
             {
-                var reach = Distances(_level.Start, pressed, out _);
-                var detour = MultiSourceDistances(route, pressed);
-                bool Ok(Cell c, int minDetour)
+                var walk = new List<Cell> { _level.Start };
+                var cur = _level.Start;
+                int mask = 0;
+                bool Leg(Cell to, int stage)
                 {
-                    int i = _level.IndexOf(c);
-                    return IsCell(c) && reach[i] >= 0 && (earlier == null || earlier[i] < 0) && detour[i] >= minDetour && detour[i] <= maxDetour
-                           && c.Manhattan(awayFrom) >= _spec.MinPoiSpacing && FarFromPois(c) && FarFrom(avoid, c);
+                    var dist = Distances(cur, mask, out var parent, null, p => !_gatePads.TryGetValue(p, out int j) || j < stage);
+                    if (dist[_level.IndexOf(to)] < 0) return false;
+                    var path = BuildPath(parent, to);
+                    for (int k = 1; k < path.Count; k++) walk.Add(path[k]);
+                    cur = to;
+                    return true;
                 }
-                for (int minDetour = 3; minDetour >= 2; minDetour--)
+                for (int i = 0; i < _spec.Gates.Count; i++)
                 {
-                    int md = minDetour;
-                    var dead = CandidatesAllFloors(c => Ok(c, md), deadEndsOnly: true);
-                    if (dead.Count > 0) return dead[0];
+                    if (_mech[i].HasValue)
+                    {
+                        if (!Leg(_mech[i].Value, i)) return null;
+                        mask |= 1 << _mechChannel[i];
+                    }
+                    if (_padA[i].HasValue)
+                    {
+                        if (!Leg(_padA[i].Value, i)) return null;
+                        walk.Add(_padB[i].Value);
+                        cur = _padB[i].Value;
+                    }
                 }
-                if (deadEndOnly) return null;
-                for (int minDetour = 2; minDetour >= 1; minDetour--)
-                {
-                    int md = minDetour;
-                    var any = CandidatesAllFloors(c => Ok(c, md), deadEndsOnly: false);
-                    if (any.Count > 0) return any[0];
-                }
-                return null;
+                return Leg(_level.Exit, _spec.Gates.Count) ? walk : null;
             }
+
 
             // ------------------------------------------------------------------ braiding
 
@@ -630,6 +701,183 @@ namespace MummyEscape.Core
             }
 
 
+            /// <summary>
+            /// Braiding loops long branches instead of erasing them, which can leave a whole wing no useful walk goes
+            /// through. Ground off the walk the gate chain asks for is kept only where it links two separate points of
+            /// the walk: a short or a long way between them, a choice to remember. A pocket entered and left through
+            /// the same spot (or two spots side by side) serves nothing and goes back to rock.
+            /// </summary>
+            void PruneWings(List<Cell> walk)
+            {
+                var onWalk = new bool[_level.CellCount];
+                foreach (var c in walk)
+                {
+                    onWalk[_level.IndexOf(c)] = true;
+                    // A climb lands on the other floor: the ladder left behind is walked on too.
+                    foreach (int f in new[] { c.Floor - 1, c.Floor + 1 })
+                    {
+                        var other = c.WithFloor(f);
+                        var t = _level[c].Type;
+                        if (_level.InBounds(other) && (t == TileType.LadderUp || t == TileType.LadderDown)
+                            && (_level[other].Type == TileType.LadderUp || _level[other].Type == TileType.LadderDown))
+                            onWalk[_level.IndexOf(other)] = true;
+                    }
+                }
+                var seen = new bool[_level.CellCount];
+                var q = new Queue<Cell>();
+                foreach (var c0 in _level.AllCells())
+                {
+                    int i0 = _level.IndexOf(c0);
+                    if (seen[i0] || onWalk[i0] || !Walkable(c0)) continue;
+                    var area = new List<Cell>();
+                    var touches = new List<Cell>();
+                    bool special = false;
+                    seen[i0] = true;
+                    q.Enqueue(c0);
+                    while (q.Count > 0)
+                    {
+                        var c = q.Dequeue();
+                        area.Add(c);
+                        special |= _level[c].Type != TileType.Floor;
+                        foreach (var d in DirExt.All)
+                        {
+                            var n = c.Step(d);
+                            if (!Walkable(n)) continue;
+                            int ni = _level.IndexOf(n);
+                            if (onWalk[ni]) { if (!touches.Contains(n)) touches.Add(n); continue; }
+                            if (seen[ni]) continue;
+                            seen[ni] = true;
+                            q.Enqueue(n);
+                        }
+                    }
+                    if (special) continue;
+                    if (!LinksApart(touches)) { foreach (var c in area) _level[c] = Tile.Wall; continue; }
+                    if (area.Count > MaxWayTiles) ThinToOneWay(area, touches);
+                }
+            }
+
+            /// <summary>
+            /// A whole block of maze between two points of the walk is a place to get lost, not a choice: keep a single
+            /// corridor through it, between the two links farthest apart, and give the rest back to the rock.
+            /// </summary>
+            void ThinToOneWay(List<Cell> area, List<Cell> touches)
+            {
+                Cell from = touches[0], to = touches[0];
+                int best = -1;
+                foreach (var a in touches)
+                    foreach (var b in touches)
+                        if (a.Floor == b.Floor && a.Manhattan(b) > best) { best = a.Manhattan(b); from = a; to = b; }
+                var inArea = new HashSet<Cell>(area);
+                var prev = new Dictionary<Cell, Cell>();
+                var q = new Queue<Cell>();
+                foreach (var d in DirExt.All)
+                {
+                    var n = from.Step(d);
+                    if (inArea.Contains(n) && !prev.ContainsKey(n)) { prev[n] = n; q.Enqueue(n); }
+                }
+                Cell? end = null;
+                while (q.Count > 0 && !end.HasValue)
+                {
+                    var c = q.Dequeue();
+                    foreach (var d in DirExt.All)
+                        if (c.Step(d) == to) { end = c; break; }
+                    if (end.HasValue) break;
+                    foreach (var d in DirExt.All)
+                    {
+                        var n = c.Step(d);
+                        if (!inArea.Contains(n) || prev.ContainsKey(n)) continue;
+                        prev[n] = c;
+                        q.Enqueue(n);
+                    }
+                }
+                if (!end.HasValue) return;
+                var keep = new HashSet<Cell>();
+                for (var c = end.Value; ; c = prev[c])
+                {
+                    keep.Add(c);
+                    if (prev[c] == c) break;
+                }
+                foreach (var c in area)
+                    if (!keep.Contains(c)) _level[c] = Tile.Wall;
+            }
+
+            /// <summary>Above this many tiles, a way between two points of the walk is thinned to a single corridor.</summary>
+            const int MaxWayTiles = 8;
+
+            /// <summary>True when two of these walk tiles are far enough apart for a way between them to be a real choice.</summary>
+            static bool LinksApart(List<Cell> touches)
+            {
+                for (int a = 0; a < touches.Count; a++)
+                    for (int b = a + 1; b < touches.Count; b++)
+                        if (touches[a].Floor == touches[b].Floor && touches[a].Manhattan(touches[b]) >= MinLinkApart) return true;
+                return false;
+            }
+
+            /// <summary>Two links closer than this make a pocket, not a way of its own.</summary>
+            const int MinLinkApart = 3;
+
+            /// <summary>
+            /// Short and long ways: a new corridor dug through the rock between two spots of the same area (1 to 3 maze
+            /// cells long), running beside the walk. It is never a big shortcut (the par barely moves): the choice is
+            /// between ways of similar length, or a longer way around, to remember from the preview.
+            /// </summary>
+            void AddBypasses(int count)
+            {
+                if (count <= 0) return;
+                var comp = FloorComponents();
+                bool Rock(Cell c) => _level.InBounds(c) && IsInterior(c) && IsCell(c) && _level[c].Type == TileType.Wall;
+                bool End(Cell c) => _level.InBounds(c) && IsInterior(c) && IsCell(c) && IsFloorType(c) && c != _level.Start;
+                var starts = new List<Cell>();
+                foreach (var c in _level.AllCells()) if (End(c)) starts.Add(c);
+                _rng.Shuffle(starts);
+                foreach (var a in starts)
+                {
+                    if (count <= 0) return;
+                    if (!End(a)) continue;
+                    var ground = Distances(a, AllOpen, out _);
+                    // BFS over rock cells two tiles apart, up to 3 cells deep.
+                    var prev = new Dictionary<Cell, Cell>();
+                    var frontier = new List<Cell> { a };
+                    Cell? hit = null, last = null;
+                    for (int depth = 1; depth <= 3 && !hit.HasValue; depth++)
+                    {
+                        var next = new List<Cell>();
+                        _rng.Shuffle(frontier);
+                        foreach (var c in frontier)
+                        {
+                            foreach (var d in DirExt.All)
+                            {
+                                var wall = c.Step(d);
+                                var n = wall.Step(d);
+                                if (!_level.InBounds(n) || _level[wall].Type != TileType.Wall || prev.ContainsKey(n) || n == a) continue;
+                                if (Rock(n)) { prev[n] = c; next.Add(n); continue; }
+                                // Reached ground again: a bypass if it joins the same area, about as long as the way it doubles.
+                                if (depth < 2 || !End(n) || comp[_level.IndexOf(n)] != comp[_level.IndexOf(a)]) continue;
+                                int old = ground[_level.IndexOf(n)], fresh = 2 * depth;
+                                if (old < 4 || fresh < old - 4) continue;
+                                hit = n; last = c;
+                                break;
+                            }
+                            if (hit.HasValue) break;
+                        }
+                        frontier = next;
+                    }
+                    if (!hit.HasValue) continue;
+                    // Dig from the far end back to the start of the bypass.
+                    var cur = hit.Value;
+                    var from = last.Value;
+                    while (true)
+                    {
+                        _level[new Cell(cur.Floor, (cur.X + from.X) / 2, (cur.Y + from.Y) / 2)] = Tile.Floor;
+                        if (from == a) break;
+                        _level[from] = Tile.Floor;
+                        cur = from;
+                        from = prev[from];
+                    }
+                    count--;
+                }
+            }
+
             /// <summary>Extra loops between cells at a similar distance from the start: equal-ish routes to tell apart.</summary>
             void AddLoops(int count)
             {
@@ -646,7 +894,7 @@ namespace MummyEscape.Core
                     int ia = _level.IndexOf(a), ib = _level.IndexOf(b);
                     if (comp[ia] != comp[ib] || depth[ia] < 0 || depth[ib] < 0) continue;
                     int diff = Math.Abs(depth[ia] - depth[ib]);
-                    if (diff < 4 || diff > 8 || IsMeaningfulDeadEnd(a) || IsMeaningfulDeadEnd(b)) continue;
+                    if (diff < 3 || IsMeaningfulDeadEnd(a) || IsMeaningfulDeadEnd(b)) continue;
                     if (_reserved[_level.IndexOf(w)] && !IsFloorType(w)) continue;
                     walls.Add((w, a, b));
                 }
@@ -885,34 +1133,6 @@ namespace MummyEscape.Core
                         dist[ni] = dist[ci] + 1;
                         parent[ni] = ci;
                         q.Enqueue(pos);
-                    }
-                }
-                return dist;
-            }
-
-            int[] MultiSourceDistances(List<Cell> sources, int pressed)
-            {
-                var dist = new int[_level.CellCount];
-                for (int i = 0; i < dist.Length; i++) dist[i] = -1;
-                var q = new Queue<Cell>();
-                foreach (var s0 in sources)
-                {
-                    if (dist[_level.IndexOf(s0)] >= 0) continue;
-                    dist[_level.IndexOf(s0)] = 0;
-                    q.Enqueue(s0);
-                }
-                while (q.Count > 0)
-                {
-                    var c = q.Dequeue();
-                    var s = new RuleState { Position = c, Pressed = pressed, Disarmed = -1, Hp = 99 };
-                    foreach (var d in DirExt.All)
-                    {
-                        var r = Rules.Step(_level, s, PlayerAction.Move(d));
-                        if (r.Has(StepFlags.Blocked)) continue;
-                        int ni = _level.IndexOf(r.State.Position);
-                        if (dist[ni] >= 0) continue;
-                        dist[ni] = dist[_level.IndexOf(c)] + 1;
-                        q.Enqueue(r.State.Position);
                     }
                 }
                 return dist;

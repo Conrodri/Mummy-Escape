@@ -59,7 +59,7 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 5;
+        public const int GeneratorVersion = 6;
 
         /// <summary>
         /// One theme and one signature mechanic per act: the intact antechamber (doors, portals), the flooded galleries
@@ -75,8 +75,8 @@ namespace MummyEscape.Core
         {
             new ActDefinition
             {
-                Name = "L'Antichambre", MinMoves = 14, MaxMoves = new Ramp(20, 24),
-                Floors = 1, Cells = new Ramp(5, 6), ExtraLoops = new Ramp(0, 1),
+                Name = "L'Antichambre", MinMoves = 16, MaxMoves = new Ramp(22, 28),
+                Floors = 1, Cells = new Ramp(5, 6), ExtraLoops = new Ramp(2, 3),
                 Gates = new Ramp(1, 2), GateKinds = new[] { GateKind.Door, GateKind.Portal },
                 DarknessTraps = new Ramp(0, 1),
                 TeleporterKinds = new[] { TeleporterKind.Visible },
@@ -84,8 +84,8 @@ namespace MummyEscape.Core
             },
             new ActDefinition
             {
-                Name = "Les Galeries inondées", MinMoves = 16, MaxMoves = new Ramp(24, 28),
-                Floors = 1, Cells = 6, ExtraLoops = new Ramp(2, 3),
+                Name = "Les Galeries inondées", MinMoves = 20, MaxMoves = new Ramp(28, 32),
+                Floors = 1, Cells = 6, ExtraLoops = new Ramp(3, 4),
                 Gates = 2, GateKinds = new[] { GateKind.Door, GateKind.Portal },
                 Currents = new Ramp(1, 2),
                 SpikeTraps = new Ramp(0, 1), DarknessTraps = new Ramp(0, 1), DustPatches = new Ramp(0, 1),
@@ -94,8 +94,8 @@ namespace MummyEscape.Core
             },
             new ActDefinition
             {
-                Name = "Les Ruines effondrées", MinMoves = 18, MaxMoves = new Ramp(26, 30),
-                Floors = 1, Cells = 6, ExtraLoops = new Ramp(2, 3),
+                Name = "Les Ruines effondrées", MinMoves = 22, MaxMoves = new Ramp(30, 34),
+                Floors = 1, Cells = 6, ExtraLoops = new Ramp(3, 4),
                 Gates = 2, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
                 CrumblingTiles = new Ramp(1, 2),
                 SpikeTraps = 1, DarknessTraps = 1, DustPatches = 1,
@@ -104,8 +104,8 @@ namespace MummyEscape.Core
             },
             new ActDefinition
             {
-                Name = "La Cité d'Anubis", MinMoves = 20, MaxMoves = new Ramp(28, 29),
-                Floors = new Ramp(1, 2), Cells = new Ramp(6, 5), ExtraLoops = new Ramp(2, 3),
+                Name = "La Cité d'Anubis", MinMoves = 23, MaxMoves = new Ramp(30, 31),
+                Floors = new Ramp(1, 2), Cells = new Ramp(6, 4), ExtraLoops = new Ramp(3, 4),
                 Gates = 2, GateKinds = new[] { GateKind.Laser, GateKind.Portal, GateKind.Laser, GateKind.Door },
                 BlueBarriers = true,
                 SpikeTraps = 1, DarknessTraps = 1, DustPatches = 1,
@@ -114,7 +114,7 @@ namespace MummyEscape.Core
             },
             new ActDefinition
             {
-                Name = "Le Sanctuaire embrasé", MinMoves = 22, MaxMoves = new Ramp(26, 28),
+                Name = "Le Sanctuaire embrasé", MinMoves = 24, MaxMoves = new Ramp(28, 30),
                 Floors = 2, Cells = 4, ExtraLoops = new Ramp(3, 4),
                 Gates = 2, GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Laser, GateKind.Door },
                 FireJets = 2, CrumblingTiles = 1,

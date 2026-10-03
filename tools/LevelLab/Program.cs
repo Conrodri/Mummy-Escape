@@ -69,6 +69,41 @@ if (args.Length >= 3 && args[0] == "--human-why")
     return;
 }
 
+if (args.Length >= 1 && args[0] == "--compact")
+{
+    // --compact [variants]: how much of each tomb the ideal walk actually uses, per act.
+    int n = args.Length > 1 ? int.Parse(args[1]) : 10;
+    Console.WriteLine("act | ground/grid | far>3 % | max reach | junctions | wings (levels with far>3)");
+    for (int act = 1; act <= DifficultyTable.ActCount; act++)
+    {
+        double ground = 0, far = 0, junctions = 0; int maxReach = 0, wings = 0, count = 0;
+        for (int i = 1; i <= DifficultyTable.GetAct(act).Levels; i++)
+            for (int v = 0; v < n; v++)
+            {
+                var level = LevelGenerator.Generate(new LevelId(act, i), v);
+                var reach = LevelLab.Compactness.ReachFromSolution(level);
+                int walk = 0, farTiles = 0, junc = 0, grid = 0;
+                foreach (var c in level.AllCells())
+                {
+                    if (c.X == 0 || c.Y == 0 || c.X == level.Width - 1 || c.Y == level.Height - 1) continue;
+                    grid++;
+                    if (level[c].IsSolid && level[c].Type == TileType.Wall) continue;
+                    walk++;
+                    int r = reach[level.IndexOf(c)];
+                    if (r > 3 || r < 0) farTiles++;
+                    maxReach = Math.Max(maxReach, r);
+                    int deg = 0;
+                    foreach (var d in DirExt.All) { var s = c.Step(d); if (level.InBounds(s) && level[s].Type != TileType.Wall) deg++; }
+                    if (deg >= 3) junc++;
+                }
+                ground += (double)walk / grid; far += (double)farTiles / walk; junctions += junc; count++;
+                if (farTiles > 0) wings++;
+            }
+        Console.WriteLine($"{act,3} | {ground / count * 100,8:0}% | {far / count * 100,6:0.0}% | {maxReach,9} | {junctions / count,9:0.0} | {wings}/{count}");
+    }
+    return;
+}
+
 if (args.Length >= 1 && args[0] == "--human")
 {
     LevelLab.HumanReport.Run(args);

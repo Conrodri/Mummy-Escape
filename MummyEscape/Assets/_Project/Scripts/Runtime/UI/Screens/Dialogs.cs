@@ -31,6 +31,7 @@ namespace MummyEscape.UI.Screens
             panel.pivot = new Vector2(0.5f, 1);
             panel.anchoredPosition = new Vector2(0, -260);
             panel.sizeDelta = new Vector2(960, 0);
+            UIKit.FitInParent(panel);
             panel.GetComponent<Image>().raycastTarget = true; // swallow taps inside the panel
             panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 

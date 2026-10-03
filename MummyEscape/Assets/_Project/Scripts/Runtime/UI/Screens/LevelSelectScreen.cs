@@ -37,14 +37,8 @@ namespace MummyEscape.UI.Screens
             _actStars = UIKit.Chip(meta.transform, UIKit.Art.Star, "", null, 48);
             _next = UIKit.IconButton(pager.transform, UISprites.Next, () => SetAct(_act + 1), 84);
 
-            _grid = UIKit.Rect("Grid", body);
-            UIKit.Size(_grid, 1000);
-            var grid = _grid.gameObject.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(290, 236);
-            grid.spacing = new Vector2(30, 30);
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 3;
-            grid.childAlignment = TextAnchor.UpperCenter;
+            _grid = (RectTransform)UIKit.FittedGrid(body, 3, new Vector2(290, 236), new Vector2(30, 30), out var slot).transform;
+            UIKit.Size(slot, -1, -1, -1, 1);
         }
 
         public override void OnShow()

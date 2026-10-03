@@ -24,14 +24,8 @@ namespace MummyEscape.UI.Screens
 
             UIKit.Size(UIKit.Label(body, "Gagne des scarabées en décrochant de nouvelles étoiles.", 28, UIKit.Dim), 50);
 
-            _grid = UIKit.Rect("Grid", body);
-            UIKit.Size(_grid, -1, -1, -1, 1);
-            var grid = _grid.gameObject.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(440, 520);
-            grid.spacing = new Vector2(40, 40);
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 2;
-            grid.childAlignment = TextAnchor.UpperCenter;
+            _grid = (RectTransform)UIKit.FittedGrid(body, 2, new Vector2(440, 520), new Vector2(40, 40), out var slot).transform;
+            UIKit.Size(slot, -1, -1, -1, 1);
         }
 
         public override void OnShow() => Refresh();

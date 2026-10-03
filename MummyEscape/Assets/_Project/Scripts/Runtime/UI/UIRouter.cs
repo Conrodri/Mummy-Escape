@@ -185,7 +185,7 @@ namespace MummyEscape.UI
         /// <summary>Screens fade in; modals also settle from a slightly smaller size.</summary>
         static System.Collections.IEnumerator FadeIn(UIScreen s)
         {
-            var group = s.GetComponent<CanvasGroup>() ?? s.gameObject.AddComponent<CanvasGroup>();
+            if (!s.TryGetComponent<CanvasGroup>(out var group)) group = s.gameObject.AddComponent<CanvasGroup>();
             const float duration = 0.18f;
             for (float t = 0; t < duration; t += Time.unscaledDeltaTime)
             {

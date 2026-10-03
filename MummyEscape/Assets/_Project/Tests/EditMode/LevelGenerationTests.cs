@@ -155,12 +155,58 @@ namespace MummyEscape.Tests
             Assert.IsFalse(level.AllCells().Any(c => level[c].Teleporter == TeleporterKind.Hidden), "every portal shows on the preview");
         }
 
+        /// <summary>
+        /// No wing nobody needs: ground off the ideal walk always links two separate points of it (a short or a long
+        /// way to choose between), never a pocket entered and left through the same spot.
+        /// </summary>
+        [TestCaseSource(nameof(AllMazes))]
+        public void Maze_HasNoUnusedWing(int act, int index, int variant)
+        {
+            var level = Get(new LevelId(act, index), variant);
+            var onWalk = new bool[level.CellCount];
+            var s = Rules.Initial(level);
+            onWalk[level.IndexOf(s.Position)] = true;
+            foreach (var a in level.Solution.Actions)
+            {
+                var r = Rules.Step(level, s, a);
+                onWalk[level.IndexOf(r.SteppedOn)] = true; // a ladder or a pad, before the move carries on
+                s = r.State;
+                onWalk[level.IndexOf(s.Position)] = true;
+            }
+            bool Ground(Cell c) => level.InBounds(c) && !level[c].IsSolid;
+            var seen = new bool[level.CellCount];
+            foreach (var c0 in level.AllCells())
+            {
+                if (seen[level.IndexOf(c0)] || onWalk[level.IndexOf(c0)] || !Ground(c0)) continue;
+                var touches = new List<Cell>();
+                var q = new Queue<Cell>();
+                seen[level.IndexOf(c0)] = true;
+                q.Enqueue(c0);
+                while (q.Count > 0)
+                {
+                    var c = q.Dequeue();
+                    foreach (var d in DirExt.All)
+                    {
+                        var n = c.Step(d);
+                        if (!Ground(n)) continue;
+                        if (onWalk[level.IndexOf(n)]) { touches.Add(n); continue; }
+                        if (seen[level.IndexOf(n)]) continue;
+                        seen[level.IndexOf(n)] = true;
+                        q.Enqueue(n);
+                    }
+                }
+                // 2 apart is the way around a fragile slab or a current, kept so they never wall the player in.
+                bool apart = touches.Any(a => touches.Any(b => a.Floor == b.Floor && a.Manhattan(b) >= 2));
+                Assert.IsTrue(apart, $"{c0} sits in a pocket the ideal walk never needs\n{level.ToAscii(new[] { c0 })}");
+            }
+        }
+
         /// <summary>The game plays on memory and logic, not length: the ideal route stays short in every act.</summary>
         [Test]
         public void Acts_IdealRouteStaysShort()
         {
             foreach (var id in DifficultyTable.AllLevels())
-                Assert.That(DifficultyTable.Spec(id).MaxMoves, Is.LessThanOrEqualTo(36), $"{id}: a level must fit in about 2 minutes");
+                Assert.That(DifficultyTable.Spec(id).MaxMoves, Is.LessThanOrEqualTo(38), $"{id}: a level must fit in about 2 minutes");
         }
 
         [TestCaseSource(nameof(AllLevels))]
@@ -182,9 +228,9 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void Act1_IsAtLeast14MovesWithOneMechanic()
+        public void Act1_IsAtLeast16MovesWithOneMechanic()
         {
-            Assert.AreEqual(14, DifficultyTable.GetAct(1).MinMoves);
+            Assert.AreEqual(16, DifficultyTable.GetAct(1).MinMoves);
             for (int i = 1; i <= DifficultyTable.GetAct(1).Levels; i++)
             {
                 var spec = DifficultyTable.Spec(new LevelId(1, i));

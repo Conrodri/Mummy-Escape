@@ -285,7 +285,9 @@ namespace LevelLab
                 {
                     // Lost in a wrong branch: keep following the gallery (straight on if possible) until it ends.
                     var open = sim.Openings(session, cameFrom);
-                    open.RemoveAll(d => sim._visited[level.IndexOf(session.Position.Step(d))] && open.Count > 1);
+                    // Prefer galleries not walked yet, but keep going even if they all were.
+                    var fresh = open.FindAll(d => !sim._visited[level.IndexOf(session.Position.Step(d))]);
+                    if (fresh.Count > 0) open = fresh;
                     if (open.Count == 0) { detourLeft = 0; sim._dirty = true; stats.Seconds += p.ThinkSec * Jitter(); continue; }
                     var dir = cameFrom.HasValue && open.Contains(cameFrom.Value) ? cameFrom.Value : open[rng.Next(open.Count)];
                     action = PlayerAction.Move(dir);

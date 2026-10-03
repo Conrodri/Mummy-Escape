@@ -66,6 +66,37 @@ namespace MummyEscape.Core
 
         public bool TryGetTeleportTarget(Cell from, out Cell to) => _teleportTargets.TryGetValue(IndexOf(from), out to);
 
+        /// <summary>
+        /// The same tomb trimmed to the bounding box of its ground (every floor alike, so ladders stay aligned), with a
+        /// one-tile rock border. The offset is kept even so maze cells stay on odd coordinates.
+        /// </summary>
+        internal Level CroppedToGround()
+        {
+            int minX = Width, minY = Height, maxX = -1, maxY = -1;
+            foreach (var c in AllCells())
+            {
+                if (this[c].Type == TileType.Wall) continue;
+                minX = Math.Min(minX, c.X); maxX = Math.Max(maxX, c.X);
+                minY = Math.Min(minY, c.Y); maxY = Math.Max(maxY, c.Y);
+            }
+            if (maxX < 0) return this;
+            int x0 = (minX - 1) & ~1, y0 = (minY - 1) & ~1;
+            int w = maxX + 2 - x0, h = maxY + 2 - y0;
+            if (x0 <= 0 && y0 <= 0 && w >= Width && h >= Height) return this;
+            Cell Map(Cell c) => new Cell(c.Floor, c.X - x0, c.Y - y0);
+
+            var cropped = new Level(w, h, Floors)
+            {
+                Id = Id, Spec = Spec, Seed = Seed, Variant = Variant, Attempt = Attempt,
+                Start = Map(Start), Exit = Map(Exit), ChannelCount = ChannelCount, TrapCount = TrapCount, MaxHp = MaxHp,
+            };
+            foreach (var c in cropped.AllCells())
+                cropped[c] = Get(new Cell(c.Floor, c.X + x0, c.Y + y0));
+            foreach (var kv in _teleportTargets)
+                cropped._teleportTargets[cropped.IndexOf(Map(CellAt(kv.Key)))] = Map(kv.Value);
+            return cropped;
+        }
+
         public IEnumerable<Cell> AllCells()
         {
             for (int i = 0; i < _tiles.Length; i++) yield return CellAt(i);

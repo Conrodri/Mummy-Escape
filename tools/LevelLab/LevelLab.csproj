@@ -12,5 +12,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="HumanSim.cs" />
     <Compile Include="HumanReport.cs" />
+    <Compile Include="Compactness.cs" />
   </ItemGroup>
 </Project>

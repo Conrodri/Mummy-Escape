@@ -28,7 +28,7 @@ namespace MummyEscape.UI.Screens
 
             var panel = UIKit.Panel(Root);
             var rt = panel.rectTransform;
-            UIKit.Place(rt, 0.5f, 0.5f, 940, 0);
+            UIKit.FitInParent(UIKit.Place(rt, 0.5f, 0.5f, 940, 0));
             var col = UIKit.Column(panel.transform, 22, 44);
             col.padding = new RectOffset(44, 44, 40, 44);
             panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -128,9 +128,9 @@ namespace MummyEscape.UI.Screens
             {
                 // A tier name, then what the next star asks for: humans rarely walk the ideal path, so no "+40 moves" verdict.
                 string tier = Loc.T(result.Stars >= 3 ? "Excellent !" : result.Stars == 2 ? "Bien joué !" : "Évadée de justesse !");
-                string next = result.Stars >= 3 ? Loc.F("chemin idéal : {0} coups", result.Par)
+                string goal = result.Stars >= 3 ? Loc.F("chemin idéal : {0} coups", result.Par)
                                                 : Loc.F("{0} coups ou moins pour l'étoile suivante", result.MaxMovesFor(result.Stars + 1));
-                _verdict.text = $"<b>{tier}</b> · {next}";
+                _verdict.text = $"<b>{tier}</b> · {goal}";
             }
             else
                 _verdict.text = walledIn ? Loc.T("Courants, dalles effondrées et barrières ne pardonnent pas.")

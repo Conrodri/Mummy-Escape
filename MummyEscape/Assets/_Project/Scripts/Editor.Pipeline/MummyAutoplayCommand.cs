@@ -19,7 +19,7 @@ namespace MummyEscape.EditorTools
         {
             if (!Application.isPlaying || GameApp.I == null || GameApp.I.Game.Session == null) return "Start a level in Play mode first.";
             Application.runInBackground = true;
-            var runner = GameApp.I.gameObject.GetComponent<AutoplayRunner>() ?? GameApp.I.gameObject.AddComponent<AutoplayRunner>();
+            if (!GameApp.I.gameObject.TryGetComponent<AutoplayRunner>(out var runner)) runner = GameApp.I.gameObject.AddComponent<AutoplayRunner>();
             runner.StopAllCoroutines();
             runner.StartCoroutine(runner.Run(steps, until));
             return $"Autoplay started ({GameApp.I.Game.Session.Level.Solution.Moves} moves in the solution).";

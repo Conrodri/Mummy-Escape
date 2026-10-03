@@ -427,7 +427,7 @@ namespace MummyEscape.UI
 
         public static LayoutElement Size(Component c, float height = -1, float width = -1, float flexWidth = -1, float flexHeight = -1)
         {
-            var le = c.GetComponent<LayoutElement>() ?? c.gameObject.AddComponent<LayoutElement>();
+            if (!c.TryGetComponent<LayoutElement>(out var le)) le = c.gameObject.AddComponent<LayoutElement>();
             // A fixed size means "don't stretch" unless a flexible size is given explicitly
             // (otherwise a layout group child such as a Row reports itself as flexible and eats the free space).
             if (height >= 0) { le.preferredHeight = height; le.minHeight = height; if (flexHeight < 0) le.flexibleHeight = 0; }
@@ -630,6 +630,60 @@ namespace MummyEscape.UI
             for (int i = 0; i < max; i++) Size(Image(row, i < hp ? Art.Ankh : Art.AnkhEmpty, Color.white), size, size);
             Size(row, size);
             return row;
+        }
+
+        /// <summary>
+        /// Fixed-column grid laid out at its design size inside a stretching slot, scaled down as a whole when the slot is
+        /// narrower or shorter (shrinking the cells instead would crush their content). Size the slot like any layout child.
+        /// </summary>
+        public static GridLayoutGroup FittedGrid(Transform parent, int columns, Vector2 cell, Vector2 spacing, out RectTransform slot)
+        {
+            slot = Rect("GridSlot", parent);
+            var rt = Rect("Grid", slot);
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(columns * cell.x + (columns - 1) * spacing.x, 0);
+            var g = rt.gameObject.AddComponent<GridLayoutGroup>();
+            g.cellSize = cell;
+            g.spacing = spacing;
+            g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            g.constraintCount = columns;
+            g.childAlignment = TextAnchor.UpperCenter;
+            rt.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            FitInParent(rt, 0);
+            return g;
+        }
+
+        /// <summary>Keeps a fixed-size modal panel inside its parent (the safe area) on narrow or short screens.</summary>
+        public static RectTransform FitInParent(RectTransform rt, float margin = 28)
+        {
+            if (!rt.TryGetComponent<FitInParent>(out var fit)) fit = rt.gameObject.AddComponent<FitInParent>();
+            fit.Margin = margin;
+            return rt;
+        }
+    }
+
+    /// <summary>
+    /// Scales a panel down uniformly when it is wider or taller than its parent minus a margin: fixed reference widths
+    /// (~950) overflow the canvas on tall phones once the safe area (notch, rounded corners) is taken out.
+    /// </summary>
+    public sealed class FitInParent : MonoBehaviour
+    {
+        public float Margin = 28;
+        RectTransform _rt;
+
+        void LateUpdate()
+        {
+            if (_rt == null) _rt = (RectTransform)transform;
+            var parent = _rt.parent as RectTransform;
+            if (parent == null) return;
+            Vector2 size = _rt.rect.size, room = parent.rect.size;
+            if (size.x <= 0 || size.y <= 0) return;
+            // Panels anchored to the top keep their offset from it: only the space below counts.
+            float top = _rt.anchorMin.y >= 1f ? -_rt.anchoredPosition.y : 0f;
+            float k = Mathf.Min(1f, (room.x - 2 * Margin) / size.x, (room.y - top - 2 * Margin) / size.y);
+            k = Mathf.Max(0.5f, k);
+            if (Mathf.Abs(_rt.localScale.x - k) > 0.001f) _rt.localScale = new Vector3(k, k, 1f);
         }
     }
 

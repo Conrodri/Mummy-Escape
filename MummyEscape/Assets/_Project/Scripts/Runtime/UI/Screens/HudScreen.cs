@@ -101,7 +101,7 @@ namespace MummyEscape.UI.Screens
 
             // Level intro card.
             var intro = UIKit.Rect("Intro", Root);
-            UIKit.Place(intro, 0.5f, 0.5f, 900, 300);
+            UIKit.FitInParent(UIKit.Place(intro, 0.5f, 0.5f, 900, 300));
             var ibg = UIKit.Plate(intro, new Color(0.05f, 0.035f, 0.02f, 0.85f), 40, UIKit.Rim);
             UIKit.Stretch(ibg.rectTransform);
             _introText = UIKit.Title(intro, "", 54);
