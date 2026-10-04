@@ -125,7 +125,10 @@ namespace MummyEscape.Pvp
             if (pending == null || run == null || pending.MatchId != run.MatchId) return new SubmitRunResponse { Error = "NO_PENDING_DUEL" };
 
             string error = null;
-            var verified = RunValidator.IsPlausible(run, out _) ? RunReplay.Verify(Arena(pending.Seed), run) : null;
+            // A forfeit is a loss whatever was played before it: nothing to check.
+            var verified = run.Outcome == RunOutcome.Abandoned ? new RunSubmission { MatchId = pending.MatchId, Outcome = RunOutcome.Abandoned }
+                         : RunValidator.IsPlausible(run, out _) ? RunReplay.Verify(Arena(pending.Seed), run)
+                         : null;
             if (verified == null)
             {
                 error = "INVALID_RUN";

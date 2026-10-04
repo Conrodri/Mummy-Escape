@@ -393,6 +393,24 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Server_AcceptsAForfeitMidRun()
+        {
+            var (server, store) = NewServer();
+            var duel = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var level = PvpServer.Arena(duel.Seed);
+            // What the pause menu sends (PvpMatch.BuildRun): the steps already taken, no time.
+            var forfeit = new RunSubmission
+            {
+                MatchId = duel.MatchId, Outcome = RunOutcome.Abandoned,
+                Inputs = Stamp(level.Solution.Actions.Take(8), 900, 3000),
+            };
+            var result = server.SubmitRunAsync("alice", forfeit, "Alice").Result;
+            Assert.IsNull(result.Error);
+            Assert.IsFalse(result.Resolved);
+            Assert.AreEqual(0, store.Queue.Count, "a forfeit never becomes a ghost");
+        }
+
+        [Test]
         public void Server_ReplaysTheRun_ACheaterLoses()
         {
             var (server, store) = NewServer();

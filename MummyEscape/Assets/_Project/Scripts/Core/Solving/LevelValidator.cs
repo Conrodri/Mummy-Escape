@@ -45,6 +45,8 @@ namespace MummyEscape.Core
             if (unused != null) return unused;
             var pocket = CheckNoPocket(level, solution);
             if (pocket != null) return pocket;
+            var torches = CheckTorches(level, solution);
+            if (torches != null) return torches;
             var spacing = CheckSpacing(level, spec);
             if (spacing != null) return spacing;
             var spikes = CheckSpikeShortcuts(level);
@@ -119,14 +121,10 @@ namespace MummyEscape.Core
         }
 
         /// <summary>
-        /// Every element of the tomb serves the ideal route: each button / switch is pressed, each portal and ladder
-        /// taken, each door, barrier, current, fragile slab, trap, dust patch and flame jet lies on the way, and each
-        /// wall torch relights the torch. A button with a door that leads nowhere is a design error, not a lure.
-        /// </summary>
-        /// <summary>
         /// Ground off the ideal walk links two separate points of it (a short or a long way to choose between), never a
         /// pocket entered and left through the same spot. The generator prunes pockets against the walk it planned; this
-        /// catches the rare tomb whose shortest walk, as the solver finds it, goes another way.
+        /// catches the rare tomb whose shortest walk, as the solver finds it, goes another way. Only exception: the
+        /// alcove of a wall torch, a dead end worth its few moves to see again.
         /// </summary>
         public static string CheckNoPocket(Level level, Solution solution)
         {
@@ -148,6 +146,7 @@ namespace MummyEscape.Core
             {
                 if (seen[level.IndexOf(c0)] || onWalk[level.IndexOf(c0)] || !Ground(c0)) continue;
                 touches.Clear();
+                bool touchesTorch = false;
                 seen[level.IndexOf(c0)] = true;
                 queue.Enqueue(c0);
                 while (queue.Count > 0)
@@ -156,6 +155,7 @@ namespace MummyEscape.Core
                     foreach (var d in DirExt.All)
                     {
                         var n = c.Step(d);
+                        if (level.Get(n).Type == TileType.WallTorch) touchesTorch = true;
                         if (!Ground(n)) continue;
                         if (onWalk[level.IndexOf(n)]) { touches.Add(n); continue; }
                         if (seen[level.IndexOf(n)]) continue;
@@ -164,7 +164,7 @@ namespace MummyEscape.Core
                     }
                 }
                 // 2 apart is the way around a fragile slab or a current, kept so they never wall the player in.
-                bool apart = false;
+                bool apart = touchesTorch;
                 foreach (var a in touches)
                     foreach (var b in touches)
                         apart |= a.Floor == b.Floor && a.Manhattan(b) >= 2;
@@ -173,10 +173,94 @@ namespace MummyEscape.Core
             return null;
         }
 
+        /// <summary>Moves a lit torch costs, at most: past this, the dark is always the better bet.</summary>
+        public const int MinTorchDetour = 2, MaxTorchDetour = 6;
+
+        /// <summary>
+        /// Dust and the wall torch that relights the mummy's torch are a choice: the sconce is never by the ideal walk but
+        /// in another corridor, a few moves away (<see cref="MinTorchDetour"/> to <see cref="MaxTorchDetour"/>): finish
+        /// in the dark and save time, or pay the detour to see the rest of the tomb.
+        /// </summary>
+        public static string CheckTorches(Level level, Solution solution)
+        {
+            foreach (var c in level.AllCells())
+            {
+                if (level[c].Type != TileType.WallTorch) continue;
+                int detour = TorchDetour(level, solution, c);
+                if (detour == 0) return $"torch: wall torch {c} is by the ideal walk";
+                if (detour < 0) return $"torch: wall torch {c} cannot be reached in the dark";
+                if (detour < MinTorchDetour || detour > MaxTorchDetour) return $"torch: wall torch {c} costs {detour} moves";
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Extra moves to relight at this sconce once the dust has put the torch out: leave the ideal walk, stand by the
+        /// sconce, come back to it (here or further on). 0 when the walk itself passes by it, -1 when it cannot be reached.
+        /// </summary>
+        public static int TorchDetour(Level level, Solution solution, Cell sconce)
+        {
+            var walk = new List<Cell>();
+            var states = new List<RuleState>();
+            var s = Rules.Initial(level);
+            walk.Add(s.Position);
+            states.Add(s);
+            foreach (var a in solution.Actions)
+            {
+                s = Rules.Step(level, s, a).State;
+                walk.Add(s.Position);
+                states.Add(s);
+            }
+            var spots = new List<Cell>();
+            foreach (var d in DirExt.All)
+            {
+                var n = sconce.Step(d);
+                if (level.InBounds(n) && !level[n].IsSolid) spots.Add(n);
+            }
+            foreach (var p in walk)
+                if (spots.Contains(p)) return 0;
+
+            int best = -1;
+            for (int k = 0; k < walk.Count; k++)
+            {
+                if (!states[k].TorchOut || walk[k].Floor != sconce.Floor) continue;
+                // Plain walking from where the walk stands (no current to ride, gates as they are now).
+                var state = states[k];
+                var dist = new Dictionary<Cell, int>();
+                var queue = new Queue<Cell>();
+                foreach (var spot in spots)
+                    if (Rules.CanEnter(level, spot, state) && level[spot].Type != TileType.Current) { dist[spot] = 0; queue.Enqueue(spot); }
+                while (queue.Count > 0)
+                {
+                    var c = queue.Dequeue();
+                    foreach (var d in DirExt.All)
+                    {
+                        var n = c.Step(d);
+                        if (dist.ContainsKey(n) || !Rules.CanEnter(level, n, state) || level[n].Type == TileType.Current) continue;
+                        dist[n] = dist[c] + 1;
+                        queue.Enqueue(n);
+                    }
+                }
+                if (!dist.TryGetValue(walk[k], out int there)) continue;
+                for (int m = k; m < walk.Count; m++)
+                {
+                    if (walk[m].Floor != sconce.Floor || !dist.TryGetValue(walk[m], out int back)) continue;
+                    int extra = there + back - (m - k);
+                    if (best < 0 || extra < best) best = extra;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Every element of the tomb serves the ideal route: each button / switch is pressed, each portal and ladder
+        /// taken, each door, barrier, current, fragile slab, trap, dust patch and flame jet lies on the way. Wall torches
+        /// are the exception, see <see cref="CheckTorches"/>. A button with a door that leads nowhere is a design error,
+        /// not a lure.
+        /// </summary>
         public static string CheckEverythingUsed(Level level, Solution solution)
         {
             var used = new HashSet<Cell>();
-            var relit = new HashSet<Cell>();
             var s = Rules.Initial(level);
             used.Add(s.Position);
             foreach (var a in solution.Actions)
@@ -185,7 +269,6 @@ namespace MummyEscape.Core
                 used.Add(s.Position.Step(r.Dir)); // tile walked into (or trap disarmed)
                 used.Add(r.SteppedOn);
                 used.Add(r.State.Position);
-                if (r.Has(StepFlags.TorchRelit)) relit.Add(r.State.Position);
                 s = r.State;
             }
             // A stream of current is ridden as a whole: entering it counts for every tile it carries the player along.
@@ -207,10 +290,7 @@ namespace MummyEscape.Core
                     case TileType.Floor:
                         continue;
                     case TileType.WallTorch:
-                        bool lit = false;
-                        foreach (var d in DirExt.All) lit |= relit.Contains(c.Step(d));
-                        if (!lit) return $"unused: wall torch {c} never relights the torch";
-                        continue;
+                        continue; // off the walk on purpose (CheckTorches)
                     default:
                         if (!used.Contains(c)) return $"unused: {t.Type} {c} is off the ideal route";
                         continue;
@@ -348,7 +428,7 @@ namespace MummyEscape.Core
 
         /// <summary>
         /// Plain floor that still serves a purpose at the end of a corridor: where a hole drops the player, or the step
-        /// next to a ladder / portal (needed to step back onto it).
+        /// next to a ladder / portal (needed to step back onto it), or by a wall torch (its alcove).
         /// </summary>
         public static bool IsMeaningfulFloor(Level level, Cell c)
         {
@@ -356,7 +436,7 @@ namespace MummyEscape.Core
             foreach (var d in DirExt.All)
             {
                 var t = level.Get(c.Step(d)).Type;
-                if (t == TileType.LadderUp || t == TileType.LadderDown || t == TileType.Teleporter) return true;
+                if (t == TileType.LadderUp || t == TileType.LadderDown || t == TileType.Teleporter || t == TileType.WallTorch) return true;
             }
             return false;
         }

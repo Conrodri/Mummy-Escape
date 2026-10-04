@@ -1036,9 +1036,14 @@ namespace MummyEscape.Core
 
             // ------------------------------------------------------------------ torch
 
-            /// <summary>Dust on the route smothers the torch; a wall torch a few steps further relights it.</summary>
+            /// <summary>
+            /// Dust on the route smothers the torch. The wall torch that relights it is never by the route but in another
+            /// corridor: on a way round, or at the end of a short alcove dug for it. Finish in the dark, or pay a few moves
+            /// (<see cref="LevelValidator.MinTorchDetour"/> to <see cref="LevelValidator.MaxTorchDetour"/>) to see again.
+            /// </summary>
             bool PlaceDust(List<Cell> route)
             {
+                var onRoute = new HashSet<Cell>(route);
                 var order = new List<int>();
                 for (int i = 3; i < route.Count - 6; i++) order.Add(i);
                 _rng.Shuffle(order);
@@ -1046,30 +1051,113 @@ namespace MummyEscape.Core
                 {
                     var dust = route[i];
                     if (!IsFree(dust) || Degree(dust) != 2 || Rules.NextToWallTorch(_level, dust) || !FarFromTraps(dust)) continue;
-                    for (int j = i + 3; j <= Math.Min(i + 7, route.Count - 2); j++)
+
+                    // Sconces on the rock along a way off the route, then alcoves to dig from the route further on.
+                    var sconces = new List<(Cell wall, Cell[] dig)>();
+                    foreach (var c in _level.AllCells())
                     {
-                        // The stretch between the dust and the sconce must be a walk on one floor (no jump).
-                        if (route[j].Floor != dust.Floor || route[j].Manhattan(route[j - 1]) != 1) break;
+                        if (c.Floor != dust.Floor || _level[c].Type != TileType.Wall) continue;
+                        bool byGround = false, byRoute = false;
                         foreach (var d in DirExt.All)
                         {
-                            var w = route[j].Step(d);
-                            if (!_level.InBounds(w) || _level[w].Type != TileType.Wall) continue;
-                            bool early = false;
-                            foreach (var d2 in DirExt.All)
-                            {
-                                var n = w.Step(d2);
-                                for (int m = i; m < j && !early; m++) if (route[m] == n) early = true;
-                                if (_level.Get(n).Type == TileType.Dust) early = true;
-                            }
-                            if (early) continue;
+                            var n = c.Step(d);
+                            if (!Walkable(n)) continue;
+                            byGround = true;
+                            byRoute |= onRoute.Contains(n) || _level[n].Type == TileType.Dust;
+                        }
+                        if (byGround && !byRoute) sconces.Add((c, null));
+                    }
+                    for (int j = i + 1; j < route.Count - 1; j++)
+                    {
+                        if (route[j].Floor != dust.Floor) continue;
+                        foreach (var d in DirExt.All)
+                        {
+                            var p1 = route[j].Step(d);
+                            var p2 = p1.Step(d);
+                            if (!IsRock(p1, route[j], route[j])) continue;
+                            // A dead end of one step (2 moves there and back) or two (4 moves).
+                            foreach (var side in DirExt.All)
+                                if (side != d.Opposite()) sconces.Add((p1.Step(side), new[] { p1 }));
+                            if (IsRock(p2, p1, p1))
+                                foreach (var side in DirExt.All)
+                                    if (side != d.Opposite()) sconces.Add((p2.Step(side), new[] { p1, p2 }));
+                        }
+                    }
+                    _rng.Shuffle(sconces);
+
+                    foreach (var (wall, dig) in sconces)
+                    {
+                        if (!_level.InBounds(wall) || _level[wall].Type != TileType.Wall) continue;
+                        if (dig != null && Array.IndexOf(dig, wall) >= 0) continue;
+                        if (dig != null) foreach (var p in dig) _level[p] = Tile.Floor;
+                        int detour = PlannedTorchDetour(route, i, wall, onRoute);
+                        if (detour >= LevelValidator.MinTorchDetour && detour <= LevelValidator.MaxTorchDetour)
+                        {
                             _level[dust] = new Tile { Type = TileType.Dust };
                             _reserved[_level.IndexOf(dust)] = true;
-                            _level[w] = new Tile { Type = TileType.WallTorch };
+                            _level[wall] = new Tile { Type = TileType.WallTorch };
+                            if (dig != null) foreach (var p in dig) _reserved[_level.IndexOf(p)] = true;
                             return true;
                         }
+                        if (dig != null) foreach (var p in dig) _level[p] = Tile.Wall;
                     }
                 }
                 return false;
+            }
+
+            /// <summary>Solid rock inside the tomb, with no ground around it but <paramref name="from"/> (and <paramref name="next"/>).</summary>
+            bool IsRock(Cell c, Cell from, Cell next)
+            {
+                if (!_level.InBounds(c) || !IsInterior(c) || _level[c].Type != TileType.Wall) return false;
+                foreach (var d in DirExt.All)
+                {
+                    var n = c.Step(d);
+                    if (n == from || n == next) continue;
+                    if (!_level.InBounds(n) || _level[n].Type != TileType.Wall) return false;
+                }
+                return true;
+            }
+
+            /// <summary>
+            /// The validator's measure (<see cref="LevelValidator.TorchDetour"/>) on the planned walk: extra moves to stand by
+            /// the sconce once past the dust and come back to the walk. 0 when the walk passes by it.
+            /// </summary>
+            int PlannedTorchDetour(List<Cell> route, int dustIndex, Cell sconce, HashSet<Cell> onRoute)
+            {
+                var dist = new Dictionary<Cell, int>();
+                var queue = new Queue<Cell>();
+                foreach (var d in DirExt.All)
+                {
+                    var spot = sconce.Step(d);
+                    if (!Walkable(spot)) continue;
+                    if (onRoute.Contains(spot)) return 0;
+                    if (_level[spot].Type == TileType.Current) continue;
+                    dist[spot] = 0;
+                    queue.Enqueue(spot);
+                }
+                while (queue.Count > 0)
+                {
+                    var c = queue.Dequeue();
+                    foreach (var d in DirExt.All)
+                    {
+                        var n = c.Step(d);
+                        if (dist.ContainsKey(n) || !Walkable(n) || _level[n].Type == TileType.Current) continue;
+                        dist[n] = dist[c] + 1;
+                        queue.Enqueue(n);
+                    }
+                }
+                int best = -1;
+                for (int k = dustIndex; k < route.Count; k++)
+                {
+                    if (!dist.TryGetValue(route[k], out int there)) continue;
+                    for (int m = k; m < route.Count; m++)
+                    {
+                        if (!dist.TryGetValue(route[m], out int back)) continue;
+                        int extra = there + back - (m - k);
+                        if (best < 0 || extra < best) best = extra;
+                    }
+                }
+                return best;
             }
 
             // ------------------------------------------------------------------ traps

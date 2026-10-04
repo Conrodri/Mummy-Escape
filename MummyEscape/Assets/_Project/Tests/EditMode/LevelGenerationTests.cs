@@ -167,6 +167,22 @@ namespace MummyEscape.Tests
         }
 
         /// <summary>
+        /// Dust and wall torch are a choice: the sconce is never by the ideal walk, and relighting costs a few moves
+        /// (a way round, or an alcove there and back).
+        /// </summary>
+        [TestCaseSource(nameof(AllMazes))]
+        public void Maze_WallTorchIsADetour(int act, int index, int variant)
+        {
+            var level = Get(new LevelId(act, index), variant);
+            foreach (var c in level.AllCells())
+            {
+                if (level[c].Type != TileType.WallTorch) continue;
+                int detour = LevelValidator.TorchDetour(level, level.Solution, c);
+                Assert.That(detour, Is.InRange(LevelValidator.MinTorchDetour, LevelValidator.MaxTorchDetour), $"{c}\n{level.ToAscii()}");
+            }
+        }
+
+        /// <summary>
         /// No wing nobody needs: ground off the ideal walk always links two separate points of it (a short or a long
         /// way to choose between), never a pocket entered and left through the same spot.
         /// </summary>
@@ -190,6 +206,7 @@ namespace MummyEscape.Tests
             {
                 if (seen[level.IndexOf(c0)] || onWalk[level.IndexOf(c0)] || !Ground(c0)) continue;
                 var touches = new List<Cell>();
+                bool touchesTorch = false; // the alcove of a wall torch: a dead end worth its moves
                 var q = new Queue<Cell>();
                 seen[level.IndexOf(c0)] = true;
                 q.Enqueue(c0);
@@ -199,6 +216,7 @@ namespace MummyEscape.Tests
                     foreach (var d in DirExt.All)
                     {
                         var n = c.Step(d);
+                        if (level.Get(n).Type == TileType.WallTorch) touchesTorch = true;
                         if (!Ground(n)) continue;
                         if (onWalk[level.IndexOf(n)]) { touches.Add(n); continue; }
                         if (seen[level.IndexOf(n)]) continue;
@@ -207,7 +225,7 @@ namespace MummyEscape.Tests
                     }
                 }
                 // 2 apart is the way around a fragile slab or a current, kept so they never wall the player in.
-                bool apart = touches.Any(a => touches.Any(b => a.Floor == b.Floor && a.Manhattan(b) >= 2));
+                bool apart = touchesTorch || touches.Any(a => touches.Any(b => a.Floor == b.Floor && a.Manhattan(b) >= 2));
                 Assert.IsTrue(apart, $"{c0} sits in a pocket the ideal walk never needs\n{level.ToAscii(new[] { c0 })}");
             }
         }
