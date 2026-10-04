@@ -6,6 +6,8 @@ namespace MummyEscape.UI.Screens
 {
     public sealed class MainMenuScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Home;
+
         Text _stars, _coins;
         Image _mummy, _glow;
         RectTransform _stage;
@@ -63,18 +65,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Place((RectTransform)playBtn.transform, 0.5f, 0.5f, 620, 124);
             UIKit.Rounded(playBtn.image, 62);
 
-            // Secondary destinations as captioned icons.
-            UIKit.Size(UIKit.Rect("Gap", column), 18);
-            var actions = UIKit.Row(column, 170, 22);
-            UIKit.IconAction(actions.transform, UISprites.Swords, Loc.T("Duel"), () => Router.Open<PvpScreen>());
-            UIKit.IconAction(actions.transform, UISprites.Podium, Loc.T("Classement"), () => Router.Open<LeaderboardScreen>());
-            UIKit.IconAction(actions.transform, UISprites.Friends, Loc.T("Amis"), () => Router.Open<FriendsScreen>());
-            UIKit.IconAction(actions.transform, UISprites.Bag, Loc.T("Boutique"), () => Router.Open<ShopScreen>());
-            UIKit.IconAction(actions.transform, UISprites.Note, Loc.T("Juke-box"), () => Router.Open<JukeboxScreen>());
-#if !UNITY_IOS
-            // Apple's guidelines discourage quit buttons; on iOS the home gesture closes the app.
-            UIKit.Size(UIKit.Button(column, Loc.T("Quitter"), Quit, 28, ButtonStyle.Ghost), 64);
-#endif
+            // Duel, solo, rankings, friends and the shop are in the bottom bar (NavBar).
 
             _online = UIKit.Label(Root, "", 24, UIKit.Dim, TextAnchor.MiddleCenter);
             UIKit.BottomBand(_online.rectTransform, 50, 36);
@@ -118,15 +109,6 @@ namespace MummyEscape.UI.Screens
         {
             public System.Action Resized;
             void OnRectTransformDimensionsChange() => Resized?.Invoke();
-        }
-
-        static void Quit()
-        {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
         }
     }
 }

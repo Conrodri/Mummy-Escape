@@ -16,6 +16,9 @@ namespace MummyEscape.UI
         /// <summary>Modal screens overlay the current one instead of replacing it.</summary>
         public virtual bool IsModal => false;
 
+        /// <summary>Menu screens show the bottom navigation bar, with this tab lit (<see cref="NavTab.None"/>: no bar).</summary>
+        public virtual NavTab Tab => NavTab.None;
+
         public void Setup(UIRouter router, RectTransform root)
         {
             Router = router;
@@ -56,6 +59,7 @@ namespace MummyEscape.UI
         readonly Stack<UIScreen> _history = new Stack<UIScreen>();
         readonly List<UIScreen> _modals = new List<UIScreen>();
         RectTransform _safeArea;
+        NavBar _nav;
         Rect _lastSafeArea;
 
         public UIScreen Current => _history.Count > 0 ? _history.Peek() : null;
@@ -76,6 +80,7 @@ namespace MummyEscape.UI
 
             _safeArea = UIKit.Rect("SafeArea", canvasGo.transform);
             ApplySafeArea();
+            _nav = NavBar.Create(_safeArea, this);
 
             if (FindAnyObjectByType<EventSystem>() == null)
             {
@@ -128,6 +133,7 @@ namespace MummyEscape.UI
             if (Current != screen) _history.Push(screen);
             screen.transform.SetAsFirstSibling();
             Activate(screen);
+            UpdateNav();
             return screen;
         }
 
@@ -146,6 +152,7 @@ namespace MummyEscape.UI
             while (_history.Count > 0) Deactivate(_history.Pop());
             foreach (var s in _screens.Values) if (s != null) Destroy(s.gameObject);
             _screens.Clear();
+            UpdateNav();
         }
 
         public void Close(UIScreen modal)
@@ -166,6 +173,16 @@ namespace MummyEscape.UI
             if (_history.Count <= 1) return;
             Deactivate(_history.Pop());
             Activate(Current);
+            UpdateNav();
+        }
+
+        /// <summary>Shows the bar on menu screens (the screen then ends above it), hides it in game.</summary>
+        void UpdateNav()
+        {
+            var tab = Current != null ? Current.Tab : NavTab.None;
+            _nav.Show(tab);
+            if (Current != null) Current.Root.offsetMin = new Vector2(0, tab == NavTab.None ? 0 : NavBar.Height);
+            if (_modals.Count == 0) _nav.transform.SetAsLastSibling();
         }
 
         void CloseAllModals()

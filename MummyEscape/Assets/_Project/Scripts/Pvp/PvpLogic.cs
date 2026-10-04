@@ -206,6 +206,9 @@ namespace MummyEscape.Pvp
                     Duels = d.SeasonDuels,
                     DuelsLastWeek = d.SeasonDuelsLastWeek,
                     CountedDuels = d.SeasonCountedDuels,
+                    Wins = d.SeasonWins,
+                    Losses = d.SeasonLosses,
+                    Draws = d.SeasonDraws,
                     Ranked = d.Ranked,
                     RewardsClaimed = false
                 };
@@ -215,6 +218,7 @@ namespace MummyEscape.Pvp
                 d.SeasonDuels = 0;
                 d.SeasonDuelsLastWeek = 0;
                 d.SeasonCountedDuels = 0;
+                d.SeasonWins = d.SeasonLosses = d.SeasonDraws = 0;
                 d.Season = season;
             }
 
@@ -334,9 +338,9 @@ namespace MummyEscape.Pvp
             int seals = 0;
             d.Elo = Elo.NewRating(d.Elo, opponentElo, result, d.TotalDuels);
             d.TotalDuels++;
-            if (result == DuelResult.Win) d.Wins++;
-            else if (result == DuelResult.Loss) d.Losses++;
-            else d.Draws++;
+            if (result == DuelResult.Win) { d.Wins++; d.SeasonWins++; }
+            else if (result == DuelResult.Loss) { d.Losses++; d.SeasonLosses++; }
+            else { d.Draws++; d.SeasonDraws++; }
 
             if (result == DuelResult.Win)
             {

@@ -76,6 +76,13 @@ namespace MummyEscape.Online
                     s.Data.OpponentsToday ??= new Dictionary<string, int>();
                     s.Data.UnlockedRewards ??= new List<string>();
                     if (s.Data.SeasonDuels > 0) s.Data.Ranked = true; // demo saves made before the flag existed
+                    // Demo saves made before the month's record existed: the overall record is the closest guess.
+                    if (s.Data.SeasonDuels > 0 && s.Data.SeasonWins + s.Data.SeasonLosses + s.Data.SeasonDraws == 0)
+                    {
+                        s.Data.SeasonWins = s.Data.Wins;
+                        s.Data.SeasonLosses = s.Data.Losses;
+                        s.Data.SeasonDraws = s.Data.Draws;
+                    }
                     _store.Players[Me] = s.Data;
                     // The demo leaderboard is not saved: put the player back on it.
                     if (s.Data.Ranked && s.Data.Season == Seasons.SeasonOf(DateTime.UtcNow)) _store.Board[Me] = s.Data.Elo;
@@ -124,7 +131,13 @@ namespace MummyEscape.Online
             {
                 string id = "demo_" + i;
                 int elo = 700 + rng.Next(0, 1000);
-                _store.Players[id] = new PlayerPvpData { Elo = elo, Season = season, SeasonDuels = 5 + rng.Next(60), BestEloThisSeason = elo, Ranked = true };
+                int duels = 5 + rng.Next(60);
+                var (wins, draws, losses) = DemoRecord(rng, duels, elo);
+                _store.Players[id] = new PlayerPvpData
+                {
+                    Elo = elo, Season = season, SeasonDuels = duels, BestEloThisSeason = elo, Ranked = true,
+                    SeasonWins = wins, SeasonDraws = draws, SeasonLosses = losses,
+                };
                 _store.Board[id] = elo;
                 _names[id] = DemoNames[i] + "#" + (1000 + rng.Next(9000));
             }
@@ -179,10 +192,14 @@ namespace MummyEscape.Online
             var entries = new List<PvpBoardRow>();
             var rng = new System.Random(SeasonSeed(page.Season));
             for (int i = 0; i < DemoNames.Length; i++)
-                entries.Add(new PvpBoardRow { PlayerId = "old_" + i, Elo = 700 + rng.Next(0, 1000), PlayerName = DemoNames[(i * 7 + 3) % DemoNames.Length] + "#" + (1000 + rng.Next(9000)) });
+            {
+                int elo = 700 + rng.Next(0, 1000);
+                var (wins, draws, losses) = DemoRecord(rng, 15 + rng.Next(70), elo);
+                entries.Add(new PvpBoardRow { PlayerId = "old_" + i, Elo = elo, Wins = wins, Draws = draws, Losses = losses, PlayerName = DemoNames[(i * 7 + 3) % DemoNames.Length] + "#" + (1000 + rng.Next(9000)) });
+            }
             var last = profile.Data?.LastSeason;
             if (seasonsAgo == 1 && last != null && last.Duels > 0)
-                entries.Add(new PvpBoardRow { PlayerId = Me, Elo = last.FinalElo, IsMe = true, PlayerName = NameOf(Me) });
+                entries.Add(new PvpBoardRow { PlayerId = Me, Elo = last.FinalElo, Wins = last.Wins, Losses = last.Losses, Draws = last.Draws, IsMe = true, PlayerName = NameOf(Me) });
             entries.Sort((a, b) => b.Elo.CompareTo(a.Elo));
             for (int i = 0; i < entries.Count; i++)
             {
@@ -191,6 +208,16 @@ namespace MummyEscape.Online
                 if (i < limit) page.Rows.Add(entries[i]);
             }
             return page;
+        }
+
+        /// <summary>A record that fits the Elo: the better rivals win more often.</summary>
+        static (int wins, int draws, int losses) DemoRecord(System.Random rng, int duels, int elo)
+        {
+            double rate = Math.Max(0.2, Math.Min(0.8, 0.5 + (elo - 1100) / 1600.0));
+            int draws = duels / 12;
+            int wins = (int)Math.Round((duels - draws) * rate) + rng.Next(-2, 3);
+            wins = Math.Max(0, Math.Min(duels - draws, wins));
+            return (wins, draws, duels - draws - wins);
         }
 
         /// <summary>Stable seed for a month ("2026-10" → 202610): the demo rankings stay the same across launches.</summary>

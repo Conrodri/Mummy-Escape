@@ -487,6 +487,9 @@ namespace MummyEscape
             ["signalé"] = "reported",
             ["contre {0}"] = "vs {0}",
             ["V"] = "W",
+            ["{0} V"] = "{0} W",
+            ["{0} N"] = "{0} D",
+            ["{0} D"] = "{0} L",
             ["N"] = "D",
             ["D"] = "L",
             ["TOI"] = "YOU",
@@ -540,6 +543,16 @@ namespace MummyEscape
             ["Plasma du duelliste"] = "Duelist's plasma",
             ["Lanterne de l'arène"] = "Arena lantern",
             ["Sceptre du challenger"] = "Challenger's sceptre",
+
+            // Bottom bar and saved replays
+            ["Solo"] = "Solo",
+            ["Quitter Mummy Escape ?"] = "Quit Mummy Escape?",
+            ["Ta progression est enregistrée."] = "Your progress is saved.",
+            ["Replays enregistrés ({0}/{1})"] = "Saved replays ({0}/{1})",
+            ["Les 10 places sont prises : touche le replay à remplacer."] = "All 10 slots are taken: tap the replay to replace.",
+            ["Enregistre un duel (+) pour le garder : il restera ici tant que tu ne le remplaces pas."] = "Save a duel (+) to keep it: it stays here until you replace it.",
+            ["Gardés tant que tu ne les remplaces pas."] = "Kept until you replace them.",
+            ["Remplacer"] = "Replace",
         };
     }
 }

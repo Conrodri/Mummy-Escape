@@ -381,7 +381,7 @@ namespace MummyEscape.Pvp
 
             // La ligne du joueur est relue à chaque fois : le cache peut avoir quelques minutes de retard sur son Elo.
             var rows = board.Rows.Where(r => r.PlayerId != me)
-                            .Select(r => new PvpBoardRow { PlayerId = r.PlayerId, PlayerName = r.PlayerName, Elo = r.Elo })
+                            .Select(r => new PvpBoardRow { PlayerId = r.PlayerId, PlayerName = r.PlayerName, Elo = r.Elo, Wins = r.Wins, Losses = r.Losses, Draws = r.Draws })
                             .ToList();
             if (mine != null && mine.Rank <= rows.Count + 1) rows.Insert(mine.Rank - 1, mine);
             for (int i = 0; i < rows.Count; i++) rows[i].Rank = i + 1;
@@ -408,6 +408,14 @@ namespace MummyEscape.Pvp
             return null;
         }
 
+        /// <summary>Le bilan du joueur sur <paramref name="season"/> (ce mois-ci, ou le résumé du mois dernier).</summary>
+        static PvpBoardRow WithRecord(PvpBoardRow row, PlayerPvpData d, string season)
+        {
+            if (d?.Season == season) { row.Wins = d.SeasonWins; row.Losses = d.SeasonLosses; row.Draws = d.SeasonDraws; }
+            else if (d?.LastSeason?.Season == season) { row.Wins = d.LastSeason.Wins; row.Losses = d.LastSeason.Losses; row.Draws = d.LastSeason.Draws; }
+            return row;
+        }
+
         /// <summary>
         /// Le classement d'un mois, vérifié. Le service Leaderboards garde le score que chacun y envoie, tricheurs compris :
         /// chaque entrée est comparée à l'Elo des données protégées du joueur, que seul ce serveur écrit. Ce mois-ci, un score
@@ -428,7 +436,7 @@ namespace MummyEscape.Pvp
                 players.TryGetValue(e.PlayerId, out var d);
                 int? elo = TrueElo(d, season);
                 if (seasonsAgo == 0 && (elo ?? 0) != e.Score) await _store.SubmitEloAsync(e.PlayerId, elo ?? 0);
-                if (elo != null) rows.Add(new PvpBoardRow { PlayerId = e.PlayerId, PlayerName = e.PlayerName, Elo = elo.Value });
+                if (elo != null) rows.Add(WithRecord(new PvpBoardRow { PlayerId = e.PlayerId, PlayerName = e.PlayerName, Elo = elo.Value }, d, season));
             }
             rows = rows.OrderByDescending(r => r.Elo).Take(PvpConfig.Top100Size).ToList(); // tri stable : ex aequo dans l'ordre du service
             for (int i = 0; i < rows.Count; i++) rows[i].Rank = i + 1;
@@ -469,7 +477,7 @@ namespace MummyEscape.Pvp
                     if (r.Elo > elo.Value) ahead++;
                 }
             int rank = ahead < others || others < PvpConfig.Top100Size ? ahead + 1 : Math.Max(entry.Rank, others + 1);
-            return new PvpBoardRow { Rank = rank, PlayerId = me, PlayerName = entry.PlayerName, Elo = elo.Value, IsMe = true };
+            return WithRecord(new PvpBoardRow { Rank = rank, PlayerId = me, PlayerName = entry.PlayerName, Elo = elo.Value, IsMe = true }, d, board.Season);
         }
     }
 }

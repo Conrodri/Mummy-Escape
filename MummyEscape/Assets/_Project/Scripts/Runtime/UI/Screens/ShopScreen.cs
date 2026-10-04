@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using MummyEscape.Core;
+using MummyEscape.Pvp;
 using MummyEscape.Services;
 using MummyEscape.Visual;
 using UnityEngine;
@@ -9,26 +10,31 @@ namespace MummyEscape.UI.Screens
 {
     /// <summary>
     /// Cosmetics bought with scarabs (earned by collecting new stars): one tab per slot (mummy, colour, torch, hat,
-    /// shoes) plus the act collections, sold whole for less. Every card previews the item on the current outfit.
-    /// IAP can be plugged in later.
+    /// shoes) plus the act collections, sold whole for less, and the duel tab where Maât's seals (won in duels) buy
+    /// the league skins. Every card previews the item on the current outfit. IAP can be plugged in later.
     /// </summary>
     public sealed class ShopScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Shop;
+
         const int Columns = 4;
         const float CardHeight = 340;
 
-        static readonly string[] Tabs = { "Thèmes", "Momies", "Couleurs", "Torches", "Chapeaux", "Pieds" };
-        static readonly CosmeticSlot[] TabSlots = { CosmeticSlot.Mummy, CosmeticSlot.Mummy, CosmeticSlot.Color, CosmeticSlot.Torch, CosmeticSlot.Hat, CosmeticSlot.Shoes };
+        static readonly string[] Tabs = { "Thèmes", "Momies", "Couleurs", "Torches", "Chapeaux", "Pieds", "Duel" };
+        static readonly CosmeticSlot[] TabSlots = { CosmeticSlot.Mummy, CosmeticSlot.Mummy, CosmeticSlot.Color, CosmeticSlot.Torch, CosmeticSlot.Hat, CosmeticSlot.Shoes, CosmeticSlot.Mummy };
+        const int DuelTab = 6;
 
         static readonly Color WornFill = new Color32(30, 92, 84, 255);
         static readonly Color WornRim = new Color(0.25f, 0.88f, 0.8f, 0.6f);
 
-        Text _coins, _stars;
+        Text _coins, _stars, _seals, _note;
         Image _outfit;
         UIKit.Segmented _tabs;
         RectTransform _list;
         ScrollRect _scroll;
         int _tab = 1;
+        bool _busy;
+        int _request;
 
         protected override void Build()
         {
@@ -58,6 +64,7 @@ namespace MummyEscape.UI.Screens
             wallet.childAlignment = TextAnchor.MiddleLeft;
             _stars = UIKit.Chip(wallet.transform, UIKit.Art.Star, "", null, 72);
             _coins = UIKit.Chip(wallet.transform, UIKit.Art.Scarab, "", UIKit.Gold, 72);
+            _seals = UIKit.Chip(wallet.transform, UISprites.Seal, "", UIKit.Turquoise, 72);
             var hint = UIKit.Label(side, "Les étoiles débloquent les collections des actes, les scarabées les paient.", 26, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(hint, 18);
             UIKit.Size(hint, 80);
@@ -70,9 +77,20 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
+            _busy = false;
             _tabs.Select(_tab);
             Refresh();
             _scroll.verticalNormalizedPosition = 1f;
+            LoadSeals();
+        }
+
+        /// <summary>The seals and duel rewards live on the server: fetched once if the duel home was never opened.</summary>
+        async void LoadSeals()
+        {
+            if (App.Pvp == null || App.PvpProfile != null) return;
+            int request = ++_request;
+            await App.RefreshPvpProfile();
+            if (request == _request && this != null && isActiveAndEnabled) Refresh();
         }
 
         void Refresh()
@@ -80,9 +98,14 @@ namespace MummyEscape.UI.Screens
             var save = App.Save;
             _coins.text = save.Data.Coins.ToString();
             _stars.text = save.TotalStars.ToString();
+            var pvp = App.PvpProfile?.Data;
+            _seals.transform.parent.gameObject.SetActive(App.Pvp != null);
+            _seals.text = (pvp?.Seals ?? 0).ToString();
             _outfit.sprite = App.Art.MummyPortrait(save.Loadout);
             UIKit.ClearChildren(_list);
+            _note = null;
             if (_tab == 0) { FillSets(); return; }
+            if (_tab == DuelTab) { FillDuel(pvp); return; }
 
             // One continuous grid, classics first then act after act (each card wears its act's tag):
             // per-act sections would leave a single card per row.
@@ -231,6 +254,98 @@ namespace MummyEscape.UI.Screens
             }
             foreach (var s in set) save.SelectSkin(s.Id);
             Refresh();
+        }
+
+        /// <summary>
+        /// Maât's seal shop: skins bought with seals (first win of the day, daily chest), each from a league up.
+        /// The purchase goes through the server, which holds the seals.
+        /// </summary>
+        void FillDuel(PlayerPvpData d)
+        {
+            var intro = UIKit.Label(_list, "Les sceaux de Maât se gagnent en duel (1re victoire du jour, coffre quotidien). Chaque article demande d'avoir atteint sa ligue.", 26, UIKit.Dim);
+            UIKit.FitText(intro, 18);
+            UIKit.Size(intro, 84);
+            _note = UIKit.Label(_list, "", 26, UIKit.Sand);
+            UIKit.FitText(_note, 18);
+            UIKit.Size(_note, 44);
+            if (App.Pvp == null) _note.text = Loc.T("Les duels se jouent en ligne : active le mode en ligne (Paramètres › Confidentialité).");
+            else if (d == null) _note.text = Loc.T("Chargement…");
+
+            var items = new List<(SealItem item, SkinDef def)>();
+            foreach (var item in SealShop.Items)
+            {
+                var def = PvpSkins.ShopItem(item.Id);
+                if (def != null) items.Add((item, def));
+            }
+            for (int i = 0; i < items.Count; i += Columns)
+            {
+                var cards = UIKit.Row(_list, CardHeight, 14);
+                for (int k = 0; k < Columns; k++)
+                {
+                    if (i + k < items.Count) SealCard(cards.transform, items[i + k].item, items[i + k].def, d);
+                    else UIKit.Size(UIKit.Rect("Spacer", cards.transform), -1, 0, 1);
+                }
+            }
+        }
+
+        void SealCard(Transform parent, SealItem item, SkinDef def, PlayerPvpData d)
+        {
+            var save = App.Save;
+            bool owned = save.Data.OwnedSkins.Contains(item.Id) || (d != null && d.UnlockedRewards.Contains(item.Id));
+            bool worn = save.IsWorn(item.Id);
+            bool leagueOk = d != null && d.HighestLeague >= item.MinLeague;
+            bool affordable = leagueOk && d.Seals >= item.Price;
+
+            var card = UIKit.Plate(parent, worn ? WornFill : UIKit.SurfaceHi, 28, worn ? WornRim : UIKit.Rim, false, item.Id);
+            UIKit.Size(card, -1, 0, 1);
+            UIKit.Column(card.transform, 2, 12, TextAnchor.MiddleCenter);
+            var tag = UIKit.Label(card.transform, Loc.F("Ligue {0}", Loc.T(PvpSkins.LeagueName(item.MinLeague))).ToUpperInvariant(), 20,
+                                  owned || leagueOk ? PvpSkins.LeagueColor(item.MinLeague) : UIKit.Danger, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(tag, 14);
+            UIKit.Size(tag, 28, 0);
+            var preview = UIKit.Image(card.transform, App.Art.MummyPortrait(save.Loadout.With(def)), Color.white);
+            UIKit.Size(preview, 150, 0);
+            if (!owned && !leagueOk) Lock(preview, 64);
+            var name = UIKit.Label(card.transform, def.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(name, 15);
+            UIKit.Size(name, 58, 0);
+
+            string label = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("{0} sceaux", item.Price);
+            bool usable = !_busy && !worn && (owned || affordable);
+            string id = item.Id;
+            var btn = UIKit.Button(card.transform, label, () => OnSealItem(id, owned), 22, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);
+            btn.interactable = usable;
+            UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
+            UIKit.Size(btn, 66, 0);
+        }
+
+        async void OnSealItem(string id, bool owned)
+        {
+            if (owned)
+            {
+                App.Save.GrantSkins(new[] { id });
+                App.Save.SelectSkin(id);
+                Refresh();
+                return;
+            }
+            if (_busy || App.Pvp == null) return;
+            _busy = true;
+            Refresh();
+            var r = await App.Pvp.BuyWithSealsAsync(id);
+            if (this == null) return;
+            _busy = false;
+            string note;
+            if (r != null && r.Ok)
+            {
+                App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
+                if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
+                App.Save.SelectSkin(id);
+                App.Audio.Play(Sfx.Coin);
+                note = Loc.F("{0} : à toi !", Loc.T(PvpSkins.ShopItem(id).Name));
+            }
+            else note = PvpScreen.ErrorText(r?.Error);
+            Refresh();
+            if (_note != null) _note.text = note;
         }
     }
 }

@@ -11,6 +11,8 @@ namespace MummyEscape.UI.Screens
     /// </summary>
     public sealed class JukeboxScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Solo;
+
         RectTransform _list;
         ScrollRect _scroll;
 

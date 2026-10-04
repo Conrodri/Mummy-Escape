@@ -376,6 +376,24 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Board_ShowsEachPlayersRecordOfTheMonth()
+        {
+            var (server, store) = NewServer();
+            PlayDuel(server, store, "bob");
+            var board = server.GetBoardAsync("alice", 0, 100).Result;
+            var bobRow = board.Rows.Single(r => r.PlayerId == "bob");
+            Assert.AreEqual((1, 0, 0), (bobRow.Wins, bobRow.Draws, bobRow.Losses));
+            Assert.AreEqual((0, 0, 1), (board.Me.Wins, board.Me.Draws, board.Me.Losses));
+
+            // A new month starts from zero; last month's board keeps the final record.
+            var data = store.Players["bob"];
+            Seasons.Roll(data, new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc));
+            Assert.AreEqual(0, data.SeasonWins);
+            Assert.AreEqual(1, data.LastSeason.Wins);
+            Assert.AreEqual(1, data.Wins, "the overall record is kept");
+        }
+
+        [Test]
         public void Board_LastMonthIsRecomputedFromTheFinalElo()
         {
             var (server, store) = NewServer();

@@ -13,6 +13,8 @@ namespace MummyEscape.UI.Screens
     /// </summary>
     public sealed class FriendsScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Friends;
+
         Image _portrait;
         Text _name, _code;
         Button _countryButton;
@@ -178,6 +180,8 @@ namespace MummyEscape.UI.Screens
     /// <summary>A friend's progression and per-level scores side by side with yours.</summary>
     public sealed class FriendDetailScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Friends;
+
         public override bool IsModal => true;
 
         Text _title;

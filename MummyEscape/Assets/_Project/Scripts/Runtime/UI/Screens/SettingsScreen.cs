@@ -6,6 +6,8 @@ namespace MummyEscape.UI.Screens
     /// <summary>Sound, image and comfort options, on an opaque background so it reads clearly over the menu or the game.</summary>
     public sealed class SettingsScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Home;
+
         public override bool IsModal => true;
         Button _language;
 

@@ -10,6 +10,8 @@ namespace MummyEscape.UI.Screens
     /// <summary>Monthly duel ranking by Elo: this month (live) or last month (final standings, which set the rewards).</summary>
     public sealed class PvpLeaderboardScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Duel;
+
         const int Top = 100;
         static readonly Color Gold1 = new Color32(255, 215, 90, 255);
         static readonly Color Silver = new Color32(200, 210, 222, 255);
@@ -27,7 +29,7 @@ namespace MummyEscape.UI.Screens
         {
             public GameObject Root;
             public Image Background;
-            public Text Rank, Name, League, Elo;
+            public Text Rank, Name, Record, League, Elo;
         }
 
         protected override void Build()
@@ -63,9 +65,16 @@ namespace MummyEscape.UI.Screens
             var v = new RowView { Root = h.gameObject, Background = h.GetComponent<Image>() };
             v.Rank = UIKit.Label(h.transform, "", 36, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
             UIKit.Size(v.Rank, -1, 90, 0);
-            v.Name = UIKit.Label(h.transform, "", 34, UIKit.Sand, TextAnchor.MiddleLeft);
+            // Name, and the month's record underneath.
+            var who = UIKit.Rect("Who", h.transform); // noloc
+            UIKit.Size(who, -1, -1, 1);
+            UIKit.Column(who, 0, 0, TextAnchor.MiddleLeft);
+            v.Name = UIKit.Label(who, "", 32, UIKit.Sand, TextAnchor.MiddleLeft);
             UIKit.FitText(v.Name, 22);
-            UIKit.Size(v.Name, -1, -1, 1);
+            UIKit.Size(v.Name, 42);
+            v.Record = UIKit.Label(who, "", 22, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.FitText(v.Record, 16);
+            UIKit.Size(v.Record, 28);
             v.League = UIKit.Label(h.transform, "", 24, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(v.League, 16);
             UIKit.Size(v.League, -1, 140, 0);
@@ -115,7 +124,7 @@ namespace MummyEscape.UI.Screens
             {
                 v.Name.text = "—";
                 v.Name.color = new Color(1, 1, 1, 0.2f);
-                v.League.text = v.Elo.text = "";
+                v.League.text = v.Elo.text = v.Record.text = "";
                 v.Background.color = new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.03f : 0.05f);
                 return;
             }
@@ -123,10 +132,15 @@ namespace MummyEscape.UI.Screens
             v.Name.color = row.IsMe ? UIKit.Turquoise : UIKit.Sand;
             SetLeague(v, row);
             v.Elo.text = row.Elo.ToString();
+            v.Record.text = RecordText(row);
             v.Background.color = row.IsMe ? new Color(0.13f, 0.4f, 0.4f, 0.65f)
                                : rank <= 3 ? new Color(1f, 0.85f, 0.4f, 0.12f)
                                : new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.04f : 0.07f);
         }
+
+        /// <summary>Wins, draws and losses of the month, coloured: "12 V · 1 N · 5 D".</summary>
+        static string RecordText(PvpBoardRow row) =>
+            "<color=#40E0D0>" + Loc.F("{0} V", row.Wins) + "</color> · " + Loc.F("{0} N", row.Draws) + " · <color=#D65440>" + Loc.F("{0} D", row.Losses) + "</color>"; // noloc
 
         static void SetLeague(RowView v, PvpBoardRow row)
         {
@@ -152,6 +166,7 @@ namespace MummyEscape.UI.Screens
             _me.Name.color = UIKit.Sand;
             SetLeague(_me, me);
             _me.Elo.text = me.Elo.ToString();
+            _me.Record.text = RecordText(me);
         }
     }
 }

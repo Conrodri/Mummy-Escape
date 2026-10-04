@@ -11,16 +11,22 @@ namespace MummyEscape.Online
     /// they can be watched again without a connection. A duel is saved as soon as it is played; the server's copy
     /// (<see cref="IPvpService.GetHistoryAsync"/>) then replaces it, which completes a duel run first on its tomb once
     /// someone has raced its ghost.
+    /// The player can also keep up to <see cref="SavedSize"/> duels apart: those stay until the player removes or
+    /// replaces them, whatever is played since.
     /// </summary>
     public static class ReplayStore
     {
+        public const int SavedSize = 10;
+
         [Serializable]
         sealed class Stored
         {
             public List<DuelRecord> Duels = new List<DuelRecord>();
+            public List<DuelRecord> Saved = new List<DuelRecord>();
         }
 
         static List<DuelRecord> _duels;
+        static List<DuelRecord> _saved;
 
         static string FilePath => Path.Combine(Application.persistentDataPath, "duel_replays.json"); // noloc
 
@@ -34,10 +40,49 @@ namespace MummyEscape.Online
             }
         }
 
+        /// <summary>The duels kept apart, from the most recent to the oldest.</summary>
+        public static IReadOnlyList<DuelRecord> Saved
+        {
+            get
+            {
+                Load();
+                return _saved;
+            }
+        }
+
+        public static bool IsSaved(string matchId)
+        {
+            Load();
+            return _saved.Exists(d => d.MatchId == matchId);
+        }
+
+        /// <summary>
+        /// Keeps <paramref name="duel"/> apart. Once <see cref="SavedSize"/> are kept, one must make room:
+        /// <paramref name="replaceMatchId"/> names it, and without it nothing is saved (false).
+        /// </summary>
+        public static bool Keep(DuelRecord duel, string replaceMatchId = null)
+        {
+            if (duel == null || string.IsNullOrEmpty(duel.MatchId)) return false;
+            Load();
+            if (_saved.Exists(d => d.MatchId == duel.MatchId)) return true;
+            if (replaceMatchId != null) _saved.RemoveAll(d => d.MatchId == replaceMatchId);
+            if (_saved.Count >= SavedSize) return false;
+            _saved.Add(duel);
+            SortSaved();
+            Save();
+            return true;
+        }
+
+        public static void Forget(string matchId)
+        {
+            Load();
+            if (_saved.RemoveAll(d => d.MatchId == matchId) > 0) Save();
+        }
+
         public static DuelRecord Find(string matchId)
         {
             Load();
-            return _duels.Find(d => d.MatchId == matchId);
+            return _duels.Find(d => d.MatchId == matchId) ?? _saved.Find(d => d.MatchId == matchId);
         }
 
         /// <summary>Adds or replaces duels (by match id) and keeps the latest ones.</summary>
@@ -49,7 +94,7 @@ namespace MummyEscape.Online
             {
                 if (d == null || string.IsNullOrEmpty(d.MatchId)) continue;
                 Normalize(d);
-                var known = _duels.Find(x => x.MatchId == d.MatchId);
+                var known = Find(d.MatchId);
                 if (known != null)
                 {
                     d.Reported |= known.Reported;
@@ -57,6 +102,9 @@ namespace MummyEscape.Online
                     if (known.Resolved && !d.Resolved) continue;
                 }
                 PvpServer.Remember(_duels, d);
+                // A kept duel follows the server too (the rival arrives once someone has raced its ghost).
+                int kept = _saved.FindIndex(x => x.MatchId == d.MatchId);
+                if (kept >= 0) _saved[kept] = d;
             }
             Save();
         }
@@ -65,9 +113,9 @@ namespace MummyEscape.Online
 
         public static void MarkReported(string matchId)
         {
-            var d = Find(matchId);
-            if (d == null) return;
-            d.Reported = true;
+            Load();
+            foreach (var d in _duels) if (d.MatchId == matchId) d.Reported = true;
+            foreach (var d in _saved) if (d.MatchId == matchId) d.Reported = true;
             Save();
         }
 
@@ -86,28 +134,39 @@ namespace MummyEscape.Online
             if (run.Look != null && string.IsNullOrEmpty(run.Look.Mummy)) run.Look = null;
         }
 
+        static void SortSaved() => _saved.Sort((a, b) => b.PlayedAtUnixMs.CompareTo(a.PlayedAtUnixMs));
+
         static void Load()
         {
             if (_duels != null) return;
             _duels = new List<DuelRecord>();
+            _saved = new List<DuelRecord>();
             try
             {
                 if (!File.Exists(FilePath)) return;
                 var stored = JsonUtility.FromJson<Stored>(File.ReadAllText(FilePath));
-                if (stored?.Duels == null) return;
-                foreach (var d in stored.Duels)
-                    if (d != null && !string.IsNullOrEmpty(d.MatchId))
-                    {
-                        Normalize(d);
-                        _duels.Add(d);
-                    }
+                if (stored == null) return;
+                Read(stored.Duels, _duels);
+                Read(stored.Saved, _saved);
+                SortSaved();
             }
             catch (Exception e) { Debug.LogWarning("[Pvp] Unreadable replays: " + e.Message); }
         }
 
+        static void Read(List<DuelRecord> from, List<DuelRecord> into)
+        {
+            if (from == null) return;
+            foreach (var d in from)
+                if (d != null && !string.IsNullOrEmpty(d.MatchId) && !into.Exists(x => x.MatchId == d.MatchId))
+                {
+                    Normalize(d);
+                    into.Add(d);
+                }
+        }
+
         static void Save()
         {
-            try { File.WriteAllText(FilePath, JsonUtility.ToJson(new Stored { Duels = _duels })); }
+            try { File.WriteAllText(FilePath, JsonUtility.ToJson(new Stored { Duels = _duels, Saved = _saved })); }
             catch (Exception e) { Debug.LogWarning("[Pvp] Replays not saved: " + e.Message); }
         }
     }

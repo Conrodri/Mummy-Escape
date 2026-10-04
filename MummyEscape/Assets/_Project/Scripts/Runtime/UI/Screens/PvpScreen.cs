@@ -10,16 +10,20 @@ namespace MummyEscape.UI.Screens
 {
     /// <summary>
     /// Duel home: league, Elo and world rank, the "find a rival" button (unlocked at 35 solo stars), the month's
-    /// rewards to collect, and the seal shop. Everything shown comes from the server profile.
+    /// rewards to collect and the last duels to watch again (the seal shop is in the Boutique). Everything shown comes from the server profile.
     /// </summary>
     public sealed class PvpScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Duel;
+
         Image _badge;
         Text _league, _elo, _record, _season, _info;
         Text _seals;
         Button _find, _claim;
-        RectTransform _shop, _history;
-        Text _historyHint;
+        RectTransform _history, _saved;
+        Text _historyHint, _savedTitle, _savedHint;
+        Button _cancelReplace;
+        DuelRecord _replacing;
         ScrollRect _scroll;
         bool _busy;
         int _request;
@@ -85,25 +89,28 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(_claim.GetComponentInChildren<Text>(), 18);
             UIKit.Size(_claim, -1, -1, 1);
 
+            _savedTitle = UIKit.SectionTitle(list, "");
+            _savedHint = UIKit.Label(list, "", 24, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.FitText(_savedHint, 16);
+            UIKit.Size(_savedHint, 60);
+            _cancelReplace = UIKit.Button(list, "Annuler", () => { _replacing = null; FillHistory(); }, 28);
+            UIKit.Size(_cancelReplace, 80);
+            _saved = UIKit.Rect("Saved", list); // noloc
+            UIKit.Column(_saved, 12, 0);
+
             UIKit.SectionTitle(list, "Derniers duels");
             _historyHint = UIKit.Label(list, "", 24, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(_historyHint, 16);
             UIKit.Size(_historyHint, 60);
             _history = UIKit.Rect("History", list); // noloc
             UIKit.Column(_history, 12, 0);
-
-            UIKit.SectionTitle(list, "Boutique des sceaux");
-            var hint = UIKit.Label(list, "Les sceaux de Maât se gagnent en duel (1re victoire du jour, coffre quotidien). Chaque article demande d'avoir atteint sa ligue.", 24, UIKit.Dim, TextAnchor.MiddleLeft);
-            UIKit.FitText(hint, 16);
-            UIKit.Size(hint, 70);
-            _shop = UIKit.Rect("Shop", list);
-            UIKit.Column(_shop, 12, 0);
         }
 
         public override void OnShow()
         {
             App.Lighting.SetMood(false);
             _busy = false;
+            _replacing = null;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;
             Show(App.PvpProfile);
@@ -179,13 +186,38 @@ namespace MummyEscape.UI.Screens
             _claim.gameObject.SetActive(claimable);
             if (claimable) UIKit.SetLabel(_claim, Loc.F("Récompenses de {0}", PvpSkins.MonthName(d.LastSeason.Season)));
             _claim.interactable = !_busy;
-
-            FillShop(d);
         }
 
-        /// <summary>The last duels kept on the phone, each to watch again from both sides.</summary>
+        /// <summary>
+        /// The duels kept apart (until the player removes or replaces them), then the last duels played, each to
+        /// watch again from both sides.
+        /// </summary>
         void FillHistory()
         {
+            var store = Online.ReplayStore.Saved;
+            if (_replacing != null && store.Count < Online.ReplayStore.SavedSize) _replacing = null;
+            UIKit.ClearChildren(_saved);
+            _savedTitle.text = Loc.F("Replays enregistrés ({0}/{1})", store.Count, Online.ReplayStore.SavedSize);
+            _savedHint.text = _replacing != null ? "<color=#E8C35A>" + Loc.T("Les 10 places sont prises : touche le replay à remplacer.") + "</color>"
+                            : store.Count == 0 ? Loc.T("Enregistre un duel (+) pour le garder : il restera ici tant que tu ne le remplaces pas.")
+                            : Loc.T("Gardés tant que tu ne les remplaces pas.");
+            _cancelReplace.gameObject.SetActive(_replacing != null);
+            foreach (var duel in store)
+            {
+                var d = duel;
+                if (_replacing != null)
+                {
+                    var row = DuelRow(_saved, d, () => Replace(d));
+                    var replace = UIKit.Button(row.transform, "Remplacer", () => Replace(d), 24, ButtonStyle.Primary);
+                    UIKit.FitText(replace.GetComponentInChildren<Text>(), 16);
+                    UIKit.Size(replace, 84, 200, 0);
+                    continue;
+                }
+                var h = DuelRow(_saved, d, () => Watch(d));
+                UIKit.IconButton(h.transform, UISprites.Close, () => { Online.ReplayStore.Forget(d.MatchId); FillHistory(); }, 72);
+                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(d), 84).interactable = d.Me != null;
+            }
+
             UIKit.ClearChildren(_history);
             var duels = Online.ReplayStore.Duels;
             _historyHint.text = duels.Count == 0 ? Loc.T("Tes 10 derniers duels apparaîtront ici, à revoir des deux points de vue.")
@@ -193,30 +225,59 @@ namespace MummyEscape.UI.Screens
             foreach (var duel in duels)
             {
                 var d = duel;
-                UIKit.ListItem(_history, 132, () => Watch(d), out var h);
-                var badge = UIKit.Image(h.transform, UISprites.Circle, ResultColor(d), false, "Result"); // noloc
-                UIKit.Size(badge, 84, 84, 0);
-                var letter = UIKit.Title(badge.transform, !d.Resolved ? "…" : d.Result == DuelResult.Win ? Loc.T("V") : d.Result == DuelResult.Draw ? Loc.T("N") : Loc.T("D"), 44, UIKit.Ink); // noloc
-                UIKit.Stretch(letter.rectTransform);
-
-                var col = UIKit.Rect("Text", h.transform); // noloc
-                UIKit.Size(col, -1, -1, 1);
-                UIKit.Column(col, 2, 0, TextAnchor.MiddleLeft);
-                string rival = d.Rival == null ? Loc.T("En attente d'un adversaire")
-                             : Loc.F("contre {0}", string.IsNullOrEmpty(d.Rival.PlayerName) ? Loc.T("Momie anonyme") : d.Rival.PlayerName);
-                var name = UIKit.Label(col, rival, 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-                UIKit.FitText(name, 20);
-                UIKit.Size(name, 44);
-                int delta = d.EloAfter - d.EloBefore;
-                string when = System.DateTimeOffset.FromUnixTimeMilliseconds(d.PlayedAtUnixMs).ToLocalTime().ToString("dd/MM HH:mm"); // noloc
-                string elo = d.Resolved ? "  ·  Elo " + (delta > 0 ? "+" : "") + delta : ""; // noloc
-                var sub = UIKit.Label(col, when + elo + (d.Reported ? "  ·  " + Loc.T("signalé") : ""), 24, UIKit.Dim, TextAnchor.MiddleLeft);
-                UIKit.FitText(sub, 16);
-                UIKit.Size(sub, 34);
-
-                var play = UIKit.IconButton(h.transform, UISprites.Play, () => Watch(d), 84);
-                play.interactable = d.Me != null;
+                var h = DuelRow(_history, d, () => Watch(d));
+                bool kept = Online.ReplayStore.IsSaved(d.MatchId);
+                var save = UIKit.IconButton(h.transform, kept ? UISprites.Check : UISprites.Plus, () => Keep(d), 72);
+                save.interactable = !kept && d.Me != null;
+                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(d), 84).interactable = d.Me != null;
             }
+        }
+
+        void Keep(DuelRecord d)
+        {
+            if (Online.ReplayStore.Keep(d)) App.Audio.Play(Sfx.Coin);
+            else
+            {
+                // Full: the player picks the one to give up, in the list above.
+                _replacing = d;
+                _scroll.verticalNormalizedPosition = 1f;
+            }
+            FillHistory();
+        }
+
+        void Replace(DuelRecord old)
+        {
+            if (_replacing == null) return;
+            Online.ReplayStore.Keep(_replacing, old.MatchId);
+            _replacing = null;
+            App.Audio.Play(Sfx.Coin);
+            FillHistory();
+        }
+
+        /// <summary>One duel: result, rival, date and Elo change; the caller adds the buttons at the end.</summary>
+        HorizontalLayoutGroup DuelRow(RectTransform parent, DuelRecord d, System.Action onClick)
+        {
+            UIKit.ListItem(parent, 132, onClick, out var h);
+            var badge = UIKit.Image(h.transform, UISprites.Circle, ResultColor(d), false, "Result"); // noloc
+            UIKit.Size(badge, 84, 84, 0);
+            var letter = UIKit.Title(badge.transform, !d.Resolved ? "…" : d.Result == DuelResult.Win ? Loc.T("V") : d.Result == DuelResult.Draw ? Loc.T("N") : Loc.T("D"), 44, UIKit.Ink); // noloc
+            UIKit.Stretch(letter.rectTransform);
+
+            var col = UIKit.Rect("Text", h.transform); // noloc
+            UIKit.Size(col, -1, -1, 1);
+            UIKit.Column(col, 2, 0, TextAnchor.MiddleLeft);
+            string rival = d.Rival == null ? Loc.T("En attente d'un adversaire")
+                         : Loc.F("contre {0}", string.IsNullOrEmpty(d.Rival.PlayerName) ? Loc.T("Momie anonyme") : d.Rival.PlayerName);
+            var name = UIKit.Label(col, rival, 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(name, 20);
+            UIKit.Size(name, 44);
+            int delta = d.EloAfter - d.EloBefore;
+            string when = System.DateTimeOffset.FromUnixTimeMilliseconds(d.PlayedAtUnixMs).ToLocalTime().ToString("dd/MM HH:mm"); // noloc
+            string elo = d.Resolved ? "  ·  Elo " + (delta > 0 ? "+" : "") + delta : ""; // noloc
+            var sub = UIKit.Label(col, when + elo + (d.Reported ? "  ·  " + Loc.T("signalé") : ""), 24, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.FitText(sub, 16);
+            UIKit.Size(sub, 34);
+            return h;
         }
 
         static Color ResultColor(DuelRecord d) =>
@@ -229,69 +290,6 @@ namespace MummyEscape.UI.Screens
         }
 
         static string Capitalized(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
-
-        void FillShop(PlayerPvpData d)
-        {
-            UIKit.ClearChildren(_shop);
-            var save = App.Save;
-            foreach (var item in SealShop.Items)
-            {
-                var def = PvpSkins.ShopItem(item.Id);
-                if (def == null) continue;
-                bool owned = save.Data.OwnedSkins.Contains(item.Id) || (d != null && d.UnlockedRewards.Contains(item.Id));
-                bool worn = save.IsWorn(item.Id);
-                bool leagueOk = d != null && d.HighestLeague >= item.MinLeague;
-                bool affordable = d != null && leagueOk && d.Seals >= item.Price;
-
-                UIKit.ListItem(_shop, 150, null, out var h, worn);
-                var portrait = UIKit.Image(h.transform, App.Art.MummyPortrait(save.Loadout.With(def)), Color.white);
-                portrait.preserveAspect = true;
-                UIKit.Size(portrait, 130, 110, 0);
-                var col = UIKit.Rect("Text", h.transform);
-                UIKit.Size(col, -1, -1, 1);
-                UIKit.Column(col, 2, 0, TextAnchor.MiddleLeft);
-                var name = UIKit.Label(col, def.Name, 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-                UIKit.FitText(name, 20);
-                UIKit.Size(name, 46);
-                var need = UIKit.Label(col, "", 24, leagueOk ? UIKit.Dim : UIKit.Danger, TextAnchor.MiddleLeft);
-                need.text = Loc.F(leagueOk ? "Débloqué (ligue {0})" : "Atteins la ligue {0} pour l'acheter", Loc.T(PvpSkins.LeagueName(item.MinLeague)));
-                UIKit.Size(need, 34);
-
-                string label = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("{0} sceaux", item.Price);
-                bool usable = !_busy && !worn && (owned || affordable);
-                string id = item.Id;
-                var btn = UIKit.Button(h.transform, label, () => OnShopItem(id, owned), 26, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);
-                btn.interactable = usable;
-                UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
-                UIKit.Size(btn, 96, 220, 0);
-            }
-        }
-
-        async void OnShopItem(string id, bool owned)
-        {
-            if (owned)
-            {
-                App.Save.GrantSkins(new[] { id });
-                App.Save.SelectSkin(id);
-                Show(App.PvpProfile);
-                return;
-            }
-            _busy = true;
-            Show(App.PvpProfile);
-            var r = await App.Pvp.BuyWithSealsAsync(id);
-            if (this == null) return;
-            _busy = false;
-            if (r != null && r.Ok)
-            {
-                App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
-                if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
-                App.Save.SelectSkin(id);
-                App.Audio.Play(Sfx.Coin);
-                _info.text = Loc.F("{0} : à toi !", Loc.T(PvpSkins.ShopItem(id).Name));
-            }
-            else _info.text = ErrorText(r?.Error);
-            Show(App.PvpProfile);
-        }
 
         async void Claim()
         {

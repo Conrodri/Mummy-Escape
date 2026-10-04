@@ -6,6 +6,8 @@ namespace MummyEscape.UI.Screens
 {
     public sealed class LevelSelectScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Solo;
+
         int _act = 1;
         Text _actNumber, _actTitle, _actInfo, _actStars;
         Button _prev, _next;
@@ -14,7 +16,10 @@ namespace MummyEscape.UI.Screens
         protected override void Build()
         {
             UIKit.Backdrop(Root);
-            Header("Choisis ta crypte");
+            var title = Header("Choisis ta crypte");
+            // The music of the tombs, with the solo game it belongs to.
+            var jukebox = UIKit.IconButton(title.transform.parent, UISprites.Note, () => Router.Open<JukeboxScreen>(), 92);
+            UIKit.Place((RectTransform)jukebox.transform, 1, 0.5f, 92, 92, -36, 0);
             var body = Body(190, 60);
             UIKit.Column(body, 28);
 

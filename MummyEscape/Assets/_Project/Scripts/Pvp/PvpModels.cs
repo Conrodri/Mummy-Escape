@@ -84,6 +84,7 @@ namespace MummyEscape.Pvp
         public int Duels;
         public int DuelsLastWeek;
         public int CountedDuels;       // pour le skin de participation
+        public int Wins, Losses, Draws; // bilan du mois (classement)
         public bool Ranked;            // Elo publié dans le classement du mois
         public bool RewardsClaimed;
     }
@@ -102,6 +103,10 @@ namespace MummyEscape.Pvp
         public int SeasonDuels;
         public int SeasonDuelsLastWeek;
         public int SeasonCountedDuels;  // duels comptés pour le skin de participation
+        /// <summary>Bilan du mois, affiché dans le classement mensuel.</summary>
+        public int SeasonWins;
+        public int SeasonLosses;
+        public int SeasonDraws;
         public int BestEloThisSeason = PvpConfig.StartingElo;
         /// <summary>Le serveur a publié l'Elo du joueur dans le classement de cette saison (au moins un duel résolu).</summary>
         public bool Ranked;
@@ -192,6 +197,8 @@ namespace MummyEscape.Pvp
         public string PlayerId;
         public string PlayerName;
         public int Elo;
+        /// <summary>Bilan du joueur sur le mois de ce classement.</summary>
+        public int Wins, Losses, Draws;
         public bool IsMe;
     }
 

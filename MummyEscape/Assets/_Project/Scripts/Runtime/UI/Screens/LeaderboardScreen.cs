@@ -13,6 +13,8 @@ namespace MummyEscape.UI.Screens
     /// </summary>
     public sealed class LeaderboardScreen : UIScreen
     {
+        public override NavTab Tab => NavTab.Ranking;
+
         const int Top = 100;
         static readonly LeaderboardScope[] Scopes = { LeaderboardScope.Global, LeaderboardScope.Country, LeaderboardScope.Friends };
         static readonly Color Gold1 = new Color32(255, 214, 92, 255);
