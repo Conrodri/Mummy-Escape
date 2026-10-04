@@ -3,6 +3,7 @@
     "rootNamespace": "MummyEscape.Tests",
     "references": [
         "MummyEscape.Core",
+        "MummyEscape.Pvp",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

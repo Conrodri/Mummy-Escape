@@ -45,7 +45,75 @@ namespace MummyEscape.Core
             if (unused != null) return unused;
             var spacing = CheckSpacing(level, spec);
             if (spacing != null) return spacing;
+            var spikes = CheckSpikeShortcuts(level);
+            if (spikes != null) return spikes;
             return CheckNoDeadLock(level, hazards: true);
+        }
+
+        /// <summary>The way round a spike trap costs at least this many moves more than walking across it.</summary>
+        public const int MinSpikeDetour = 4;
+
+        /// <summary>
+        /// Spikes only ever guard a shortcut: next to each one runs a longer way without spikes, and the whole tomb can
+        /// be cleared without stepping on a single spike. Losing a life is a choice to go faster, never a toll.
+        /// </summary>
+        public static string CheckSpikeShortcuts(Level level)
+        {
+            bool any = false;
+            foreach (var c in level.AllCells())
+            {
+                var t = level[c];
+                if (t.Type != TileType.Trap || t.Trap != TrapKind.Spikes) continue;
+                any = true;
+                int extra = SpikeDetour(level, c);
+                if (extra < 0) return $"spikes: no way around {c}";
+                if (extra < MinSpikeDetour) return $"spikes: {c} saves only {extra} moves";
+            }
+            if (!any) return null;
+            var safe = SolverOptions.Default;
+            safe.AvoidSpikes = true;
+            return Solver.Solve(level, safe) == null ? "spikes: the exit cannot be reached without a spike" : null;
+        }
+
+        /// <summary>
+        /// Extra moves the shortest spike-free way between the two sides of this spike costs over walking across it
+        /// (every channel on, both directions, the worse one counts); -1 when either direction has no way round.
+        /// </summary>
+        public static int SpikeDetour(Level level, Cell spike)
+        {
+            var sides = new List<Cell>();
+            foreach (var d in DirExt.All)
+                if (!level.Get(spike.Step(d)).IsSolid) sides.Add(spike.Step(d));
+            if (sides.Count != 2) return -1;
+            int there = SpikeFreeDistance(level, sides[0], sides[1]);
+            int back = SpikeFreeDistance(level, sides[1], sides[0]);
+            return there < 0 || back < 0 ? -1 : Math.Min(there, back) - 2;
+        }
+
+        static int SpikeFreeDistance(Level level, Cell from, Cell to)
+        {
+            var dist = new Dictionary<Cell, int> { [from] = 0 };
+            var q = new Queue<Cell>();
+            q.Enqueue(from);
+            while (q.Count > 0)
+            {
+                var c = q.Dequeue();
+                if (c == to) return dist[c];
+                if (level[c].Type == TileType.Exit) continue;
+                var s = new RuleState { Position = c, Pressed = -1, Hp = 99 };
+                foreach (var d in DirExt.All)
+                {
+                    var r = Rules.Step(level, s, PlayerAction.Move(d));
+                    if (r.Has(StepFlags.Blocked)) continue;
+                    var stepped = level[r.SteppedOn];
+                    if (stepped.Type == TileType.Trap && stepped.Trap == TrapKind.Spikes) continue;
+                    var p = r.State.Position;
+                    if (dist.ContainsKey(p)) continue;
+                    dist[p] = dist[c] + 1;
+                    q.Enqueue(p);
+                }
+            }
+            return -1;
         }
 
         /// <summary>
@@ -149,7 +217,7 @@ namespace MummyEscape.Core
                 {
                     actions.Add(PlayerAction.Move(d));
                     var adj = level.Get(st.Position.Step(d));
-                    if (hazards && adj.Type == TileType.Trap && adj.Trap == TrapKind.Spikes && Rules.IsTrapArmed(adj, st.Disarmed))
+                    if (hazards && Rules.IsDisarmable(adj, st.Disarmed))
                         actions.Add(PlayerAction.Disarm(d));
                 }
                 foreach (var a in actions)

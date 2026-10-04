@@ -307,6 +307,7 @@ namespace MummyEscape.Online
                 // Our own data first (Unity also erases a deleted player's data across its services).
                 await DeleteKey(SaveKey, false);
                 await DeleteKey(ProgressKey, true);
+                await DeleteKey("solo_total_stars", false); // duels: the protected PvP data goes with the player
                 foreach (var f in new List<Unity.Services.Friends.Models.Relationship>(FriendsService.Instance.Friends))
                     try { await FriendsService.Instance.DeleteFriendAsync(f.Member.Id); } catch (Exception) { }
                 await AuthenticationService.Instance.DeleteAccountAsync();

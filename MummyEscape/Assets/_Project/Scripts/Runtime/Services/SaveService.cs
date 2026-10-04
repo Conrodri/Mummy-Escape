@@ -176,6 +176,21 @@ namespace MummyEscape.Services
             return true;
         }
 
+        /// <summary>Adds duel rewards the server granted (season skins, seal shop); returns true when one was new.</summary>
+        public bool GrantSkins(IEnumerable<string> ids)
+        {
+            if (ids == null) return false;
+            bool added = false;
+            foreach (var id in ids)
+                if (!string.IsNullOrEmpty(id) && !Data.OwnedSkins.Contains(id) && SkinCatalog.Get(id).Id == id)
+                {
+                    Data.OwnedSkins.Add(id);
+                    added = true;
+                }
+            if (added) Save();
+            return added;
+        }
+
         /// <summary>Buys every missing piece of a collection at once, for the given price.</summary>
         public bool TryBuyAll(IEnumerable<SkinDef> items, int price)
         {

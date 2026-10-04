@@ -27,6 +27,10 @@ namespace MummyEscape.Visual
         public CosmeticSlot Slot = CosmeticSlot.Color;
         /// <summary>Act whose theme the item belongs to (1-5), 0 for the classics.</summary>
         public int Theme;
+        /// <summary>Won in duels (see <see cref="PvpSkins"/>): never sold for scarabs.</summary>
+        public bool Pvp;
+        /// <summary>Month a season reward belongs to ("2026-10"), null otherwise.</summary>
+        public string Season;
 
         /// <summary>Stars the player must have won before buying it: <see cref="SkinCatalog.StarsPerTheme"/> per act of its theme.</summary>
         public int MinStars => Theme * SkinCatalog.StarsPerTheme;
@@ -159,13 +163,15 @@ namespace MummyEscape.Visual
         public static SkinDef Get(string id)
         {
             foreach (var s in All) if (s.Id == id) return s;
-            return All[0];
+            return PvpSkins.Resolve(id) ?? All[0];
         }
 
         /// <summary>Item of that slot, or the slot's default when the id is unknown or belongs to another slot.</summary>
         public static SkinDef Get(string id, CosmeticSlot slot)
         {
             foreach (var s in All) if (s.Id == id && s.Slot == slot) return s;
+            var pvp = PvpSkins.Resolve(id);
+            if (pvp != null && pvp.Slot == slot) return pvp;
             foreach (var s in All) if (s.Slot == slot && s.Price == 0) return s;
             return All[0];
         }

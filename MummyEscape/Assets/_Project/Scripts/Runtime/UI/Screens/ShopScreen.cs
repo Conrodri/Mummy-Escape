@@ -88,6 +88,8 @@ namespace MummyEscape.UI.Screens
             // per-act sections would leave a single card per row.
             var items = new List<SkinDef>(SkinCatalog.InSlot(TabSlots[_tab]));
             items.Sort((a, b) => a.Theme != b.Theme ? a.Theme.CompareTo(b.Theme) : a.Price.CompareTo(b.Price));
+            // Duel rewards the player owns come last, ready to wear (they are never sold here).
+            items.AddRange(PvpSkins.Owned(save.Data.OwnedSkins, TabSlots[_tab]));
             for (int i = 0; i < items.Count; i += Columns)
             {
                 var cards = UIKit.Row(_list, CardHeight, 14);
@@ -115,8 +117,8 @@ namespace MummyEscape.UI.Screens
             var card = UIKit.Plate(parent, worn ? WornFill : UIKit.SurfaceHi, 28, worn ? WornRim : UIKit.Rim, false, item.Id);
             UIKit.Size(card, -1, 0, 1);
             UIKit.Column(card.transform, 2, 12, TextAnchor.MiddleCenter);
-            var tag = UIKit.Label(card.transform, item.Theme == 0 ? Loc.T("Classique") : Loc.F("Acte {0}", item.Theme).ToUpperInvariant(), 20,
-                                  item.Theme == 0 ? UIKit.Dim : ThemeColor(item.Theme), TextAnchor.MiddleCenter, FontStyle.Bold);
+            var tag = UIKit.Label(card.transform, item.Pvp ? Loc.T("Duel").ToUpperInvariant() : item.Theme == 0 ? Loc.T("Classique") : Loc.F("Acte {0}", item.Theme).ToUpperInvariant(), 20,
+                                  item.Pvp ? UIKit.Turquoise : item.Theme == 0 ? UIKit.Dim : ThemeColor(item.Theme), TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(tag, 14);
             UIKit.Size(tag, 28, 0);
             var preview = UIKit.Image(card.transform, App.Art.MummyPortrait(save.Loadout.With(item)), Color.white);

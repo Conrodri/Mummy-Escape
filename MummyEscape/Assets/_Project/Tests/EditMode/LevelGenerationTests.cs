@@ -146,6 +146,17 @@ namespace MummyEscape.Tests
             Assert.IsNull(LevelValidator.CheckNoDeadLock(Get(new LevelId(act, index), variant)));
         }
 
+        /// <summary>
+        /// Spikes guard shortcuts: each one has a longer spike-free way round, and the exit can be reached without
+        /// stepping on any spike (a life is traded for moves, never owed).
+        /// </summary>
+        [TestCaseSource(nameof(AllMazes))]
+        public void Maze_SpikesOnlyGuardShortcuts(int act, int index, int variant)
+        {
+            var level = Get(new LevelId(act, index), variant);
+            Assert.IsNull(LevelValidator.CheckSpikeShortcuts(level));
+        }
+
         /// <summary>No lure: every button, door, portal, ladder, hazard and wall torch serves the ideal route.</summary>
         [TestCaseSource(nameof(AllMazes))]
         public void Maze_EveryElementServesTheRoute(int act, int index, int variant)

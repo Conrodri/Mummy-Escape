@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../MummyEscape/Assets/_Project/Scripts/Core/**/*.cs" Exclude="../../MummyEscape/Assets/_Project/Scripts/Core/AssemblyInfo.cs" LinkBase="Core" />
+    <Compile Include="../../MummyEscape/Assets/_Project/Scripts/Pvp/**/*.cs" LinkBase="Pvp" />
     <Compile Include="../../MummyEscape/Assets/_Project/Tests/EditMode/**/*.cs" LinkBase="Tests" />
   </ItemGroup>
   <ItemGroup>

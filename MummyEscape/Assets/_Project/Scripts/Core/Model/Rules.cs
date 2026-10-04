@@ -4,7 +4,7 @@ namespace MummyEscape.Core
 {
     public enum ActionKind : byte { Move, Disarm }
 
-    /// <summary>One player input: swipe (Move) or tap on an adjacent trap (Disarm).</summary>
+    /// <summary>One player input: swipe (Move) or the disarm button next to visible spikes (Disarm).</summary>
     public readonly struct PlayerAction : IEquatable<PlayerAction>
     {
         public readonly ActionKind Kind;
@@ -109,6 +109,8 @@ namespace MummyEscape.Core
 
         public static bool IsDoorOpen(Tile t, int pressed) => (pressed & (1 << t.Channel)) != 0;
         public static bool IsTrapArmed(Tile t, int disarmed) => t.Type == TileType.Trap && (disarmed & (1 << t.TrapIndex)) == 0;
+        /// <summary>Only traps that hurt (spikes) can be disarmed; cursed sand cannot.</summary>
+        public static bool IsDisarmable(Tile t, int disarmed) => IsTrapArmed(t, disarmed) && t.Trap == TrapKind.Spikes;
 
         /// <summary>Doors open with their channel; red barriers too, blue barriers do the opposite.</summary>
         public static bool IsGateOpen(Tile t, int pressed)
@@ -148,7 +150,7 @@ namespace MummyEscape.Core
             if (action.Kind == ActionKind.Disarm)
             {
                 var tt = level.Get(target);
-                if (!s.SeesNeighbours || !IsTrapArmed(tt, s.Disarmed)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
+                if (!s.SeesNeighbours || !IsDisarmable(tt, s.Disarmed)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
                 r.State.Disarmed |= 1 << tt.TrapIndex;
                 r.Flags = StepFlags.Disarmed;
                 return r;

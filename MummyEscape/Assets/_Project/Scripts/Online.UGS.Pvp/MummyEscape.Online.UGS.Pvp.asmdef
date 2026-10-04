@@ -1,0 +1,31 @@
+{
+    "name": "MummyEscape.Online.UGS.Pvp",
+    "rootNamespace": "MummyEscape.Online",
+    "references": [
+        "MummyEscape.Core",
+        "MummyEscape.Pvp",
+        "MummyEscape.Runtime",
+        "Unity.Services.Core",
+        "Unity.Services.Authentication",
+        "Unity.Services.CloudCode",
+        "Unity.Services.CloudSave",
+        "Unity.Services.Leaderboards"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MUMMY_UGS_CLOUDCODE",
+        "MUMMY_UGS_LEADERBOARDS",
+        "MUMMY_UGS_CLOUDSAVE"
+    ],
+    "versionDefines": [
+        { "name": "com.unity.services.cloudcode", "expression": "2.0.0", "define": "MUMMY_UGS_CLOUDCODE" },
+        { "name": "com.unity.services.leaderboards", "expression": "2.0.0", "define": "MUMMY_UGS_LEADERBOARDS" },
+        { "name": "com.unity.services.cloudsave", "expression": "3.0.0", "define": "MUMMY_UGS_CLOUDSAVE" }
+    ],
+    "noEngineReferences": false
+}

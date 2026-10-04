@@ -70,7 +70,7 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 7;
+        public const int GeneratorVersion = 8;
 
         /// <summary>
         /// One theme and one signature mechanic per act: the intact antechamber (doors, portals), the flooded galleries

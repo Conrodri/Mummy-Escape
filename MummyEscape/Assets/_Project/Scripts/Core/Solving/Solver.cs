@@ -22,6 +22,8 @@ namespace MummyEscape.Core
         public bool AllowButtons;
         /// <summary>When false, teleporters never transport: used to prove that a portal is mandatory.</summary>
         public bool AllowTeleporters;
+        /// <summary>When true, armed spikes are never walked onto: used to prove the long way round them exists.</summary>
+        public bool AvoidSpikes;
         /// <summary>Safety cap on explored states.</summary>
         public int MaxStates;
 
@@ -39,9 +41,11 @@ namespace MummyEscape.Core
     {
         public static Solution Solve(Level level) => Solve(level, SolverOptions.Default);
 
-        public static Solution Solve(Level level, SolverOptions options)
+        public static Solution Solve(Level level, SolverOptions options) => Solve(level, Rules.Initial(level), options);
+
+        /// <summary>Shortest way to the exit from any situation of a run (PvP progress: moves still to go).</summary>
+        public static Solution Solve(Level level, RuleState start, SolverOptions options)
         {
-            var start = Rules.Initial(level);
             bool tick = HasFireJets(level);
             var startKey = Pack(level, start, tick);
             var parent = new Dictionary<long, (long prev, PlayerAction action)>();
@@ -63,7 +67,7 @@ namespace MummyEscape.Core
                 {
                     candidates.Add(PlayerAction.Move(dir));
                     var adj = level.Get(s.Position.Step(dir));
-                    if (adj.Type == TileType.Trap && adj.Trap == TrapKind.Spikes && Rules.IsTrapArmed(adj, s.Disarmed))
+                    if (!options.AvoidSpikes && Rules.IsDisarmable(adj, s.Disarmed))
                         candidates.Add(PlayerAction.Disarm(dir));
                 }
 
@@ -71,13 +75,14 @@ namespace MummyEscape.Core
                 {
                     var r = Rules.Step(level, s, a);
                     if (r.Has(StepFlags.Blocked) || r.Has(StepFlags.Died)) continue;
+                    if (options.AvoidSpikes && r.Has(StepFlags.TrapTriggered) && r.Has(StepFlags.Damaged) && !r.Has(StepFlags.Burned)) continue;
                     if (!options.AllowTeleporters && r.Has(StepFlags.Teleported)) r.State.Position = r.SteppedOn; // stand on the pad, no transport
                     var ns = r.State;
                     if (!options.AllowButtons) ns.Pressed = s.Pressed;
                     long nk = Pack(level, ns, tick);
                     if (parent.ContainsKey(nk)) continue;
                     parent[nk] = (key, a);
-                    if (r.Has(StepFlags.Won)) return Rebuild(level, parent, nk, options);
+                    if (r.Has(StepFlags.Won)) return Rebuild(level, start, parent, nk, options);
                     states[nk] = ns;
                     queue.Enqueue(nk);
                 }
@@ -87,7 +92,7 @@ namespace MummyEscape.Core
             return null;
         }
 
-        static Solution Rebuild(Level level, Dictionary<long, (long prev, PlayerAction action)> parent, long goal, SolverOptions options)
+        static Solution Rebuild(Level level, RuleState start, Dictionary<long, (long prev, PlayerAction action)> parent, long goal, SolverOptions options)
         {
             var actions = new List<PlayerAction>();
             for (long k = goal; parent[k].prev >= 0; k = parent[k].prev) actions.Add(parent[k].action);
@@ -95,7 +100,7 @@ namespace MummyEscape.Core
 
             // Replay to collect stats.
             var sol = new Solution { Actions = actions };
-            var s = Rules.Initial(level);
+            var s = start;
             foreach (var a in actions)
             {
                 var r = Rules.Step(level, s, a);

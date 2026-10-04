@@ -22,7 +22,7 @@ namespace MummyEscape.UI
         public static Sprite Ring { get; private set; }
         public static Sprite RadialGlow { get; private set; }
 
-        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note;
+        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal;
 
         public static void Init()
         {
@@ -88,6 +88,11 @@ namespace MummyEscape.UI
                                   Mathf.Abs(Len((p.x - 64) * 2.2f, p.y - 64) - 46) - 5f)));
             Plus = Icon(p => Min(Seg(p, 64, 26, 64, 102, 15), Seg(p, 26, 64, 102, 64, 15)));
             Note = Icon(p => Min(Len((p.x - 48) * 0.85f, (p.y - 34) * 1.15f) - 19f, Min(Seg(p, 64, 36, 64, 106, 10), Seg(p, 64, 104, 96, 82, 10))));
+            // Two crossed khopesh-like blades: the duels.
+            Swords = Icon(p => Min(Min(Min(Seg(p, 40, 40, 106, 106, 11), Seg(p, 18, 18, 36, 36, 13)), Seg(p, 26, 52, 52, 26, 10)),
+                                   Min(Min(Seg(p, 88, 40, 22, 106, 11), Seg(p, 110, 18, 92, 36, 13)), Seg(p, 76, 26, 102, 52, 10))));
+            // Feather of Maat in a ring: the seals earned in duels.
+            Seal = Icon(p => Min(Annulus(p, 64, 64, 52, 9), Min(Len((p.x - 64) * 2.2f, (p.y - 70) * 0.95f) - 30f, Seg(p, 64, 24, 64, 44, 7))));
         }
 
         // ------------------------------------------------------------------ shapes

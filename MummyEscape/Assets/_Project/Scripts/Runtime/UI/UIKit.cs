@@ -520,7 +520,7 @@ namespace MummyEscape.UI
             var text = Label(row.transform, label, TextSize, Sand, TextAnchor.MiddleLeft);
             Stretch(text.rectTransform, 0, 0, 150, 0);
 
-            var track = Plate(row.transform, Color.white, 30, null, false, "Track");
+            var track = Plate(row.transform, Color.white, 30, null, false, "Track"); // noloc
             Place(track.rectTransform, 1f, 0.5f, 108, 60, -4, 0);
             var knob = Image(track.transform, UISprites.Circle, Color.white, false, "Knob");
             knob.preserveAspect = true;

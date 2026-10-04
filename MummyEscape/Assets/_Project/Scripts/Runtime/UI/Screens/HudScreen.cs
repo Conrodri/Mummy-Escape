@@ -17,6 +17,7 @@ namespace MummyEscape.UI.Screens
         RectTransform _hearts;
         readonly List<Image> _ankhs = new List<Image>();
         RectTransform _bottomBar;
+        Button _disarm;
         CanvasGroup _preview;
         Text _previewTitle;
         Text _previewCount;
@@ -24,6 +25,10 @@ namespace MummyEscape.UI.Screens
         CanvasGroup _intro;
         Text _introText;
         float _introTimer;
+        // Duel: both runs' progress and the time left.
+        RectTransform _duel;
+        Image _myBar, _rivalBar;
+        Text _myName, _rivalName, _timeLeft;
 
         protected override void Build()
         {
@@ -58,6 +63,19 @@ namespace MummyEscape.UI.Screens
             _status = UIKit.Label(Root, "", 40, new Color(0.75f, 0.55f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.TopBand(_status.rectTransform, 90, 240);
 
+            // Duel panel under the top bar: how far each mummy got, and the clock running down.
+            _duel = UIKit.Rect("Duel", Root);
+            UIKit.TopBand(_duel, 132, 226);
+            _duel.offsetMin = new Vector2(24, _duel.offsetMin.y);
+            _duel.offsetMax = new Vector2(-24, _duel.offsetMax.y);
+            var dbg = UIKit.Plate(_duel, new Color(0.05f, 0.035f, 0.02f, 0.72f), 32, UIKit.Rim);
+            UIKit.Stretch(dbg.rectTransform);
+            _myBar = ProgressBar(_duel, 0, UIKit.Gold, out _myName);
+            _rivalBar = ProgressBar(_duel, 1, UIKit.Turquoise, out _rivalName);
+            _timeLeft = UIKit.Label(_duel, "", 54, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Place(_timeLeft.rectTransform, 1, 0.5f, 170, 110, -16, 0);
+            _duel.gameObject.SetActive(false);
+
             // Bottom: map peek (hold) + hint.
             var bottom = UIKit.Rect("BottomBar", Root);
             UIKit.BottomBand(bottom, 150, 24);
@@ -77,6 +95,11 @@ namespace MummyEscape.UI.Screens
             var trigger = map.gameObject.AddComponent<EventTrigger>();
             AddTrigger(trigger, EventTriggerType.PointerDown, () => App.Game.SetMapView(true));
             AddTrigger(trigger, EventTriggerType.PointerUp, () => App.Game.SetMapView(false));
+
+            // Disarm: lights up only next to spikes the torch shows (not in the dark, not blinded, not cursed sand).
+            _disarm = UIKit.Button(bottom, "Désamorcer", () => App.Game.DisarmAdjacent(), 34, ButtonStyle.Primary);
+            UIKit.FitText(_disarm.GetComponentInChildren<Text>(), 22);
+            UIKit.Place((RectTransform)_disarm.transform, 1, 1, 330, 100, -30, 110);
 
             _hint = UIKit.Label(bottom, "", 30, UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Italic);
             UIKit.Stretch(_hint.rectTransform, 44, 0, 290, 0);
@@ -109,6 +132,66 @@ namespace MummyEscape.UI.Screens
             _intro = intro.gameObject.AddComponent<CanvasGroup>();
             _intro.blocksRaycasts = false;
             _intro.alpha = 0;
+        }
+
+        /// <summary>One row of the duel panel (0 = top): a name, then a track filling with the progress.</summary>
+        static Image ProgressBar(RectTransform parent, int index, Color color, out Text label)
+        {
+            var row = UIKit.Rect("Row" + index, parent); // noloc
+            row.anchorMin = new Vector2(0, index == 0 ? 0.5f : 0f);
+            row.anchorMax = new Vector2(1, index == 0 ? 1f : 0.5f);
+            row.offsetMin = new Vector2(26, index == 0 ? 2 : 10);
+            row.offsetMax = new Vector2(-196, index == 0 ? -10 : -2);
+            label = UIKit.Label(row, "", 26, color, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(label, 16);
+            var lr = label.rectTransform;
+            lr.anchorMin = new Vector2(0, 0);
+            lr.anchorMax = new Vector2(0.45f, 1);
+            lr.offsetMin = lr.offsetMax = Vector2.zero;
+            var track = UIKit.Image(row, UISprites.Round, new Color(1, 1, 1, 0.12f), false, "Track"); // noloc
+            UIKit.Rounded(track, 12);
+            track.rectTransform.anchorMin = new Vector2(0.47f, 0.5f);
+            track.rectTransform.anchorMax = new Vector2(1, 0.5f);
+            track.rectTransform.offsetMin = new Vector2(0, -12);
+            track.rectTransform.offsetMax = new Vector2(0, 12);
+            var fill = UIKit.Image(track.transform, UISprites.Round, color, false, "Fill"); // noloc
+            UIKit.Rounded(fill, 12);
+            fill.rectTransform.anchorMin = Vector2.zero;
+            fill.rectTransform.anchorMax = new Vector2(0.04f, 1);
+            fill.rectTransform.offsetMin = fill.rectTransform.offsetMax = Vector2.zero;
+            return fill;
+        }
+
+        static void SetProgress(Image fill, float p) =>
+            fill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(fill.rectTransform.anchorMax.x, Mathf.Clamp(p, 0.04f, 1f), 0.25f), 1);
+
+        void UpdateDuel()
+        {
+            var match = App.Game.Match;
+            bool duel = match != null;
+            if (_duel.gameObject.activeSelf != duel)
+            {
+                _duel.gameObject.SetActive(duel);
+                UIKit.TopBand(_status.rectTransform, 90, duel ? 372 : 240);
+            }
+            if (!duel) return;
+            int left = App.Game.DuelTimeLeftMs, sec = (left + 999) / 1000;
+            _timeLeft.text = $"{sec / 60}:{sec % 60:00}";
+            _timeLeft.color = sec <= 30 ? UIKit.Danger : UIKit.Sand;
+            _myName.text = Loc.T("Toi");
+            SetProgress(_myBar, match.MyProgress);
+            _rivalBar.transform.parent.gameObject.SetActive(match.HasGhost);
+            if (!match.HasGhost)
+            {
+                _rivalName.text = Loc.T("Pas de rival : tu ouvres la voie");
+                return;
+            }
+            int elapsed = App.Game.Session?.ElapsedMs ?? 0;
+            string state = !match.GhostDone(elapsed) ? ""
+                         : match.Ghost.Outcome == Pvp.RunOutcome.Finished ? "  · " + Loc.F("sorti en {0}", LevelResult.FormatTime(match.Ghost.TimeMs))
+                         : "  · " + Loc.T("éliminé");
+            _rivalName.text = $"{match.Ghost.PlayerName} · {match.Ghost.Elo}{state}";
+            SetProgress(_rivalBar, match.GhostProgress);
         }
 
         static void AddTrigger(EventTrigger trigger, EventTriggerType type, System.Action action)
@@ -144,7 +227,12 @@ namespace MummyEscape.UI.Screens
 
         void ShowLoading(LevelId id)
         {
-            _introText.text = Loc.F("Niveau {0}", id) + "\n<size=36>" + Loc.T("Les dieux scellent un nouveau tombeau…") + "</size>";
+            var match = App.Game.Match;
+            string title = match == null ? Loc.F("Niveau {0}", id)
+                         : match.HasGhost ? Loc.F("Duel contre {0}", match.Ghost.PlayerName)
+                         : Loc.T("Duel");
+            _introText.text = title + "\n<size=36>" + Loc.T("Les dieux scellent un nouveau tombeau…") + "</size>";
+            UpdateDuel();
             _intro.alpha = 1f;
             _introTimer = float.MaxValue;
         }
@@ -169,6 +257,7 @@ namespace MummyEscape.UI.Screens
         {
             var session = App.Game.Session;
             if (session != null) UpdateCounter(session);
+            UpdateDuel();
             if (App.Game.Previewing)
                 _previewCount.text = Mathf.Max(1, Mathf.CeilToInt(App.Game.PreviewLeft)).ToString();
             if (_introTimer == float.MaxValue || _introTimer < 0f) return;
@@ -189,7 +278,7 @@ namespace MummyEscape.UI.Screens
             var s = App.Game.Session;
             if (s == null) return;
             var level = s.Level;
-            _level.text = Loc.F("Niveau {0}", level.Id);
+            _level.text = App.Game.InDuel ? Loc.T("Duel") : Loc.F("Niveau {0}", level.Id);
             UpdateCounter(s);
             _floor.text = level.Floors > 1 && !App.Game.Previewing ? Loc.F("Étage {0} / {1}", s.Position.Floor + 1, level.Floors) : "";
 
@@ -203,6 +292,8 @@ namespace MummyEscape.UI.Screens
                 UIKit.SetLabel(_ready, App.Game.PreviewOnLastFloor ? "Prêt" : "Étage suivant");
             }
 
+
+            _disarm.interactable = !preview && s.Status == SessionStatus.Playing && s.CanDisarm(out _);
 
             while (_ankhs.Count < level.MaxHp)
             {

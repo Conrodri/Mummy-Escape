@@ -3,6 +3,7 @@ using MummyEscape.Core;
 using MummyEscape.Game;
 using MummyEscape.Input;
 using MummyEscape.Online;
+using MummyEscape.Pvp;
 using MummyEscape.Services;
 using MummyEscape.UI;
 using MummyEscape.UI.Screens;
@@ -81,7 +82,10 @@ namespace MummyEscape.App
             player.Init(Art, spriteMaterial, Settings);
             var input = Child<SwipeInput>("Input");
             Game = Child<GameController>("Game");
-            Game.Init(this, maze, player, input);
+            var ghost = Child<GhostView>("Ghost");
+            ghost.Init(Art, Fx.Unlit);
+            Game.Init(this, maze, player, ghost, input);
+            Game.DuelEnded += (match, run) => UI.Open<PvpResultScreen>().Show(match, run);
 
             // Nothing goes online before the player has been informed and has chosen to (GDPR): offline until then.
             Online = Offline(OfflineReason);
@@ -94,11 +98,68 @@ namespace MummyEscape.App
             Save.Changed += () => _cloudDirty = true;
         }
 
+        // ------------------------------------------------------------------ duels
+
+        IPvpService _pvp;
+        IOnlineService _pvpOnline;
+
+        /// <summary>Duel service for the current online state (server, demo rivals, or null when duels are unavailable).</summary>
+        public IPvpService Pvp
+        {
+            get
+            {
+                if (_pvpOnline != Online)
+                {
+                    _pvpOnline = Online;
+                    _pvp = PvpServiceFactory.For(Online, () => Save.TotalStars);
+                    PvpProfile = null;
+                }
+                if (_pvp is LocalPvpService local) local.PlayerName = Online.PlayerName;
+                return _pvp;
+            }
+        }
+
+        /// <summary>Last profile the server sent (null until loaded).</summary>
+        public PvpProfileResponse PvpProfile { get; private set; }
+
+        public async Task<PvpProfileResponse> RefreshPvpProfile()
+        {
+            var pvp = Pvp;
+            if (pvp == null) return null;
+            var profile = await pvp.GetProfileAsync();
+            if (profile?.Data != null)
+            {
+                PvpProfile = profile;
+                Save.GrantSkins(profile.Data.UnlockedRewards);
+            }
+            return profile;
+        }
+
+        /// <summary>Keeps the cached profile in step after a duel or a purchase.</summary>
+        public void UpdatePvpWallet(int seals, System.Collections.Generic.List<string> rewards)
+        {
+            if (PvpProfile?.Data != null) PvpProfile.Data.Seals = seals;
+            Save.GrantSkins(rewards);
+        }
+
+        int _syncedStars = -1;
+
+        /// <summary>The server opens the duels at 35 solo stars: it is told the count whenever it grows.</summary>
+        public Task SyncSoloStars()
+        {
+            var pvp = Pvp;
+            int stars = Save.TotalStars;
+            if (pvp == null || stars == _syncedStars) return Task.CompletedTask;
+            _syncedStars = stars;
+            return pvp.SyncSoloStarsAsync(stars);
+        }
+
         void OnDestroy() => Loc.Changed -= OnLanguageChanged;
 
         /// <summary>Screens are built once with their texts: rebuild them all, back where the player was (the settings).</summary>
         void OnLanguageChanged()
         {
+            PvpSkins.ClearCache();
             if (UI == null) return;
             UI.RebuildAll();
             if (Game.Session != null)
@@ -153,6 +214,8 @@ namespace MummyEscape.App
                 }
                 await PushCloudSave();
             }
+            _syncedStars = -1;
+            await SyncSoloStars();
             await PublishProgress();
             RefreshMenus();
         }

@@ -1,0 +1,446 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using MummyEscape.Core;
+using MummyEscape.Pvp;
+using NUnit.Framework;
+
+namespace MummyEscape.Tests
+{
+    /// <summary>Rules of the PvP pack (Elo, leagues, duels, matchmaking, seasons, rewards), then the race and the server on real tombs.</summary>
+    public class PvpTests
+    {
+        // ------------------------------------------------------------------ pack rules
+
+        [Test]
+        public void Elo_MatchesTheDesignExamples()
+        {
+            Assert.That(Elo.Expected(1200, 1000), Is.EqualTo(0.7597).Within(0.001));
+            Assert.AreEqual(1206, Elo.NewRating(1200, 1000, DuelResult.Win, 50));
+            Assert.AreEqual(994, Elo.NewRating(1000, 1200, DuelResult.Loss, 50));
+            Assert.AreEqual(1194, Elo.NewRating(1200, 1000, DuelResult.Draw, 50));
+            Assert.AreEqual(1182, Elo.NewRating(1200, 1000, DuelResult.Loss, 50));
+            Assert.AreEqual(1018, Elo.NewRating(1000, 1200, DuelResult.Win, 50));
+            Assert.AreEqual(40, Elo.KFactor(1000, 3), "placement");
+            Assert.AreEqual(16, Elo.KFactor(1900, 50), "high level");
+            Assert.That(Elo.NewRating(110, 2000, DuelResult.Loss, 3), Is.GreaterThanOrEqualTo(PvpConfig.MinElo));
+        }
+
+        [Test]
+        public void Leagues_FollowTheThresholds()
+        {
+            Assert.AreEqual(League.Bronze, Leagues.FromElo(850));
+            Assert.AreEqual(League.Argent, Leagues.FromElo(900));
+            Assert.AreEqual(League.Or, Leagues.FromElo(1299));
+            Assert.AreEqual(League.Platine, Leagues.FromElo(1300));
+            Assert.AreEqual(League.Diamant, Leagues.FromElo(1500));
+            Assert.AreEqual("Top 100", Leagues.DisplayName(1600, 42));
+            Assert.AreEqual("Diamant", Leagues.DisplayName(1600, 150));
+        }
+
+        [Test]
+        public void Duels_ExitBeatsAll_ThenSpeed_ThenProgress()
+        {
+            Assert.AreEqual(DuelResult.Win, DuelResolver.Resolve(RunOutcome.Finished, 60000, 1, RunOutcome.Finished, 61000, 1));
+            Assert.AreEqual(DuelResult.Draw, DuelResolver.Resolve(RunOutcome.Finished, 60000, 1, RunOutcome.Finished, 60150, 1));
+            Assert.AreEqual(DuelResult.Loss, DuelResolver.Resolve(RunOutcome.Died, 20000, 0.9f, RunOutcome.Finished, 170000, 1));
+            Assert.AreEqual(DuelResult.Win, DuelResolver.Resolve(RunOutcome.Died, 20000, 0.8f, RunOutcome.Died, 30000, 0.4f));
+            Assert.AreEqual(DuelResult.Draw, DuelResolver.Resolve(RunOutcome.TimedOut, 180000, 0.50f, RunOutcome.Died, 9000, 0.51f));
+            Assert.AreEqual(DuelResult.Loss, DuelResolver.Resolve(RunOutcome.Abandoned, 0, 0, RunOutcome.Died, 5000, 0.1f));
+            Assert.AreEqual(DuelResult.Loss, DuelResolver.Invert(DuelResult.Win));
+        }
+
+        [Test]
+        public void Validator_RejectsImplausibleRuns()
+        {
+            var ok = new RunSubmission { Outcome = RunOutcome.Finished, TimeMs = 65000, Progress = 1,
+                Inputs = new List<RunInput> { new RunInput { Tick = 0, Direction = 2 }, new RunInput { Tick = 40, Direction = 5 } } };
+            Assert.IsTrue(RunValidator.IsPlausible(ok, out _));
+            Assert.IsFalse(RunValidator.IsPlausible(new RunSubmission { Outcome = RunOutcome.Finished, TimeMs = 2000, Progress = 1 }, out var r1));
+            Assert.AreEqual("too_fast", r1);
+            var disorder = new RunSubmission { Outcome = RunOutcome.Died, TimeMs = 30000, Progress = 0.3f,
+                Inputs = new List<RunInput> { new RunInput { Tick = 50, Direction = 1 }, new RunInput { Tick = 10, Direction = 2 } } };
+            Assert.IsFalse(RunValidator.IsPlausible(disorder, out var r2));
+            Assert.AreEqual("bad_ticks", r2);
+            var machineGun = new RunSubmission { Outcome = RunOutcome.Died, TimeMs = 30000, Progress = 0.3f,
+                Inputs = new List<RunInput> { new RunInput { Tick = 50, Direction = 1 }, new RunInput { Tick = 51, Direction = 2 } } };
+            Assert.IsFalse(RunValidator.IsPlausible(machineGun, out var r3));
+            Assert.AreEqual("inputs_too_close", r3);
+            var none = new RunSubmission { Outcome = RunOutcome.Died, TimeMs = 30000,
+                Inputs = new List<RunInput> { new RunInput { Tick = 50, Direction = 0 } } };
+            Assert.IsFalse(RunValidator.IsPlausible(none, out var r4));
+            Assert.AreEqual("bad_direction", r4);
+        }
+
+        [Test]
+        public void Matchmaking_PicksTheClosestValidGhost()
+        {
+            long now = 1_800_000_000_000;
+            var buckets = GhostPicker.BucketsToSearch(1050);
+            Assert.AreEqual(10, buckets[0]);
+            CollectionAssert.Contains(buckets, 13);
+            CollectionAssert.Contains(buckets, 7);
+            Assert.AreEqual(7, buckets.Count);
+            var ghosts = new List<GhostRun>
+            {
+                new GhostRun { GhostId = "me", PlayerId = "p0", Elo = 1050, CreatedAtUnixMs = now },
+                new GhostRun { GhostId = "far", PlayerId = "p1", Elo = 1400, CreatedAtUnixMs = now },
+                new GhostRun { GhostId = "close", PlayerId = "p2", Elo = 1080, CreatedAtUnixMs = now },
+                new GhostRun { GhostId = "seen", PlayerId = "p3", Elo = 1050, CreatedAtUnixMs = now },
+                new GhostRun { GhostId = "old", PlayerId = "p4", Elo = 1050, CreatedAtUnixMs = now - 25L * 3600_000 },
+            };
+            var seen = new Dictionary<string, int> { { "p3", 3 } };
+            Assert.AreEqual("close", GhostPicker.Pick(ghosts, "p0", 1050, seen, now)?.GhostId);
+            Assert.IsNull(GhostPicker.Pick(new List<GhostRun> { ghosts[1] }, "p0", 1050, seen, now), "never beyond ±300");
+        }
+
+        [Test]
+        public void Seasons_SoftResetAndKeepASummary()
+        {
+            var d = new PlayerPvpData { Elo = 1600, Season = "2026-09", Day = "2026-09-30", SeasonDuels = 40, SeasonDuelsLastWeek = 8 };
+            Seasons.Roll(d, new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc));
+            Assert.AreEqual(1300, d.Elo);
+            Assert.AreEqual(1600, d.LastSeason.FinalElo);
+            Assert.AreEqual(40, d.LastSeason.Duels);
+            Assert.AreEqual(0, d.SeasonDuels);
+            Assert.AreEqual("2026-10", d.Season);
+            Assert.AreEqual("2026-10-01", d.Day);
+            Assert.AreEqual(900, Seasons.SoftReset(800));
+            Assert.IsTrue(Seasons.IsLastWeekOfSeason(new DateTime(2026, 10, 25)));
+            Assert.IsFalse(Seasons.IsLastWeekOfSeason(new DateTime(2026, 10, 24)));
+        }
+
+        [Test]
+        public void DailyRewards_ChestOnce_FirstWinBonus_CappedParticipation()
+        {
+            var p = new PlayerPvpData { Elo = 1150 };
+            var day = new DateTime(2026, 10, 4, 12, 0, 0, DateTimeKind.Utc);
+            Seasons.Roll(p, day);
+            Assert.AreEqual(45, DuelBookkeeping.RecordDuelPlayed(p, 45000, day, false), "Or chest");
+            Assert.AreEqual(0, DuelBookkeeping.RecordDuelPlayed(p, 45000, day, false), "once a day");
+            Assert.AreEqual(30, DuelBookkeeping.ApplyResult(p, "p9", 1150, DuelResult.Win));
+            Assert.AreEqual(0, DuelBookkeeping.ApplyResult(p, "p9", 1150, DuelResult.Win));
+            Assert.AreEqual(2, p.OpponentsToday["p9"]);
+            Assert.AreEqual(2, p.Wins);
+            for (int i = 0; i < 30; i++) DuelBookkeeping.RecordDuelPlayed(p, 45000, day, false);
+            Assert.AreEqual(PvpConfig.MaxCountedDuelsPerDay, p.CountedDuelsToday);
+            DuelBookkeeping.RecordDuelPlayed(p, 5000, day, false);
+            Assert.AreEqual(15, p.SeasonCountedDuels, "a too short duel does not count");
+        }
+
+        [Test]
+        public void SeasonRewards_LeagueAndBelow_Participation_Top100()
+        {
+            var sum = new SeasonSummary { Season = "2026-10", FinalElo = 1320, Duels = 40, DuelsLastWeek = 6, CountedDuels = 30 };
+            var rewards = SeasonRewards.Compute(sum, out bool eligible);
+            Assert.IsTrue(eligible);
+            Assert.That(rewards, Does.Contain("pvp_2026-10_rank_platine").And.Contain("pvp_2026-10_rank_bronze"));
+            Assert.That(rewards, Does.Not.Contain("pvp_2026-10_rank_diamant"));
+            Assert.That(rewards, Does.Contain("pvp_2026-10_participation_25").And.Not.Contain("pvp_2026-10_participation_50"));
+            var lazy = SeasonRewards.Compute(new SeasonSummary { Season = "2026-10", FinalElo = 1600, Duels = 20, DuelsLastWeek = 2, CountedDuels = 12 }, out bool lazyEligible);
+            Assert.IsFalse(lazyEligible);
+            Assert.AreEqual(new[] { "pvp_2026-10_participation_10" }, lazy.ToArray());
+            Assert.AreEqual("pvp_2026-10_rank_top100", SeasonRewards.Top100("2026-10", 42, true));
+            Assert.IsNull(SeasonRewards.Top100("2026-10", 142, true));
+            Assert.IsNull(SeasonRewards.Top100("2026-10", 42, false));
+        }
+
+        [Test]
+        public void SealShop_ChecksLeagueAndBalance()
+        {
+            var d = new PlayerPvpData { Seals = 600, HighestLeague = League.Argent };
+            Assert.AreEqual("LEAGUE", SealShop.TryBuy(d, "pvp_shop_obsidian"));
+            Assert.IsNull(SealShop.TryBuy(d, "pvp_shop_feather"));
+            Assert.AreEqual(100, d.Seals);
+            Assert.AreEqual("OWNED", SealShop.TryBuy(d, "pvp_shop_feather"));
+            Assert.AreEqual("SEALS", SealShop.TryBuy(d, "pvp_shop_scales"));
+            Assert.AreEqual("UNKNOWN_ITEM", SealShop.TryBuy(d, "nope"));
+        }
+
+        // ------------------------------------------------------------------ the race
+
+        [Test]
+        public void Actions_RoundTrip()
+        {
+            foreach (var d in DirExt.All)
+                foreach (var a in new[] { PlayerAction.Move(d), PlayerAction.Disarm(d) })
+                {
+                    Assert.IsTrue(RunActions.TryDecode(RunActions.Encode(a), out var back));
+                    Assert.AreEqual(a, back);
+                }
+            Assert.AreEqual(1, RunActions.Encode(PlayerAction.Move(Dir.Up)), "the pack's numbering: 1 = up");
+            Assert.AreEqual(4, RunActions.Encode(PlayerAction.Move(Dir.Left)));
+            Assert.IsFalse(RunActions.TryDecode(0, out _));
+        }
+
+        [Test]
+        public void Arena_IsDeterministic_AndDrawsMiddleLevelsOfActs1To3()
+        {
+            foreach (int seed in new[] { 1, 2, 3, 77, 123456, int.MaxValue })
+            {
+                var id = PvpArena.LevelFor(seed);
+                Assert.That(id.Act, Is.InRange(1, 3));
+                Assert.That(id.Index, Is.InRange(4, 7));
+            }
+            var a = PvpArena.Generate(4242);
+            var b = PvpArena.Generate(4242);
+            Assert.AreEqual(a.ToAscii(), b.ToAscii(), "same seed, same tomb on every device");
+        }
+
+        /// <summary>The ideal route, one action every <paramref name="gapMs"/> ms.</summary>
+        static List<RunInput> Stamp(IEnumerable<PlayerAction> actions, int gapMs, int startMs = 500) =>
+            actions.Select((a, i) => new RunInput { Tick = RunActions.TickOf(startMs + i * gapMs), Direction = RunActions.Encode(a) }).ToList();
+
+        /// <summary>A finished run as the game sends it: the clock stops on the last action.</summary>
+        static RunSubmission Finish(string matchId, List<RunInput> inputs) => new RunSubmission
+        {
+            MatchId = matchId, Outcome = RunOutcome.Finished, Progress = 1, Inputs = inputs,
+            TimeMs = RunActions.MsOf(inputs[inputs.Count - 1].Tick),
+        };
+
+        [Test]
+        public void Replay_VerifiesWhatItPlays()
+        {
+            var level = PvpArena.Generate(1001);
+            var inputs = Stamp(level.Solution.Actions, 400);
+            var won = RunReplay.Verify(level, new RunSubmission { Outcome = RunOutcome.Finished, TimeMs = 1, Progress = 0, Inputs = inputs });
+            Assert.IsNotNull(won);
+            Assert.AreEqual(RunOutcome.Finished, won.Outcome);
+            Assert.AreEqual(1f, won.Progress);
+            Assert.AreEqual(RunActions.MsOf(inputs[inputs.Count - 1].Tick), won.TimeMs, "the server's own clock, not the client's");
+
+            var half = inputs.Take(inputs.Count / 2).ToList();
+            Assert.IsNull(RunReplay.Verify(level, new RunSubmission { Outcome = RunOutcome.Finished, Inputs = half }), "claims an exit it never reached");
+            var timedOut = RunReplay.Verify(level, new RunSubmission { Outcome = RunOutcome.TimedOut, Inputs = half });
+            Assert.AreEqual(RunOutcome.TimedOut, timedOut.Outcome);
+            Assert.That(timedOut.Progress, Is.GreaterThan(0f).And.LessThan(1f));
+
+            // A move into a wall is never recorded by the game: a run containing one was forged.
+            var forged = new List<RunInput>();
+            foreach (var d in DirExt.All)
+                if (Rules.Step(level, Rules.Initial(level), PlayerAction.Move(d)).Has(StepFlags.Blocked))
+                {
+                    forged.Add(new RunInput { Tick = 10, Direction = RunActions.Encode(PlayerAction.Move(d)) });
+                    break;
+                }
+            Assume.That(forged.Count, Is.EqualTo(1));
+            Assert.IsNull(RunReplay.Verify(level, new RunSubmission { Outcome = RunOutcome.TimedOut, Inputs = forged }));
+        }
+
+        [Test]
+        public void Progress_GoesFromZeroToOne()
+        {
+            var level = PvpArena.Generate(2002);
+            Assert.AreEqual(0f, PvpProgress.Of(level, Rules.Initial(level)));
+            var replay = new RunReplay(level, Stamp(level.Solution.Actions, 300));
+            replay.AdvanceTo(RunActions.TickOf(500 + 300 * (level.Solution.Moves / 2)));
+            Assert.That(replay.Progress, Is.InRange(0.3f, 0.7f));
+            replay.AdvanceTo(int.MaxValue);
+            Assert.AreEqual(1f, replay.Progress);
+        }
+
+        [Test]
+        public void Bots_RunValidRaces()
+        {
+            var rng = new Random(5);
+            for (int i = 0; i < 5; i++)
+            {
+                var ghost = PvpBots.Make(rng, 1000, 0);
+                var check = RunReplay.Verify(PvpArena.Generate(ghost.Seed), new RunSubmission { Outcome = ghost.Outcome, Inputs = ghost.Inputs });
+                Assert.IsNotNull(check);
+                Assert.AreEqual(RunOutcome.Finished, check.Outcome);
+                Assert.AreEqual(ghost.TimeMs, check.TimeMs);
+                Assert.That(RunValidator.IsPlausible(new RunSubmission { Outcome = ghost.Outcome, TimeMs = ghost.TimeMs, Progress = 1, Inputs = ghost.Inputs }, out var why), Is.True, why);
+            }
+        }
+
+        // ------------------------------------------------------------------ the server
+
+        static readonly DateTime Today = new DateTime(2026, 10, 4, 12, 0, 0, DateTimeKind.Utc);
+
+        static (PvpServer server, MemoryPvpStore store) NewServer()
+        {
+            var store = new MemoryPvpStore();
+            store.SoloStars["alice"] = 40;
+            store.SoloStars["bob"] = 60;
+            int seed = 3003;
+            return (new PvpServer(store, () => Today, () => seed++), store);
+        }
+
+        [Test]
+        public void Server_LocksPvpBelowAct3_AndRefusesOldClients()
+        {
+            var (server, store) = NewServer();
+            store.SoloStars["carol"] = PvpConfig.RequiredSoloStars - 1;
+            Assert.AreEqual("LOCKED", server.FindDuelAsync("carol", DifficultyTable.GeneratorVersion).Result.Error);
+            Assert.AreEqual("OUTDATED", server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion - 1).Result.Error);
+        }
+
+        [Test]
+        public void Server_FirstRunBecomesAGhost_SecondPlayerRacesItOnTheSameTomb()
+        {
+            var (server, store) = NewServer();
+
+            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            Assert.IsNull(first.Error);
+            Assert.IsNull(first.Ghost, "nobody waiting: alice runs first");
+            var level = PvpServer.Arena(first.Seed);
+            var slow = Finish(first.MatchId, Stamp(level.Solution.Actions, 900));
+            var queued = server.SubmitRunAsync("alice", slow, "Alice").Result;
+            Assert.IsNull(queued.Error);
+            Assert.IsFalse(queued.Resolved);
+            Assert.AreEqual(1, store.Queue.Count);
+            Assert.That(queued.SealsGained, Is.GreaterThan(0), "daily chest");
+
+            var second = server.FindDuelAsync("bob", DifficultyTable.GeneratorVersion).Result;
+            Assert.IsNotNull(second.Ghost);
+            Assert.AreEqual("Alice", second.Ghost.PlayerName);
+            Assert.AreEqual(first.Seed, second.Seed, "same seed, same tomb");
+            Assert.AreEqual(0, store.Queue.Count, "a ghost serves one duel only");
+
+            var fast = Finish(second.MatchId, Stamp(level.Solution.Actions, 400));
+            var duel = server.SubmitRunAsync("bob", fast, "Bob").Result;
+            Assert.IsTrue(duel.Resolved);
+            Assert.AreEqual(DuelResult.Win, duel.Result);
+            Assert.That(duel.EloAfter, Is.GreaterThan(duel.EloBefore));
+            Assert.That(store.Players["alice"].Elo, Is.LessThan(PvpConfig.StartingElo));
+            Assert.AreEqual(1, store.Players["alice"].Losses);
+        }
+
+        [Test]
+        public void Server_ReplaysTheRun_ACheaterLoses()
+        {
+            var (server, store) = NewServer();
+            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var level = PvpServer.Arena(first.Seed);
+            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level.Solution.Actions, 900)), "Alice").Wait();
+
+            var second = server.FindDuelAsync("bob", DifficultyTable.GeneratorVersion).Result;
+            // Bob claims a lightning exit after only three moves.
+            var lie = new RunSubmission { MatchId = second.MatchId, Outcome = RunOutcome.Finished, TimeMs = 5000, Progress = 1,
+                                          Inputs = Stamp(level.Solution.Actions.Take(3), 400) };
+            var result = server.SubmitRunAsync("bob", lie, "Bob").Result;
+            Assert.AreEqual("INVALID_RUN", result.Error);
+            Assert.AreEqual(DuelResult.Loss, result.Result);
+            Assert.AreEqual(1, store.Players["alice"].Wins);
+        }
+
+        [Test]
+        public void Server_SearchingAgainKeepsTheSameDuel()
+        {
+            var (server, _) = NewServer();
+            var a = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var b = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            Assert.AreEqual(a.MatchId, b.MatchId);
+            Assert.AreEqual(a.Seed, b.Seed);
+        }
+
+        [Test]
+        public void Server_ClaimsSeasonRewards_Once()
+        {
+            var (server, store) = NewServer();
+            store.Players["alice"] = new PlayerPvpData
+            {
+                Elo = 1320, Season = "2026-09", Day = "2026-09-30", SeasonDuels = 40, SeasonDuelsLastWeek = 6, SeasonCountedDuels = 30,
+            };
+            store.LastSeasonRanks["alice"] = 12;
+            var claim = server.ClaimSeasonRewardsAsync("alice").Result;
+            Assert.AreEqual("2026-09", claim.Season);
+            Assert.That(claim.NewRewards, Does.Contain("pvp_2026-09_rank_platine").And.Contain("pvp_2026-09_rank_top100")
+                                              .And.Contain("pvp_2026-09_participation_25"));
+            Assert.AreEqual("NOTHING_TO_CLAIM", server.ClaimSeasonRewardsAsync("alice").Result.Error);
+            Assert.That(store.Players["alice"].UnlockedRewards, Does.Contain("pvp_2026-09_rank_top100"));
+        }
+
+        [Test]
+        public void Server_SellsSealItems()
+        {
+            var (server, store) = NewServer();
+            store.Players["alice"] = new PlayerPvpData { Seals = 350, HighestLeague = League.Bronze };
+            var buy = server.BuyWithSealsAsync("alice", "pvp_shop_scales").Result;
+            Assert.IsTrue(buy.Ok);
+            Assert.AreEqual(50, buy.Seals);
+            Assert.That(buy.UnlockedRewards, Does.Contain("pvp_shop_scales"));
+            Assert.AreEqual("OWNED", server.BuyWithSealsAsync("alice", "pvp_shop_scales").Result.Error);
+            Assert.AreEqual("LEAGUE", server.BuyWithSealsAsync("alice", "pvp_shop_feather").Result.Error);
+        }
+
+        // ------------------------------------------------------------------ the game side of a duel
+
+        [Test]
+        public void Match_RecordsTheRunTheServerWillAccept()
+        {
+            var ghost = PvpBots.Make(new Random(11), 1100, 0);
+            var match = new PvpMatch(new FindDuelResponse { MatchId = "m1", Seed = ghost.Seed, Ghost = ghost });
+            var level = PvpArena.Generate(ghost.Seed);
+            match.Begin(level);
+            var session = new GameSession(level);
+
+            // Plays the ideal path a little faster than the ghost, two actions sometimes in the same 20 ms.
+            int ms = 700;
+            foreach (var action in level.Solution.Actions)
+            {
+                var before = session.State;
+                var r = session.Apply(action);
+                Assert.IsFalse(r.Has(StepFlags.Blocked));
+                match.Record(action, ms, before, session);
+                ms += 300;
+            }
+            Assert.AreEqual(SessionStatus.Won, session.Status);
+            Assert.AreEqual(1f, match.MyProgress);
+            for (int i = 1; i < match.Inputs.Count; i++)
+                Assert.GreaterOrEqual(match.Inputs[i].Tick - match.Inputs[i - 1].Tick, PvpConfig.MinInputGapTicks);
+
+            var run = match.BuildRun(RunOutcome.Finished);
+            Assert.AreEqual(RunOutcome.Finished, run.Outcome);
+            Assert.That(RunValidator.IsPlausible(run, out var why), Is.True, why);
+            var server = RunReplay.Verify(level, run);
+            Assert.AreEqual(run.TimeMs, server.TimeMs);
+            Assert.AreEqual(RunActions.MsOf(match.Inputs[match.Inputs.Count - 1].Tick), run.TimeMs);
+        }
+
+        [Test]
+        public void Match_GhostFollowsThePlayersClock()
+        {
+            var ghost = PvpBots.Make(new Random(12), 1000, 0);
+            var match = new PvpMatch(new FindDuelResponse { MatchId = "m2", Seed = ghost.Seed, Ghost = ghost });
+            match.Begin(PvpArena.Generate(ghost.Seed));
+
+            Assert.IsFalse(match.AdvanceGhost(0), "nothing before its first action");
+            Assert.AreEqual(match.Level.Start, match.GhostReplay.Session.Position);
+            int half = RunActions.MsOf(ghost.Inputs[ghost.Inputs.Count / 2].Tick);
+            Assert.IsTrue(match.AdvanceGhost(half));
+            Assert.That(match.GhostProgress, Is.GreaterThan(0f).And.LessThan(1f));
+            Assert.IsFalse(match.GhostDone(half));
+            match.AdvanceGhost(ghost.TimeMs);
+            Assert.AreEqual(SessionStatus.Won, match.GhostReplay.Session.Status);
+            Assert.AreEqual(1f, match.GhostProgress);
+            Assert.IsTrue(match.GhostDone(ghost.TimeMs));
+        }
+
+        [Test]
+        public void Match_TimeOutAndForfeit()
+        {
+            var match = new PvpMatch(new FindDuelResponse { MatchId = "m3", Seed = 77 });
+            var level = PvpArena.Generate(77);
+            match.Begin(level);
+            Assert.IsNull(match.GhostReplay, "first on this tomb: no ghost");
+            var session = new GameSession(level);
+            var first = level.Solution.Actions[0];
+            var before = session.State;
+            session.Apply(first);
+            match.Record(first, 1500, before, session);
+
+            var timedOut = match.BuildRun(RunOutcome.TimedOut);
+            Assert.AreEqual(RunOutcome.TimedOut, timedOut.Outcome);
+            Assert.AreEqual(PvpConfig.TimeLimitMs, timedOut.TimeMs);
+            Assert.That(timedOut.Progress, Is.GreaterThan(0f));
+
+            var forfeit = match.BuildRun(RunOutcome.Abandoned);
+            Assert.AreEqual(RunOutcome.Abandoned, forfeit.Outcome);
+            match.Over = true;
+            match.Record(first, 3000, before, session);
+            Assert.AreEqual(1, match.Inputs.Count, "nothing is recorded once the run is over");
+        }
+    }
+}

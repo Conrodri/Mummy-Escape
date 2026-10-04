@@ -38,13 +38,14 @@ if (args.Length >= 2 && args[0] == "--why")
     var p = args[1].Split('-');
     var wid = new LevelId(int.Parse(p[0]), int.Parse(p[1]));
     var wspec = DifficultyTable.Spec(wid);
+    int wvar = args.Length > 4 ? int.Parse(args[4]) : 0; // --why 3-10 [prefix] [n] [variant]
     for (int a = 0; a < (args.Length > 3 ? int.Parse(args[3]) : 40); a++)
     {
-        var l = LevelGenerator.TryAttempt(wspec, DifficultyTable.Seed(wid, 0), a, out string why);
+        var l = LevelGenerator.TryAttempt(wspec, DifficultyTable.Seed(wid, wvar), a, out string why);
         Console.WriteLine($"attempt {a}: {(l != null ? "OK par " + l.Solution.Moves : why)}");
         if (l == null && args.Length > 2 && why.StartsWith(args[2]))
         {
-            Console.WriteLine(LevelGenerator.BuildUnchecked(wspec, DifficultyTable.Seed(wid, 0), a, out _).ToAscii());
+            Console.WriteLine(LevelGenerator.BuildUnchecked(wspec, DifficultyTable.Seed(wid, wvar), a, out _).ToAscii());
             return;
         }
     }
@@ -182,7 +183,7 @@ foreach (var id in DifficultyTable.AllLevels())
             attempts.Add(level.Attempt + 1);
             mech.Add(level.Solution.Mechanics);
         }
-        catch (LevelGenerationException) { failed++; }
+        catch (LevelGenerationException) { failed++; Console.Error.WriteLine($"  {id} variant {v}: no valid tomb"); }
         times.Add(sw.ElapsedMilliseconds);
     }
     string top = string.Join(", ", failures.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {kv.Value}"));

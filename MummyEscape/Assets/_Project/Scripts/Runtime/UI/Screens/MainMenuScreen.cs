@@ -65,7 +65,8 @@ namespace MummyEscape.UI.Screens
 
             // Secondary destinations as captioned icons.
             UIKit.Size(UIKit.Rect("Gap", column), 18);
-            var actions = UIKit.Row(column, 170, 44);
+            var actions = UIKit.Row(column, 170, 22);
+            UIKit.IconAction(actions.transform, UISprites.Swords, Loc.T("Duel"), () => Router.Open<PvpScreen>());
             UIKit.IconAction(actions.transform, UISprites.Podium, Loc.T("Classement"), () => Router.Open<LeaderboardScreen>());
             UIKit.IconAction(actions.transform, UISprites.Friends, Loc.T("Amis"), () => Router.Open<FriendsScreen>());
             UIKit.IconAction(actions.transform, UISprites.Bag, Loc.T("Boutique"), () => Router.Open<ShopScreen>());

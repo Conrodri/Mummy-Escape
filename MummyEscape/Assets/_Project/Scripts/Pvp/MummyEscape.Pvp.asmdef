@@ -1,0 +1,16 @@
+{
+    "name": "MummyEscape.Pvp",
+    "rootNamespace": "MummyEscape.Pvp",
+    "references": [
+        "MummyEscape.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

@@ -67,6 +67,52 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Darkness_CannotBeDisarmed()
+        {
+            var lvl = FromAscii("#######", "#S~..E#", "#######");
+            var s = new GameSession(lvl);
+            Assert.IsFalse(s.CanDisarm(out _), "only spikes offer the disarm button");
+            Assert.IsTrue(s.Disarm(Dir.Right).Has(StepFlags.Blocked));
+        }
+
+        [Test]
+        public void Spikes_DisarmButtonOnlyWhenSeen()
+        {
+            var s = new GameSession(FromAscii("########", "#S.^..E#", "########"));
+            Assert.IsFalse(s.CanDisarm(out _), "not next to the spikes yet");
+            s.Move(Dir.Right);
+            Assert.IsTrue(s.CanDisarm(out var dir));
+            Assert.AreEqual(Dir.Right, dir);
+            s.Disarm(dir);
+            Assert.IsFalse(s.CanDisarm(out _), "already disarmed");
+
+            var dark = new GameSession(FromAscii("########", "#S,^..E#", "########"));
+            dark.Move(Dir.Right);
+            Assert.IsFalse(dark.CanDisarm(out _), "torch out: the spikes cannot be seen");
+        }
+
+        [Test]
+        public void Spikes_ShortcutHasAWayRound()
+        {
+            // Spikes across the short way, a spike-free loop above.
+            var lvl = FromAscii(
+                "########",
+                "#.....##",
+                "#.###.##",
+                "#S.^..E#",
+                "########");
+            Assert.AreEqual(8, LevelValidator.SpikeDetour(lvl, new Cell(0, 3, 1)), "10 moves round instead of 2");
+            Assert.IsNull(LevelValidator.CheckSpikeShortcuts(lvl));
+            var safe = SolverOptions.Default;
+            safe.AvoidSpikes = true;
+            Assert.AreEqual(9, Solver.Solve(lvl, safe).Moves, "the long way: up, across, down");
+            Assert.AreEqual(5, Solver.Solve(lvl).Moves, "par trades a life for the shortcut");
+
+            var corridor = FromAscii("#######", "#S.^.E#", "#######");
+            Assert.IsNotNull(LevelValidator.CheckSpikeShortcuts(corridor), "spikes with no way round are refused");
+        }
+
+        [Test]
         public void Darkness_BlindsForThreeMoves()
         {
             var s = new GameSession(FromAscii("#########", "#S~....E#", "#########"));

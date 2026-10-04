@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MummyEscape.App;
 using MummyEscape.Core;
 using MummyEscape.Input;
+using MummyEscape.Pvp;
 using MummyEscape.Services;
 using MummyEscape.UI.Screens;
 using MummyEscape.Visual;
@@ -29,6 +30,7 @@ namespace MummyEscape.Game
         GameApp _app;
         MazeView _maze;
         PlayerView _player;
+        GhostView _ghost;
         SwipeInput _input;
         readonly Dictionary<(LevelId, int), Task<Level>> _pending = new Dictionary<(LevelId, int), Task<Level>>();
 
@@ -48,11 +50,12 @@ namespace MummyEscape.Game
         PlayerAction? _buffered;
         int _loadToken;
 
-        public void Init(GameApp app, MazeView maze, PlayerView player, SwipeInput input)
+        public void Init(GameApp app, MazeView maze, PlayerView player, GhostView ghost, SwipeInput input)
         {
             _app = app;
             _maze = maze;
             _player = player;
+            _ghost = ghost;
             _input = input;
             _input.Swiped += OnSwipe;
             _input.Tapped += OnTap;
@@ -63,12 +66,8 @@ namespace MummyEscape.Game
         public async Task StartLevel(LevelId id)
         {
             int token = ++_loadToken;
-            StopAllCoroutines();
-            EndPreviewVisuals();
-            _busy = false;
-            _buffered = null;
-            _input.Enabled = false;
-            ScreenshotRedraw = false;
+            ResetForLoad();
+            Match = null;
             CurrentLevel = id;
             _app.Audio.PlayMusic(id.Act); // renders (if needed) while the maze is generated
             LevelLoading?.Invoke(id);
@@ -90,7 +89,107 @@ namespace MummyEscape.Game
                 _pending.Remove((id, variant));
             }
             if (token != _loadToken || this == null) return; // another level was requested meanwhile
+            Setup(level);
+            Prefetch(id); // the replay's maze, ready before the player needs it
+            LevelStarted?.Invoke();
+            Changed?.Invoke();
+            StartCoroutine(PreviewRoutine());
+        }
 
+        void ResetForLoad()
+        {
+            StopAllCoroutines();
+            EndPreviewVisuals();
+            _busy = false;
+            _buffered = null;
+            _input.Enabled = false;
+            ScreenshotRedraw = false;
+            _ghost.Hide();
+        }
+
+        // ------------------------------------------------------------------ duels
+
+        /// <summary>The duel being played, null in solo.</summary>
+        public PvpMatch Match { get; private set; }
+        public bool InDuel => Match != null;
+        /// <summary>Raised when a duel run ends (exit, death, time out, forfeit) with what goes to the server.</summary>
+        public event Action<PvpMatch, RunSubmission> DuelEnded;
+
+        /// <summary>Time left in the duel, in milliseconds.</summary>
+        public int DuelTimeLeftMs => Session == null ? PvpConfig.TimeLimitMs : Math.Max(0, PvpConfig.TimeLimitMs - Session.ElapsedMs);
+
+        /// <summary>
+        /// Starts a duel on the tomb the server drew. Same rules as solo, with three differences: the preview is always
+        /// shown, the clock never stops (not even in the pause menu) and the run ends after 3 minutes.
+        /// </summary>
+        public async Task StartDuel(PvpMatch match)
+        {
+            int token = ++_loadToken;
+            ResetForLoad();
+            Session = null; // the last run's clock must not reach the new duel while its tomb is generated
+            Match = match;
+            var id = PvpArena.LevelFor(match.Seed);
+            CurrentLevel = id;
+            _app.Audio.PlayMusic(id.Act);
+            LevelLoading?.Invoke(id);
+            Level level;
+            try
+            {
+                level = await Task.Run(() => PvpServer.Arena(match.Seed));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Game] Could not generate duel tomb {match.Seed}: {e}");
+                return;
+            }
+            if (token != _loadToken || this == null) return;
+            match.Begin(level);
+            Setup(level);
+            if (match.HasGhost) _ghost.Snap(level.Start);
+            LevelStarted?.Invoke();
+            Changed?.Invoke();
+            StartCoroutine(PreviewRoutine());
+        }
+
+        /// <summary>Leaves the duel: the run counts as a forfeit (a loss).</summary>
+        public void ForfeitDuel()
+        {
+            if (Match == null || Match.Over) return;
+            EndDuel(RunOutcome.Abandoned);
+        }
+
+        void EndDuel(RunOutcome outcome)
+        {
+            var match = Match;
+            match.Over = true;
+            _input.Enabled = false;
+            _buffered = null;
+            DuelEnded?.Invoke(match, match.BuildRun(outcome));
+        }
+
+        void UpdateDuel()
+        {
+            var match = Match;
+            if (match == null || Session == null || match.Level == null || match.Over) return;
+            int elapsed = Session.ElapsedMs;
+            if (match.AdvanceGhost(elapsed)) Changed?.Invoke();
+            if (match.GhostReplay != null)
+            {
+                var g = match.GhostReplay.Session;
+                bool gone = g.Status == SessionStatus.Won; // out of the tomb
+                bool seen = !Previewing && !gone && g.Position.Floor == Session.Position.Floor && Session.IsVisible(g.Position);
+                _ghost.Show(g.Position, seen);
+            }
+            // Out of time: the run stops where it is (an action being animated has already counted).
+            if (!Previewing && Session.Status == SessionStatus.Playing && elapsed >= PvpConfig.TimeLimitMs)
+            {
+                _app.Audio.Play(Sfx.Death);
+                EndDuel(RunOutcome.TimedOut);
+            }
+        }
+
+        void Setup(Level level)
+        {
             Session = new GameSession(level);
             ApplyTheme(TombTheme.ForAct(level.Id.Act));
             IndexMechanisms(level);
@@ -105,10 +204,6 @@ namespace MummyEscape.Game
             _app.Lighting.SetMood(true);
             _paused = false;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
-            Prefetch(id); // the replay's maze, ready before the player needs it
-            LevelStarted?.Invoke();
-            Changed?.Invoke();
-            StartCoroutine(PreviewRoutine());
         }
 
         void ApplyTheme(TombTheme theme)
@@ -160,7 +255,7 @@ namespace MummyEscape.Game
         /// </summary>
         IEnumerator PreviewRoutine()
         {
-            if (!_app.Settings.ShowPreview)
+            if (!_app.Settings.ShowPreview && Match == null) // a duel always shows the tomb: both rivals get the same look
             {
                 _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
                 PreviewChanged?.Invoke();
@@ -196,7 +291,8 @@ namespace MummyEscape.Game
                         _maze.Concealed = captured;
                         PreviewChanged?.Invoke();
                     }
-                    if (!captured && !_paused) PreviewLeft -= Time.deltaTime;
+                    // In a duel the pause menu does not stop the preview either (no studying the map at leisure).
+                    if (!captured && (!_paused || Match != null)) PreviewLeft -= Time.deltaTime;
                     yield return null;
                 }
             }
@@ -224,7 +320,8 @@ namespace MummyEscape.Game
         /// </summary>
         void OnPreviewScreenshot()
         {
-            if (!Previewing || Session == null) return;
+            // A duel's tomb is drawn by the server and shared with the rival: it cannot be swapped.
+            if (!Previewing || Session == null || Match != null) return;
             _ = RedrawAfterScreenshot();
         }
 
@@ -249,7 +346,10 @@ namespace MummyEscape.Game
             if (Session != null) _app.Camera.EndArea(MazeView.CellToWorld(Session.Position));
         }
 
-        public void Restart() => _ = StartLevel(CurrentLevel);
+        public void Restart()
+        {
+            if (Match == null) _ = StartLevel(CurrentLevel);
+        }
 
         public void Abandon()
         {
@@ -257,6 +357,8 @@ namespace MummyEscape.Game
             EndPreviewVisuals();
             StopAllCoroutines();
             Session = null;
+            Match = null;
+            _ghost.Hide();
             _busy = false;
             _input.Enabled = false;
             _maze.Clear();
@@ -269,7 +371,10 @@ namespace MummyEscape.Game
         {
             // The clock runs once the tomb is hidden, never while paused. Scaled delta: Unity caps it after a hitch or
             // when the app comes back from the background, so a phone call does not ruin a run.
-            if (Session != null && !Previewing && !_paused) Session.Tick(Time.deltaTime);
+            // In a duel the clock never stops: the rival's ghost did not pause either.
+            bool duel = Match != null;
+            if (Session != null && !Previewing && (!_paused || duel) && !(duel && Match.Over)) Session.Tick(Time.deltaTime);
+            if (duel) UpdateDuel();
             // A floor may have its own music (Resources/Music/act{n}_f{floor}); no-op while the track playing fits.
             if (Session != null && Session.Status == SessionStatus.Playing && !Previewing)
                 _app.Audio.PlayLevelMusic(CurrentLevel.Act, Session.Position.Floor + 1);
@@ -313,16 +418,23 @@ namespace MummyEscape.Game
             if (Mathf.Abs(dx) + Mathf.Abs(dy) != 1) return;
             var dir = dx > 0 ? Dir.Right : dx < 0 ? Dir.Left : dy > 0 ? Dir.Up : Dir.Down;
 
-            // Tapping a visible armed trap disarms it; tapping any other neighbour moves there.
-            var t = Session.PerceivedTile(cell);
-            bool disarm = t.Type == TileType.Trap && Session.IsTrapArmed(cell) && Session.IsVisible(cell);
-            Submit(disarm ? PlayerAction.Disarm(dir) : PlayerAction.Move(dir));
+            // Tapping a neighbour moves there, except onto visible spikes: no life lost to a stray tap (swipe to take
+            // the hit on purpose, or use the disarm button).
+            if (Session.IsVisible(cell) && Rules.IsDisarmable(Session.Level.Get(cell), Session.State.Disarmed)) return;
+            Submit(PlayerAction.Move(dir));
+        }
+
+        /// <summary>The HUD disarm button: disarms the visible spikes next to the mummy, if any.</summary>
+        public void DisarmAdjacent()
+        {
+            if (Session != null && Session.CanDisarm(out var dir)) Submit(PlayerAction.Disarm(dir));
         }
 
         /// <summary>Feeds one action to the game (swipe / tap handlers, and the editor autoplay tool).</summary>
         public void Submit(PlayerAction action)
         {
             if (Session == null || _paused || Previewing || Session.Status != SessionStatus.Playing) return;
+            if (Match != null && Match.Over) return;
             if (_busy) { _buffered = action; return; }
             StartCoroutine(Play(action));
         }
@@ -347,6 +459,8 @@ namespace MummyEscape.Game
                 }
                 yield break;
             }
+            // Duel: every accepted action is recorded with its time, for the server's replay and the rival's ghost.
+            Match?.Record(action, Session.ElapsedMs, before, Session);
 
             _busy = true;
             Changed?.Invoke();
@@ -593,9 +707,19 @@ namespace MummyEscape.Game
             }
             yield return new WaitForSeconds(0.35f);
 
+            if (Match != null)
+            {
+                // A duel touches neither the solo records nor the scarabs: its result comes from the server.
+                if (!Match.Over) EndDuel(result.Won ? RunOutcome.Finished : RunOutcome.Died);
+                yield break;
+            }
             var outcome = _app.Save.Apply(result);
             _ = _app.Online.SubmitScoreAsync(result);
-            if (result.Won) _ = _app.PublishProgress();
+            if (result.Won)
+            {
+                _ = _app.PublishProgress();
+                _ = _app.SyncSoloStars();
+            }
             _app.UI.Open<RecapScreen>().Show(result, outcome);
         }
 

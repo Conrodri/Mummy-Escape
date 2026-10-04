@@ -7,6 +7,9 @@ namespace MummyEscape.UI.Screens
     {
         public override bool IsModal => true;
 
+        Button _restart, _quit;
+        Text _duelNote;
+
         protected override void Build()
         {
             var shade = UIKit.Image(Root, UIKit.Art.White, UIKit.Shade, true);
@@ -19,15 +22,41 @@ namespace MummyEscape.UI.Screens
             panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             UIKit.Size(UIKit.Title(panel, "Pause", 68), 100);
+            _duelNote = UIKit.Label(panel, "Duel : le chrono continue de tourner !", 30, UIKit.Danger, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(_duelNote, 20);
+            UIKit.Size(_duelNote, 50);
             UIKit.Size(UIKit.Button(panel, "Reprendre", Resume, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
-            UIKit.Size(UIKit.Button(panel, "Recommencer", () => { Router.Close(this); App.Game.Restart(); }), UIKit.ButtonHeight);
+            _restart = UIKit.Button(panel, "Recommencer", () => { Router.Close(this); App.Game.Restart(); });
+            UIKit.Size(_restart, UIKit.ButtonHeight);
             UIKit.Size(UIKit.Button(panel, "Paramètres", () => Router.Open<SettingsScreen>()), UIKit.ButtonHeight);
-            UIKit.Size(UIKit.Button(panel, "Quitter le niveau", () => { App.Game.Abandon(); Router.Reset<MainMenuScreen>(); }, UIKit.TextSize, ButtonStyle.Ghost), 72);
+            _quit = UIKit.Button(panel, "Quitter le niveau", Quit, UIKit.TextSize, ButtonStyle.Ghost);
+            UIKit.Size(_quit, 72);
         }
 
-        public override void OnShow() => App.Game.SetPaused(true);
+        public override void OnShow()
+        {
+            bool duel = App.Game.InDuel;
+            _duelNote.gameObject.SetActive(duel);
+            _restart.gameObject.SetActive(!duel);
+            UIKit.SetLabel(_quit, duel ? "Abandonner le duel (défaite)" : "Quitter le niveau");
+            App.Game.SetPaused(true);
+        }
+
         public override void OnHide() => App.Game.SetPaused(false);
 
         void Resume() => Router.Close(this);
+
+        void Quit()
+        {
+            if (App.Game.InDuel)
+            {
+                // The forfeit is sent like any run; the result screen opens over the HUD.
+                Router.Close(this);
+                App.Game.ForfeitDuel();
+                return;
+            }
+            App.Game.Abandon();
+            Router.Reset<MainMenuScreen>();
+        }
     }
 }

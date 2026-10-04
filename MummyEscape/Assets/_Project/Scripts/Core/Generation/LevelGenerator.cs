@@ -23,7 +23,7 @@ namespace MummyEscape.Core
     {
         public const int MaxAttempts = 3000;
         /// <summary>Fallback searches with a wider par window when the spec itself finds no tomb.</summary>
-        public const int MaxRelaxSteps = 2, RelaxMoves = 3;
+        public const int MaxRelaxSteps = 3, RelaxMoves = 3;
 
         /// <summary>Generates maze number <paramref name="variant"/> of a campaign level (a new variant per run).</summary>
         public static Level Generate(LevelId id, int variant = 0)
@@ -151,8 +151,9 @@ namespace MummyEscape.Core
                     if (!PlaceDust(route)) { failure = "dust: no spot"; return null; }
 
                 // Traps sit on the route only: something to remember and get past, never a pointless side hazard.
+                // Spikes guard a shortcut, with a longer way round: a life for a few moves, the player's call.
                 for (int k = 0; k < _spec.SpikeTraps; k++)
-                    if (!PlaceTrap(TrapKind.Spikes, route)) { failure = "spikes: no spot"; return null; }
+                    if (!PlaceSpikes(route)) { failure = "spikes: no shortcut with a way round"; return null; }
                 for (int k = 0; k < _spec.DarknessTraps; k++)
                     if (!PlaceTrap(TrapKind.Darkness, route)) { failure = "darkness: no spot"; return null; }
 
@@ -1088,6 +1089,114 @@ namespace MummyEscape.Core
                 _traps.Add(t);
                 _reserved[_level.IndexOf(t)] = true;
                 return true;
+            }
+
+            /// <summary>Above this many extra moves, the way round a spike is no longer a real option.</summary>
+            const int MaxSpikeDetour = 14;
+
+            /// <summary>
+            /// Spikes on a corridor of the route that a spike-free way bypasses, a few moves longer
+            /// (<see cref="LevelValidator.MinSpikeDetour"/>): the short way costs a life (or a disarm), the long one only time.
+            /// </summary>
+            bool PlaceSpikes(List<Cell> route)
+            {
+                var spots = new List<Cell>();
+                for (int i = 2; i < route.Count - 1; i++)
+                {
+                    var c = route[i];
+                    if (IsFree(c) && Degree(c) == 2 && FarFromTraps(c) && !spots.Contains(c)) spots.Add(c);
+                }
+                _rng.Shuffle(spots);
+                foreach (var c in spots)
+                {
+                    _level[c] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)_traps.Count };
+                    int extra = LevelValidator.SpikeDetour(_level, c);
+                    if (extra < LevelValidator.MinSpikeDetour || extra > MaxSpikeDetour) { _level[c] = Tile.Floor; continue; }
+                    _traps.Add(c);
+                    _reserved[_level.IndexOf(c)] = true;
+                    return true;
+                }
+                return DigSpikeDetour(route);
+            }
+
+            /// <summary>
+            /// No natural shortcut: dig the long way round a short stretch of the route through the rock (up to 3 maze cells),
+            /// then put the spikes on the stretch it doubles. Undone when the detour is too short or too long.
+            /// </summary>
+            bool DigSpikeDetour(List<Cell> route)
+            {
+                bool Rock(Cell c) => _level.InBounds(c) && IsInterior(c) && IsCell(c) && _level[c].Type == TileType.Wall;
+                var starts = new List<int>();
+                for (int i = 1; i < route.Count - 3; i++) if (IsCell(route[i])) starts.Add(i);
+                _rng.Shuffle(starts);
+                foreach (int ia in starts)
+                {
+                    // Plain walk on one floor ahead of the start: the stretch the detour may double.
+                    var ahead = new Dictionary<Cell, int>();
+                    for (int k = ia + 1; k < Math.Min(route.Count - 1, ia + 9); k++)
+                    {
+                        if (route[k].Floor != route[ia].Floor || route[k].Manhattan(route[k - 1]) != 1) break;
+                        if (IsCell(route[k]) && !ahead.ContainsKey(route[k])) ahead[route[k]] = k;
+                    }
+                    if (ahead.Count == 0) continue;
+
+                    var a = route[ia];
+                    var prev = new Dictionary<Cell, Cell>();
+                    var frontier = new List<Cell> { a };
+                    Cell? hit = null, last = null;
+                    // The dug way (2 tiles per maze cell) must be longer than the stretch it doubles: that is the detour.
+                    for (int depth = 1; depth <= 4 && !hit.HasValue; depth++)
+                    {
+                        var next = new List<Cell>();
+                        foreach (var c in frontier)
+                        {
+                            foreach (var d in DirExt.All)
+                            {
+                                var wall = c.Step(d);
+                                var n = wall.Step(d);
+                                if (!_level.InBounds(n) || _level[wall].Type != TileType.Wall || prev.ContainsKey(n) || n == a) continue;
+                                if (Rock(n)) { prev[n] = c; next.Add(n); continue; }
+                                if (ahead.TryGetValue(n, out int kb) && 2 * depth - (kb - ia) >= LevelValidator.MinSpikeDetour)
+                                {
+                                    hit = n; last = c;
+                                    break;
+                                }
+                            }
+                            if (hit.HasValue) break;
+                        }
+                        frontier = next;
+                    }
+                    if (!hit.HasValue) continue;
+
+                    var dug = new List<Cell>();
+                    void Dig(Cell t) { if (_level[t].Type == TileType.Wall) { _level[t] = Tile.Floor; dug.Add(t); } }
+                    var cur = hit.Value;
+                    var from = last.Value;
+                    while (true)
+                    {
+                        Dig(new Cell(cur.Floor, (cur.X + from.X) / 2, (cur.Y + from.Y) / 2));
+                        if (from == a) break;
+                        Dig(from);
+                        cur = from;
+                        from = prev[from];
+                    }
+
+                    var spots = new List<Cell>();
+                    for (int k = ia + 1; k < ahead[hit.Value]; k++)
+                        if (IsFree(route[k]) && Degree(route[k]) == 2 && FarFromTraps(route[k])) spots.Add(route[k]);
+                    _rng.Shuffle(spots);
+                    foreach (var s in spots)
+                    {
+                        _level[s] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)_traps.Count };
+                        int extra = LevelValidator.SpikeDetour(_level, s);
+                        if (extra < LevelValidator.MinSpikeDetour || extra > MaxSpikeDetour) { _level[s] = Tile.Floor; continue; }
+                        _traps.Add(s);
+                        _reserved[_level.IndexOf(s)] = true;
+                        return true;
+                    }
+                    foreach (var t in dug) _level[t] = Tile.Wall;
+                }
+                return false;
             }
 
             bool FarFromTraps(Cell c)

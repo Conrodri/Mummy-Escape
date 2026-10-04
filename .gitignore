@@ -63,3 +63,6 @@ TestResults/
 *.keystore
 signing.properties
 upload_certificate.pem
+
+# --- Module Cloud Code (server/) ---
+server/**/[Bb]in/
