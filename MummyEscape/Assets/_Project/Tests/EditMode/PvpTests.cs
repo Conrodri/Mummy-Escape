@@ -428,6 +428,118 @@ namespace MummyEscape.Tests
             Assert.AreEqual(1, store.Players["alice"].Wins);
         }
 
+        /// <summary>Alice runs first on a tomb, then <paramref name="rival"/> races her ghost.</summary>
+        static (DuelRecord alice, DuelRecord rival) PlayDuel(PvpServer server, MemoryPvpStore store, string rival)
+        {
+            store.SoloStars[rival] = 50;
+            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var level = PvpServer.Arena(first.Seed);
+            var run = Finish(first.MatchId, Stamp(level.Solution.Actions, 900));
+            run.Look = new PlayerLook { Mummy = "mummy_classic", Hat = "BAD hat!" };
+            server.SubmitRunAsync("alice", run, "Alice").Wait();
+
+            var second = server.FindDuelAsync(rival, DifficultyTable.GeneratorVersion).Result;
+            Assert.AreEqual("mummy_classic", second.Ghost.Look.Mummy, "the ghost carries its look for the VS screen");
+            Assert.IsNull(second.Ghost.Look.Hat, "unsafe ids are dropped");
+            server.SubmitRunAsync(rival, Finish(second.MatchId, Stamp(level.Solution.Actions, 700)), rival).Wait();
+            return (server.GetHistoryAsync("alice").Result.Duels.Find(d => d.MatchId == first.MatchId),
+                    server.GetHistoryAsync(rival).Result.Duels.Find(d => d.MatchId == second.MatchId));
+        }
+
+        [Test]
+        public void History_KeepsBothRuns_AndCompletesTheFirstRunnersDuel()
+        {
+            var (server, store) = NewServer();
+            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var level = PvpServer.Arena(first.Seed);
+            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level.Solution.Actions, 900)), "Alice").Wait();
+            var open = server.GetHistoryAsync("alice").Result.Duels.Single();
+            Assert.IsFalse(open.Resolved);
+            Assert.IsNull(open.Rival);
+            Assert.AreEqual(level.Solution.Actions.Count, open.Me.Inputs.Count);
+
+            var second = server.FindDuelAsync("bob", DifficultyTable.GeneratorVersion).Result;
+            server.SubmitRunAsync("bob", Finish(second.MatchId, Stamp(level.Solution.Actions, 700)), "Bob").Wait();
+
+            var alice = server.GetHistoryAsync("alice").Result.Duels.Single();
+            Assert.IsTrue(alice.Resolved, "racing her ghost completes Alice's duel");
+            Assert.AreEqual(DuelResult.Loss, alice.Result);
+            Assert.AreEqual("Bob", alice.Rival.PlayerName);
+            Assert.Less(alice.EloAfter, alice.EloBefore);
+            var bob = server.GetHistoryAsync("bob").Result.Duels.Single();
+            Assert.AreEqual(DuelResult.Win, bob.Result);
+            Assert.AreEqual(first.Seed, bob.Seed);
+            Assert.AreEqual("Alice", bob.Rival.PlayerName);
+
+            // Both runs replay to their verdict on the same tomb.
+            foreach (var run in new[] { bob.Me, bob.Rival })
+            {
+                var replay = new RunReplay(PvpServer.Arena(bob.Seed), run.Inputs);
+                replay.AdvanceTo(int.MaxValue);
+                Assert.AreEqual(SessionStatus.Won, replay.Session.Status);
+            }
+        }
+
+        [Test]
+        public void History_KeepsTheTenLatestDuels()
+        {
+            var history = new List<DuelRecord>();
+            for (int i = 0; i < 14; i++) PvpServer.Remember(history, new DuelRecord { MatchId = "m" + i, PlayedAtUnixMs = 1000 + i });
+            Assert.AreEqual(PvpConfig.HistorySize, history.Count);
+            Assert.AreEqual("m13", history[0].MatchId);
+            Assert.AreEqual("m4", history[9].MatchId);
+            // Completing an open duel keeps its place.
+            PvpServer.Remember(history, new DuelRecord { MatchId = "m8", PlayedAtUnixMs = 1008, Resolved = true });
+            Assert.AreEqual(10, history.Count);
+            Assert.IsTrue(history[5].Resolved);
+        }
+
+        [Test]
+        public void Report_FilesTheDuelInADossier_FlaggedAfterThreeReporters()
+        {
+            var (server, store) = NewServer();
+            var (alice, bob) = PlayDuel(server, store, "bob");
+            Assert.AreEqual("UNKNOWN_DUEL", server.ReportCheatAsync("bob", "nope").Result.Error);
+            Assert.IsTrue(server.ReportCheatAsync("bob", bob.MatchId).Result.Ok);
+            Assert.AreEqual("ALREADY_REPORTED", server.ReportCheatAsync("bob", bob.MatchId).Result.Error);
+            Assert.IsTrue(server.GetHistoryAsync("bob").Result.Duels.Single().Reported);
+
+            var dossier = store.Dossiers["alice"];
+            Assert.AreEqual(1, dossier.Reports.Count);
+            Assert.AreEqual(bob.Seed, dossier.Reports[0].Seed);
+            Assert.AreEqual("Alice", dossier.Reports[0].Suspect.PlayerName);
+            Assert.IsFalse(dossier.Flagged);
+
+            // The same reporter again on another duel: still one reporter.
+            var (_, bob2) = PlayDuel(server, store, "bob");
+            server.ReportCheatAsync("bob", bob2.MatchId).Wait();
+            Assert.AreEqual(1, store.Dossiers["alice"].Reporters.Count);
+            Assert.IsFalse(store.Dossiers["alice"].Flagged);
+
+            foreach (var other in new[] { "carol", "dan" })
+            {
+                var (_, theirs) = PlayDuel(server, store, other);
+                Assert.IsTrue(server.ReportCheatAsync(other, theirs.MatchId).Result.Ok);
+            }
+            Assert.AreEqual(3, store.Dossiers["alice"].Reporters.Count);
+            Assert.IsTrue(store.Dossiers["alice"].Flagged, "three different players: to be checked");
+            Assert.IsFalse(store.Dossiers.ContainsKey("bob"));
+            Assert.AreEqual("alice", alice.Me.PlayerId);
+        }
+
+        [Test]
+        public void Report_LimitedPerDay_AndNeverWithoutARival()
+        {
+            var (server, store) = NewServer();
+            store.Players["bob"] = new PlayerPvpData { Day = "2026-10-04", ReportsToday = PvpConfig.MaxReportsPerDay };
+            var (_, bob) = PlayDuel(server, store, "bob");
+            Assert.AreEqual("LIMIT", server.ReportCheatAsync("bob", bob.MatchId).Result.Error);
+            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var level = PvpServer.Arena(first.Seed);
+            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level.Solution.Actions, 900)), "Alice").Wait();
+            Assert.AreEqual("NO_RIVAL", server.ReportCheatAsync("alice", first.MatchId).Result.Error);
+        }
+
         [Test]
         public void Server_SearchingAgainKeepsTheSameDuel()
         {

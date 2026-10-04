@@ -14,12 +14,14 @@ namespace MummyEscape.World
         const float MaxAlpha = 0.55f;
 
         SpriteRenderer _sprite;
+        ArtLibrary _art;
         Vector3 _target;
         bool _visible;
         float _alpha;
 
         public void Init(ArtLibrary art, Material unlit)
         {
+            _art = art;
             _sprite = new GameObject("Body").AddComponent<SpriteRenderer>();
             _sprite.transform.SetParent(transform, false);
             if (unlit != null) _sprite.sharedMaterial = unlit; // glows faintly whatever the light
@@ -28,10 +30,13 @@ namespace MummyEscape.World
             Hide();
         }
 
+        /// <summary>Dresses the ghost in its runner's outfit (still pale and see-through).</summary>
+        public void SetLook(Loadout look) => _sprite.sprite = _art.Mummy(look);
+
         public void Snap(Cell c)
         {
             _target = MazeView.CellToWorld(c);
-            transform.position = _target;
+            transform.localPosition = _target;
         }
 
         /// <summary>Where the ghost stands now, and whether the player can see that tile.</summary>
@@ -39,8 +44,8 @@ namespace MummyEscape.World
         {
             var to = MazeView.CellToWorld(c);
             // A far jump (portal, fall, other floor) is not walked: the ghost fades out and reappears there.
-            if ((to - transform.position).sqrMagnitude > 2.5f * 2.5f && _alpha > 0.01f) _alpha = 0f;
-            if ((to - transform.position).sqrMagnitude > 2.5f * 2.5f) transform.position = to;
+            if ((to - transform.localPosition).sqrMagnitude > 2.5f * 2.5f && _alpha > 0.01f) _alpha = 0f;
+            if ((to - transform.localPosition).sqrMagnitude > 2.5f * 2.5f) transform.localPosition = to;
             if (to.x < _target.x - 0.01f) _sprite.flipX = true;
             else if (to.x > _target.x + 0.01f) _sprite.flipX = false;
             _target = to;
@@ -58,7 +63,7 @@ namespace MummyEscape.World
 
         void Update()
         {
-            transform.position = Vector3.MoveTowards(transform.position, _target, Time.deltaTime * 9f);
+            transform.localPosition = Vector3.MoveTowards(transform.localPosition, _target, Time.deltaTime * 9f);
             _alpha = Mathf.MoveTowards(_alpha, _visible ? MaxAlpha : 0f, Time.deltaTime * 3f);
             float wave = 1f + Mathf.Sin(Time.time * 2.4f) * 0.08f;
             _sprite.color = new Color(Tint.r, Tint.g, Tint.b, _alpha * wave);

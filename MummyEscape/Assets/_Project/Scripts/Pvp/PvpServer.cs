@@ -33,6 +33,11 @@ namespace MummyEscape.Pvp
         Task<PvpBoardPage> GetCachedBoardAsync(string season);
         /// <summary>Null efface le cache de cette saison.</summary>
         Task SetCachedBoardAsync(string season, PvpBoardPage board);
+        /// <summary>Derniers duels du joueur, du plus récent au plus ancien : lus, modifiés par <paramref name="mutate"/> puis réécrits
+        /// (lecture seule si <paramref name="mutate"/> est null).</summary>
+        Task<List<DuelRecord>> UpdateHistoryAsync(string playerId, Action<List<DuelRecord>> mutate);
+        /// <summary>Dossier de triche d'un joueur (neuf si absent), dans un espace que les joueurs ne lisent pas : modifié puis réécrit.</summary>
+        Task<CheatDossier> UpdateDossierAsync(string playerId, Action<CheatDossier> mutate);
     }
 
     /// <summary>
@@ -134,6 +139,7 @@ namespace MummyEscape.Pvp
                 error = "INVALID_RUN";
                 verified = new RunSubmission { MatchId = pending.MatchId, Outcome = RunOutcome.Abandoned };
             }
+            verified.Look = PlayerLook.Sanitize(run.Look);
             await _store.SetPendingAsync(me, null);
             var response = await ResolveAsync(me, pending, verified, playerName);
             response.Error = error;
@@ -168,7 +174,15 @@ namespace MummyEscape.Pvp
                         Progress = run.Progress,
                         Inputs = run.Inputs,
                         CreatedAtUnixMs = NowMs,
+                        Look = run.Look,
                     }, NowMs);
+                    // Le duel reste ouvert dans l'historique : complété quand quelqu'un affrontera ce fantôme.
+                    await RecordAsync(me, h => Remember(h, new DuelRecord
+                    {
+                        MatchId = pending.MatchId, Seed = pending.Seed, GeneratorVersion = DifficultyTable.GeneratorVersion,
+                        PlayedAtUnixMs = NowMs, EloBefore = data.Elo, EloAfter = data.Elo,
+                        Me = RunOf(me, playerName, data.Elo, run),
+                    }));
                 }
                 return new SubmitRunResponse
                 {
@@ -198,6 +212,26 @@ namespace MummyEscape.Pvp
             await _store.SubmitEloAsync(me, mine.Elo);
             await _store.SubmitEloAsync(ghost.PlayerId, theirs.Elo);
             await ForgetBoardIfChangedAsync(Math.Max(mine.Elo, theirs.Elo), me, ghost.PlayerId);
+
+            // Le duel dans l'historique des deux joueurs, de quoi le revoir des deux points de vue.
+            var myRun = RunOf(me, playerName, myEloBefore, run);
+            var ghostRun = DuelRun.Of(ghost);
+            await RecordAsync(me, h => Remember(h, new DuelRecord
+            {
+                MatchId = pending.MatchId, Seed = pending.Seed, GeneratorVersion = ghost.GeneratorVersion, PlayedAtUnixMs = NowMs,
+                Resolved = true, Result = resultForMe, EloBefore = myEloBefore, EloAfter = mine.Elo, Me = myRun, Rival = ghostRun,
+            }));
+            await RecordAsync(ghost.PlayerId, h =>
+            {
+                var open = h.Find(r => r.MatchId == ghost.GhostId);
+                Remember(h, new DuelRecord
+                {
+                    MatchId = ghost.GhostId, Seed = ghost.Seed, GeneratorVersion = ghost.GeneratorVersion,
+                    PlayedAtUnixMs = open?.PlayedAtUnixMs ?? ghost.CreatedAtUnixMs, Resolved = true,
+                    Result = DuelResolver.Invert(resultForMe), EloBefore = oppEloBefore, EloAfter = theirs.Elo,
+                    Me = open?.Me ?? ghostRun, Rival = myRun,
+                });
+            });
 
             return new SubmitRunResponse
             {
@@ -256,6 +290,83 @@ namespace MummyEscape.Pvp
             response.Seals = data.Seals;
             response.UnlockedRewards = data.UnlockedRewards;
             return response;
+        }
+
+        // ------------------------------------------------------------------ replays and reports
+
+        /// <summary>Les derniers duels du joueur (<see cref="PvpConfig.HistorySize"/> au plus), les deux courses de chacun.</summary>
+        public async Task<DuelHistoryResponse> GetHistoryAsync(string me) =>
+            new DuelHistoryResponse { Duels = await _store.UpdateHistoryAsync(me, null) ?? new List<DuelRecord>() };
+
+        /// <summary>
+        /// Signale l'adversaire d'un duel de l'historique pour triche. Le serveur copie le duel en entier (les deux courses)
+        /// dans le dossier du joueur signalé, qu'un humain examine ; plusieurs joueurs différents le marquent « à vérifier ».
+        /// Rien n'est sanctionné automatiquement.
+        /// </summary>
+        public async Task<ReportResponse> ReportCheatAsync(string me, string matchId)
+        {
+            var duel = (await _store.UpdateHistoryAsync(me, null))?.Find(r => r.MatchId == matchId);
+            if (duel == null) return new ReportResponse { Error = "UNKNOWN_DUEL" };
+            if (duel.Rival == null || string.IsNullOrEmpty(duel.Rival.PlayerId) || duel.Rival.PlayerId == me) return new ReportResponse { Error = "NO_RIVAL" };
+            if (duel.Reported) return new ReportResponse { Error = "ALREADY_REPORTED" };
+
+            bool allowed = false;
+            await Update(me, d =>
+            {
+                allowed = d.ReportsToday < PvpConfig.MaxReportsPerDay;
+                if (allowed) d.ReportsToday++;
+            });
+            if (!allowed) return new ReportResponse { Error = "LIMIT" };
+
+            long now = NowMs;
+            await _store.UpdateDossierAsync(duel.Rival.PlayerId, f =>
+            {
+                f.PlayerId = duel.Rival.PlayerId;
+                f.PlayerName = duel.Rival.PlayerName;
+                if (f.Reporters == null) f.Reporters = new List<string>();
+                if (f.Reports == null) f.Reports = new List<CheatReport>();
+                if (!f.Reporters.Contains(me)) f.Reporters.Add(me);
+                f.Reports.RemoveAll(r => r.MatchId == matchId && r.ReporterId == me);
+                f.Reports.Add(new CheatReport
+                {
+                    MatchId = matchId, ReporterId = me, ReportedAtUnixMs = now, Seed = duel.Seed, GeneratorVersion = duel.GeneratorVersion,
+                    Suspect = duel.Rival, Reporter = duel.Me,
+                });
+                if (f.Reports.Count > PvpConfig.MaxReportsPerDossier) f.Reports.RemoveRange(0, f.Reports.Count - PvpConfig.MaxReportsPerDossier);
+                f.TotalReports++;
+                f.LastReportUnixMs = now;
+                f.Flagged = f.Reporters.Count >= PvpConfig.ReportersToFlag;
+            });
+            await RecordAsync(me, h =>
+            {
+                var r = h.Find(x => x.MatchId == matchId);
+                if (r != null) r.Reported = true;
+            });
+            return new ReportResponse { Ok = true };
+        }
+
+        /// <summary>Range un duel dans un historique. Le duel est déjà joué et compté : un historique illisible n'y change rien.</summary>
+        async Task RecordAsync(string playerId, Action<List<DuelRecord>> mutate)
+        {
+            try { await _store.UpdateHistoryAsync(playerId, mutate); }
+            catch { /* replay perdu, verdict et Elo intacts */ }
+        }
+
+        static DuelRun RunOf(string playerId, string playerName, int elo, RunSubmission run) => new DuelRun
+        {
+            PlayerId = playerId, PlayerName = playerName, Look = run.Look, Elo = elo,
+            Outcome = run.Outcome, TimeMs = run.TimeMs, Progress = run.Progress, Inputs = run.Inputs ?? new List<RunInput>(),
+        };
+
+        /// <summary>Range un duel dans l'historique (il remplace celui du même identifiant), du plus récent au plus ancien ; les plus
+        /// anciens au-delà de <see cref="PvpConfig.HistorySize"/> sont oubliés.</summary>
+        public static void Remember(List<DuelRecord> history, DuelRecord record)
+        {
+            history.RemoveAll(r => r == null || r.MatchId == record.MatchId);
+            history.Add(record);
+            var sorted = history.OrderByDescending(r => r.PlayedAtUnixMs).Take(PvpConfig.HistorySize).ToList();
+            history.Clear();
+            history.AddRange(sorted);
         }
 
         // ------------------------------------------------------------------ ranking

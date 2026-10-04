@@ -95,39 +95,39 @@ namespace MummyEscape.World
 
         public void Place(Cell c)
         {
-            transform.position = MazeView.CellToWorld(c);
+            transform.localPosition = MazeView.CellToWorld(c);
             _body.localScale = Vector3.one;
             _sprite.color = Color.white;
         }
 
         public IEnumerator WalkTo(Cell c, float duration = 0.13f)
         {
-            Vector3 from = transform.position, to = MazeView.CellToWorld(c);
+            Vector3 from = transform.localPosition, to = MazeView.CellToWorld(c);
             if (to.x < from.x - 0.01f) _sprite.flipX = true;
             else if (to.x > from.x + 0.01f) _sprite.flipX = false;
             for (float t = 0; t < 1f; t += Time.deltaTime / duration)
             {
                 float e = 1f - (1f - t) * (1f - t);
-                transform.position = Vector3.Lerp(from, to, e);
+                transform.localPosition = Vector3.Lerp(from, to, e);
                 _body.localPosition = new Vector3(0, Mathf.Sin(t * Mathf.PI) * 0.12f, 0);
                 yield return null;
             }
-            transform.position = to;
+            transform.localPosition = to;
             _body.localPosition = Vector3.zero;
         }
 
         /// <summary>Carried by a current: glides without walking, slightly tilted.</summary>
         public IEnumerator Slide(Cell c, float duration = 0.09f)
         {
-            Vector3 from = transform.position, to = MazeView.CellToWorld(c);
+            Vector3 from = transform.localPosition, to = MazeView.CellToWorld(c);
             float tilt = to.x < from.x - 0.01f ? 8f : to.x > from.x + 0.01f ? -8f : 0f;
             for (float t = 0; t < 1f; t += Time.deltaTime / duration)
             {
-                transform.position = Vector3.Lerp(from, to, t);
+                transform.localPosition = Vector3.Lerp(from, to, t);
                 _body.localRotation = Quaternion.Euler(0f, 0f, tilt + Mathf.Sin(Time.time * 30f) * 3f);
                 yield return null;
             }
-            transform.position = to;
+            transform.localPosition = to;
             _body.localRotation = Quaternion.identity;
         }
 

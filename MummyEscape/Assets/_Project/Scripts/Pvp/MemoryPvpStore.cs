@@ -19,6 +19,10 @@ namespace MummyEscape.Pvp
         public readonly Dictionary<string, int> LastBoard = new Dictionary<string, int>();
         /// <summary>Classements vérifiés gardés par le serveur, par saison.</summary>
         public readonly Dictionary<string, PvpBoardPage> BoardCache = new Dictionary<string, PvpBoardPage>();
+        /// <summary>Derniers duels de chaque joueur.</summary>
+        public readonly Dictionary<string, List<DuelRecord>> History = new Dictionary<string, List<DuelRecord>>();
+        /// <summary>Dossiers de triche, par joueur signalé.</summary>
+        public readonly Dictionary<string, CheatDossier> Dossiers = new Dictionary<string, CheatDossier>();
         /// <summary>Appelé quand rien n'attend dans la file : un adversaire simulé (mode hors ligne), ou null.</summary>
         public Func<string, int, GhostRun> MakeGhost;
 
@@ -91,6 +95,20 @@ namespace MummyEscape.Pvp
         {
             if (board == null) BoardCache.Remove(season); else BoardCache[season] = board;
             return Task.CompletedTask;
+        }
+
+        public Task<List<DuelRecord>> UpdateHistoryAsync(string playerId, Action<List<DuelRecord>> mutate)
+        {
+            if (!History.TryGetValue(playerId, out var h)) History[playerId] = h = new List<DuelRecord>();
+            mutate?.Invoke(h);
+            return Task.FromResult(h);
+        }
+
+        public Task<CheatDossier> UpdateDossierAsync(string playerId, Action<CheatDossier> mutate)
+        {
+            if (!Dossiers.TryGetValue(playerId, out var f)) Dossiers[playerId] = f = new CheatDossier { PlayerId = playerId };
+            mutate?.Invoke(f);
+            return Task.FromResult(f);
         }
     }
 }

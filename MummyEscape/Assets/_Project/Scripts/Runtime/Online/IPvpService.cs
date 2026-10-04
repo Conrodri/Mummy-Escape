@@ -22,6 +22,10 @@ namespace MummyEscape.Online
         Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit);
         /// <summary>Publishes the solo star count, which unlocks the duels (<see cref="PvpConfig.RequiredSoloStars"/>).</summary>
         Task SyncSoloStarsAsync(int stars);
+        /// <summary>The player's last duels (<see cref="PvpConfig.HistorySize"/>), both runs of each: the replays. Null on failure.</summary>
+        Task<DuelHistoryResponse> GetHistoryAsync();
+        /// <summary>Reports the rival of a duel of the history for cheating: the server files the whole duel for review.</summary>
+        Task<ReportResponse> ReportCheatAsync(string matchId);
     }
 
     public static class PvpServiceFactory

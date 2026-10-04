@@ -31,6 +31,8 @@ namespace MummyEscape.App
         public ScreenGuard Guard { get; private set; }
         public GameController Game { get; private set; }
         public UIRouter UI { get; private set; }
+        /// <summary>Lit sprite material of the world (tiles, mummies), for views built later (duel replays).</summary>
+        public Material SpriteMaterial { get; private set; }
 
         public static GameApp Create(Material spriteMaterial, Material unlitMaterial, AudioClip music)
         {
@@ -52,6 +54,7 @@ namespace MummyEscape.App
                 if (shader != null) spriteMaterial = new Material(shader);
             }
 
+            SpriteMaterial = spriteMaterial;
             Settings = new SettingsService();
             Settings.Load();
             Loc.Apply(Settings.Language); // before any text is built

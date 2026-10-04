@@ -145,7 +145,11 @@ namespace MummyEscape.Game
             if (token != _loadToken || this == null) return;
             match.Begin(level);
             Setup(level);
-            if (match.HasGhost) _ghost.Snap(level.Start);
+            if (match.HasGhost)
+            {
+                _ghost.SetLook(PvpSkins.Loadout(match.Ghost.Look));
+                _ghost.Snap(level.Start);
+            }
             LevelStarted?.Invoke();
             Changed?.Invoke();
             StartCoroutine(PreviewRoutine());
@@ -164,7 +168,9 @@ namespace MummyEscape.Game
             match.Over = true;
             _input.Enabled = false;
             _buffered = null;
-            DuelEnded?.Invoke(match, match.BuildRun(outcome));
+            var run = match.BuildRun(outcome);
+            run.Look = PvpSkins.Look(_app.Save.Loadout);
+            DuelEnded?.Invoke(match, run);
         }
 
         void UpdateDuel()

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace MummyEscape.Services
 {
-    public enum Sfx { Step, Bump, Button, Door, Spikes, Darkness, Disarm, Teleport, Curse, Fall, Climb, Win, Death, Click, Coin, Splash, Crumble, Laser, Fire, Mirror, Turn }
+    public enum Sfx { Step, Bump, Button, Door, Spikes, Darkness, Disarm, Teleport, Curse, Fall, Climb, Win, Death, Click, Coin, Splash, Crumble, Laser, Fire, Mirror, Turn, Versus }
 
     /// <summary>
     /// Music + sound effects. Ships with synthesized placeholder sounds so the game is audible from day one;
@@ -194,6 +194,9 @@ namespace MummyEscape.Services
                     case Sfx.Fire: return Build("fire", 0.8f, (t, i) => Noise(i / 2) * Env(t, 0.04f, 0.75f) * (0.7f + 0.3f * Noise(i / 700)) * 0.6f + Sine(80, t) * Env(t, 0.02f, 0.5f) * 0.35f);
                     case Sfx.Mirror: return Build("mirror", 0.9f, (t, i) => (Sine(880 - 440 * t, t) * 0.4f + Sine(660 + 440 * t, t) * 0.4f) * Env(t, 0.02f, 0.85f) * 0.35f);
                     case Sfx.Turn: return Build("turn", 1.0f, (t, i) => Noise(i / 5) * Env(t, 0.05f, 0.9f) * 0.45f + Sine(55 + 30 * t, t) * Env(t, 0.05f, 0.9f) * 0.55f);
+                    // A rush of air, then a gong as the two names clash (duel VS screen).
+                    case Sfx.Versus: return Build("versus", 1.6f, (t, i) => Noise(i / 2) * Env(t, 0.28f, 0.06f) * 0.3f + Noise(i) * Env(t - 0.34f, 0.001f, 0.09f) * 0.55f
+                                                                              + (Sine(98f, t) + Sine(147f, t) * 0.6f + Sine(196.5f, t) * 0.35f) * Env(t - 0.34f, 0.004f, 1.2f) * 0.4f);
                 }
                 return Build("silence", 0.05f, (t, i) => 0f);
             }

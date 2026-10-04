@@ -19,7 +19,8 @@ namespace MummyEscape.UI.Screens
 
         Text _title, _subtitle, _me, _rival, _elo, _note;
         RectTransform _rewards;
-        Button _again, _menu, _retry;
+        Button _again, _menu, _retry, _watch;
+        DuelRecord _record;
         PvpMatch _match;
         RunSubmission _run;
         bool _sending;
@@ -56,6 +57,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_retry, 100);
             _again = UIKit.Button(panel.transform, "Nouveau duel", Again, 40, ButtonStyle.Primary);
             UIKit.Size(_again, 112);
+            _watch = UIKit.Button(panel.transform, "Revoir le duel", Watch, 34);
+            UIKit.Size(_watch, 92);
             _menu = UIKit.Button(panel.transform, "Retour aux duels", Menu, UIKit.TextSize, ButtonStyle.Ghost);
             UIKit.Size(_menu, 76);
         }
@@ -75,6 +78,7 @@ namespace MummyEscape.UI.Screens
         {
             _match = match;
             _run = run;
+            _record = null;
             string rival = match.HasGhost ? match.Ghost.PlayerName : null;
             _subtitle.text = rival != null ? Loc.F("contre {0} · Elo {1}", rival, match.Ghost.Elo) : Loc.T("Premier sur ce tombeau");
             _me.text = "<b>" + Loc.T("Toi") + "</b>  ·  " + OutcomeText(run.Outcome, run.TimeMs, run.Progress);
@@ -153,12 +157,44 @@ namespace MummyEscape.UI.Screens
                 UIKit.Chip(_rewards, UISprites.Seal, "+" + r.SealsGained, UIKit.Turquoise, 60);
                 _rewards.gameObject.SetActive(true);
             }
+            Keep(r);
             App.UpdatePvpWallet(r.Seals, null);
             SetButtons(true, false);
         }
 
+        /// <summary>Saves the duel on the phone right away (the server's copy replaces it on the next visit to the duels).</summary>
+        void Keep(SubmitRunResponse r)
+        {
+            // A forfeit before anyone raced the tomb leaves nothing to watch.
+            if (_run.Outcome == RunOutcome.Abandoned && !_match.HasGhost) return;
+            _record = new DuelRecord
+            {
+                MatchId = _run.MatchId, Seed = _match.Seed, GeneratorVersion = DifficultyTable.GeneratorVersion,
+                PlayedAtUnixMs = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Resolved = r.Resolved, Result = r.Result, EloBefore = r.EloBefore, EloAfter = r.EloAfter,
+                Me = new DuelRun
+                {
+                    PlayerName = App.Online.PlayerName, Look = _run.Look, Elo = r.EloBefore, Outcome = _run.Outcome,
+                    TimeMs = _run.TimeMs, Progress = _run.Progress, Inputs = _run.Inputs,
+                },
+                Rival = DuelRun.Of(_match.Ghost),
+            };
+            Online.ReplayStore.Add(_record);
+        }
+
+        void Watch()
+        {
+            var record = _record;
+            if (record == null) return;
+            App.Game.Abandon();
+            Router.Reset<MainMenuScreen>();
+            Router.Open<PvpScreen>();
+            Router.Open<ReplayScreen>().Show(record);
+        }
+
         void SetButtons(bool done, bool canRetry)
         {
+            _watch.gameObject.SetActive(done && !canRetry && _record != null);
             _retry.gameObject.SetActive(canRetry);
             _again.gameObject.SetActive(!canRetry);
             _again.interactable = done;
@@ -183,7 +219,7 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             Router.Close(this);
-            _ = App.Game.StartDuel(new PvpMatch(duel));
+            PvpScreen.Versus(Router, duel);
         }
 
         void Menu()

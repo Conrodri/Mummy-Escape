@@ -23,6 +23,8 @@ namespace MummyEscape.Pvp.Server
         public const string PendingDuelKey = "pvp_pending";
         public const string QueueCustomId = "pvp_queue";
         public const string BoardCustomId = "pvp_board";              // classements vérifiés, en cache
+        public const string HistoryKey = "pvp_history";               // derniers duels du joueur (protégé)
+        public const string ReportsCustomId = "pvp_reports";          // dossiers de triche, une clé par joueur signalé
 
         const int MaxWriteRetries = 4;
 
@@ -99,6 +101,30 @@ namespace MummyEscape.Pvp.Server
             var res = await _api.CloudSaveData.GetItemsAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, playerId, new List<string> { SoloStarsKey });
             var item = res.Data.Results.FirstOrDefault(i => i.Key == SoloStarsKey);
             return item?.Value != null && int.TryParse(item.Value.ToString(), out int stars) ? stars : 0;
+        }
+
+        public async Task<List<DuelRecord>> UpdateHistoryAsync(string playerId, Action<List<DuelRecord>> mutate)
+        {
+            Exception last = null;
+            for (int attempt = 0; attempt < MaxWriteRetries; attempt++)
+            {
+                var (history, writeLock) = await GetProtectedAsync<List<DuelRecord>>(playerId, HistoryKey);
+                history ??= new List<DuelRecord>();
+                if (mutate == null) return history;
+                mutate(history);
+                try
+                {
+                    await SetProtectedAsync(playerId, HistoryKey, history, writeLock);
+                    return history;
+                }
+                catch (Exception e)
+                {
+                    last = e;
+                    await Task.Delay(50 * (attempt + 1));
+                }
+            }
+            _logger.LogWarning("Historique de {player} non enregistré : {msg}", playerId, last?.Message);
+            return new List<DuelRecord>();
         }
 
         // ------------------------------------------------------------------ ghost queue (custom items)
@@ -267,6 +293,33 @@ namespace MummyEscape.Pvp.Server
                     if (data != null) found[id] = data;
             }
             return found;
+        }
+
+        // ------------------------------------------------------------------ cheat reports (custom items)
+
+        public async Task<CheatDossier> UpdateDossierAsync(string playerId, Action<CheatDossier> mutate)
+        {
+            Exception last = null;
+            for (int attempt = 0; attempt < MaxWriteRetries; attempt++)
+            {
+                var res = await _api.CloudSaveData.GetPrivateCustomItemsAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, ReportsCustomId, new List<string> { playerId });
+                var item = res.Data.Results.FirstOrDefault(i => i.Key == playerId);
+                var dossier = FromItem<CheatDossier>(item?.Value) ?? new CheatDossier { PlayerId = playerId };
+                mutate?.Invoke(dossier);
+                var body = item?.WriteLock == null ? new SetItemBody(playerId, ToToken(dossier)) : new SetItemBody(playerId, ToToken(dossier), item.WriteLock);
+                try
+                {
+                    await _api.CloudSaveData.SetPrivateCustomItemAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, ReportsCustomId, body);
+                    if (dossier.Flagged) _logger.LogWarning("Joueur {player} à vérifier : {n} signalements de joueurs différents", playerId, dossier.Reporters.Count);
+                    return dossier;
+                }
+                catch (Exception e)
+                {
+                    last = e;
+                    await Task.Delay(50 * (attempt + 1));
+                }
+            }
+            throw new Exception("Signalement non enregistré pour " + playerId, last);
         }
 
         // ------------------------------------------------------------------ verified ranking cache (custom items)

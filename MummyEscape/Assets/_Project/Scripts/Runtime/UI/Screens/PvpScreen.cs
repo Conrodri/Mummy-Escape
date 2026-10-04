@@ -18,7 +18,8 @@ namespace MummyEscape.UI.Screens
         Text _league, _elo, _record, _season, _info;
         Text _seals;
         Button _find, _claim;
-        RectTransform _shop;
+        RectTransform _shop, _history;
+        Text _historyHint;
         ScrollRect _scroll;
         bool _busy;
         int _request;
@@ -84,6 +85,13 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(_claim.GetComponentInChildren<Text>(), 18);
             UIKit.Size(_claim, -1, -1, 1);
 
+            UIKit.SectionTitle(list, "Derniers duels");
+            _historyHint = UIKit.Label(list, "", 24, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.FitText(_historyHint, 16);
+            UIKit.Size(_historyHint, 60);
+            _history = UIKit.Rect("History", list); // noloc
+            UIKit.Column(_history, 12, 0);
+
             UIKit.SectionTitle(list, "Boutique des sceaux");
             var hint = UIKit.Label(list, "Les sceaux de Maât se gagnent en duel (1re victoire du jour, coffre quotidien). Chaque article demande d'avoir atteint sa ligue.", 24, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(hint, 16);
@@ -100,6 +108,7 @@ namespace MummyEscape.UI.Screens
             _scroll.verticalNormalizedPosition = 1f;
             Show(App.PvpProfile);
             Reload();
+            FillHistory();
         }
 
         async void Reload()
@@ -122,6 +131,13 @@ namespace MummyEscape.UI.Screens
             }
             if (!_busy) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : adversaires simulés") + "</color>" : "";
             Show(profile);
+            var history = await App.Pvp.GetHistoryAsync();
+            if (request != _request || this == null) return;
+            if (history?.Duels != null)
+            {
+                Online.ReplayStore.Merge(history.Duels);
+                FillHistory();
+            }
         }
 
         void Show(PvpProfileResponse profile)
@@ -165,6 +181,51 @@ namespace MummyEscape.UI.Screens
             _claim.interactable = !_busy;
 
             FillShop(d);
+        }
+
+        /// <summary>The last duels kept on the phone, each to watch again from both sides.</summary>
+        void FillHistory()
+        {
+            UIKit.ClearChildren(_history);
+            var duels = Online.ReplayStore.Duels;
+            _historyHint.text = duels.Count == 0 ? Loc.T("Tes 10 derniers duels apparaîtront ici, à revoir des deux points de vue.")
+                                                 : Loc.T("Les 10 derniers, à revoir des deux points de vue. Les plus anciens laissent la place aux nouveaux.");
+            foreach (var duel in duels)
+            {
+                var d = duel;
+                UIKit.ListItem(_history, 132, () => Watch(d), out var h);
+                var badge = UIKit.Image(h.transform, UISprites.Circle, ResultColor(d), false, "Result"); // noloc
+                UIKit.Size(badge, 84, 84, 0);
+                var letter = UIKit.Title(badge.transform, !d.Resolved ? "…" : d.Result == DuelResult.Win ? Loc.T("V") : d.Result == DuelResult.Draw ? Loc.T("N") : Loc.T("D"), 44, UIKit.Ink); // noloc
+                UIKit.Stretch(letter.rectTransform);
+
+                var col = UIKit.Rect("Text", h.transform); // noloc
+                UIKit.Size(col, -1, -1, 1);
+                UIKit.Column(col, 2, 0, TextAnchor.MiddleLeft);
+                string rival = d.Rival == null ? Loc.T("En attente d'un adversaire")
+                             : Loc.F("contre {0}", string.IsNullOrEmpty(d.Rival.PlayerName) ? Loc.T("Momie anonyme") : d.Rival.PlayerName);
+                var name = UIKit.Label(col, rival, 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+                UIKit.FitText(name, 20);
+                UIKit.Size(name, 44);
+                int delta = d.EloAfter - d.EloBefore;
+                string when = System.DateTimeOffset.FromUnixTimeMilliseconds(d.PlayedAtUnixMs).ToLocalTime().ToString("dd/MM HH:mm"); // noloc
+                string elo = d.Resolved ? "  ·  Elo " + (delta > 0 ? "+" : "") + delta : ""; // noloc
+                var sub = UIKit.Label(col, when + elo + (d.Reported ? "  ·  " + Loc.T("signalé") : ""), 24, UIKit.Dim, TextAnchor.MiddleLeft);
+                UIKit.FitText(sub, 16);
+                UIKit.Size(sub, 34);
+
+                var play = UIKit.IconButton(h.transform, UISprites.Play, () => Watch(d), 84);
+                play.interactable = d.Me != null;
+            }
+        }
+
+        static Color ResultColor(DuelRecord d) =>
+            !d.Resolved ? UIKit.Dim : d.Result == DuelResult.Win ? UIKit.Gold : d.Result == DuelResult.Draw ? UIKit.Sand : UIKit.Danger;
+
+        void Watch(DuelRecord d)
+        {
+            if (_busy || d.Me == null) return;
+            Router.Open<ReplayScreen>().Show(d);
         }
 
         static string Capitalized(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
@@ -273,8 +334,19 @@ namespace MummyEscape.UI.Screens
                 Show(App.PvpProfile);
                 return;
             }
-            Router.Open<HudScreen>();
-            _ = App.Game.StartDuel(new PvpMatch(duel));
+            Versus(Router, duel);
+        }
+
+        /// <summary>The VS screen while the tomb is drawn, then the run (HUD, preview).</summary>
+        public static void Versus(UIRouter router, FindDuelResponse duel)
+        {
+            var app = MummyEscape.App.GameApp.I;
+            _ = System.Threading.Tasks.Task.Run(() => PvpServer.Arena(duel.Seed));
+            router.Open<VsScreen>().Show(app.Save.Loadout, app.Online.PlayerName, duel.MyElo, duel.Ghost, () =>
+            {
+                router.Open<HudScreen>();
+                _ = app.Game.StartDuel(new PvpMatch(duel));
+            });
         }
 
         /// <summary>The server's error codes, in words.</summary>

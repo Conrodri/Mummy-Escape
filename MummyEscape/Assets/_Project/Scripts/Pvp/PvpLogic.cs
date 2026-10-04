@@ -225,6 +225,7 @@ namespace MummyEscape.Pvp
                 d.DuelsToday = 0;
                 d.CountedDuelsToday = 0;
                 d.WinsToday = 0;
+                d.ReportsToday = 0;
                 d.DailyChestGranted = false;
                 d.OpponentsToday = new Dictionary<string, int>();
             }

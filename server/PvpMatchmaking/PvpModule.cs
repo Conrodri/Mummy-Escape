@@ -52,5 +52,13 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("GetPvpBoard")]
         public Task<PvpBoardPage> GetPvpBoard(IExecutionContext ctx, int seasonsAgo, int limit) =>
             Server(ctx).GetBoardAsync(ctx.PlayerId, seasonsAgo, limit);
+
+        /// <summary>Les 10 derniers duels du joueur, avec les deux courses de chacun (replays) ; complète ceux où il courait en premier.</summary>
+        [CloudCodeFunction("GetDuelHistory")]
+        public Task<DuelHistoryResponse> GetDuelHistory(IExecutionContext ctx) => Server(ctx).GetHistoryAsync(ctx.PlayerId);
+
+        /// <summary>Signale l'adversaire d'un duel de l'historique : le duel est copié dans son dossier (Cloud Save › pvp_reports).</summary>
+        [CloudCodeFunction("ReportCheat")]
+        public Task<ReportResponse> ReportCheat(IExecutionContext ctx, string matchId) => Server(ctx).ReportCheatAsync(ctx.PlayerId, matchId);
     }
 }

@@ -60,6 +60,11 @@ namespace MummyEscape.Online
             catch (Exception e) { Debug.LogWarning("[Pvp] solo stars not synced: " + e.Message); }
         }
 
+        public Task<DuelHistoryResponse> GetHistoryAsync() => Call<DuelHistoryResponse>("GetDuelHistory", null, _ => null);
+
+        public Task<ReportResponse> ReportCheatAsync(string matchId) =>
+            Call("ReportCheat", new Dictionary<string, object> { { "matchId", matchId } }, e => new ReportResponse { Error = e });
+
         public async Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit)
         {
             // Read through the server, which checks every score against the players' protected Elo.

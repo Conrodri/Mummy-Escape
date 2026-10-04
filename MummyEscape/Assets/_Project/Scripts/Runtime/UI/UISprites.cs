@@ -22,7 +22,7 @@ namespace MummyEscape.UI
         public static Sprite Ring { get; private set; }
         public static Sprite RadialGlow { get; private set; }
 
-        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal;
+        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal, Arrow, Flag;
 
         public static void Init()
         {
@@ -73,6 +73,9 @@ namespace MummyEscape.UI
                 return Max(Min(roof, body), -Box(p, 64, 30, 10, 16, 3));
             });
             Close = Icon(p => Min(Seg(p, 32, 32, 96, 96, 14), Seg(p, 32, 96, 96, 32, 14)));
+            // Pointing up; rotate the image for the other directions.
+            Arrow = Icon(p => Min(Poly(p, 64, 116, 18, 66, 110, 66), Box(p, 64, 40, 14, 30, 4)));
+            Flag = Icon(p => Min(Seg(p, 34, 14, 34, 114, 10), Poly(p, 38, 112, 108, 92, 38, 68)));
             Clock = Icon(p => Min(Annulus(p, 64, 64, 44, 12), Min(Seg(p, 64, 64, 64, 92, 10), Seg(p, 64, 64, 86, 64, 10))));
             Steps = Icon(p => Min(Min(Seg(p, 42, 72, 46, 98, 26), Disc(p, 48, 50, 10)),
                                   Min(Seg(p, 82, 40, 86, 66, 26), Disc(p, 80, 18, 10))));

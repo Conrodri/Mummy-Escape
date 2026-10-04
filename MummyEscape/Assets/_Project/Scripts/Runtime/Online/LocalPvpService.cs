@@ -22,6 +22,7 @@ namespace MummyEscape.Online
         {
             public PlayerPvpData Data;
             public PendingDuel Pending;
+            public List<DuelRecord> History;
         }
 
         static readonly string[] DemoNames =
@@ -47,7 +48,11 @@ namespace MummyEscape.Online
             _store.MakeGhost = (player, elo) =>
             {
                 GhostRun ghost;
-                lock (_rng) ghost = PvpBots.Make(_rng, elo, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                lock (_rng)
+                {
+                    ghost = PvpBots.Make(_rng, elo, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                    ghost.Look = Visual.PvpSkins.RandomLook(_rng);
+                }
                 lock (_names) _names[ghost.PlayerId] = ghost.PlayerName;
                 return ghost;
             };
@@ -78,7 +83,18 @@ namespace MummyEscape.Online
                 if (s.Pending != null && !string.IsNullOrEmpty(s.Pending.MatchId))
                 {
                     if (s.Pending.Ghost != null && string.IsNullOrEmpty(s.Pending.Ghost.GhostId)) s.Pending.Ghost = null;
+                    if (s.Pending.Ghost != null && s.Pending.Ghost.Look != null && string.IsNullOrEmpty(s.Pending.Ghost.Look.Mummy)) s.Pending.Ghost.Look = null;
                     _store.Pending[Me] = s.Pending;
+                }
+                if (s.History != null)
+                {
+                    foreach (var r in s.History)
+                    {
+                        if (r.Rival != null && string.IsNullOrEmpty(r.Rival.PlayerId)) r.Rival = null;
+                        FixLook(r.Me);
+                        FixLook(r.Rival);
+                    }
+                    _store.History[Me] = s.History;
                 }
             }
             catch (Exception e) { Debug.LogWarning("[Pvp] Unreadable demo data: " + e.Message); }
@@ -88,8 +104,15 @@ namespace MummyEscape.Online
         {
             _store.Players.TryGetValue(Me, out var data);
             _store.Pending.TryGetValue(Me, out var pending);
-            PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(new Stored { Data = data, Pending = pending }));
+            _store.History.TryGetValue(Me, out var history);
+            PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(new Stored { Data = data, Pending = pending, History = history }));
             PlayerPrefs.Save();
+        }
+
+        /// <summary>JsonUtility reads a missing look as an empty one.</summary>
+        static void FixLook(DuelRun run)
+        {
+            if (run != null && run.Look != null && string.IsNullOrEmpty(run.Look.Mummy)) run.Look = null;
         }
 
         /// <summary>Thirty rivals ranked this month (the same every launch of the month), so the ranking looks alive.</summary>
@@ -134,6 +157,10 @@ namespace MummyEscape.Online
         public Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId) => Run(() => _server.BuyWithSealsAsync(Me, itemId));
 
         public Task SyncSoloStarsAsync(int stars) => Task.CompletedTask; // read live from the save
+
+        public Task<DuelHistoryResponse> GetHistoryAsync() => Run(() => _server.GetHistoryAsync(Me));
+
+        public Task<ReportResponse> ReportCheatAsync(string matchId) => Run(() => _server.ReportCheatAsync(Me, matchId));
 
         public async Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit)
         {

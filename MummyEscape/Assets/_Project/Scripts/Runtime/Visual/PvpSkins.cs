@@ -144,6 +144,34 @@ namespace MummyEscape.Visual
         }
 
         /// <summary>Drops the cached names (they are in the current language).</summary>
+        /// <summary>What a rival sees of this outfit (VS screen, ghost, replays).</summary>
+        public static PlayerLook Look(Loadout l) => new PlayerLook
+        {
+            Mummy = l.Mummy.Id, Color = l.Color.Id, Torch = l.Torch.Id, Hat = l.Hat.Id, Shoes = l.Shoes.Id,
+        };
+
+        /// <summary>The outfit behind a rival's look; unknown pieces (or no look at all) fall back to the classic ones.</summary>
+        public static Loadout Loadout(PlayerLook look) => look == null ? SkinCatalog.Classic : new Loadout(
+            SkinCatalog.Get(look.Mummy, CosmeticSlot.Mummy), SkinCatalog.Get(look.Color, CosmeticSlot.Color),
+            SkinCatalog.Get(look.Torch, CosmeticSlot.Torch), SkinCatalog.Get(look.Hat, CosmeticSlot.Hat),
+            SkinCatalog.Get(look.Shoes, CosmeticSlot.Shoes));
+
+        /// <summary>A random outfit from the catalogue, for the simulated rivals of the offline demo.</summary>
+        public static PlayerLook RandomLook(System.Random rng)
+        {
+            string Pick(CosmeticSlot slot)
+            {
+                var items = new List<SkinDef>(SkinCatalog.InSlot(slot));
+                // Half the rivals keep the basic piece: an outfit full of rare items on everyone would look odd.
+                return rng.Next(2) == 0 ? items[0].Id : items[rng.Next(items.Count)].Id;
+            }
+            return new PlayerLook
+            {
+                Mummy = Pick(CosmeticSlot.Mummy), Color = Pick(CosmeticSlot.Color), Torch = Pick(CosmeticSlot.Torch),
+                Hat = Pick(CosmeticSlot.Hat), Shoes = Pick(CosmeticSlot.Shoes),
+            };
+        }
+
         public static void ClearCache()
         {
             lock (Cache) Cache.Clear();

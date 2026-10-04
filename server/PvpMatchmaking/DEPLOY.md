@@ -5,7 +5,7 @@ Le serveur des duels. Toute la logique (Elo, ligues, saisons, récompenses, bout
 générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne contient que le branchement sur Unity Cloud :
 
 - `PvpModule.cs` : les points d'entrée `FindDuel`, `SubmitRun`, `GetPvpProfile`, `ClaimSeasonRewards`, `BuyWithSeals`,
-  `GetPvpBoard` ;
+  `GetPvpBoard`, `GetDuelHistory`, `ReportCheat` ;
 - `CloudSavePvpStore.cs` : le stockage (Cloud Save, Leaderboards).
 
 ## Compiler
@@ -40,6 +40,18 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
    - `pvp_queue` : données « custom » **privées** (illisibles par les joueurs), une clé par version du générateur et
      tranche de 100 Elo (`v8_b10`…).
    - `pvp_board` : données « custom » **privées**, le classement vérifié de chaque mois (`board_2026-10`), gardé 5 minutes.
+   - `pvp_history` : donnée joueur **protégée**, les 10 derniers duels du joueur avec les deux courses de chacun (les replays).
+     Le premier sur un tombeau y a un duel « en attente », complété quand quelqu'un affronte son fantôme.
+   - `pvp_reports` : données « custom » **privées**, un dossier de triche par joueur signalé (clé = son identifiant).
+
+## Signalements de triche
+
+Un joueur peut signaler l'adversaire d'un duel de son historique (`ReportCheat`, 5 par jour). Le serveur copie le duel entier
+(graine du tombeau, version du générateur, les deux courses horodatées) dans le dossier du joueur signalé, dans
+`pvp_reports`. Un dossier signalé par 3 joueurs différents passe à `Flagged: true` (« à vérifier ») et le module l'écrit
+dans les logs (Dashboard › Cloud Code › Logs). Aucune sanction automatique : on examine les dossiers depuis le Dashboard
+(Cloud Save › Custom Items › `pvp_reports`). Pour revoir un duel signalé, la même graine et les mêmes actions rejouent la
+course à l'identique (`RunReplay`).
 
 ## Versions
 

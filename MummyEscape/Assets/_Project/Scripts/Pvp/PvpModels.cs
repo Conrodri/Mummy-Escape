@@ -41,6 +41,8 @@ namespace MummyEscape.Pvp
         /// <summary>Progression de 0 à 1 : 1 - distance restante / distance de départ jusqu'à la sortie.</summary>
         public float Progress;
         public List<RunInput> Inputs = new List<RunInput>();
+        /// <summary>Tenue de la momie (cosmétique, montrée à l'adversaire : écran VS, fantôme, replay).</summary>
+        public PlayerLook Look;
     }
 
     /// <summary>Une course stockée, rejouée comme fantôme par l'adversaire.</summary>
@@ -59,6 +61,7 @@ namespace MummyEscape.Pvp
         public float Progress;
         public List<RunInput> Inputs = new List<RunInput>();
         public long CreatedAtUnixMs;
+        public PlayerLook Look;
     }
 
     /// <summary>Duel en cours pour un joueur : créé par FindDuel, consommé par SubmitRun.</summary>
@@ -108,6 +111,8 @@ namespace MummyEscape.Pvp
         public int DuelsToday;
         public int CountedDuelsToday;
         public int WinsToday;
+        /// <summary>Signalements de triche envoyés aujourd'hui (limités par <see cref="PvpConfig.MaxReportsPerDay"/>).</summary>
+        public int ReportsToday;
         public bool DailyChestGranted;
         public Dictionary<string, int> OpponentsToday = new Dictionary<string, int>();
 
@@ -210,5 +215,128 @@ namespace MummyEscape.Pvp
         public string PlayerName;
         public int Score;
         public int Rank;          // 1 = premier
+    }
+
+    /// <summary>
+    /// La tenue d'une momie, par identifiants du catalogue de skins (momie, couleur, torche, chapeau, chaussures). Purement
+    /// cosmétique : le client l'annonce, le serveur se contente de la nettoyer (<see cref="Sanitize"/>).
+    /// </summary>
+    [Serializable]
+    public class PlayerLook
+    {
+        public string Mummy, Color, Torch, Hat, Shoes;
+
+        public const int MaxIdLength = 40;
+
+        /// <summary>Une copie aux identifiants sûrs (minuscules, chiffres, « _ » et « - », 40 caractères au plus), null si rien ne reste.</summary>
+        public static PlayerLook Sanitize(PlayerLook look)
+        {
+            if (look == null) return null;
+            var clean = new PlayerLook { Mummy = Id(look.Mummy), Color = Id(look.Color), Torch = Id(look.Torch), Hat = Id(look.Hat), Shoes = Id(look.Shoes) };
+            return clean.Mummy == null && clean.Color == null && clean.Torch == null && clean.Hat == null && clean.Shoes == null ? null : clean;
+        }
+
+        static string Id(string id)
+        {
+            if (string.IsNullOrEmpty(id) || id.Length > MaxIdLength) return null;
+            foreach (char c in id)
+                if (!(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_' || c == '-')) return null;
+            return id;
+        }
+    }
+
+    /// <summary>Une des deux courses d'un duel, de quoi la rejouer (même graine + mêmes actions = même course).</summary>
+    [Serializable]
+    public class DuelRun
+    {
+        public string PlayerId;
+        public string PlayerName;
+        public PlayerLook Look;
+        /// <summary>Elo du joueur au moment de la course.</summary>
+        public int Elo;
+        public RunOutcome Outcome;
+        public int TimeMs;
+        public float Progress;
+        public List<RunInput> Inputs = new List<RunInput>();
+
+        public static DuelRun Of(GhostRun g) => g == null ? null : new DuelRun
+        {
+            PlayerId = g.PlayerId, PlayerName = g.PlayerName, Look = g.Look, Elo = g.Elo,
+            Outcome = g.Outcome, TimeMs = g.TimeMs, Progress = g.Progress, Inputs = g.Inputs ?? new List<RunInput>(),
+        };
+    }
+
+    /// <summary>
+    /// Un duel joué, vu par un joueur : sa course (<see cref="Me"/>), celle de l'adversaire (<see cref="Rival"/>) et le verdict.
+    /// Le premier sur un tombeau n'a pas encore d'adversaire : le duel reste ouvert jusqu'à ce que quelqu'un affronte son
+    /// fantôme, et le serveur le complète alors.
+    /// </summary>
+    [Serializable]
+    public class DuelRecord
+    {
+        /// <summary>Identifiant du duel de ce joueur (pour le premier coureur, aussi celui de son fantôme).</summary>
+        public string MatchId;
+        public int Seed;
+        public int GeneratorVersion;
+        public long PlayedAtUnixMs;
+        /// <summary>False tant que personne n'a couru contre le fantôme de ce joueur.</summary>
+        public bool Resolved;
+        public DuelResult Result;
+        public int EloBefore;
+        public int EloAfter;
+        public DuelRun Me;
+        /// <summary>Null tant que le duel n'est pas résolu.</summary>
+        public DuelRun Rival;
+        /// <summary>Ce joueur a signalé son adversaire pour ce duel.</summary>
+        public bool Reported;
+    }
+
+    /// <summary>Réponse de GetDuelHistory : les derniers duels du joueur, du plus récent au plus ancien.</summary>
+    [Serializable]
+    public class DuelHistoryResponse
+    {
+        public List<DuelRecord> Duels = new List<DuelRecord>();
+    }
+
+    /// <summary>Un signalement : le duel en entier, pour qu'un humain le revoie.</summary>
+    [Serializable]
+    public class CheatReport
+    {
+        public string MatchId;
+        public string ReporterId;
+        public long ReportedAtUnixMs;
+        public int Seed;
+        public int GeneratorVersion;
+        /// <summary>La course soupçonnée.</summary>
+        public DuelRun Suspect;
+        /// <summary>La course de celui qui signale.</summary>
+        public DuelRun Reporter;
+    }
+
+    /// <summary>
+    /// Dossier d'un joueur signalé, rangé à part (illisible par les joueurs) et examiné depuis le Dashboard. Plusieurs
+    /// joueurs différents qui le signalent le marquent « à vérifier » ; aucune sanction automatique.
+    /// </summary>
+    [Serializable]
+    public class CheatDossier
+    {
+        public string PlayerId;
+        public string PlayerName;
+        /// <summary>Joueurs différents qui l'ont signalé.</summary>
+        public List<string> Reporters = new List<string>();
+        /// <summary>Les derniers signalements (<see cref="PvpConfig.MaxReportsPerDossier"/> au plus).</summary>
+        public List<CheatReport> Reports = new List<CheatReport>();
+        public int TotalReports;
+        /// <summary>À vérifier : <see cref="PvpConfig.ReportersToFlag"/> joueurs différents l'ont signalé.</summary>
+        public bool Flagged;
+        public long LastReportUnixMs;
+    }
+
+    /// <summary>Réponse de ReportCheat.</summary>
+    [Serializable]
+    public class ReportResponse
+    {
+        public bool Ok;
+        public string Error;   // "UNKNOWN_DUEL", "NO_RIVAL", "ALREADY_REPORTED", "LIMIT"
     }
 }

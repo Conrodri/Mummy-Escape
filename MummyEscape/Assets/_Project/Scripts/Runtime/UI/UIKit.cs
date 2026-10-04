@@ -196,6 +196,7 @@ namespace MummyEscape.UI
             if (onClick != null)
             {
                 var btn = img.gameObject.AddComponent<Button>();
+            btn.targetGraphic = img; // set by Awake only when built active
                 var colors = btn.colors;
                 colors.pressedColor = new Color(0.8f, 0.78f, 0.72f);
                 colors.highlightedColor = Color.white;
@@ -331,6 +332,7 @@ namespace MummyEscape.UI
             img.raycastTarget = true;
             if (style == ButtonStyle.Primary || style == ButtonStyle.Danger) DropShadow(img, 6, 0.45f);
             var btn = img.gameObject.AddComponent<Button>();
+            btn.targetGraphic = img; // set by Awake only when built active
             var colors = btn.colors;
             colors.highlightedColor = Color.white;
             colors.selectedColor = Color.white;

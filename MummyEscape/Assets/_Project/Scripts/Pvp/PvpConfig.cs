@@ -41,6 +41,12 @@ namespace MummyEscape.Pvp
         public const int PendingDuelLifetimeMinutes = 10; // au-delà, le duel non envoyé = abandon
         public const int MaxDuelsVsSameOpponentPerDay = 3;
 
+        // --- Replays et signalements ---
+        public const int HistorySize = 10;              // duels gardés par joueur (les plus anciens remplacés)
+        public const int MaxReportsPerDay = 5;          // signalements de triche par joueur et par jour
+        public const int ReportersToFlag = 3;           // joueurs différents qui signalent : dossier « à vérifier »
+        public const int MaxReportsPerDossier = 20;     // signalements détaillés gardés par dossier
+
         // --- Accès ---
         public const int RequiredSoloStars = 35;        // acte 3 atteint en solo
 
