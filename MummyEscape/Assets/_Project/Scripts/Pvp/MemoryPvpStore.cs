@@ -1,6 +1,7 @@
 // Mummy Escape PvP — stockage en mémoire : tests, et duels hors ligne contre des adversaires simulés.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MummyEscape.Pvp
@@ -12,8 +13,12 @@ namespace MummyEscape.Pvp
         public readonly Dictionary<string, int> SoloStars = new Dictionary<string, int>();
         /// <summary>Fantômes en attente, toutes tranches confondues.</summary>
         public readonly List<GhostRun> Queue = new List<GhostRun>();
-        /// <summary>Rang final de chaque joueur au mois précédent (simulé).</summary>
-        public readonly Dictionary<string, int> LastSeasonRanks = new Dictionary<string, int>();
+        /// <summary>Classement du mois : le score de chaque joueur, tel qu'envoyé (un tricheur peut y écrire).</summary>
+        public readonly Dictionary<string, int> Board = new Dictionary<string, int>();
+        /// <summary>Classement archivé du mois précédent.</summary>
+        public readonly Dictionary<string, int> LastBoard = new Dictionary<string, int>();
+        /// <summary>Classements vérifiés gardés par le serveur, par saison.</summary>
+        public readonly Dictionary<string, PvpBoardPage> BoardCache = new Dictionary<string, PvpBoardPage>();
         /// <summary>Appelé quand rien n'attend dans la file : un adversaire simulé (mode hors ligne), ou null.</summary>
         public Func<string, int, GhostRun> MakeGhost;
 
@@ -52,19 +57,40 @@ namespace MummyEscape.Pvp
             return Task.CompletedTask;
         }
 
-        public Task SubmitEloAsync(string playerId, int elo) => Task.CompletedTask;
-
-        /// <summary>Rang parmi les joueurs connus, par Elo décroissant.</summary>
-        public Task<int> GetWorldRankAsync(string playerId)
+        public Task SubmitEloAsync(string playerId, int elo)
         {
-            if (!Players.TryGetValue(playerId, out var me) || me.SeasonDuels == 0) return Task.FromResult(0);
-            int rank = 1;
-            foreach (var kv in Players)
-                if (kv.Key != playerId && kv.Value.SeasonDuels > 0 && kv.Value.Elo > me.Elo) rank++;
-            return Task.FromResult(rank);
+            Board[playerId] = elo;
+            return Task.CompletedTask;
         }
 
-        public Task<int> GetLastSeasonRankAsync(string playerId) =>
-            Task.FromResult(LastSeasonRanks.TryGetValue(playerId, out int r) ? r : 0);
+        /// <summary>Par score décroissant, comme le service.</summary>
+        List<BoardEntry> Ranked(int seasonsAgo) =>
+            (seasonsAgo == 0 ? Board : LastBoard)
+                .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select((kv, i) => new BoardEntry { PlayerId = kv.Key, PlayerName = kv.Key, Score = kv.Value, Rank = i + 1 })
+                .ToList();
+
+        public Task<List<BoardEntry>> ReadBoardAsync(int seasonsAgo, int limit) =>
+            Task.FromResult(Ranked(seasonsAgo).Take(limit).ToList());
+
+        public Task<BoardEntry> ReadBoardEntryAsync(string playerId, int seasonsAgo) =>
+            Task.FromResult(Ranked(seasonsAgo).Find(e => e.PlayerId == playerId));
+
+        public Task<Dictionary<string, PlayerPvpData>> ReadPlayersAsync(IReadOnlyCollection<string> playerIds)
+        {
+            var found = new Dictionary<string, PlayerPvpData>();
+            foreach (var id in playerIds)
+                if (Players.TryGetValue(id, out var d)) found[id] = d;
+            return Task.FromResult(found);
+        }
+
+        public Task<PvpBoardPage> GetCachedBoardAsync(string season) =>
+            Task.FromResult(BoardCache.TryGetValue(season, out var b) ? b : null);
+
+        public Task SetCachedBoardAsync(string season, PvpBoardPage board)
+        {
+            if (board == null) BoardCache.Remove(season); else BoardCache[season] = board;
+            return Task.CompletedTask;
+        }
     }
 }

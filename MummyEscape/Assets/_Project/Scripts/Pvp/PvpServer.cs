@@ -2,6 +2,7 @@
 // Cloud (server/PvpMatchmaking), le jeu l'exécute en local pour jouer hors ligne contre des adversaires simulés.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MummyEscape.Core;
 
@@ -21,10 +22,17 @@ namespace MummyEscape.Pvp
         Task<GhostRun> ClaimGhostAsync(string playerId, int elo, int generatorVersion, IDictionary<string, int> opponentsToday, long nowMs);
         Task EnqueueGhostAsync(GhostRun ghost, long nowMs);
         Task SubmitEloAsync(string playerId, int elo);
-        /// <summary>Rang mondial du mois (1 = premier), 0 si non classé.</summary>
-        Task<int> GetWorldRankAsync(string playerId);
-        /// <summary>Rang final du joueur dans le classement archivé du mois précédent, 0 si inconnu.</summary>
-        Task<int> GetLastSeasonRankAsync(string playerId);
+        /// <summary>Haut du classement, tel que le service le renvoie : <paramref name="seasonsAgo"/> 0 = ce mois, 1 = le mois
+        /// dernier (version archivée). Vide si ce mois n'a pas de classement.</summary>
+        Task<List<BoardEntry>> ReadBoardAsync(int seasonsAgo, int limit);
+        /// <summary>L'entrée du joueur dans ce classement, null s'il n'y figure pas.</summary>
+        Task<BoardEntry> ReadBoardEntryAsync(string playerId, int seasonsAgo);
+        /// <summary>Données PvP de plusieurs joueurs, telles qu'enregistrées (sans les modifier) ; les absents sont omis.</summary>
+        Task<Dictionary<string, PlayerPvpData>> ReadPlayersAsync(IReadOnlyCollection<string> playerIds);
+        /// <summary>Classement vérifié d'une saison gardé en cache, null si absent.</summary>
+        Task<PvpBoardPage> GetCachedBoardAsync(string season);
+        /// <summary>Null efface le cache de cette saison.</summary>
+        Task SetCachedBoardAsync(string season, PvpBoardPage board);
     }
 
     /// <summary>
@@ -132,7 +140,7 @@ namespace MummyEscape.Pvp
         async Task<SubmitRunResponse> ResolveAsync(string me, PendingDuel pending, RunSubmission run, string playerName)
         {
             var utc = _utcNow();
-            int worldRank = await _store.GetWorldRankAsync(me);
+            int worldRank = await WorldRankAsync(me);
             bool isTop100 = worldRank > 0 && worldRank <= PvpConfig.Top100Size;
             bool abandoned = run.Outcome == RunOutcome.Abandoned;
             int durationMs = abandoned ? 0 : run.TimeMs;
@@ -177,10 +185,16 @@ namespace MummyEscape.Pvp
             {
                 gained = abandoned ? 0 : DuelBookkeeping.RecordDuelPlayed(d, durationMs, utc, isTop100);
                 gained += DuelBookkeeping.ApplyResult(d, ghost.PlayerId, oppEloBefore, resultForMe);
+                d.Ranked = true;
             });
-            var theirs = await Update(ghost.PlayerId, d => DuelBookkeeping.ApplyResult(d, me, myEloBefore, DuelResolver.Invert(resultForMe)));
+            var theirs = await Update(ghost.PlayerId, d =>
+            {
+                DuelBookkeeping.ApplyResult(d, me, myEloBefore, DuelResolver.Invert(resultForMe));
+                d.Ranked = true;
+            });
             await _store.SubmitEloAsync(me, mine.Elo);
             await _store.SubmitEloAsync(ghost.PlayerId, theirs.Elo);
+            await ForgetBoardIfChangedAsync(Math.Max(mine.Elo, theirs.Elo), me, ghost.PlayerId);
 
             return new SubmitRunResponse
             {
@@ -193,7 +207,7 @@ namespace MummyEscape.Pvp
         public async Task<PvpProfileResponse> GetProfileAsync(string me)
         {
             var data = await Update(me);
-            int rank = await _store.GetWorldRankAsync(me);
+            int rank = await WorldRankAsync(me);
             return new PvpProfileResponse { Data = data, WorldRank = rank, LeagueName = Leagues.DisplayName(data.Elo, rank) };
         }
 
@@ -203,7 +217,9 @@ namespace MummyEscape.Pvp
             var response = new SeasonRewardsResponse();
             // Lecture du rang archivé seulement s'il y a quelque chose à réclamer.
             var current = await Update(me);
-            int lastRank = current.LastSeason != null && !current.LastSeason.RewardsClaimed ? await _store.GetLastSeasonRankAsync(me) : 0;
+            int lastRank = current.LastSeason != null && !current.LastSeason.RewardsClaimed
+                ? (await MyRowAsync(me, 1, await VerifiedBoardAsync(1)))?.Rank ?? 0
+                : 0;
             await Update(me, d =>
             {
                 response.NewRewards.Clear();
@@ -237,6 +253,109 @@ namespace MummyEscape.Pvp
             response.Seals = data.Seals;
             response.UnlockedRewards = data.UnlockedRewards;
             return response;
+        }
+
+        // ------------------------------------------------------------------ ranking
+
+        /// <summary>Classement vérifié d'un mois (0 = celui-ci, 1 = le précédent) : les <paramref name="limit"/> premiers et le joueur.</summary>
+        public async Task<PvpBoardPage> GetBoardAsync(string me, int seasonsAgo, int limit)
+        {
+            seasonsAgo = Math.Max(0, Math.Min(1, seasonsAgo));
+            limit = Math.Max(1, Math.Min(PvpConfig.Top100Size, limit));
+            var board = await VerifiedBoardAsync(seasonsAgo);
+            var mine = await MyRowAsync(me, seasonsAgo, board);
+
+            // La ligne du joueur est relue à chaque fois : le cache peut avoir quelques minutes de retard sur son Elo.
+            var rows = board.Rows.Where(r => r.PlayerId != me)
+                            .Select(r => new PvpBoardRow { PlayerId = r.PlayerId, PlayerName = r.PlayerName, Elo = r.Elo })
+                            .ToList();
+            if (mine != null && mine.Rank <= rows.Count + 1) rows.Insert(mine.Rank - 1, mine);
+            for (int i = 0; i < rows.Count; i++) rows[i].Rank = i + 1;
+            if (rows.Count > limit) rows.RemoveRange(limit, rows.Count - limit);
+            return new PvpBoardPage { Season = board.Season, Rows = rows, Me = mine, BuiltAtUnixMs = board.BuiltAtUnixMs };
+        }
+
+        /// <summary>Rang mondial vérifié du mois (1 = premier), 0 si non classé.</summary>
+        async Task<int> WorldRankAsync(string me) => (await MyRowAsync(me, 0, await VerifiedBoardAsync(0)))?.Rank ?? 0;
+
+        string SeasonAgo(int seasonsAgo)
+        {
+            var now = _utcNow();
+            return Seasons.SeasonOf(new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-seasonsAgo));
+        }
+
+        /// <summary>L'Elo que le joueur doit avoir dans le classement de <paramref name="season"/>, null s'il n'y a pas sa place
+        /// (aucun duel résolu ce mois-là).</summary>
+        static int? TrueElo(PlayerPvpData d, string season)
+        {
+            if (d == null) return null;
+            if (d.Season == season) return d.Ranked ? d.Elo : (int?)null;
+            if (d.LastSeason != null && d.LastSeason.Season == season) return d.LastSeason.Ranked ? d.LastSeason.FinalElo : (int?)null;
+            return null;
+        }
+
+        /// <summary>
+        /// Le classement d'un mois, vérifié. Le service Leaderboards garde le score que chacun y envoie, tricheurs compris :
+        /// chaque entrée est comparée à l'Elo des données protégées du joueur, que seul ce serveur écrit. Ce mois-ci, un score
+        /// faux est réécrit avec le vrai Elo et une entrée sans duel tombe à 0, si bien que le classement se répare ; un mois
+        /// archivé, figé, est seulement recalculé. Gardé <see cref="PvpConfig.BoardCacheMinutes"/> minutes.
+        /// </summary>
+        async Task<PvpBoardPage> VerifiedBoardAsync(int seasonsAgo)
+        {
+            string season = SeasonAgo(seasonsAgo);
+            var cached = await _store.GetCachedBoardAsync(season);
+            if (cached != null && NowMs - cached.BuiltAtUnixMs < PvpConfig.BoardCacheMinutes * 60_000L) return cached;
+
+            var entries = await _store.ReadBoardAsync(seasonsAgo, PvpConfig.Top100Size + PvpConfig.BoardMargin);
+            var players = await _store.ReadPlayersAsync(entries.ConvertAll(e => e.PlayerId));
+            var rows = new List<PvpBoardRow>();
+            foreach (var e in entries)
+            {
+                players.TryGetValue(e.PlayerId, out var d);
+                int? elo = TrueElo(d, season);
+                if (seasonsAgo == 0 && (elo ?? 0) != e.Score) await _store.SubmitEloAsync(e.PlayerId, elo ?? 0);
+                if (elo != null) rows.Add(new PvpBoardRow { PlayerId = e.PlayerId, PlayerName = e.PlayerName, Elo = elo.Value });
+            }
+            rows = rows.OrderByDescending(r => r.Elo).Take(PvpConfig.Top100Size).ToList(); // tri stable : ex aequo dans l'ordre du service
+            for (int i = 0; i < rows.Count; i++) rows[i].Rank = i + 1;
+
+            var board = new PvpBoardPage { Season = season, Rows = rows, BuiltAtUnixMs = NowMs };
+            await _store.SetCachedBoardAsync(season, board);
+            return board;
+        }
+
+        /// <summary>Oublie le classement en cache quand un duel y fait entrer ou bouger quelqu'un : il sera vérifié de nouveau.</summary>
+        async Task ForgetBoardIfChangedAsync(int bestElo, string playerA, string playerB)
+        {
+            string season = SeasonAgo(0);
+            var cached = await _store.GetCachedBoardAsync(season);
+            if (cached == null) return;
+            bool changed = cached.Rows.Count < PvpConfig.Top100Size
+                           || bestElo >= cached.Rows[cached.Rows.Count - 1].Elo
+                           || cached.Rows.Exists(r => r.PlayerId == playerA || r.PlayerId == playerB);
+            if (changed) await _store.SetCachedBoardAsync(season, null);
+        }
+
+        /// <summary>La ligne vérifiée du joueur dans le classement d'un mois, null s'il n'y figure pas.</summary>
+        async Task<PvpBoardRow> MyRowAsync(string me, int seasonsAgo, PvpBoardPage board)
+        {
+            var entry = await _store.ReadBoardEntryAsync(me, seasonsAgo);
+            if (entry == null) return null;
+            (await _store.ReadPlayersAsync(new[] { me })).TryGetValue(me, out var d);
+            int? elo = TrueElo(d, board.Season);
+            if (seasonsAgo == 0 && (elo ?? 0) != entry.Score) await _store.SubmitEloAsync(me, elo ?? 0);
+            if (elo == null) return null;
+
+            // Placé parmi les lignes vérifiées ; plus bas qu'elles toutes, le rang du service (jamais avant elles).
+            int others = 0, ahead = 0;
+            foreach (var r in board.Rows)
+                if (r.PlayerId != me)
+                {
+                    others++;
+                    if (r.Elo > elo.Value) ahead++;
+                }
+            int rank = ahead < others || others < PvpConfig.Top100Size ? ahead + 1 : Math.Max(entry.Rank, others + 1);
+            return new PvpBoardRow { Rank = rank, PlayerId = me, PlayerName = entry.PlayerName, Elo = elo.Value, IsMe = true };
         }
     }
 }

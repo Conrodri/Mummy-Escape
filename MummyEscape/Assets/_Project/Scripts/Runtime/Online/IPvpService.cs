@@ -1,28 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using MummyEscape.Pvp;
 
 namespace MummyEscape.Online
 {
-    public sealed class PvpBoardRow
-    {
-        public int Rank;          // 1-based
-        public string PlayerId;
-        public string PlayerName;
-        public int Elo;
-        public bool IsMe;
-    }
-
-    public sealed class PvpBoardPage
-    {
-        /// <summary>Month of the ranking ("2026-10"), empty when unknown.</summary>
-        public string Season = "";
-        public List<PvpBoardRow> Rows = new List<PvpBoardRow>();
-        /// <summary>The local player's entry (Rank 0 = outside the fetched range), null when unranked.</summary>
-        public PvpBoardRow Me;
-    }
-
     /// <summary>
     /// Ghost duels: matchmaking, run submission, profile, season rewards and the seal shop. Every rule is decided by
     /// the server (<see cref="PvpServer"/>, in a Cloud Code module online); the game only shows what it answers.
@@ -37,7 +18,7 @@ namespace MummyEscape.Online
         Task<SubmitRunResponse> SubmitRunAsync(RunSubmission run, string playerName);
         Task<SeasonRewardsResponse> ClaimSeasonRewardsAsync();
         Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId);
-        /// <summary>Top of the monthly Elo ranking: <paramref name="seasonsAgo"/> 0 = this month, 1 = last month.</summary>
+        /// <summary>Top of the monthly Elo ranking, checked by the server: <paramref name="seasonsAgo"/> 0 = this month, 1 = last month.</summary>
         Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit);
         /// <summary>Publishes the solo star count, which unlocks the duels (<see cref="PvpConfig.RequiredSoloStars"/>).</summary>
         Task SyncSoloStarsAsync(int stars);

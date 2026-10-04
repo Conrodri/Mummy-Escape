@@ -31,6 +31,10 @@ namespace MummyEscape.Core
         Darkness,
         /// <summary>Dust that smothers the torch, with a wall torch further on to light it again.</summary>
         Dust,
+        /// <summary>A mirror of Seth: reverses the controls for ten steps (from act 2).</summary>
+        Reverse,
+        /// <summary>A turning slab: the tomb turns a quarter turn on screen, the map in memory with it (from act 3).</summary>
+        Rotate,
     }
 
     /// <summary>Design data for one act. Add an entry to <see cref="DifficultyTable.Acts"/> to add an act.</summary>
@@ -70,7 +74,7 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 8;
+        public const int GeneratorVersion = 9;
 
         /// <summary>
         /// One theme and one signature mechanic per act: the intact antechamber (doors, portals), the flooded galleries
@@ -97,7 +101,7 @@ namespace MummyEscape.Core
                 Cells = 6, ExtraLoops = new Ramp(3, 4),
                 GateKinds = new[] { GateKind.Door, GateKind.Portal },
                 Currents = new Ramp(1, 2),
-                Perils = new[] { Peril.Spikes, Peril.Dust, Peril.Darkness },
+                Perils = new[] { Peril.Spikes, Peril.Reverse, Peril.Dust, Peril.Darkness },
             },
             new ActDefinition
             {
@@ -105,7 +109,7 @@ namespace MummyEscape.Core
                 MoreFloorsFrom = 5, Cells = 6, StackedCells = 5, ExtraLoops = new Ramp(3, 4),
                 GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
                 CrumblingTiles = new Ramp(1, 2),
-                Perils = new[] { Peril.Dust, Peril.Spikes, Peril.Darkness },
+                Perils = new[] { Peril.Dust, Peril.Rotate, Peril.Spikes, Peril.Reverse, Peril.Darkness },
                 TeleporterKinds = new[] { TeleporterKind.Locked, TeleporterKind.Visible },
             },
             new ActDefinition
@@ -115,7 +119,7 @@ namespace MummyEscape.Core
                 // Cycled so every level, even with a single gate, has its laser.
                 GateKinds = new[] { GateKind.Laser, GateKind.Laser, GateKind.Laser, GateKind.Portal, GateKind.Laser, GateKind.Door },
                 BlueBarriers = true,
-                Perils = new[] { Peril.Darkness, Peril.Spikes, Peril.Dust },
+                Perils = new[] { Peril.Darkness, Peril.Rotate, Peril.Spikes, Peril.Reverse, Peril.Dust },
                 TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Locked, TeleporterKind.Visible },
             },
             new ActDefinition
@@ -124,7 +128,7 @@ namespace MummyEscape.Core
                 Floors = 3, StackedCells = 4, ExtraLoops = new Ramp(3, 4),
                 GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Laser, GateKind.Door },
                 FireJets = 2, CrumblingTiles = 1,
-                Perils = new[] { Peril.Dust, Peril.Darkness, Peril.Spikes },
+                Perils = new[] { Peril.Dust, Peril.Reverse, Peril.Darkness, Peril.Rotate, Peril.Spikes },
                 TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Visible },
             },
         };
@@ -188,6 +192,8 @@ namespace MummyEscape.Core
                 {
                     case Peril.Spikes: spec.SpikeTraps++; break;
                     case Peril.Darkness: spec.DarknessTraps++; break;
+                    case Peril.Reverse: spec.ReverseTraps++; break;
+                    case Peril.Rotate: spec.RotateTraps++; break;
                     default: spec.DustPatches++; break;
                 }
             }

@@ -43,6 +43,8 @@ namespace MummyEscape.Core
             if (pads != null) return pads;
             var unused = CheckEverythingUsed(level, solution);
             if (unused != null) return unused;
+            var pocket = CheckNoPocket(level, solution);
+            if (pocket != null) return pocket;
             var spacing = CheckSpacing(level, spec);
             if (spacing != null) return spacing;
             var spikes = CheckSpikeShortcuts(level);
@@ -121,6 +123,56 @@ namespace MummyEscape.Core
         /// taken, each door, barrier, current, fragile slab, trap, dust patch and flame jet lies on the way, and each
         /// wall torch relights the torch. A button with a door that leads nowhere is a design error, not a lure.
         /// </summary>
+        /// <summary>
+        /// Ground off the ideal walk links two separate points of it (a short or a long way to choose between), never a
+        /// pocket entered and left through the same spot. The generator prunes pockets against the walk it planned; this
+        /// catches the rare tomb whose shortest walk, as the solver finds it, goes another way.
+        /// </summary>
+        public static string CheckNoPocket(Level level, Solution solution)
+        {
+            var onWalk = new bool[level.CellCount];
+            var s = Rules.Initial(level);
+            onWalk[level.IndexOf(s.Position)] = true;
+            foreach (var a in solution.Actions)
+            {
+                var r = Rules.Step(level, s, a);
+                onWalk[level.IndexOf(r.SteppedOn)] = true; // a ladder or a pad, before the move carries on
+                s = r.State;
+                onWalk[level.IndexOf(s.Position)] = true;
+            }
+            bool Ground(Cell c) => level.InBounds(c) && !level[c].IsSolid;
+            var seen = new bool[level.CellCount];
+            var touches = new List<Cell>();
+            var queue = new Queue<Cell>();
+            foreach (var c0 in level.AllCells())
+            {
+                if (seen[level.IndexOf(c0)] || onWalk[level.IndexOf(c0)] || !Ground(c0)) continue;
+                touches.Clear();
+                seen[level.IndexOf(c0)] = true;
+                queue.Enqueue(c0);
+                while (queue.Count > 0)
+                {
+                    var c = queue.Dequeue();
+                    foreach (var d in DirExt.All)
+                    {
+                        var n = c.Step(d);
+                        if (!Ground(n)) continue;
+                        if (onWalk[level.IndexOf(n)]) { touches.Add(n); continue; }
+                        if (seen[level.IndexOf(n)]) continue;
+                        seen[level.IndexOf(n)] = true;
+                        queue.Enqueue(n);
+                    }
+                }
+                // 2 apart is the way around a fragile slab or a current, kept so they never wall the player in.
+                bool apart = false;
+                foreach (var a in touches)
+                    foreach (var b in touches)
+                        apart |= a.Floor == b.Floor && a.Manhattan(b) >= 2;
+                if (!apart) return $"pocket: {c0} is off the ideal walk and leads nowhere";
+            }
+            return null;
+        }
+
         public static string CheckEverythingUsed(Level level, Solution solution)
         {
             var used = new HashSet<Cell>();
@@ -130,7 +182,7 @@ namespace MummyEscape.Core
             foreach (var a in solution.Actions)
             {
                 var r = Rules.Step(level, s, a);
-                used.Add(s.Position.Step(a.Dir)); // tile walked into (or trap disarmed)
+                used.Add(s.Position.Step(r.Dir)); // tile walked into (or trap disarmed)
                 used.Add(r.SteppedOn);
                 used.Add(r.State.Position);
                 if (r.Has(StepFlags.TorchRelit)) relit.Add(r.State.Position);

@@ -67,6 +67,65 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Mirror_ReversesTheNextTenSteps_Once()
+        {
+            var lvl = FromAscii("#################", "#SX............E#", "#################");
+            var s = new GameSession(lvl);
+            var hit = s.Move(Dir.Right);
+            Assert.IsTrue(hit.Has(StepFlags.Reversed));
+            Assert.AreEqual(Rules.ReverseDuration, s.State.Reversed);
+
+            // Bumping into a wall does not wear the curse off.
+            Assert.IsTrue(s.Move(Dir.Up).Has(StepFlags.Blocked), "up means down: the wall below");
+            Assert.AreEqual(Rules.ReverseDuration, s.State.Reversed);
+
+            for (int i = 0; i < Rules.ReverseDuration; i++) Assert.AreEqual(Dir.Right, s.Move(Dir.Left).Dir);
+            Assert.AreEqual(12, s.Position.X);
+            Assert.AreEqual(0, s.State.Reversed);
+            Assert.AreEqual(11, s.Move(Dir.Left).SteppedOn.X, "back to normal");
+
+            // Single use: walking over the spent mirror again changes nothing.
+            for (int i = 0; i < 9; i++) s.Move(Dir.Left);
+            Assert.AreEqual(2, s.Position.X);
+            Assert.AreEqual(0, s.State.Reversed);
+        }
+
+        [Test]
+        public void TurningSlab_TurnsTheControlsWithTheScreen_ForGood()
+        {
+            var lvl = FromAscii("#######", "#SR..E#", "#######");
+            var s = new GameSession(lvl);
+            Assert.IsTrue(s.Move(Dir.Right).Has(StepFlags.Rotated));
+            Assert.AreEqual(1, s.State.Rotation);
+            // Turned a quarter clockwise: the corridor's east now points down on screen.
+            Assert.IsTrue(s.Move(Dir.Right).Has(StepFlags.Blocked));
+            Assert.AreEqual(Dir.Right, s.Move(Dir.Down).Dir);
+            Assert.AreEqual(Dir.Left, s.Move(Dir.Up).Dir);
+            Assert.IsFalse(s.Move(Dir.Up).Has(StepFlags.Rotated), "single use");
+            Assert.AreEqual(1, s.State.Rotation, "the turn lasts the whole run");
+
+            var sol = Solver.Solve(lvl);
+            Assert.AreEqual(4, sol.Moves);
+            Assert.AreEqual(new[] { Dir.Right, Dir.Down, Dir.Down, Dir.Down }, sol.Actions.ConvertAll(a => a.Dir).ToArray());
+        }
+
+        [Test]
+        public void TurningSlab_Anticlockwise_AndMirror_Combine()
+        {
+            var lvl = FromAscii("########", "#SWX..E#", "########");
+            var s = new GameSession(lvl);
+            s.Move(Dir.Right);
+            Assert.AreEqual(3, s.State.Rotation);
+            // Anticlockwise: east points up on screen.
+            Assert.IsTrue(s.Move(Dir.Up).Has(StepFlags.Reversed));
+            // Reversed as well: east is now a swipe down.
+            Assert.AreEqual(Dir.Right, s.Move(Dir.Down).Dir);
+            Assert.AreEqual(Dir.Right, s.Move(Dir.Down).Dir);
+            Assert.AreEqual(Dir.Right, s.Move(Dir.Down).Dir);
+            Assert.AreEqual(SessionStatus.Won, s.Status);
+        }
+
+        [Test]
         public void Darkness_CannotBeDisarmed()
         {
             var lvl = FromAscii("#######", "#S~..E#", "#######");

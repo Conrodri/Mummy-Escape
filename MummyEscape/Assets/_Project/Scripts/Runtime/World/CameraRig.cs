@@ -72,6 +72,22 @@ namespace MummyEscape.World
             Follow(follow);
         }
 
+        float _angle, _targetAngle;
+
+        /// <summary>Turns the view so the tomb appears turned clockwise by <paramref name="quarters"/> quarter turns
+        /// (turning slab); <paramref name="snap"/> skips the animation (new run).</summary>
+        public void SetTurn(int quarters, bool snap = false)
+        {
+            float target = 90f * quarters;
+            // Shortest way round from where the view is now.
+            _targetAngle = _angle + Mathf.DeltaAngle(_angle, target);
+            if (snap) _angle = _targetAngle;
+            transform.rotation = Quaternion.Euler(0f, 0f, _angle);
+        }
+
+        /// <summary>The view's current turn: upright sprites (the mummy, the ghost) copy it.</summary>
+        public Quaternion Turn => transform.rotation;
+
         public void Shake(float amount)
         {
             if (_settings.ScreenShake) _trauma = Mathf.Clamp01(_trauma + amount);
@@ -90,6 +106,9 @@ namespace MummyEscape.World
             float t = Time.time * 30f;
             var shake = new Vector3((Mathf.PerlinNoise(t, 0.1f) - 0.5f) * 2f * s, (Mathf.PerlinNoise(0.7f, t) - 0.5f) * 2f * s, 0f);
             transform.position = _base + shake;
+            _angle = Mathf.Lerp(_angle, _targetAngle, 1f - Mathf.Exp(-Time.deltaTime * 6f));
+            if (Mathf.Abs(_angle - _targetAngle) < 0.05f) _angle = _targetAngle;
+            transform.rotation = Quaternion.Euler(0f, 0f, _angle);
         }
     }
 }

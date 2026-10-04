@@ -120,7 +120,8 @@ namespace MummyEscape.Core
         public const int MaxCells = 1 << 12, MaxChannels = 12, MaxTraps = 12, MaxCrumbling = 12;
 
         /// <summary>
-        /// 12 bits position, 12 channels, 12 traps, 3 hp, 2 blind, 1 torch, 12 collapsed slabs, 2 flame tick = 56 bits.
+        /// 12 bits position, 12 channels, 12 traps, 3 hp, 2 blind, 1 torch, 12 collapsed slabs, 2 flame tick, 2 turns of the tomb,
+        /// 4 reversed steps = 62 bits.
         /// The tick only matters when the tomb has flame jets (otherwise it would triple the states for nothing).
         /// </summary>
         static long Pack(Level level, RuleState s, bool tick)
@@ -132,7 +133,9 @@ namespace MummyEscape.Core
                    | ((long)(s.Blind & 0x3) << 39)
                    | (s.TorchOut ? 1L << 41 : 0)
                    | ((long)(s.Crumbled & 0xFFF) << 42)
-                   | (tick ? (long)(s.Tick & 0x3) << 54 : 0);
+                   | (tick ? (long)(s.Tick & 0x3) << 54 : 0)
+                   | ((long)(s.Rotation & 0x3) << 56)
+                   | ((long)(s.Reversed & 0xF) << 58);
         }
 
         static bool HasFireJets(Level level)

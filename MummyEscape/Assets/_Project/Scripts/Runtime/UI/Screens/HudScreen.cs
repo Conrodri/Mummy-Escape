@@ -14,6 +14,7 @@ namespace MummyEscape.UI.Screens
         Text _floor;
         Text _status;
         Text _hint;
+        int _rotation, _turnedAt;
         RectTransform _hearts;
         readonly List<Image> _ankhs = new List<Image>();
         RectTransform _bottomBar;
@@ -307,11 +308,18 @@ namespace MummyEscape.UI.Screens
                 _ankhs[i].sprite = i < s.Hp ? UIKit.Art.Ankh : UIKit.Art.AnkhEmpty;
             }
 
-            _status.color = preview ? new Color(1f, 0.45f, 0.35f) : s.IsBlind ? new Color(0.75f, 0.55f, 1f) : new Color(1f, 0.62f, 0.3f);
+            // The tomb just turned: say so for a few steps (the turn itself lasts the whole run).
+            if (s.State.Rotation != _rotation) { _rotation = s.State.Rotation; _turnedAt = s.Moves; }
+            bool justTurned = _rotation != 0 && s.Moves - _turnedAt < 4;
+            int reversed = s.State.Reversed;
+            _status.color = preview ? new Color(1f, 0.45f, 0.35f) : reversed > 0 ? new Color(1f, 0.45f, 0.85f)
+                          : justTurned ? new Color(1f, 0.82f, 0.4f) : s.IsBlind ? new Color(0.75f, 0.55f, 1f) : new Color(1f, 0.62f, 0.3f);
             _status.text = preview
                     ? App.Game.ScreenCaptured ? Loc.T("Enregistrement d'écran détecté :\nle tombeau reste dans l'ombre")
                     : App.Game.ScreenshotRedraw ? Loc.T("Capture d'écran : les dieux ont scellé\nun autre tombeau !")
                     : ""
+                : reversed > 0 ? Loc.F("Commandes inversées ! ({0})", reversed)
+                : justTurned ? Loc.T("Le tombeau a pivoté !\nTes gestes suivent l'écran.")
                 : s.IsBlind ? Loc.F("Aveuglé ! ({0})", s.BlindTurnsLeft)
                 : !s.TorchLit ? Loc.T("Torche éteinte : longe une torche murale")
                 : "";

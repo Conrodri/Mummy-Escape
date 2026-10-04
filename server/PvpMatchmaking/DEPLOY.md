@@ -4,7 +4,8 @@ Le serveur des duels. Toute la logique (Elo, ligues, saisons, récompenses, bout
 `MummyEscape/Assets/_Project/Scripts/Pvp/` et n'est écrite qu'une fois : le jeu et ce module compilent les mêmes fichiers, avec le
 générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne contient que le branchement sur Unity Cloud :
 
-- `PvpModule.cs` : les points d'entrée `FindDuel`, `SubmitRun`, `GetPvpProfile`, `ClaimSeasonRewards`, `BuyWithSeals` ;
+- `PvpModule.cs` : les points d'entrée `FindDuel`, `SubmitRun`, `GetPvpProfile`, `ClaimSeasonRewards`, `BuyWithSeals`,
+  `GetPvpBoard` ;
 - `CloudSavePvpStore.cs` : le stockage (Cloud Save, Leaderboards).
 
 ## Compiler
@@ -31,11 +32,14 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
 4. **Access Control** : interdire aux joueurs d'écrire dans `pvp_elo` uniquement (pas dans tous les leaderboards : les
    classements solo sont écrits par le jeu). Règle `Deny`, principal `Player`, action `Write`, ressource
    `urn:ugs:leaderboards:/v1/projects/*/leaderboards/pvp_elo/scores/players/*`.
+   Même sans cette règle, un score falsifié ne tient pas : le jeu lit le classement par `GetPvpBoard`, qui compare chaque
+   entrée à l'Elo protégé du joueur, réécrit les scores faux et met à 0 les entrées sans duel.
 5. **Cloud Save** : rien à créer.
    - `pvp` et `pvp_pending` : données joueur **protégées** (le joueur les lit, seul le serveur les écrit).
    - `solo_total_stars` : écrit par le jeu, lu par le serveur pour ouvrir les duels à 35 étoiles.
    - `pvp_queue` : données « custom » **privées** (illisibles par les joueurs), une clé par version du générateur et
      tranche de 100 Elo (`v8_b10`…).
+   - `pvp_board` : données « custom » **privées**, le classement vérifié de chaque mois (`board_2026-10`), gardé 5 minutes.
 
 ## Versions
 

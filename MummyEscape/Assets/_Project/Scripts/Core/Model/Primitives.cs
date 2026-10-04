@@ -12,6 +12,8 @@ namespace MummyEscape.Core
         public static int Dx(this Dir d) => d == Dir.Right ? 1 : d == Dir.Left ? -1 : 0;
         public static int Dy(this Dir d) => d == Dir.Up ? 1 : d == Dir.Down ? -1 : 0;
         public static Dir Opposite(this Dir d) => (Dir)(((int)d + 2) & 3);
+        /// <summary>Turned clockwise by this many quarter turns (negative = anticlockwise).</summary>
+        public static Dir Turn(this Dir d, int quarters) => (Dir)(((int)d + quarters) & 3);
     }
 
     /// <summary>A tile coordinate in the tomb: floor (storey) + grid position.</summary>

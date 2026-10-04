@@ -64,6 +64,10 @@ namespace MummyEscape.Core
         // ---- Hazards, all on the route (nothing is placed just to mislead) ----
         public int SpikeTraps;
         public int DarknessTraps;
+        /// <summary>Mirrors of Seth: the controls are reversed for a few steps.</summary>
+        public int ReverseTraps;
+        /// <summary>Turning slabs: the tomb turns a quarter turn on screen.</summary>
+        public int RotateTraps;
         /// <summary>Dust patches on the route (torch goes out), each followed by a wall torch further on.</summary>
         public int DustPatches;
 
@@ -120,7 +124,7 @@ namespace MummyEscape.Core
 
         public override string ToString() =>
             $"{Id} moves[{MinMoves}-{MaxMoves}] floors:{Floors} cells:{CellsX}x{CellsY} gates:[{string.Join(",", Gates)}] " +
-            $"spikes:{SpikeTraps} dark:{DarknessTraps} dust:{DustPatches} loops:{ExtraLoops}" +
+            $"spikes:{SpikeTraps} dark:{DarknessTraps} mirror:{ReverseTraps} turn:{RotateTraps} dust:{DustPatches} loops:{ExtraLoops}" +
             $" currents:{Currents} crumbling:{CrumblingTiles} fire:{FireJets}{(BlueBarriers ? " blue" : "")}";
     }
 }

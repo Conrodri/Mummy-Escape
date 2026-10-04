@@ -156,6 +156,16 @@ namespace MummyEscape.Core
                     if (!PlaceSpikes(route)) { failure = "spikes: no shortcut with a way round"; return null; }
                 for (int k = 0; k < _spec.DarknessTraps; k++)
                     if (!PlaceTrap(TrapKind.Darkness, route)) { failure = "darkness: no spot"; return null; }
+                for (int k = 0; k < _spec.ReverseTraps; k++)
+                    if (!PlaceTrap(TrapKind.Reverse, route)) { failure = "mirror: no spot"; return null; }
+                for (int k = 0; k < _spec.RotateTraps; k++)
+                {
+                    if (!PlaceTrap(TrapKind.Rotate, route)) { failure = "turning slab: no spot"; return null; }
+                    var slab = _traps[_traps.Count - 1];
+                    var turning = _level[slab];
+                    turning.Param = (byte)(_rng.Chance(500) ? 1 : 3); // clockwise or anticlockwise
+                    _level[slab] = turning;
+                }
 
                 if (_channels > Solver.MaxChannels || _traps.Count > Solver.MaxTraps || _crumbling > Solver.MaxCrumbling)
                 {

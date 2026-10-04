@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace MummyEscape.Services
 {
-    public enum Sfx { Step, Bump, Button, Door, Spikes, Darkness, Disarm, Teleport, Curse, Fall, Climb, Win, Death, Click, Coin, Splash, Crumble, Laser, Fire }
+    public enum Sfx { Step, Bump, Button, Door, Spikes, Darkness, Disarm, Teleport, Curse, Fall, Climb, Win, Death, Click, Coin, Splash, Crumble, Laser, Fire, Mirror, Turn }
 
     /// <summary>
     /// Music + sound effects. Ships with synthesized placeholder sounds so the game is audible from day one;
@@ -192,6 +192,8 @@ namespace MummyEscape.Services
                     case Sfx.Crumble: return Build("crumble", 0.9f, (t, i) => Noise(i / 4) * Env(t, 0.02f, 0.85f) * (0.6f + 0.4f * Mathf.Sin(t * 47f)) * 0.6f + Sine(50, t) * Env(t, 0.01f, 0.5f) * 0.5f);
                     case Sfx.Laser: return Build("laser", 0.45f, (t, i) => (Sine(880 - 500 * t, t) * 0.5f + Sine(1320 - 750 * t, t) * 0.25f) * Env(t, 0.003f, 0.4f) * 0.35f + Noise(i) * Env(t, 0.001f, 0.04f) * 0.2f);
                     case Sfx.Fire: return Build("fire", 0.8f, (t, i) => Noise(i / 2) * Env(t, 0.04f, 0.75f) * (0.7f + 0.3f * Noise(i / 700)) * 0.6f + Sine(80, t) * Env(t, 0.02f, 0.5f) * 0.35f);
+                    case Sfx.Mirror: return Build("mirror", 0.9f, (t, i) => (Sine(880 - 440 * t, t) * 0.4f + Sine(660 + 440 * t, t) * 0.4f) * Env(t, 0.02f, 0.85f) * 0.35f);
+                    case Sfx.Turn: return Build("turn", 1.0f, (t, i) => Noise(i / 5) * Env(t, 0.05f, 0.9f) * 0.45f + Sine(55 + 30 * t, t) * Env(t, 0.05f, 0.9f) * 0.55f);
                 }
                 return Build("silence", 0.05f, (t, i) => 0f);
             }

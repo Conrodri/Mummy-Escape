@@ -206,10 +206,12 @@ namespace MummyEscape.Pvp
                     Duels = d.SeasonDuels,
                     DuelsLastWeek = d.SeasonDuelsLastWeek,
                     CountedDuels = d.SeasonCountedDuels,
+                    Ranked = d.Ranked,
                     RewardsClaimed = false
                 };
                 d.Elo = SoftReset(d.Elo);
                 d.BestEloThisSeason = d.Elo;
+                d.Ranked = false;
                 d.SeasonDuels = 0;
                 d.SeasonDuelsLastWeek = 0;
                 d.SeasonCountedDuels = 0;

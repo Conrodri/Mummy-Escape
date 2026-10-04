@@ -201,6 +201,7 @@ namespace MummyEscape.Game
             _player.SetBlind(false);
             _player.SetTorchLit(true);
             _app.Camera.SnapTo(MazeView.CellToWorld(level.Start));
+            _app.Camera.SetTurn(0, true);
             _app.Lighting.SetMood(true);
             _paused = false;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
@@ -380,6 +381,14 @@ namespace MummyEscape.Game
                 _app.Audio.PlayLevelMusic(CurrentLevel.Act, Session.Position.Floor + 1);
         }
 
+        void LateUpdate()
+        {
+            // The tomb may be turned on screen (turning slab): the mummy and the ghost stay upright.
+            var turn = _app.Camera.Turn;
+            _player.transform.rotation = turn;
+            _ghost.transform.rotation = turn;
+        }
+
         public void SetPaused(bool paused)
         {
             _paused = paused;
@@ -416,12 +425,15 @@ namespace MummyEscape.Game
             var cell = MazeView.WorldToCell(world, Session.Position.Floor);
             int dx = cell.X - Session.Position.X, dy = cell.Y - Session.Position.Y;
             if (Mathf.Abs(dx) + Mathf.Abs(dy) != 1) return;
-            var dir = dx > 0 ? Dir.Right : dx < 0 ? Dir.Left : dy > 0 ? Dir.Up : Dir.Down;
+            var toward = dx > 0 ? Dir.Right : dx < 0 ? Dir.Left : dy > 0 ? Dir.Up : Dir.Down;
+            // A tap is a swipe toward that tile on screen: the turned tomb and the mirror apply to it as well.
+            var swipe = toward.Turn(Session.State.Rotation);
+            var dest = Session.Position.Step(Session.State.WorldDir(swipe));
 
             // Tapping a neighbour moves there, except onto visible spikes: no life lost to a stray tap (swipe to take
             // the hit on purpose, or use the disarm button).
-            if (Session.IsVisible(cell) && Rules.IsDisarmable(Session.Level.Get(cell), Session.State.Disarmed)) return;
-            Submit(PlayerAction.Move(dir));
+            if (Session.IsVisible(dest) && Rules.IsDisarmable(Session.Level.Get(dest), Session.State.Disarmed)) return;
+            Submit(PlayerAction.Move(swipe));
         }
 
         /// <summary>The HUD disarm button: disarms the visible spikes next to the mummy, if any.</summary>
@@ -452,9 +464,9 @@ namespace MummyEscape.Game
                 if (action.Kind == ActionKind.Move)
                 {
                     _app.Audio.Play(Sfx.Bump);
-                    fx.Bump(MazeView.CellToWorld(from), action.Dir);
+                    fx.Bump(MazeView.CellToWorld(from), r.Dir);
                     _busy = true;
-                    yield return _player.Bump(action.Dir);
+                    yield return _player.Bump(r.Dir);
                     _busy = false;
                 }
                 yield break;
@@ -481,7 +493,7 @@ namespace MummyEscape.Game
                 if (transport) _maze.FloorOverride = r.SteppedOn.Floor;
 
                 var level = Session.Level;
-                var first = from.Step(action.Dir);
+                var first = from.Step(r.Dir);
                 var landed = MazeView.CellToWorld(r.SteppedOn);
 
                 audio.Play(Sfx.Step, 0.12f);
@@ -554,6 +566,23 @@ namespace MummyEscape.Game
                     audio.Play(Sfx.Darkness);
                     fx.Darkness(landed);
                     _app.Lighting.Flash(new Color(0.4f, 0.1f, 0.6f));
+                }
+                if (r.Has(StepFlags.Reversed))
+                {
+                    audio.Play(Sfx.Mirror);
+                    fx.ButtonPressed(landed, new Color(1f, 0.35f, 0.75f));
+                    _app.Lighting.Flash(new Color(0.9f, 0.2f, 0.6f));
+                    Haptic();
+                }
+                if (r.Has(StepFlags.Rotated))
+                {
+                    audio.Play(Sfx.Turn);
+                    fx.ButtonPressed(landed, new Color(1f, 0.8f, 0.3f));
+                    cam.SetTurn(Session.State.Rotation);
+                    cam.Shake(0.4f);
+                    Haptic();
+                    _maze.RefreshSprites();
+                    yield return new WaitForSeconds(0.45f); // let the tomb turn before the next step
                 }
                 if (r.Has(StepFlags.PortalSealed)) audio.Play(Sfx.Bump);
                 if (r.Has(StepFlags.TorchSmothered))

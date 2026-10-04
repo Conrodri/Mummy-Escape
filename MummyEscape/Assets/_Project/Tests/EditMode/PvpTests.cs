@@ -305,6 +305,91 @@ namespace MummyEscape.Tests
             Assert.That(duel.EloAfter, Is.GreaterThan(duel.EloBefore));
             Assert.That(store.Players["alice"].Elo, Is.LessThan(PvpConfig.StartingElo));
             Assert.AreEqual(1, store.Players["alice"].Losses);
+
+            // Both Elos are published, and both players count as ranked this month.
+            Assert.AreEqual(store.Players["bob"].Elo, store.Board["bob"]);
+            Assert.AreEqual(store.Players["alice"].Elo, store.Board["alice"]);
+            var board = server.GetBoardAsync("alice", 0, 100).Result;
+            Assert.AreEqual(new[] { "bob", "alice" }, board.Rows.Select(r => r.PlayerId).ToArray());
+            Assert.AreEqual(2, board.Me.Rank);
+        }
+
+        static PlayerPvpData RankedPlayer(int elo) =>
+            new PlayerPvpData { Elo = elo, Season = "2026-10", Day = "2026-10-04", SeasonDuels = 3, Ranked = true };
+
+        [Test]
+        public void Board_RewritesForgedScores_AndDropsPlayersWithoutADuel()
+        {
+            var (server, store) = NewServer();
+            store.Players["alice"] = RankedPlayer(1100);
+            store.Players["bob"] = RankedPlayer(1050);
+            store.Players["carol"] = new PlayerPvpData { Season = "2026-10", Day = "2026-10-04" }; // opened the duel screen only
+            store.Board["alice"] = 1100;
+            store.Board["bob"] = 5000;      // posted by the client itself
+            store.Board["carol"] = 1000;
+            store.Board["mallory"] = 9000;  // no PvP data at all
+
+            var board = server.GetBoardAsync("alice", 0, 100).Result;
+            Assert.AreEqual(new[] { "alice", "bob" }, board.Rows.Select(r => r.PlayerId).ToArray());
+            Assert.AreEqual(new[] { 1100, 1050 }, board.Rows.Select(r => r.Elo).ToArray());
+            Assert.AreEqual(1, board.Me.Rank);
+            Assert.IsTrue(board.Me.IsMe);
+
+            // The leaderboard itself is repaired.
+            Assert.AreEqual(1050, store.Board["bob"]);
+            Assert.AreEqual(0, store.Board["carol"]);
+            Assert.AreEqual(0, store.Board["mallory"]);
+        }
+
+        [Test]
+        public void Board_ACheaterCannotBuyAWorldRank()
+        {
+            var (server, store) = NewServer();
+            store.Players["alice"] = RankedPlayer(1100);
+            store.Players["bob"] = RankedPlayer(900);
+            store.Board["alice"] = 1100;
+            store.Board["bob"] = 99_999;
+
+            var profile = server.GetProfileAsync("bob").Result;
+            Assert.AreEqual(2, profile.WorldRank);
+            Assert.AreEqual(900, store.Board["bob"]);
+            Assert.AreEqual(1, server.GetProfileAsync("alice").Result.WorldRank);
+            Assert.AreEqual(0, server.GetProfileAsync("carol").Result.WorldRank);
+        }
+
+        [Test]
+        public void Board_SeesFreshEloDespiteTheCache()
+        {
+            var (server, store) = NewServer();
+            store.Players["alice"] = RankedPlayer(1100);
+            store.Players["bob"] = RankedPlayer(1000);
+            store.Board["alice"] = 1100;
+            store.Board["bob"] = 1000;
+            Assert.AreEqual(2, server.GetBoardAsync("bob", 0, 100).Result.Me.Rank);
+
+            // Bob climbs within the cache's lifetime: his own row is read again.
+            store.Players["bob"].Elo = 1200;
+            store.Board["bob"] = 1200;
+            var board = server.GetBoardAsync("bob", 0, 100).Result;
+            Assert.AreEqual(1, board.Me.Rank);
+            Assert.AreEqual(new[] { "bob", "alice" }, board.Rows.Select(r => r.PlayerId).ToArray());
+        }
+
+        [Test]
+        public void Board_LastMonthIsRecomputedFromTheFinalElo()
+        {
+            var (server, store) = NewServer();
+            store.Players["alice"] = new PlayerPvpData { Elo = 1320, Season = "2026-09", SeasonDuels = 40, Ranked = true };
+            store.Players["bob"] = new PlayerPvpData { Elo = 1000, Season = "2026-09", SeasonDuels = 4, Ranked = true };
+            store.LastBoard["alice"] = 1320;
+            store.LastBoard["bob"] = 7000;
+            store.LastBoard["mallory"] = 8000;
+
+            var board = server.GetBoardAsync("bob", 1, 100).Result;
+            Assert.AreEqual("2026-09", board.Season);
+            Assert.AreEqual(new[] { "alice", "bob" }, board.Rows.Select(r => r.PlayerId).ToArray());
+            Assert.AreEqual(2, board.Me.Rank);
+            Assert.AreEqual(7000, store.LastBoard["bob"], "archives are frozen: only the shown ranking changes");
         }
 
         [Test]
@@ -342,8 +427,9 @@ namespace MummyEscape.Tests
             store.Players["alice"] = new PlayerPvpData
             {
                 Elo = 1320, Season = "2026-09", Day = "2026-09-30", SeasonDuels = 40, SeasonDuelsLastWeek = 6, SeasonCountedDuels = 30,
+                Ranked = true,
             };
-            store.LastSeasonRanks["alice"] = 12;
+            store.LastBoard["alice"] = 1320;
             var claim = server.ClaimSeasonRewardsAsync("alice").Result;
             Assert.AreEqual("2026-09", claim.Season);
             Assert.That(claim.NewRewards, Does.Contain("pvp_2026-09_rank_platine").And.Contain("pvp_2026-09_rank_top100")

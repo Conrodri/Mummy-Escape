@@ -119,6 +119,9 @@ namespace MummyEscape.Visual
                 case TileType.Button: return Tiled(l.Active ? "button_on" : "button_off", () => PaintButton(l.Active));
                 case TileType.Trap:
                     if (t.Trap == TrapKind.Spikes) return Tiled(l.Armed ? "spikes" : "spikes_off", () => PaintSpikes(l.Armed));
+                    if (t.Trap == TrapKind.Reverse) return Tiled(l.Armed ? "mirror" : "mirror_off", () => PaintMirror(l.Armed));
+                    if (t.Trap == TrapKind.Rotate)
+                        return l.Armed ? Tiled(t.Param == 1 ? "turn_cw" : "turn_ccw", () => PaintTurning(true, t.Param == 1)) : Tiled("turn_off", () => PaintTurning(false, false));
                     return Tiled(l.Armed ? "dark" : "dark_off", () => PaintDarkness(l.Armed));
                 case TileType.Teleporter:
                     if (t.Teleporter == TeleporterKind.Locked && !l.Active) return Tiled("tp_locked", () => PaintPortal(new Color32(110, 110, 120, 255), true));
@@ -190,7 +193,12 @@ namespace MummyEscape.Visual
                     if (t.Teleporter == TeleporterKind.Cursed) return new Color(0.6f, 1f, 0.3f);
                     if (t.Teleporter == TeleporterKind.Locked && !l.Active) return null;
                     return new Color(0.3f, 0.95f, 1f);
-                case TileType.Trap: return t.Trap == TrapKind.Darkness && l.Armed ? new Color(0.55f, 0.25f, 0.9f) : (Color?)null;
+                case TileType.Trap:
+                    if (!l.Armed) return null;
+                    return t.Trap == TrapKind.Darkness ? new Color(0.55f, 0.25f, 0.9f)
+                         : t.Trap == TrapKind.Reverse ? new Color(1f, 0.35f, 0.8f)
+                         : t.Trap == TrapKind.Rotate ? new Color(1f, 0.8f, 0.35f)
+                         : (Color?)null;
                 case TileType.Barrier:
                     if (l.Open) return null;
                     return t.Param == 0 ? new Color(1f, 0.2f, 0.25f) : new Color(0.25f, 0.45f, 1f);
@@ -605,6 +613,46 @@ namespace MummyEscape.Visual
                     if (r < 13 && swirl > 0.1f) p.Set(x, y, Px.Lerp(p.Get(x, y), new Color32(28, 14, 40, 255), 0.85f));
                 }
             for (int k = 0; k < 8; k++) p.Set(6 + (int)(Px.Hash(k, 1, 77) * 20), 6 + (int)(Px.Hash(1, k, 77) * 20), new Color32(170, 90, 255, 255));
+            return p;
+        }
+
+        /// <summary>Mirror of Seth: a polished disc set in the floor, two arrows swapping sides (dull once it has struck).</summary>
+        static Px PaintMirror(bool armed)
+        {
+            var p = PaintFloor(0);
+            p.Circle(16, 16, 11, StoneDark, true);
+            p.Circle(16, 16, 10, armed ? Gold : MetalDark, false);
+            p.Circle(16, 16, 8, armed ? new Color32(150, 70, 140, 255) : new Color32(70, 62, 70, 255), true);
+            if (!armed) return p;
+            var ink = new Color32(255, 190, 240, 255);
+            // ← on top, → below.
+            p.Line(10, 19, 22, 19, ink); p.Line(10, 19, 13, 22, ink); p.Line(10, 19, 13, 16, ink);
+            p.Line(10, 13, 22, 13, ink); p.Line(22, 13, 19, 16, ink); p.Line(22, 13, 19, 10, ink);
+            return p;
+        }
+
+        /// <summary>Turning slab: a round slab cut out of the floor, an arrow curling the way the tomb will turn.</summary>
+        static Px PaintTurning(bool armed, bool clockwise)
+        {
+            var p = PaintFloor(0);
+            p.Circle(16, 16, 12, StoneDark, false);
+            p.Circle(16, 16, 11, armed ? Gold : MetalDark, false);
+            if (!armed) return p;
+            var ink = new Color32(255, 205, 90, 255);
+            int X(float x) => clockwise ? 31 - Mathf.RoundToInt(x) : Mathf.RoundToInt(x);
+            int Y(float y) => Mathf.RoundToInt(y);
+            const float r = 7f, from = 0.4f, to = 5.0f;
+            for (int k = 0; k <= 48; k++)
+            {
+                float a = Mathf.Lerp(from, to, k / 48f);
+                p.Set(X(16 + Mathf.Cos(a) * r), Y(16 + Mathf.Sin(a) * r), ink);
+            }
+            // Arrow head at the end of the arc (drawn anticlockwise, mirrored for clockwise).
+            float ex = 16 + Mathf.Cos(to) * r, ey = 16 + Mathf.Sin(to) * r;
+            float tx = -Mathf.Sin(to), ty = Mathf.Cos(to), nx = Mathf.Cos(to), ny = Mathf.Sin(to);
+            float hx = ex + tx * 2f, hy = ey + ty * 2f;
+            p.Line(X(hx), Y(hy), X(ex - tx * 2f + nx * 3f), Y(ey - ty * 2f + ny * 3f), ink);
+            p.Line(X(hx), Y(hy), X(ex - tx * 2f - nx * 3f), Y(ey - ty * 2f - ny * 3f), ink);
             return p;
         }
 

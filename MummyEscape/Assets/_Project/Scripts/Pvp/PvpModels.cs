@@ -81,6 +81,7 @@ namespace MummyEscape.Pvp
         public int Duels;
         public int DuelsLastWeek;
         public int CountedDuels;       // pour le skin de participation
+        public bool Ranked;            // Elo publié dans le classement du mois
         public bool RewardsClaimed;
     }
 
@@ -99,6 +100,8 @@ namespace MummyEscape.Pvp
         public int SeasonDuelsLastWeek;
         public int SeasonCountedDuels;  // duels comptés pour le skin de participation
         public int BestEloThisSeason = PvpConfig.StartingElo;
+        /// <summary>Le serveur a publié l'Elo du joueur dans le classement de cette saison (au moins un duel résolu).</summary>
+        public bool Ranked;
         public SeasonSummary LastSeason;
 
         public string Day;              // "2026-10-04" (UTC)
@@ -174,5 +177,38 @@ namespace MummyEscape.Pvp
         public int Seals;
         public List<string> UnlockedRewards = new List<string>();
         public string Error;   // "UNKNOWN_ITEM", "OWNED", "LEAGUE", "SEALS"
+    }
+
+    /// <summary>Une ligne du classement mensuel.</summary>
+    [Serializable]
+    public sealed class PvpBoardRow
+    {
+        public int Rank;          // 1 = premier
+        public string PlayerId;
+        public string PlayerName;
+        public int Elo;
+        public bool IsMe;
+    }
+
+    /// <summary>Classement d'un mois, vérifié par le serveur.</summary>
+    [Serializable]
+    public sealed class PvpBoardPage
+    {
+        /// <summary>Mois du classement ("2026-10"), vide si inconnu.</summary>
+        public string Season = "";
+        public List<PvpBoardRow> Rows = new List<PvpBoardRow>();
+        /// <summary>L'entrée du joueur, null s'il n'est pas classé.</summary>
+        public PvpBoardRow Me;
+        /// <summary>Instant de la vérification (cache du serveur).</summary>
+        public long BuiltAtUnixMs;
+    }
+
+    /// <summary>Une entrée du service de classement, telle quelle : le score peut venir d'un tricheur.</summary>
+    public sealed class BoardEntry
+    {
+        public string PlayerId;
+        public string PlayerName;
+        public int Score;
+        public int Rank;          // 1 = premier
     }
 }

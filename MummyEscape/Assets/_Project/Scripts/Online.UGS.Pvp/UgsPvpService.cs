@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MummyEscape.Core;
 using MummyEscape.Pvp;
-using Unity.Services.Authentication;
 using Unity.Services.CloudCode;
 using Unity.Services.CloudSave;
-using Unity.Services.Leaderboards;
 using UnityEngine;
 
 namespace MummyEscape.Online
@@ -14,12 +12,11 @@ namespace MummyEscape.Online
     /// <summary>
     /// Duels through the "PvpMatchmaking" Cloud Code module (server/PvpMatchmaking): the server picks the rival, replays
     /// the run and keeps the Elo, the seals and the rewards in protected Cloud Save data the game can only read.
-    /// The monthly ranking is the "pvp_elo" leaderboard (reset every month, archived versions = past seasons).
+    /// The monthly ranking ("pvp_elo" leaderboard) is read through the module too, which checks every score.
     /// </summary>
     public sealed class UgsPvpService : IPvpService
     {
         const string Module = "PvpMatchmaking";
-        const string LeaderboardId = "pvp_elo";
         const string SoloStarsKey = "solo_total_stars";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -65,55 +62,10 @@ namespace MummyEscape.Online
 
         public async Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit)
         {
-            var page = new PvpBoardPage();
-            string me = AuthenticationService.Instance.PlayerId;
-            var lb = LeaderboardsService.Instance;
-            try
-            {
-                if (seasonsAgo == 0)
-                {
-                    page.Season = Seasons.SeasonOf(DateTime.UtcNow);
-                    var scores = await lb.GetScoresAsync(LeaderboardId, new GetScoresOptions { Limit = limit });
-                    foreach (var e in scores.Results) page.Rows.Add(Row(e.PlayerId, e.PlayerName, e.Score, e.Rank, me));
-                    try
-                    {
-                        var mine = await lb.GetPlayerScoreAsync(LeaderboardId);
-                        page.Me = Row(mine.PlayerId, mine.PlayerName, mine.Score, mine.Rank, me);
-                    }
-                    catch (Exception) { /* no duel this month */ }
-                    return page;
-                }
-
-                // Past months: the archived versions of the leaderboard, most recent first.
-                var versions = await lb.GetVersionsAsync(LeaderboardId, new GetVersionsOptions { Limit = Math.Max(1, seasonsAgo) });
-                var list = new List<Unity.Services.Leaderboards.Models.LeaderboardVersion>(versions.Results ?? new List<Unity.Services.Leaderboards.Models.LeaderboardVersion>());
-                list.Sort((a, b) => b.End.CompareTo(a.End));
-                if (list.Count < seasonsAgo) return page;
-                var version = list[seasonsAgo - 1];
-                page.Season = Seasons.SeasonOf(version.Start.AddDays(1));
-                var past = await lb.GetVersionScoresAsync(LeaderboardId, version.Id, new GetVersionScoresOptions { Limit = limit });
-                foreach (var e in past.Results) page.Rows.Add(Row(e.PlayerId, e.PlayerName, e.Score, e.Rank, me));
-                try
-                {
-                    var mine = await lb.GetVersionPlayerScoreAsync(LeaderboardId, version.Id);
-                    page.Me = Row(mine.PlayerId, mine.PlayerName, mine.Score, mine.Rank, me);
-                }
-                catch (Exception) { /* not ranked that month */ }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[Pvp] ranking unavailable: " + e.Message);
-            }
-            return page;
+            // Read through the server, which checks every score against the players' protected Elo.
+            var page = await Call<PvpBoardPage>("GetPvpBoard",
+                new Dictionary<string, object> { { "seasonsAgo", seasonsAgo }, { "limit", limit } }, _ => null);
+            return page ?? new PvpBoardPage();
         }
-
-        static PvpBoardRow Row(string playerId, string name, double score, int rank, string me) => new PvpBoardRow
-        {
-            PlayerId = playerId,
-            PlayerName = name,
-            Elo = (int)Math.Round(score),
-            Rank = rank + 1, // the service counts from 0
-            IsMe = playerId == me,
-        };
     }
 }

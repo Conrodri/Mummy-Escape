@@ -174,7 +174,8 @@ namespace MummyEscape.Core
                 case TileType.Exit: return 'E';
                 case TileType.Door: return (char)('A' + t.Channel);
                 case TileType.Button: return (char)('a' + t.Channel);
-                case TileType.Trap: return t.Trap == TrapKind.Spikes ? '^' : '~';
+                case TileType.Trap:
+                    return t.Trap == TrapKind.Spikes ? '^' : t.Trap == TrapKind.Reverse ? 'X' : t.Trap == TrapKind.Rotate ? (t.Param == 1 ? 'R' : 'W') : '~';
                 case TileType.Teleporter:
                     return t.Teleporter == TeleporterKind.Hidden ? '?' : t.Teleporter == TeleporterKind.Cursed ? '%' : t.Teleporter == TeleporterKind.Locked ? '&' : '@';
                 case TileType.BreakableFloor: return 'v';

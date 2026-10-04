@@ -40,6 +40,11 @@ namespace MummyEscape.Core
         Spikes,
         /// <summary>Cursed sand: player is blinded (sees only their own tile) for a few moves.</summary>
         Darkness,
+        /// <summary>Turning slab (single use): the whole tomb turns a quarter turn on screen for the rest of the run
+        /// (<see cref="Tile.Param"/> = 1 clockwise, 3 anticlockwise). Swipes follow the screen.</summary>
+        Rotate,
+        /// <summary>Mirror of Seth (single use): the controls are reversed for the next <see cref="Rules.ReverseDuration"/> steps.</summary>
+        Reverse,
     }
 
     public enum TeleporterKind : byte

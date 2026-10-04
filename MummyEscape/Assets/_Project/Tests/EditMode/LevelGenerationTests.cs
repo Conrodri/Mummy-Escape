@@ -292,7 +292,7 @@ namespace MummyEscape.Tests
                 int Load(int i)
                 {
                     var s = DifficultyTable.Spec(new LevelId(act, i));
-                    return s.Gates.Count + s.SpikeTraps + s.DarknessTraps + s.DustPatches + s.Currents + s.CrumblingTiles + s.FireJets;
+                    return s.Gates.Count + s.SpikeTraps + s.DarknessTraps + s.ReverseTraps + s.RotateTraps + s.DustPatches + s.Currents + s.CrumblingTiles + s.FireJets;
                 }
                 Assert.That(Load(levels), Is.GreaterThanOrEqualTo(Load(1)), $"act {act} should end harder than it starts");
                 for (int i = 2; i <= levels; i++)

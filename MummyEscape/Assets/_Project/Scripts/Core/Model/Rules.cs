@@ -38,15 +38,23 @@ namespace MummyEscape.Core
         public int Crumbled;
         /// <summary>Actions taken, modulo 3: the rhythm of the flame jets.</summary>
         public int Tick;
+        /// <summary>Quarter turns (clockwise) of the tomb on screen, from turning slabs: a swipe moves the way it points on screen.</summary>
+        public int Rotation;
+        /// <summary>Steps left with reversed controls (mirror of Seth).</summary>
+        public int Reversed;
 
         /// <summary>The torch lights the 4 neighbouring tiles: not while blinded, not while it is out.</summary>
         public bool SeesNeighbours => Blind == 0 && !TorchOut;
 
+        /// <summary>The direction in the tomb a swipe stands for (screen turned, controls reversed).</summary>
+        public Dir WorldDir(Dir swipe) => swipe.Turn(-Rotation + (Reversed > 0 ? 2 : 0));
+
         public bool Equals(RuleState o) => Position == o.Position && Pressed == o.Pressed && Disarmed == o.Disarmed && Hp == o.Hp && Blind == o.Blind
-                                           && TorchOut == o.TorchOut && Crumbled == o.Crumbled && Tick == o.Tick;
+                                           && TorchOut == o.TorchOut && Crumbled == o.Crumbled && Tick == o.Tick
+                                           && Rotation == o.Rotation && Reversed == o.Reversed;
         public override bool Equals(object obj) => obj is RuleState s && Equals(s);
         public override int GetHashCode() => Position.GetHashCode() ^ (Pressed * 397) ^ (Disarmed * 7919) ^ Hp ^ (Blind << 20) ^ (TorchOut ? 1 << 24 : 0)
-                                             ^ (Crumbled * 1543) ^ (Tick << 28);
+                                             ^ (Crumbled * 1543) ^ (Tick << 28) ^ (Rotation << 26) ^ (Reversed << 16);
     }
 
     [Flags]
@@ -80,12 +88,18 @@ namespace MummyEscape.Core
         Burned = 1 << 20,
         /// <summary>Set by the session: no way to the exit is left (currents, collapsed slabs, barriers).</summary>
         Trapped = 1 << 21,
+        /// <summary>A turning slab turned the tomb (see <see cref="RuleState.Rotation"/>).</summary>
+        Rotated = 1 << 22,
+        /// <summary>A mirror of Seth reversed the controls.</summary>
+        Reversed = 1 << 23,
     }
 
     public struct StepResult
     {
         public RuleState State;
         public StepFlags Flags;
+        /// <summary>The direction in the tomb the action went (a swipe after turning and reversal).</summary>
+        public Dir Dir;
         /// <summary>Tile the player walked onto before any transport (teleporter, ladder, hole).</summary>
         public Cell SteppedOn;
         /// <summary>Channel activated, when ButtonPressed is set.</summary>
@@ -104,6 +118,8 @@ namespace MummyEscape.Core
     public static class Rules
     {
         public const int BlindDuration = 3;
+        /// <summary>Steps taken with reversed controls after a mirror of Seth.</summary>
+        public const int ReverseDuration = 10;
 
         public static RuleState Initial(Level level) => new RuleState { Position = level.Start, Hp = level.MaxHp };
 
@@ -145,7 +161,9 @@ namespace MummyEscape.Core
             // Every accepted action ticks blindness down; a fresh darkness trap resets it below.
             r.State.Blind = s.Blind > 0 ? s.Blind - 1 : 0;
             r.State.Tick = (s.Tick + 1) % FlameCycle;
-            var target = s.Position.Step(action.Dir);
+            // A swipe follows the screen (turned tomb) and the mirror; the disarm button names the trap's side directly.
+            r.Dir = action.Kind == ActionKind.Move ? s.WorldDir(action.Dir) : action.Dir;
+            var target = s.Position.Step(r.Dir);
 
             if (action.Kind == ActionKind.Disarm)
             {
@@ -157,6 +175,8 @@ namespace MummyEscape.Core
             }
 
             if (!CanEnter(level, target, s)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
+            // Reversed controls wear off step by step (bumping into a wall does not count).
+            r.State.Reversed = s.Reversed > 0 ? s.Reversed - 1 : 0;
 
             r.Flags = StepFlags.Moved;
             // A fragile slab gives way as soon as the mummy steps off it.
@@ -224,6 +244,18 @@ namespace MummyEscape.Core
                         {
                             r.Flags |= StepFlags.Blinded;
                             r.State.Blind = BlindDuration;
+                        }
+                        else if (t.Trap == TrapKind.Rotate)
+                        {
+                            r.State.Rotation = (s.Rotation + t.Param) & 3;
+                            r.State.Disarmed |= 1 << t.TrapIndex; // single use
+                            r.Flags |= StepFlags.Rotated;
+                        }
+                        else if (t.Trap == TrapKind.Reverse)
+                        {
+                            r.State.Reversed = ReverseDuration;
+                            r.State.Disarmed |= 1 << t.TrapIndex; // single use
+                            r.Flags |= StepFlags.Reversed;
                         }
                     }
                     break;

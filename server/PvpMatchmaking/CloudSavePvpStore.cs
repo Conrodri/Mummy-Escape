@@ -22,6 +22,7 @@ namespace MummyEscape.Pvp.Server
         public const string PlayerDataKey = "pvp";
         public const string PendingDuelKey = "pvp_pending";
         public const string QueueCustomId = "pvp_queue";
+        public const string BoardCustomId = "pvp_board";              // classements vérifiés, en cache
 
         const int MaxWriteRetries = 4;
 
@@ -190,35 +191,114 @@ namespace MummyEscape.Pvp.Server
             }
         }
 
-        public async Task<int> GetWorldRankAsync(string playerId)
+        Guid ProjectGuid => Guid.Parse(_ctx.ProjectId);
+
+        static BoardEntry Entry(string playerId, string playerName, double score, int rank) => new BoardEntry
+        {
+            PlayerId = playerId,
+            PlayerName = playerName,
+            Score = (int)Math.Round(score),
+            Rank = rank + 1, // le service compte à partir de 0
+        };
+
+        string _lastVersionId;
+
+        /// <summary>La version archivée la plus récente du classement (le mois dernier), null s'il n'y en a pas encore.</summary>
+        async Task<string> LastVersionIdAsync()
+        {
+            if (_lastVersionId != null) return _lastVersionId;
+            var versions = await _api.Leaderboards.GetLeaderboardVersionsAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, 1);
+            return _lastVersionId = versions.Data.Results?.OrderByDescending(v => v.End).FirstOrDefault()?.Id;
+        }
+
+        public async Task<List<BoardEntry>> ReadBoardAsync(int seasonsAgo, int limit)
         {
             try
             {
-                var res = await _api.Leaderboards.GetLeaderboardPlayerScoreAsync(_ctx, _ctx.ServiceToken, Guid.Parse(_ctx.ProjectId),
-                    LeaderboardId, playerId);
-                return Convert.ToInt32(res.Data.Rank) + 1; // le service compte à partir de 0
+                if (seasonsAgo == 0)
+                {
+                    var res = await _api.Leaderboards.GetLeaderboardScoresAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, null, 0, limit);
+                    return res.Data.Results.Select(e => Entry(e.PlayerId, e.PlayerName, e.Score, e.Rank)).ToList();
+                }
+                string version = await LastVersionIdAsync();
+                if (version == null) return new List<BoardEntry>();
+                var past = await _api.Leaderboards.GetLeaderboardVersionScoresAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, version, null, 0, limit);
+                return past.Data.Results.Select(e => Entry(e.PlayerId, e.PlayerName, e.Score, e.Rank)).ToList();
             }
-            catch
+            catch (Exception e)
             {
-                return 0; // pas encore de score ce mois-ci
+                _logger.LogError("Classement illisible ({ago}) : {msg}", seasonsAgo, e.Message);
+                return new List<BoardEntry>();
             }
         }
 
-        /// <summary>Rang final au mois précédent : la dernière version archivée du classement.</summary>
-        public async Task<int> GetLastSeasonRankAsync(string playerId)
+        public async Task<BoardEntry> ReadBoardEntryAsync(string playerId, int seasonsAgo)
         {
             try
             {
-                var versions = await _api.Leaderboards.GetLeaderboardVersionsAsync(_ctx, _ctx.ServiceToken, Guid.Parse(_ctx.ProjectId), LeaderboardId);
-                var latest = versions.Data.Results?.FirstOrDefault();
-                if (latest == null) return 0;
-                var res = await _api.Leaderboards.GetLeaderboardVersionPlayerScoreAsync(_ctx, _ctx.ServiceToken, Guid.Parse(_ctx.ProjectId),
-                    LeaderboardId, latest.Id, playerId);
-                return Convert.ToInt32(res.Data.Rank) + 1;
+                if (seasonsAgo == 0)
+                {
+                    var res = await _api.Leaderboards.GetLeaderboardPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, playerId);
+                    return Entry(res.Data.PlayerId, res.Data.PlayerName, res.Data.Score, res.Data.Rank);
+                }
+                string version = await LastVersionIdAsync();
+                if (version == null) return null;
+                var past = await _api.Leaderboards.GetLeaderboardVersionPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, version, playerId);
+                return Entry(past.Data.PlayerId, past.Data.PlayerName, past.Data.Score, past.Data.Rank);
             }
             catch
             {
-                return 0; // pas classé le mois dernier
+                return null; // pas classé ce mois-là
+            }
+        }
+
+        /// <summary>Lit les données protégées par petits groupes, pour ne pas lancer cent requêtes d'un coup.</summary>
+        public async Task<Dictionary<string, PlayerPvpData>> ReadPlayersAsync(IReadOnlyCollection<string> playerIds)
+        {
+            var found = new Dictionary<string, PlayerPvpData>();
+            foreach (var chunk in playerIds.Distinct().Chunk(10))
+            {
+                var reads = chunk.Select(async id =>
+                {
+                    try { return (id, data: (await GetProtectedAsync<PlayerPvpData>(id, PlayerDataKey)).value); }
+                    catch { return (id, data: (PlayerPvpData)null); } // joueur inconnu
+                });
+                foreach (var (id, data) in await Task.WhenAll(reads))
+                    if (data != null) found[id] = data;
+            }
+            return found;
+        }
+
+        // ------------------------------------------------------------------ verified ranking cache (custom items)
+
+        static string BoardKey(string season) => "board_" + season;
+
+        public async Task<PvpBoardPage> GetCachedBoardAsync(string season)
+        {
+            try
+            {
+                string key = BoardKey(season);
+                var res = await _api.CloudSaveData.GetPrivateCustomItemsAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, BoardCustomId, new List<string> { key });
+                var board = FromItem<PvpBoardPage>(res.Data.Results.FirstOrDefault(i => i.Key == key)?.Value);
+                return board != null && board.BuiltAtUnixMs > 0 ? board : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Un cache effacé est réécrit vide et daté de 0 : périmé, il sera reconstruit.</summary>
+        public async Task SetCachedBoardAsync(string season, PvpBoardPage board)
+        {
+            try
+            {
+                await _api.CloudSaveData.SetPrivateCustomItemAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, BoardCustomId,
+                    new SetItemBody(BoardKey(season), ToToken(board ?? new PvpBoardPage())));
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning("Cache du classement non écrit : {msg}", e.Message);
             }
         }
     }

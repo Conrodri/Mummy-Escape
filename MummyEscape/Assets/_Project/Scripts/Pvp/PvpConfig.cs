@@ -21,6 +21,8 @@ namespace MummyEscape.Pvp
         public const int PlatineMin = 1300;
         public const int DiamantMin = 1500;
         public const int Top100Size = 100;
+        public const int BoardMargin = 20;              // entrées lues en plus du Top 100 (celles écartées à la vérification)
+        public const int BoardCacheMinutes = 5;         // classement vérifié gardé ce temps avant d'être relu
 
         // --- Course ---
         public const int TickRate = 50;                 // résolution des horodatages : 1/50 s (20 ms)

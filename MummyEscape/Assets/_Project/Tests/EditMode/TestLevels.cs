@@ -6,7 +6,8 @@ namespace MummyEscape.Tests
     {
         /// <summary>
         /// 1-floor level from ASCII rows (top row first): S start, E exit, # wall, . floor, A-P doors, a-p buttons,
-        /// ^ spikes, ~ darkness, , dust, ! wall torch, {>}< currents (up right down left), x fragile slab,
+        /// ^ spikes, ~ darkness, X mirror (reversed controls), R W turning slab (clockwise, anticlockwise),
+        /// , dust, ! wall torch, {>}< currents (up right down left), x fragile slab,
         /// | red barrier and = blue barrier (channel 0), $ switch (channel 0), 0-2 flame jet phase.
         /// </summary>
         public static Level FromAscii(params string[] rows)
@@ -27,6 +28,8 @@ namespace MummyEscape.Tests
                     else if (ch >= 'a' && ch <= 'p') { t = new Tile { Type = TileType.Button, Channel = (byte)(ch - 'a') }; channels++; }
                     else if (ch == '^') t = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)traps++ };
                     else if (ch == '~') t = new Tile { Type = TileType.Trap, Trap = TrapKind.Darkness, TrapIndex = (byte)traps++ };
+                    else if (ch == 'X') t = new Tile { Type = TileType.Trap, Trap = TrapKind.Reverse, TrapIndex = (byte)traps++ };
+                    else if (ch == 'R' || ch == 'W') t = new Tile { Type = TileType.Trap, Trap = TrapKind.Rotate, TrapIndex = (byte)traps++, Param = (byte)(ch == 'R' ? 1 : 3) };
                     else if (ch == ',') t = new Tile { Type = TileType.Dust };
                     else if (ch == '!') t = new Tile { Type = TileType.WallTorch };
                     else if (Level.CurrentGlyphs.IndexOf(ch) >= 0) t = new Tile { Type = TileType.Current, Param = (byte)Level.CurrentGlyphs.IndexOf(ch) };

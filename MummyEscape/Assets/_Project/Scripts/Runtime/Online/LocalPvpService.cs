@@ -70,7 +70,10 @@ namespace MummyEscape.Online
                     if (s.Data.LastSeason != null && string.IsNullOrEmpty(s.Data.LastSeason.Season)) s.Data.LastSeason = null;
                     s.Data.OpponentsToday ??= new Dictionary<string, int>();
                     s.Data.UnlockedRewards ??= new List<string>();
+                    if (s.Data.SeasonDuels > 0) s.Data.Ranked = true; // demo saves made before the flag existed
                     _store.Players[Me] = s.Data;
+                    // The demo leaderboard is not saved: put the player back on it.
+                    if (s.Data.Ranked && s.Data.Season == Seasons.SeasonOf(DateTime.UtcNow)) _store.Board[Me] = s.Data.Elo;
                 }
                 if (s.Pending != null && !string.IsNullOrEmpty(s.Pending.MatchId))
                 {
@@ -98,7 +101,8 @@ namespace MummyEscape.Online
             {
                 string id = "demo_" + i;
                 int elo = 700 + rng.Next(0, 1000);
-                _store.Players[id] = new PlayerPvpData { Elo = elo, Season = season, SeasonDuels = 5 + rng.Next(60), BestEloThisSeason = elo };
+                _store.Players[id] = new PlayerPvpData { Elo = elo, Season = season, SeasonDuels = 5 + rng.Next(60), BestEloThisSeason = elo, Ranked = true };
+                _store.Board[id] = elo;
                 _names[id] = DemoNames[i] + "#" + (1000 + rng.Next(9000));
             }
         }
@@ -134,25 +138,24 @@ namespace MummyEscape.Online
         public async Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit)
         {
             var profile = await GetProfileAsync(); // rolls the season first
-            var now = DateTime.UtcNow;
-            var page = new PvpBoardPage { Season = Seasons.SeasonOf(now.AddMonths(-seasonsAgo)) };
-            var entries = new List<PvpBoardRow>();
             if (seasonsAgo == 0)
             {
-                foreach (var kv in _store.Players)
-                    if (kv.Value.SeasonDuels > 0 && kv.Value.Season == page.Season)
-                        entries.Add(new PvpBoardRow { PlayerId = kv.Key, Elo = kv.Value.Elo, IsMe = kv.Key == Me, PlayerName = NameOf(kv.Key) });
+                // This month: the server's checked ranking, as online.
+                var board = await Run(() => _server.GetBoardAsync(Me, 0, limit));
+                foreach (var row in board.Rows) row.PlayerName = NameOf(row.PlayerId);
+                if (board.Me != null) board.Me.PlayerName = NameOf(Me);
+                return board;
             }
-            else
-            {
-                // Past months: a frozen demo ranking, with the player at their final Elo if they played that month.
-                var rng = new System.Random(SeasonSeed(page.Season));
-                for (int i = 0; i < DemoNames.Length; i++)
-                    entries.Add(new PvpBoardRow { PlayerId = "old_" + i, Elo = 700 + rng.Next(0, 1000), PlayerName = DemoNames[(i * 7 + 3) % DemoNames.Length] + "#" + (1000 + rng.Next(9000)) });
-                var last = profile.Data?.LastSeason;
-                if (seasonsAgo == 1 && last != null && last.Duels > 0)
-                    entries.Add(new PvpBoardRow { PlayerId = Me, Elo = last.FinalElo, IsMe = true, PlayerName = NameOf(Me) });
-            }
+
+            // Past months: a frozen demo ranking, with the player at their final Elo if they played that month.
+            var page = new PvpBoardPage { Season = Seasons.SeasonOf(DateTime.UtcNow.AddMonths(-seasonsAgo)) };
+            var entries = new List<PvpBoardRow>();
+            var rng = new System.Random(SeasonSeed(page.Season));
+            for (int i = 0; i < DemoNames.Length; i++)
+                entries.Add(new PvpBoardRow { PlayerId = "old_" + i, Elo = 700 + rng.Next(0, 1000), PlayerName = DemoNames[(i * 7 + 3) % DemoNames.Length] + "#" + (1000 + rng.Next(9000)) });
+            var last = profile.Data?.LastSeason;
+            if (seasonsAgo == 1 && last != null && last.Duels > 0)
+                entries.Add(new PvpBoardRow { PlayerId = Me, Elo = last.FinalElo, IsMe = true, PlayerName = NameOf(Me) });
             entries.Sort((a, b) => b.Elo.CompareTo(a.Elo));
             for (int i = 0; i < entries.Count; i++)
             {

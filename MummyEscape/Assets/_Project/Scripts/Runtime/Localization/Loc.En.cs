@@ -140,6 +140,8 @@ namespace MummyEscape
             ["Enregistrement d'écran détecté :\nle tombeau reste dans l'ombre"] = "Screen recording detected:\nthe tomb stays in the dark",
             ["Capture d'écran : les dieux ont scellé\nun autre tombeau !"] = "Screenshot: the gods have sealed\nanother tomb!",
             ["Aveuglé ! ({0})"] = "Blinded! ({0})",
+            ["Commandes inversées ! ({0})"] = "Controls reversed! ({0})",
+            ["Le tombeau a pivoté !\nTes gestes suivent l'écran."] = "The tomb has turned!\nYour swipes follow the screen.",
             ["Torche éteinte : longe une torche murale"] = "Torch out: walk past a wall torch",
             ["Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines."] = "Swipe to move one tile.\nYour torch lights up the tiles around you.",
             ["Maintiens « Carte » pour revoir ce que tu as exploré."] = "Hold \"Map\" to review what you have explored.",

@@ -47,5 +47,10 @@ namespace MummyEscape.Pvp.Server
 
         [CloudCodeFunction("BuyWithSeals")]
         public Task<SealPurchaseResponse> BuyWithSeals(IExecutionContext ctx, string itemId) => Server(ctx).BuyWithSealsAsync(ctx.PlayerId, itemId);
+
+        /// <summary>Classement mensuel vérifié : chaque score est comparé à l'Elo protégé du joueur (0 = ce mois, 1 = le précédent).</summary>
+        [CloudCodeFunction("GetPvpBoard")]
+        public Task<PvpBoardPage> GetPvpBoard(IExecutionContext ctx, int seasonsAgo, int limit) =>
+            Server(ctx).GetBoardAsync(ctx.PlayerId, seasonsAgo, limit);
     }
 }
