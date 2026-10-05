@@ -271,6 +271,14 @@ namespace MummyEscape.UI.Screens
         {
             int sec = s.ElapsedMs / 1000;
             string text = Loc.F("Coups : {0}", s.Moves) + $"  ·  {sec / 60}:{sec % 60:00}";
+            // Solo: the expert mummy's time on this maze, red once the clock has gone past it.
+            var pace = App.Game.Pace;
+            int target = pace != null && pace.IsCompletedSuccessfully ? pace.Result.TargetMs ?? 0 : 0;
+            if (target > 0)
+            {
+                string toBeat = Loc.F("à battre {0}", LevelResult.FormatTime(target));
+                text += $"  <size=26><color=#{(s.ElapsedMs > target ? "E06A4A" : "9C8B70")}>· {toBeat}</color></size>"; // noloc
+            }
             if (_moves.text != text) _moves.text = text;
         }
 

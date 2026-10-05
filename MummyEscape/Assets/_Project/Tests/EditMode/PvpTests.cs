@@ -187,9 +187,24 @@ namespace MummyEscape.Tests
             Assert.AreEqual(a.ToAscii(), b.ToAscii(), "same seed, same tomb on every device");
         }
 
-        /// <summary>The ideal route, one action every <paramref name="gapMs"/> ms.</summary>
-        static List<RunInput> Stamp(IEnumerable<PlayerAction> actions, int gapMs, int startMs = 500) =>
-            actions.Select((a, i) => new RunInput { Tick = RunActions.TickOf(startMs + i * gapMs), Direction = RunActions.Encode(a) }).ToList();
+        /// <summary>
+        /// The ideal route, one action every <paramref name="gapMs"/> ms, or later when the game is still animating the
+        /// previous one (a portal, a trap: <see cref="RunTiming"/>).
+        /// </summary>
+        static List<RunInput> Stamp(Level level, IEnumerable<PlayerAction> actions, int gapMs, int startMs = 500)
+        {
+            var inputs = new List<RunInput>();
+            var s = Rules.Initial(level);
+            int ms = startMs;
+            foreach (var a in actions)
+            {
+                inputs.Add(new RunInput { Tick = RunActions.TickOf(ms), Direction = RunActions.Encode(a) });
+                var r = Rules.Step(level, s, a);
+                ms += Math.Max(gapMs, RunTiming.MinGapMs(level, s, a, r));
+                s = r.State;
+            }
+            return inputs;
+        }
 
         /// <summary>A finished run as the game sends it: the clock stops on the last action.</summary>
         static RunSubmission Finish(string matchId, List<RunInput> inputs) => new RunSubmission
@@ -202,7 +217,7 @@ namespace MummyEscape.Tests
         public void Replay_VerifiesWhatItPlays()
         {
             var level = PvpArena.Generate(1001);
-            var inputs = Stamp(level.Solution.Actions, 400);
+            var inputs = Stamp(level, level.Solution.Actions, 400);
             var won = RunReplay.Verify(level, new RunSubmission { Outcome = RunOutcome.Finished, TimeMs = 1, Progress = 0, Inputs = inputs });
             Assert.IsNotNull(won);
             Assert.AreEqual(RunOutcome.Finished, won.Outcome);
@@ -228,11 +243,117 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Timing_FastestRunIsAcceptedAndNothingFaster()
+        {
+            foreach (int seed in new[] { 1001, 2002, 3003, 4004, 5005, 6006 })
+            {
+                var level = PvpArena.Generate(seed);
+                var fastest = Solver.SolveFastest(level, (st, a, r) => RunTiming.MinGapMs(level, st, a, r), SolverOptions.Default);
+                Assert.IsNotNull(fastest);
+                Assert.AreEqual(fastest.Cost, RunTiming.MinFinishMs(level));
+                Assert.That(fastest.Cost, Is.GreaterThanOrEqualTo((level.Solution.Moves - 1) * RunTiming.WalkMs), "never under one walk per move");
+
+                // Swiping the instant the game allows, from the moment the fog falls.
+                var inputs = new List<RunInput>();
+                var s = Rules.Initial(level);
+                int ms = 0;
+                foreach (var a in fastest.Actions)
+                {
+                    inputs.Add(new RunInput { Tick = RunActions.TickOf(ms), Direction = RunActions.Encode(a) });
+                    var r = Rules.Step(level, s, a);
+                    ms += RunTiming.MinGapMs(level, s, a, r);
+                    s = r.State;
+                }
+                var replay = new RunReplay(level, inputs);
+                replay.AdvanceTo(int.MaxValue);
+                Assert.AreEqual(SessionStatus.Won, replay.Session.Status);
+                Assert.IsFalse(replay.TooFast, $"seed {seed}: the fastest possible run");
+                Assert.That(RunActions.MsOf(replay.LastTick), Is.InRange(fastest.Cost - 20, fastest.Cost));
+
+                // One action sent 40 ms before the previous one finished animating: only a modified game does that.
+                int k = inputs.Count / 2;
+                var cheat = inputs.Select(i => new RunInput { Tick = i.Tick, Direction = i.Direction }).ToList();
+                for (int i = k; i < cheat.Count; i++) cheat[i].Tick -= 2;
+                var forged = new RunReplay(level, cheat);
+                forged.AdvanceTo(int.MaxValue);
+                Assert.IsTrue(forged.TooFast, $"seed {seed}: 40 ms ahead of the animation");
+
+                // Every step a little quicker (100 ms walks instead of 130): each gap alone looks almost fine, the sum does not.
+                var hurried = new List<RunInput>();
+                var hs = Rules.Initial(level);
+                int hms = 0;
+                foreach (var a in fastest.Actions)
+                {
+                    hurried.Add(new RunInput { Tick = RunActions.TickOf(hms), Direction = RunActions.Encode(a) });
+                    var r = Rules.Step(level, hs, a);
+                    hms += RunTiming.MinGapMs(level, hs, a, r) * 100 / 130;
+                    hs = r.State;
+                }
+                var quick = new RunReplay(level, hurried);
+                quick.AdvanceTo(int.MaxValue);
+                Assert.IsTrue(quick.TooFast, $"seed {seed}: 23 % faster than the animations");
+                Assert.IsNull(RunReplay.Verify(level, new RunSubmission { Outcome = RunOutcome.Finished, Inputs = cheat }));
+            }
+        }
+
+        [Test]
+        public void Timing_HonestRecordingAndBotsRespectTheAnimations()
+        {
+            var rng = new Random(21);
+            for (int i = 0; i < 20; i++)
+            {
+                var ghost = PvpBots.Make(rng, 1000 + 60 * i, 0);
+                var level = PvpArena.Generate(ghost.Seed);
+                var replay = new RunReplay(level, ghost.Inputs);
+                replay.AdvanceTo(int.MaxValue);
+                Assert.IsFalse(replay.TooFast);
+                if (ghost.Outcome == RunOutcome.Finished) Assert.That(ghost.TimeMs, Is.GreaterThanOrEqualTo(RunTiming.MinFinishMs(level)));
+            }
+
+            // The game records each action when it starts, the animation of the last one having just ended.
+            var arena = PvpArena.Generate(3003);
+            var match = new PvpMatch(new FindDuelResponse { MatchId = "t1", Seed = 3003 });
+            match.Begin(arena);
+            var session = new GameSession(arena);
+            double clock = 0;
+            foreach (var a in arena.Solution.Actions)
+            {
+                var before = session.State;
+                var r = session.Apply(a);
+                match.Record(a, (int)clock, before, session);
+                clock += RunTiming.MinGapMs(arena, before, a, r) * 0.9999; // the float clock lands a hair early
+            }
+            var run = match.BuildRun(RunOutcome.Finished);
+            var check = new RunReplay(arena, run.Inputs);
+            check.AdvanceTo(int.MaxValue);
+            Assert.IsFalse(check.TooFast);
+        }
+
+        [Test]
+        public void Pace_SoloTimeToBeatAndPerfectMinimum()
+        {
+            foreach (var id in new[] { new LevelId(1, 5), new LevelId(3, 10), new LevelId(5, 5) })
+            {
+                var level = LevelGenerator.Generate(id, 2);
+                var pace = TombPace.Of(level);
+                Assert.IsTrue(pace.PerfectMs.HasValue && pace.TargetMs.HasValue, id.ToString());
+                Assert.Greater(pace.TargetMs.Value, pace.PerfectMs.Value, "the expert mummy is not perfect");
+                Assert.AreEqual(pace.TargetMs, TombPace.Of(level).TargetMs, "the same time to beat on every device");
+
+                int par = level.Solution.Moves, perfect = pace.PerfectMs.Value;
+                Assert.AreEqual(PaceVerdict.Normal, pace.Judge(pace.TargetMs.Value, par));
+                Assert.AreEqual(PaceVerdict.Impossible, pace.Judge(perfect - 100, par));
+                Assert.AreEqual(par >= TombPace.SuspiciousMinPar ? PaceVerdict.Suspicious : PaceVerdict.Normal, pace.Judge(perfect, par));
+                Assert.AreEqual(PaceVerdict.Normal, pace.Judge(perfect * 2, par));
+            }
+        }
+
+        [Test]
         public void Progress_GoesFromZeroToOne()
         {
             var level = PvpArena.Generate(2002);
             Assert.AreEqual(0f, PvpProgress.Of(level, Rules.Initial(level)));
-            var replay = new RunReplay(level, Stamp(level.Solution.Actions, 300));
+            var replay = new RunReplay(level, Stamp(level, level.Solution.Actions, 300));
             replay.AdvanceTo(RunActions.TickOf(500 + 300 * (level.Solution.Moves / 2)));
             Assert.That(replay.Progress, Is.InRange(0.3f, 0.7f));
             replay.AdvanceTo(int.MaxValue);
@@ -248,8 +369,10 @@ namespace MummyEscape.Tests
                 var ghost = PvpBots.Make(rng, 1000, 0);
                 var check = RunReplay.Verify(PvpArena.Generate(ghost.Seed), new RunSubmission { Outcome = ghost.Outcome, Inputs = ghost.Inputs });
                 Assert.IsNotNull(check);
-                Assert.AreEqual(RunOutcome.Finished, check.Outcome);
+                // Bots play like people: most reach the exit, some die in a trap or run out of time.
+                Assert.AreEqual(ghost.Outcome, check.Outcome);
                 Assert.AreEqual(ghost.TimeMs, check.TimeMs);
+                if (ghost.Outcome != RunOutcome.Finished) continue;
                 Assert.That(RunValidator.IsPlausible(new RunSubmission { Outcome = ghost.Outcome, TimeMs = ghost.TimeMs, Progress = 1, Inputs = ghost.Inputs }, out var why), Is.True, why);
             }
         }
@@ -285,7 +408,7 @@ namespace MummyEscape.Tests
             Assert.IsNull(first.Error);
             Assert.IsNull(first.Ghost, "nobody waiting: alice runs first");
             var level = PvpServer.Arena(first.Seed);
-            var slow = Finish(first.MatchId, Stamp(level.Solution.Actions, 900));
+            var slow = Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900));
             var queued = server.SubmitRunAsync("alice", slow, "Alice").Result;
             Assert.IsNull(queued.Error);
             Assert.IsFalse(queued.Resolved);
@@ -298,7 +421,7 @@ namespace MummyEscape.Tests
             Assert.AreEqual(first.Seed, second.Seed, "same seed, same tomb");
             Assert.AreEqual(0, store.Queue.Count, "a ghost serves one duel only");
 
-            var fast = Finish(second.MatchId, Stamp(level.Solution.Actions, 400));
+            var fast = Finish(second.MatchId, Stamp(level, level.Solution.Actions, 400));
             var duel = server.SubmitRunAsync("bob", fast, "Bob").Result;
             Assert.IsTrue(duel.Resolved);
             Assert.AreEqual(DuelResult.Win, duel.Result);
@@ -420,7 +543,7 @@ namespace MummyEscape.Tests
             var forfeit = new RunSubmission
             {
                 MatchId = duel.MatchId, Outcome = RunOutcome.Abandoned,
-                Inputs = Stamp(level.Solution.Actions.Take(8), 900, 3000),
+                Inputs = Stamp(level, level.Solution.Actions.Take(8), 900, 3000),
             };
             var result = server.SubmitRunAsync("alice", forfeit, "Alice").Result;
             Assert.IsNull(result.Error);
@@ -434,12 +557,12 @@ namespace MummyEscape.Tests
             var (server, store) = NewServer();
             var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
             var level = PvpServer.Arena(first.Seed);
-            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level.Solution.Actions, 900)), "Alice").Wait();
+            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900)), "Alice").Wait();
 
             var second = server.FindDuelAsync("bob", DifficultyTable.GeneratorVersion).Result;
             // Bob claims a lightning exit after only three moves.
             var lie = new RunSubmission { MatchId = second.MatchId, Outcome = RunOutcome.Finished, TimeMs = 5000, Progress = 1,
-                                          Inputs = Stamp(level.Solution.Actions.Take(3), 400) };
+                                          Inputs = Stamp(level, level.Solution.Actions.Take(3), 400) };
             var result = server.SubmitRunAsync("bob", lie, "Bob").Result;
             Assert.AreEqual("INVALID_RUN", result.Error);
             Assert.AreEqual(DuelResult.Loss, result.Result);
@@ -452,14 +575,14 @@ namespace MummyEscape.Tests
             store.SoloStars[rival] = 50;
             var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
             var level = PvpServer.Arena(first.Seed);
-            var run = Finish(first.MatchId, Stamp(level.Solution.Actions, 900));
+            var run = Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900));
             run.Look = new PlayerLook { Mummy = "mummy_classic", Hat = "BAD hat!" };
             server.SubmitRunAsync("alice", run, "Alice").Wait();
 
             var second = server.FindDuelAsync(rival, DifficultyTable.GeneratorVersion).Result;
             Assert.AreEqual("mummy_classic", second.Ghost.Look.Mummy, "the ghost carries its look for the VS screen");
             Assert.IsNull(second.Ghost.Look.Hat, "unsafe ids are dropped");
-            server.SubmitRunAsync(rival, Finish(second.MatchId, Stamp(level.Solution.Actions, 700)), rival).Wait();
+            server.SubmitRunAsync(rival, Finish(second.MatchId, Stamp(level, level.Solution.Actions, 700)), rival).Wait();
             return (server.GetHistoryAsync("alice").Result.Duels.Find(d => d.MatchId == first.MatchId),
                     server.GetHistoryAsync(rival).Result.Duels.Find(d => d.MatchId == second.MatchId));
         }
@@ -470,14 +593,14 @@ namespace MummyEscape.Tests
             var (server, store) = NewServer();
             var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
             var level = PvpServer.Arena(first.Seed);
-            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level.Solution.Actions, 900)), "Alice").Wait();
+            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900)), "Alice").Wait();
             var open = server.GetHistoryAsync("alice").Result.Duels.Single();
             Assert.IsFalse(open.Resolved);
             Assert.IsNull(open.Rival);
             Assert.AreEqual(level.Solution.Actions.Count, open.Me.Inputs.Count);
 
             var second = server.FindDuelAsync("bob", DifficultyTable.GeneratorVersion).Result;
-            server.SubmitRunAsync("bob", Finish(second.MatchId, Stamp(level.Solution.Actions, 700)), "Bob").Wait();
+            server.SubmitRunAsync("bob", Finish(second.MatchId, Stamp(level, level.Solution.Actions, 700)), "Bob").Wait();
 
             var alice = server.GetHistoryAsync("alice").Result.Duels.Single();
             Assert.IsTrue(alice.Resolved, "racing her ghost completes Alice's duel");
@@ -554,7 +677,7 @@ namespace MummyEscape.Tests
             Assert.AreEqual("LIMIT", server.ReportCheatAsync("bob", bob.MatchId).Result.Error);
             var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
             var level = PvpServer.Arena(first.Seed);
-            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level.Solution.Actions, 900)), "Alice").Wait();
+            server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900)), "Alice").Wait();
             Assert.AreEqual("NO_RIVAL", server.ReportCheatAsync("alice", first.MatchId).Result.Error);
         }
 
@@ -636,7 +759,11 @@ namespace MummyEscape.Tests
         [Test]
         public void Match_GhostFollowsThePlayersClock()
         {
-            var ghost = PvpBots.Make(new Random(12), 1000, 0);
+            // Bots play like people and may die in a trap: take one that reaches the exit.
+            var rng = new Random(12);
+            GhostRun ghost;
+            do ghost = PvpBots.Make(rng, 1000, 0);
+            while (ghost.Outcome != RunOutcome.Finished);
             var match = new PvpMatch(new FindDuelResponse { MatchId = "m2", Seed = ghost.Seed, Ghost = ghost });
             match.Begin(PvpArena.Generate(ghost.Seed));
 

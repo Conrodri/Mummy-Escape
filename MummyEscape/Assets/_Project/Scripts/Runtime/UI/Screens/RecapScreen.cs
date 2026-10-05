@@ -166,6 +166,16 @@ namespace MummyEscape.UI.Screens
                 UIKit.Chip(_rewards, UIKit.Art.Scarab, "+" + outcome.CoinsEarned, UIKit.Gold, 60);
                 any = true;
             }
+            if (result.Won && result.TargetMs > 0)
+            {
+                // The expert mummy (a simulated player) ran this same maze: its time is the one to beat.
+                bool beaten = result.TimeMs <= result.TargetMs;
+                UIKit.Chip(_rewards, beaten ? UISprites.Check : UISprites.Podium,
+                    beaten ? Loc.F("Momie experte battue ! ({0})", LevelResult.FormatTime(result.TargetMs))
+                           : Loc.F("Momie experte : {0}", LevelResult.FormatTime(result.TargetMs)),
+                    beaten ? UIKit.Turquoise : UIKit.Dim, 60);
+                any = true;
+            }
             _rewards.gameObject.SetActive(any);
 
             var next = Progression.Next(result.Level);

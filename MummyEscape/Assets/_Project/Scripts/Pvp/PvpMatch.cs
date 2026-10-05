@@ -34,11 +34,16 @@ namespace MummyEscape.Pvp
         }
 
         /// <summary>Records an action the rules accepted, at the run time it was played (at least the minimum gap after the previous one).</summary>
+        readonly RunClock _clock = new RunClock();
+
         public void Record(PlayerAction action, int elapsedMs, RuleState before, GameSession session)
         {
             if (Over) return;
             int tick = RunActions.TickOf(elapsedMs);
             if (Inputs.Count > 0) tick = System.Math.Max(tick, Inputs[Inputs.Count - 1].Tick + PvpConfig.MinInputGapTicks);
+            // Jamais avant la fin de l'animation précédente, même à un arrondi près : le serveur la vérifie (RunTiming).
+            tick = System.Math.Max(tick, _clock.MinTick);
+            _clock.Accept(tick, RunTiming.MinGapMs(Level, before, action, Rules.Step(Level, before, action)));
             Inputs.Add(new RunInput { Tick = tick, Direction = RunActions.Encode(action) });
             MyProgress = session.Status == SessionStatus.Won ? 1f
                        : PvpProgress.Of(Level, session.Status == SessionStatus.Dead ? before : session.State);

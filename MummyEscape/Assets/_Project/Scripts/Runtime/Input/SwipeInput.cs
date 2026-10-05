@@ -23,6 +23,7 @@ namespace MummyEscape.Input
         const float TapMaxSeconds = 0.3f;
 
         Vector2 _start;
+        int _touchId = -1;
         float _startTime;
         bool _tracking;
         bool _consumed;
@@ -37,7 +38,7 @@ namespace MummyEscape.Input
             ReadKeyboard();
 
             bool pressed, down, up;
-            Vector2 pos;
+            Vector2 pos, start;
             var touch = Touchscreen.current;
             if (touch != null && (touch.primaryTouch.press.isPressed || touch.primaryTouch.press.wasReleasedThisFrame))
             {
@@ -46,6 +47,11 @@ namespace MummyEscape.Input
                 down = t.press.wasPressedThisFrame;
                 up = t.press.wasReleasedThisFrame;
                 pos = t.position.ReadValue();
+                // Measure from where this very touch began: on the press frame of a quick second swipe, the position
+                // can still be where the previous finger left the glass, and the gesture then read backwards.
+                start = t.startPosition.ReadValue();
+                int id = t.touchId.ReadValue();
+                if (pressed && id != _touchId) { down = true; _touchId = id; } // a new touch, even if its press was missed
             }
             else if (Mouse.current != null)
             {
@@ -54,14 +60,15 @@ namespace MummyEscape.Input
                 down = m.leftButton.wasPressedThisFrame;
                 up = m.leftButton.wasReleasedThisFrame;
                 pos = m.position.ReadValue();
+                start = pos;
             }
             else return;
 
             if (down)
             {
-                _tracking = !IsOverUi(pos);
+                _tracking = !IsOverUi(start);
                 _consumed = false;
-                _start = pos;
+                _start = start;
                 _startTime = Time.unscaledTime;
             }
             if (!_tracking) return;
@@ -82,6 +89,7 @@ namespace MummyEscape.Input
             {
                 if (!_consumed && Time.unscaledTime - _startTime <= TapMaxSeconds) Tapped?.Invoke(pos);
                 _tracking = false;
+                _touchId = -1;
             }
         }
 

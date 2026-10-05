@@ -68,6 +68,7 @@ namespace MummyEscape.Game
             int token = ++_loadToken;
             ResetForLoad();
             Match = null;
+            Pace = null;
             CurrentLevel = id;
             _app.Audio.PlayMusic(id.Act); // renders (if needed) while the maze is generated
             LevelLoading?.Invoke(id);
@@ -90,6 +91,7 @@ namespace MummyEscape.Game
             }
             if (token != _loadToken || this == null) return; // another level was requested meanwhile
             Setup(level);
+            Pace = Task.Run(() => TombPace.Of(level));
             Prefetch(id); // the replay's maze, ready before the player needs it
             LevelStarted?.Invoke();
             Changed?.Invoke();
@@ -111,6 +113,12 @@ namespace MummyEscape.Game
 
         /// <summary>The duel being played, null in solo.</summary>
         public PvpMatch Match { get; private set; }
+
+        /// <summary>
+        /// Solo tomb: the expert mummy's time (to beat) and the perfect minimum, worked out off the main thread while
+        /// the map is previewed. Null in a duel.
+        /// </summary>
+        public Task<TombPace> Pace { get; private set; }
         public bool InDuel => Match != null;
         /// <summary>Raised when a duel run ends (exit, death, time out, forfeit) with what goes to the server.</summary>
         public event Action<PvpMatch, RunSubmission> DuelEnded;
@@ -128,6 +136,7 @@ namespace MummyEscape.Game
             ResetForLoad();
             Session = null; // the last run's clock must not reach the new duel while its tomb is generated
             Match = match;
+            Pace = null;
             var id = PvpArena.LevelFor(match.Seed);
             CurrentLevel = id;
             _app.Audio.PlayMusic(id.Act);
@@ -205,6 +214,7 @@ namespace MummyEscape.Game
             _player.SetSkin(_app.Save.Loadout);
             _player.Place(level.Start);
             _player.SetBlind(false);
+            _player.SetReversed(0);
             _player.SetTorchLit(true);
             _app.Camera.SnapTo(MazeView.CellToWorld(level.Start));
             _app.Camera.SetTurn(0, true);
@@ -380,7 +390,9 @@ namespace MummyEscape.Game
             // when the app comes back from the background, so a phone call does not ruin a run.
             // In a duel the clock never stops: the rival's ghost did not pause either.
             bool duel = Match != null;
-            if (Session != null && !Previewing && (!_paused || duel) && !(duel && Match.Over)) Session.Tick(Time.deltaTime);
+            // A step being animated keeps the clock running even in pause: pausing on every swipe must not hide the
+            // animations from the time (nobody beats RunTiming's minimum).
+            if (Session != null && !Previewing && (!_paused || duel || _busy) && !(duel && Match.Over)) Session.Tick(Time.deltaTime);
             if (duel) UpdateDuel();
             // A floor may have its own music (Resources/Music/act{n}_f{floor}); no-op while the track playing fits.
             if (Session != null && Session.Status == SessionStatus.Playing && !Previewing)
@@ -491,7 +503,7 @@ namespace MummyEscape.Game
                 fx.Disarm(MazeView.CellToWorld(from.Step(action.Dir)));
                 Haptic();
                 _maze.RefreshSprites();
-                yield return new WaitForSeconds(0.15f);
+                yield return new WaitForSeconds(RunTiming.DisarmMs / 1000f);
             }
             else
             {
@@ -588,7 +600,7 @@ namespace MummyEscape.Game
                     cam.Shake(0.4f);
                     Haptic();
                     _maze.RefreshSprites();
-                    yield return new WaitForSeconds(0.45f); // let the tomb turn before the next step
+                    yield return new WaitForSeconds(RunTiming.TombTurnMs / 1000f); // let the tomb turn before the next step
                 }
                 if (r.Has(StepFlags.PortalSealed)) audio.Play(Sfx.Bump);
                 if (r.Has(StepFlags.TorchSmothered))
@@ -627,7 +639,7 @@ namespace MummyEscape.Game
                     {
                         audio.Play(Sfx.Climb);
                         fx.Climb(landed);
-                        yield return _player.Vanish(0.2f);
+                        yield return _player.Vanish(RunTiming.ClimbMs / 1000f);
                     }
 
                     _maze.FloorOverride = -1;
@@ -649,6 +661,7 @@ namespace MummyEscape.Game
 
             FlameJetsBeat(r);
             _player.SetBlind(Session.IsBlind);
+            _player.SetReversed(Session.State.Reversed);
             _player.SetTorchLit(Session.TorchLit);
             _maze.RefreshSprites();
             Changed?.Invoke();
@@ -748,8 +761,22 @@ namespace MummyEscape.Game
                 if (!Match.Over) EndDuel(result.Won ? RunOutcome.Finished : RunOutcome.Died);
                 yield break;
             }
+            // Judge the time against the tomb's perfect minimum (rarely still being computed after a very quick run).
+            var pace = Pace;
+            if (pace != null)
+            {
+                while (!pace.IsCompleted) yield return null;
+                if (pace.Status == TaskStatus.RanToCompletion)
+                {
+                    result.TargetMs = pace.Result.TargetMs ?? 0;
+                    result.PerfectMs = pace.Result.PerfectMs ?? 0;
+                    result.Pace = (int)pace.Result.Judge(result.TimeMs, result.Par);
+                }
+            }
             var outcome = _app.Save.Apply(result);
-            _ = _app.Online.SubmitScoreAsync(result);
+            // Faster than the game's animations allow: a modified game, kept off the leaderboard.
+            if (result.Pace != (int)PaceVerdict.Impossible) _ = _app.Online.SubmitScoreAsync(result);
+            else Debug.LogWarning($"[Game] {result.Level} run of {result.TimeMs} ms under the perfect {result.PerfectMs} ms: not submitted");
             if (result.Won)
             {
                 _ = _app.PublishProgress();

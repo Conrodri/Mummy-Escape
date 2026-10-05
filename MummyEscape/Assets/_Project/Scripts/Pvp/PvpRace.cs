@@ -65,10 +65,16 @@ namespace MummyEscape.Pvp
     {
         readonly IList<RunInput> _inputs;
         int _next;
+        readonly RunClock _clock = new RunClock(); // jamais plus vite que les animations du jeu
 
         public GameSession Session { get; }
         /// <summary>Une action enregistrée a été refusée par les règles : la course a été trafiquée.</summary>
         public bool Invalid { get; private set; }
+        /// <summary>
+        /// Une action est partie avant la fin de l'animation de la précédente (<see cref="RunTiming"/>) : impossible avec
+        /// le jeu, la course a été accélérée. Le fantôme la rejoue quand même ; le serveur la refuse.
+        /// </summary>
+        public bool TooFast { get; private set; }
         /// <summary>Instant (en pas) de la dernière action jouée.</summary>
         public int LastTick { get; private set; }
         /// <summary>Situation juste avant le coup fatal (ou la situation actuelle) : c'est elle que mesure la progression.</summary>
@@ -94,6 +100,7 @@ namespace MummyEscape.Pvp
                 var before = Session.State;
                 var r = Session.Apply(action);
                 if (r.Has(StepFlags.Blocked)) { Invalid = true; break; }
+                if (!_clock.Accept(input.Tick, RunTiming.MinGapMs(Session.Level, before, action, r))) TooFast = true;
                 LastTick = input.Tick;
                 LastAlive = Session.Status == SessionStatus.Dead ? before : Session.State;
                 last = r;
@@ -112,7 +119,7 @@ namespace MummyEscape.Pvp
             if (run.Outcome == RunOutcome.Abandoned) return run;
             var replay = new RunReplay(level, run.Inputs);
             replay.AdvanceTo(int.MaxValue);
-            if (replay.Invalid || RunActions.MsOf(replay.LastTick) > PvpConfig.TimeLimitMs) return null;
+            if (replay.Invalid || replay.TooFast || RunActions.MsOf(replay.LastTick) > PvpConfig.TimeLimitMs) return null;
             var verified = new RunSubmission { MatchId = run.MatchId, Inputs = run.Inputs };
             var status = replay.Session.Status;
             if (status == SessionStatus.Won)

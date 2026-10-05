@@ -8,6 +8,25 @@ using MummyEscape.Core;
 using MummyEscape.Pvp;
 using MummyEscape.PvpSim;
 
+if (args.Length > 0 && args[0] == "analyze")
+{
+    // dotnet run -c Release --project tools/PvpSim -- analyze <duel_replays.json>
+    RunAnalysis.Run(args[1], "player");
+    return;
+}
+if (args.Length > 0 && args[0] == "solo")
+{
+    // dotnet run -c Release --project tools/PvpSim -- solo [variants]
+    SoloTimes.Run(args.Length > 1 ? int.Parse(args[1]) : 20);
+    return;
+}
+if (args.Length > 0 && args[0] == "calibrate")
+{
+    // dotnet run -c Release --project tools/PvpSim -- calibrate <elo> [ghosts]
+    RunAnalysis.Calibrate(int.Parse(args[1]), args.Length > 2 ? int.Parse(args[2]) : 200);
+    return;
+}
+
 int players = args.Length > 0 ? int.Parse(args[0]) : 60;
 int days = args.Length > 1 ? int.Parse(args[1]) : 5;
 int seed = args.Length > 2 ? int.Parse(args[2]) : 2026;

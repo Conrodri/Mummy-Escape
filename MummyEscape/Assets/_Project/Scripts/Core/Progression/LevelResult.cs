@@ -20,6 +20,12 @@ namespace MummyEscape.Core
         public int TrapsTriggered;
         /// <summary>Play time after the map preview, in milliseconds (second sort key of the leaderboard).</summary>
         public int TimeMs;
+        /// <summary>The expert mummy's time on this maze, to beat (0: unknown).</summary>
+        public int TargetMs;
+        /// <summary>No mistake and every swipe the instant the game allows (0: unknown). Nobody goes under it.</summary>
+        public int PerfectMs;
+        /// <summary>How the time compares with the perfect one: 0 normal, 1 suspicious, 2 impossible (Pvp.PaceVerdict).</summary>
+        public int Pace;
 
         /// <summary>Moves spent above the optimal route of this maze (0 = perfect run).</summary>
         public int OverPar => Math.Max(0, Moves - Par);

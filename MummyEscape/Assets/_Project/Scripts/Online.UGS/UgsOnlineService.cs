@@ -74,14 +74,15 @@ namespace MummyEscape.Online
             try
             {
                 await LeaderboardsService.Instance.AddPlayerScoreAsync(OnlineServiceFactory.LeaderboardId(result.Level), result.LeaderboardScore,
-                    new AddPlayerScoreOptions { Metadata = new ScoreMeta { c = Country ?? "" } });
+                    new AddPlayerScoreOptions { Metadata = new ScoreMeta { c = Country ?? "", s = result.Pace == 1 ? 1 : 0 } });
             }
             catch (Exception e) { Debug.LogWarning("[Online] score not submitted: " + e.Message); }
         }
 
         /// <summary>Score metadata stored with each entry (kept tiny: it is returned for every row).</summary>
         [Serializable]
-        sealed class ScoreMeta { public string c; }
+        /// <summary>c: country; s: 1 when the time is nearly the tomb's perfect minimum on a big maze (suspicious, see TombPace).</summary>
+        sealed class ScoreMeta { public string c; public int s; }
 
         // Country rankings are filtered client-side from the global board (UGS has no per-country boards):
         // walk the best scores page by page until the top N of the country is found.
@@ -149,7 +150,15 @@ namespace MummyEscape.Online
                 TimeMs = timeMs,
                 IsMe = e.PlayerId == PlayerId,
                 Country = CountryOf(e),
+                Suspicious = MetaOf(e)?.s == 1,
             };
+        }
+
+        static ScoreMeta MetaOf(Unity.Services.Leaderboards.Models.LeaderboardEntry e)
+        {
+            if (string.IsNullOrEmpty(e.Metadata)) return null;
+            try { return JsonUtility.FromJson<ScoreMeta>(e.Metadata); }
+            catch (Exception) { return null; }
         }
 
         static string CountryOf(Unity.Services.Leaderboards.Models.LeaderboardEntry e)

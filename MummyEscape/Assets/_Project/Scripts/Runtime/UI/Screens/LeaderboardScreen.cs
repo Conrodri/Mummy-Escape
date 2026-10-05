@@ -108,7 +108,7 @@ namespace MummyEscape.UI.Screens
         /// <summary>Gap to the optimal route, with the play time (the tie breaker) underneath.</summary>
         static string ScoreText(LeaderboardRow row) =>
             row.TimeMs > 0
-                ? $"{LevelResult.FormatOverPar(row.OverPar)}\n<size=22><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color></size>"
+                ? $"{LevelResult.FormatOverPar(row.OverPar)}\n<size=22><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color>{(row.Suspicious ? " <b><color=#E0903A>?</color></b>" : "")}</size>" // noloc
                 : LevelResult.FormatOverPar(row.OverPar);
 
         public override void OnShow()

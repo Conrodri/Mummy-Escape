@@ -1,5 +1,6 @@
 using System.Collections;
 using MummyEscape.Core;
+using MummyEscape.Pvp;
 using MummyEscape.Services;
 using MummyEscape.Visual;
 using UnityEngine;
@@ -21,6 +22,9 @@ namespace MummyEscape.World
         SettingsService _settings;
         Material _spriteMaterial;
         bool _blind;
+        int _reversed;
+        SpriteRenderer _mirrorHalo;
+        static readonly Color MirrorPink = new Color(1f, 0.35f, 0.8f);
         float _torchRadius = 2.6f;
         Color _torchColor = new Color(1f, 0.72f, 0.42f);
 
@@ -43,6 +47,14 @@ namespace MummyEscape.World
             _flame.transform.SetParent(_body, false);
             if (spriteMaterial != null) _flame.sharedMaterial = spriteMaterial;
             _flame.sortingOrder = 11;
+
+            // Mirror trap: a pink halo pulses around the mummy while the controls are reversed.
+            _mirrorHalo = new GameObject("MirrorHalo").AddComponent<SpriteRenderer>();
+            _mirrorHalo.transform.SetParent(_body, false);
+            _mirrorHalo.sprite = art.Glow;
+            if (spriteMaterial != null) _mirrorHalo.sharedMaterial = spriteMaterial;
+            _mirrorHalo.sortingOrder = 9;
+            _mirrorHalo.enabled = false;
 
             var torchGo = new GameObject("Torch");
             torchGo.transform.SetParent(_body, false);
@@ -87,6 +99,9 @@ namespace MummyEscape.World
 
         public void SetBlind(bool blind) => _blind = blind;
 
+        /// <summary>Steps left under the mirror trap's reversed controls (0: none): the halo and the torch turn pink.</summary>
+        public void SetReversed(int steps) => _reversed = steps;
+
         public void SetTorchLit(bool lit)
         {
             TorchLit = lit;
@@ -100,7 +115,7 @@ namespace MummyEscape.World
             _sprite.color = Color.white;
         }
 
-        public IEnumerator WalkTo(Cell c, float duration = 0.13f)
+        public IEnumerator WalkTo(Cell c, float duration = RunTiming.WalkMs / 1000f)
         {
             Vector3 from = transform.localPosition, to = MazeView.CellToWorld(c);
             if (to.x < from.x - 0.01f) _sprite.flipX = true;
@@ -117,7 +132,7 @@ namespace MummyEscape.World
         }
 
         /// <summary>Carried by a current: glides without walking, slightly tilted.</summary>
-        public IEnumerator Slide(Cell c, float duration = 0.09f)
+        public IEnumerator Slide(Cell c, float duration = RunTiming.SlideMs / 1000f)
         {
             Vector3 from = transform.localPosition, to = MazeView.CellToWorld(c);
             float tilt = to.x < from.x - 0.01f ? 8f : to.x > from.x + 0.01f ? -8f : 0f;
@@ -142,7 +157,7 @@ namespace MummyEscape.World
             _body.localPosition = Vector3.zero;
         }
 
-        public IEnumerator Vanish(float duration = 0.25f)
+        public IEnumerator Vanish(float duration = RunTiming.VanishMs / 1000f)
         {
             for (float t = 0; t < 1f; t += Time.deltaTime / duration)
             {
@@ -153,7 +168,7 @@ namespace MummyEscape.World
             _sprite.color = new Color(1, 1, 1, 0);
         }
 
-        public IEnumerator Appear(float duration = 0.25f)
+        public IEnumerator Appear(float duration = RunTiming.AppearMs / 1000f)
         {
             for (float t = 0; t < 1f; t += Time.deltaTime / duration)
             {
@@ -167,7 +182,7 @@ namespace MummyEscape.World
 
         public IEnumerator FallThrough()
         {
-            for (float t = 0; t < 1f; t += Time.deltaTime / 0.35f)
+            for (float t = 0; t < 1f; t += Time.deltaTime / (RunTiming.FallMs / 1000f))
             {
                 _body.localScale = Vector3.one * (1f - t * 0.8f);
                 _body.localRotation = Quaternion.Euler(0, 0, t * 200f);
@@ -181,9 +196,9 @@ namespace MummyEscape.World
             for (int i = 0; i < 3; i++)
             {
                 _sprite.color = new Color(1f, 0.3f, 0.25f);
-                yield return new WaitForSeconds(0.06f);
+                yield return new WaitForSeconds(RunTiming.HurtMs / 6000f);
                 _sprite.color = Color.white;
-                yield return new WaitForSeconds(0.06f);
+                yield return new WaitForSeconds(RunTiming.HurtMs / 6000f);
             }
         }
 
@@ -221,6 +236,7 @@ namespace MummyEscape.World
                 _body.localScale = new Vector3(_body.localScale.x, Mathf.Lerp(_body.localScale.y, 1f + Mathf.Sin(Time.time * 3f) * 0.025f, 0.5f), 1f);
 
             UpdateFlame();
+            UpdateMirror();
             float targetRadius = _blind || !TorchLit ? 0.85f : _torchRadius;
             _torch.pointLightOuterRadius = Mathf.Lerp(_torch.pointLightOuterRadius, targetRadius, Time.deltaTime * 6f);
             if (_settings.AdvancedLighting && _torch.intensity > 0.01f)
@@ -228,6 +244,21 @@ namespace MummyEscape.World
                 float flicker = Mathf.PerlinNoise(Time.time * 7f, 0.3f) * 0.25f + Mathf.PerlinNoise(Time.time * 19f, 0.9f) * 0.1f;
                 _torch.intensity = Mathf.Lerp(_torch.intensity, 1.2f + flicker, Time.deltaTime * 10f);
             }
+        }
+
+        void UpdateMirror()
+        {
+            bool on = _reversed > 0;
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 7f);
+            _mirrorHalo.enabled = on;
+            if (on)
+            {
+                _mirrorHalo.color = new Color(MirrorPink.r, MirrorPink.g, MirrorPink.b, (0.35f + 0.35f * pulse) * _sprite.color.a);
+                float size = 1.1f + 0.15f * pulse;
+                _mirrorHalo.transform.localScale = new Vector3(size, size, 1f);
+            }
+            var torch = on ? Color.Lerp(_torchColor, MirrorPink, 0.45f + 0.4f * pulse) : _torchColor;
+            _torch.color = Color.Lerp(_torch.color, torch, Time.deltaTime * 12f);
         }
 
         void UpdateFlame()

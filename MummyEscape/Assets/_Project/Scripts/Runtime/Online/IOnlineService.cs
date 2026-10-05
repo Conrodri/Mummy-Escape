@@ -19,6 +19,8 @@ namespace MummyEscape.Online
         public bool IsMe;
         /// <summary>ISO 3166 alpha-2 code ("FR"), empty when unknown.</summary>
         public string Country = "";
+        /// <summary>A time within a hair of the tomb's perfect minimum on a big maze: not proof of cheating, but flagged.</summary>
+        public bool Suspicious;
     }
 
     public sealed class LeaderboardPage

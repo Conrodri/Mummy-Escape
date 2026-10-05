@@ -10,6 +10,8 @@ namespace MummyEscape.Core
         public int HpLeft;
         /// <summary>Teleporters taken by the optimal route.</summary>
         public int Teleports;
+        /// <summary>Total cost of the route, for <see cref="Solver.SolveFastest"/> (0 for the shortest route).</summary>
+        public int Cost;
         public List<PlayerAction> Actions = new List<PlayerAction>();
         public int Interactions => ButtonsPressed + Disarms;
         /// <summary>Mechanics the optimal route relies on (buttons pressed + portals taken): the "1 interaction minimum" contract.</summary>
@@ -88,6 +90,69 @@ namespace MummyEscape.Core
                 }
 
                 if (parent.Count > options.MaxStates) return null;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Fastest way out when actions take different times (<paramref name="cost"/>: what an action delays the next one):
+        /// Dijkstra over the same states as <see cref="Solve(Level, RuleState, SolverOptions)"/>. The winning action itself
+        /// costs nothing (a run's time is the instant of its last action). <see cref="Solution.Cost"/> holds the total.
+        /// </summary>
+        public static Solution SolveFastest(Level level, System.Func<RuleState, PlayerAction, StepResult, int> cost, SolverOptions options)
+        {
+            var start = Rules.Initial(level);
+            bool tick = HasFireJets(level);
+            var startKey = Pack(level, start, tick);
+            var parent = new Dictionary<long, (long prev, PlayerAction action)>();
+            var best = new Dictionary<long, int>();
+            var states = new Dictionary<long, RuleState>();
+            var done = new HashSet<long>();
+            var open = new SortedSet<(int cost, long key)>();
+            var candidates = new List<PlayerAction>(8);
+
+            parent[startKey] = (-1, default);
+            best[startKey] = 0;
+            states[startKey] = start;
+            open.Add((0, startKey));
+
+            while (open.Count > 0)
+            {
+                var (g, key) = open.Min;
+                open.Remove(open.Min);
+                if (!done.Add(key)) continue;
+                var s = states[key];
+
+                candidates.Clear();
+                foreach (var dir in DirExt.All)
+                {
+                    candidates.Add(PlayerAction.Move(dir));
+                    if (Rules.IsDisarmable(level.Get(s.Position.Step(dir)), s.Disarmed)) candidates.Add(PlayerAction.Disarm(dir));
+                }
+
+                foreach (var a in candidates)
+                {
+                    var r = Rules.Step(level, s, a);
+                    if (r.Has(StepFlags.Blocked) || r.Has(StepFlags.Died)) continue;
+                    long nk = Pack(level, r.State, tick);
+                    if (r.Has(StepFlags.Won))
+                    {
+                        // States leave the queue by increasing time: the first way out found is the fastest.
+                        parent[nk] = (key, a);
+                        var sol = Rebuild(level, start, parent, nk, options);
+                        sol.Cost = g;
+                        return sol;
+                    }
+                    int ng = g + cost(s, a, r);
+                    if (done.Contains(nk) || (best.TryGetValue(nk, out int known) && known <= ng)) continue;
+                    if (best.ContainsKey(nk)) open.Remove((best[nk], nk));
+                    best[nk] = ng;
+                    parent[nk] = (key, a);
+                    states[nk] = r.State;
+                    open.Add((ng, nk));
+                }
+
+                if (best.Count > options.MaxStates) return null;
             }
             return null;
         }

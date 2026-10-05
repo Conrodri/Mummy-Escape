@@ -14,27 +14,22 @@ namespace MummyEscape.Pvp
         };
 
         /// <summary>
-        /// Un fantôme d'Elo proche, qui court sur un nouveau tombeau : il suit le chemin idéal, plus lentement et en
-        /// hésitant d'autant plus que son Elo est bas (un bon joueur mémorise mieux et swipe plus vite).
+        /// Un fantôme d'Elo proche, qui court sur un nouveau tombeau en jouant comme une personne (<see cref="HumanPlayer"/>) :
+        /// rapide dans les couloirs, plus lent aux virages, avec des erreurs de mémoire et des swipes ratés, d'autant moins
+        /// que son Elo est haut.
         /// </summary>
         public static GhostRun Make(Random rng, int playerElo, long nowMs)
         {
             int elo = Math.Max(PvpConfig.MinElo, playerElo + rng.Next(-150, 151));
             int seed = rng.Next(1, int.MaxValue);
             var level = PvpArena.Generate(seed);
-            var inputs = new List<RunInput>();
-            // Rythme moyen par action : ~1,1 s à 700 Elo, ~0,45 s à 1700.
-            double pace = Math.Max(380, Math.Min(1300, 1100 - (elo - 700) * 0.65));
-            double t = 600 + rng.NextDouble() * 900; // le temps de se repérer quand le brouillard tombe
-            foreach (var action in level.Solution.Actions)
-            {
-                t += pace * (0.6 + rng.NextDouble() * 0.8);
-                // De temps en temps, une hésitation (un regard sur la carte, un doute à un carrefour).
-                if (rng.NextDouble() < 0.12) t += pace * (1 + rng.NextDouble() * 3);
-                int tick = Math.Max(RunActions.TickOf((int)t), inputs.Count == 0 ? 0 : inputs[inputs.Count - 1].Tick + PvpConfig.MinInputGapTicks);
-                inputs.Add(new RunInput { Tick = tick, Direction = RunActions.Encode(action) });
-            }
-            var run = RunReplay.Verify(level, new RunSubmission { Outcome = RunOutcome.Finished, Inputs = inputs })
+            var (inputs, outcome, _) = new HumanPlayer(HumanPlayer.SkillForElo(elo), rng).Play(level, rng);
+            // Un tombeau très court couru par un très bon bot : pas plus vite que ce que le serveur croit possible.
+            int minTick = RunActions.TickOf(PvpConfig.MinPlausibleTimeMs + 200);
+            int lastTick = inputs.Count > 0 ? inputs[inputs.Count - 1].Tick : 0;
+            if (outcome == RunOutcome.Finished && lastTick > 0 && lastTick < minTick)
+                foreach (var input in inputs) input.Tick = (int)((long)input.Tick * minTick / lastTick);
+            var run = RunReplay.Verify(level, new RunSubmission { Outcome = outcome, Inputs = inputs })
                       ?? new RunSubmission { Outcome = RunOutcome.TimedOut, TimeMs = PvpConfig.TimeLimitMs, Inputs = inputs };
             return new GhostRun
             {
