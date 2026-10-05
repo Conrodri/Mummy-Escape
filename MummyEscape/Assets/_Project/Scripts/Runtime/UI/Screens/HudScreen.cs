@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using MummyEscape.Core;
+using MummyEscape.Services;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -191,7 +192,8 @@ namespace MummyEscape.UI.Screens
             string state = !match.GhostDone(elapsed) ? ""
                          : match.Ghost.Outcome == Pvp.RunOutcome.Finished ? "  · " + Loc.F("sorti en {0}", LevelResult.FormatTime(match.Ghost.TimeMs))
                          : "  · " + Loc.T("éliminé");
-            _rivalName.text = $"{match.Ghost.PlayerName} · {match.Ghost.Elo}{state}";
+            string title = TitleBook.Line(match.Ghost.Look?.Title);
+            _rivalName.text = $"{match.Ghost.PlayerName}{(title == "" ? "" : " " + title)} · {match.Ghost.Elo}{state}";
             SetProgress(_rivalBar, match.GhostProgress);
         }
 

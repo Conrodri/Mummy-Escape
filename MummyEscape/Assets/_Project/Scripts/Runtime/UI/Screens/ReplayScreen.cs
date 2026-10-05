@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using MummyEscape.Core;
 using MummyEscape.Online;
 using MummyEscape.Pvp;
+using MummyEscape.Services;
 using MummyEscape.Visual;
 using MummyEscape.World;
 using UnityEngine;
@@ -29,6 +30,8 @@ namespace MummyEscape.UI.Screens
         Image _playIcon;
         Slider _timeline;
         DuelRecord _duel;
+        bool _spectator;
+        string _verdict;
         int _load;
         float _pendingSeek = -1f, _lastSeek;
         int _savedMask;
@@ -110,7 +113,8 @@ namespace MummyEscape.UI.Screens
             var plate = UIKit.Plate(area, new Color(0, 0, 0, 0.6f), 30, new Color(accent.r, accent.g, accent.b, 0.6f));
             UIKit.Place(plate.rectTransform, 0, 1, 620, 112, 24, -18);
             side.Tag = UIKit.Title(plate.transform, tag, 34, accent, TextAnchor.MiddleLeft);
-            UIKit.Place(side.Tag.rectTransform, 0, 1, 200, 52, 26, -6);
+            UIKit.FitText(side.Tag, 20);
+            UIKit.Place(side.Tag.rectTransform, 0, 1, 570, 52, 26, -6);
             side.Name = UIKit.Label(plate.transform, "", 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
             UIKit.FitText(side.Name, 18);
             UIKit.Place(side.Name.rectTransform, 0, 0, 570, 52, 26, 6);
@@ -141,13 +145,26 @@ namespace MummyEscape.UI.Screens
         }
 
         /// <summary>Opens a duel of the history.</summary>
-        public void Show(DuelRecord duel)
+        public void Show(DuelRecord duel) => Show(duel, false, "TOI", "RIVAL", null);
+
+        /// <summary>
+        /// Opens a round of a team battle as a spectator: traps and points of interest are hidden, the two sides are
+        /// named by their team, and there is nobody to report from here.
+        /// </summary>
+        public void ShowRound(DuelRecord round, string topTeam, string bottomTeam, string verdict) =>
+            Show(round, true, topTeam, bottomTeam, verdict);
+
+        void Show(DuelRecord duel, bool spectator, string topTag, string bottomTag, string verdict)
         {
             _duel = duel;
-            Fill(_me, duel.Me, Loc.T("Toi"));
+            _spectator = spectator;
+            _verdict = verdict;
+            _me.Tag.text = Loc.T(topTag);
+            _rival.Tag.text = Loc.T(bottomTag);
+            Fill(_me, duel.Me, spectator ? null : Loc.T("Toi"));
             Fill(_rival, duel.Rival, null);
             _waiting.text = duel.Rival == null ? Loc.T("Personne n'a encore couru contre ton fantôme : le duel se complétera quand un adversaire l'aura affronté.") : "";
-            _report.gameObject.SetActive(duel.Rival != null);
+            _report.gameObject.SetActive(duel.Rival != null && !spectator);
             _report.interactable = !duel.Reported;
             _status.text = Loc.T("Chargement…");
             SetPlaying(false);
@@ -157,7 +174,8 @@ namespace MummyEscape.UI.Screens
         static void Fill(Side side, DuelRun run, string fallback)
         {
             side.Run = run;
-            side.Name.text = run == null ? "—" : !string.IsNullOrEmpty(run.PlayerName) ? run.PlayerName : fallback ?? Loc.T("Momie anonyme");
+            side.Name.text = run == null ? "—" : (!string.IsNullOrEmpty(run.PlayerName) ? run.PlayerName : fallback ?? Loc.T("Momie anonyme"))
+                           + (Titles.Get(run.Look?.Title) != null ? " " + TitleBook.Line(run.Look.Title) : "");
             side.State.text = "";
             side.Count.text = "";
             side.Shown = -1;
@@ -187,10 +205,10 @@ namespace MummyEscape.UI.Screens
             App.Lighting.SetTheme(theme);
             App.Lighting.SetMood(true);
             if (_rig == null) _rig = ReplayRig.Create(App.transform, App);
-            _rig.Open(duel, level, theme);
+            _rig.Open(duel, level, theme, _spectator);
             _rig.Speed = 1f;
             _speed.GetComponentInChildren<Text>().text = "x1"; // noloc
-            _status.text = Verdict(duel);
+            _status.text = _verdict ?? Verdict(duel);
             SetPlaying(true);
         }
 

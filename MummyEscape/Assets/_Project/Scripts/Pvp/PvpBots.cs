@@ -18,10 +18,21 @@ namespace MummyEscape.Pvp
         /// rapide dans les couloirs, plus lent aux virages, avec des erreurs de mémoire et des swipes ratés, d'autant moins
         /// que son Elo est haut.
         /// </summary>
-        public static GhostRun Make(Random rng, int playerElo, long nowMs)
+        public static GhostRun Make(Random rng, int playerElo, long nowMs) =>
+            Make(rng, playerElo, rng.Next(1, int.MaxValue), "bot_" + rng.Next(), nowMs);
+
+        /// <summary>Le nom affiché d'un joueur simulé, tiré de son identifiant (toujours le même).</summary>
+        public static string NameOf(string botId)
+        {
+            int h = 17;
+            foreach (char c in botId ?? "") h = unchecked(h * 31 + c);
+            return Names[(h & int.MaxValue) % Names.Length];
+        }
+
+        /// <summary>La course d'un joueur simulé donné, sur un tombeau donné (manches des combats d'équipe hors ligne).</summary>
+        public static GhostRun Make(Random rng, int playerElo, int seed, string botId, long nowMs)
         {
             int elo = Math.Max(PvpConfig.MinElo, playerElo + rng.Next(-150, 151));
-            int seed = rng.Next(1, int.MaxValue);
             var level = PvpArena.Generate(seed);
             var (inputs, outcome, _) = new HumanPlayer(HumanPlayer.SkillForElo(elo), rng).Play(level, rng);
             // Un tombeau très court couru par un très bon bot : pas plus vite que ce que le serveur croit possible.
@@ -34,8 +45,8 @@ namespace MummyEscape.Pvp
             return new GhostRun
             {
                 GhostId = "bot_" + seed,
-                PlayerId = "bot_" + rng.Next(),
-                PlayerName = Names[rng.Next(Names.Length)],
+                PlayerId = botId,
+                PlayerName = NameOf(botId),
                 Elo = elo,
                 Seed = seed,
                 GeneratorVersion = DifficultyTable.GeneratorVersion,

@@ -179,6 +179,7 @@ namespace MummyEscape.Game
             _buffered = null;
             var run = match.BuildRun(outcome);
             run.Look = PvpSkins.Look(_app.Save.Loadout);
+            run.Look.Title = TitleBook.Equipped(_app);
             DuelEnded?.Invoke(match, run);
         }
 

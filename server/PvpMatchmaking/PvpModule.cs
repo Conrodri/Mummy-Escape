@@ -48,6 +48,10 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("BuyWithSeals")]
         public Task<SealPurchaseResponse> BuyWithSeals(IExecutionContext ctx, string itemId) => Server(ctx).BuyWithSealsAsync(ctx.PlayerId, itemId);
 
+        /// <summary>Un tour de la roue des sceaux du casino (0,5 % de chance d'un skin légendaire).</summary>
+        [CloudCodeFunction("SpinSealWheel")]
+        public Task<WheelSpinResponse> SpinSealWheel(IExecutionContext ctx) => Server(ctx).SpinSealWheelAsync(ctx.PlayerId);
+
         /// <summary>Classement mensuel vérifié : chaque score est comparé à l'Elo protégé du joueur (0 = ce mois, 1 = le précédent).</summary>
         [CloudCodeFunction("GetPvpBoard")]
         public Task<PvpBoardPage> GetPvpBoard(IExecutionContext ctx, int seasonsAgo, int limit) =>
@@ -60,5 +64,73 @@ namespace MummyEscape.Pvp.Server
         /// <summary>Signale l'adversaire d'un duel de l'historique : le duel est copié dans son dossier (Cloud Save › pvp_reports).</summary>
         [CloudCodeFunction("ReportCheat")]
         public Task<ReportResponse> ReportCheat(IExecutionContext ctx, string matchId) => Server(ctx).ReportCheatAsync(ctx.PlayerId, matchId);
+
+        // ------------------------------------------------------------------ 2v2
+
+        /// <summary>Les duos du joueur, ses invitations et leurs combats (courses adverses non décidées masquées).</summary>
+        [CloudCodeFunction("GetTeams")]
+        public Task<TeamsResponse> GetTeams(IExecutionContext ctx) => Server(ctx).GetTeamsAsync(ctx.PlayerId);
+
+        [CloudCodeFunction("InviteDuo")]
+        public Task<TeamActionResponse> InviteDuo(IExecutionContext ctx, string playerName, string friendId) =>
+            Server(ctx).InviteDuoAsync(ctx.PlayerId, playerName, friendId);
+
+        [CloudCodeFunction("RespondDuo")]
+        public Task<TeamActionResponse> RespondDuo(IExecutionContext ctx, string playerName, string inviteId, bool accept) =>
+            Server(ctx).RespondDuoAsync(ctx.PlayerId, playerName, inviteId, accept);
+
+        [CloudCodeFunction("LeaveDuo")]
+        public Task<TeamActionResponse> LeaveDuo(IExecutionContext ctx, string duoId) => Server(ctx).LeaveDuoAsync(ctx.PlayerId, duoId);
+
+        /// <summary>Lance un combat 2v2 (meFirst : le joueur court les manches 1 et 3).</summary>
+        [CloudCodeFunction("FindDuoMatch")]
+        public Task<TeamActionResponse> FindDuoMatch(IExecutionContext ctx, string duoId, bool meFirst, int generatorVersion) =>
+            Server(ctx).FindDuoMatchAsync(ctx.PlayerId, duoId, meFirst, generatorVersion);
+
+        [CloudCodeFunction("GetDuoBoard")]
+        public Task<DuoBoardResponse> GetDuoBoard(IExecutionContext ctx, int limit) => Server(ctx).GetDuoBoardAsync(limit);
+
+        /// <summary>Démarre la manche du joueur dans un combat d'équipe ; la course revient par SubmitRun.</summary>
+        [CloudCodeFunction("StartBattleRun")]
+        public Task<FindDuelResponse> StartBattleRun(IExecutionContext ctx, string battleId, int generatorVersion) =>
+            Server(ctx).StartBattleRunAsync(ctx.PlayerId, battleId, generatorVersion);
+
+        [CloudCodeFunction("GetBattle")]
+        public Task<TeamBattle> GetBattle(IExecutionContext ctx, string battleId) => Server(ctx).GetBattleAsync(ctx.PlayerId, battleId);
+
+        // ------------------------------------------------------------------ guildes
+
+        [CloudCodeFunction("GetGuild")]
+        public Task<GuildResponse> GetGuild(IExecutionContext ctx) => Server(ctx).GetGuildAsync(ctx.PlayerId);
+
+        /// <summary>Crée une guilde (les 500 scarabées sont payés dans le jeu).</summary>
+        [CloudCodeFunction("CreateGuild")]
+        public Task<GuildResponse> CreateGuild(IExecutionContext ctx, string playerName, string name, string tag) =>
+            Server(ctx).CreateGuildAsync(ctx.PlayerId, playerName, name, tag);
+
+        [CloudCodeFunction("SearchGuilds")]
+        public Task<GuildSearchResponse> SearchGuilds(IExecutionContext ctx, string query, int limit) => Server(ctx).SearchGuildsAsync(query, limit);
+
+        [CloudCodeFunction("GetGuildBoard")]
+        public Task<GuildSearchResponse> GetGuildBoard(IExecutionContext ctx, int limit) => Server(ctx).GetGuildBoardAsync(limit);
+
+        [CloudCodeFunction("JoinGuild")]
+        public Task<GuildResponse> JoinGuild(IExecutionContext ctx, string playerName, string guildId) =>
+            Server(ctx).JoinGuildAsync(ctx.PlayerId, playerName, guildId);
+
+        [CloudCodeFunction("LeaveGuild")]
+        public Task<GuildResponse> LeaveGuild(IExecutionContext ctx) => Server(ctx).LeaveGuildAsync(ctx.PlayerId);
+
+        [CloudCodeFunction("SetGuildRole")]
+        public Task<GuildResponse> SetGuildRole(IExecutionContext ctx, string memberId, bool officer) =>
+            Server(ctx).SetGuildRoleAsync(ctx.PlayerId, memberId, officer);
+
+        [CloudCodeFunction("KickGuildMember")]
+        public Task<GuildResponse> KickGuildMember(IExecutionContext ctx, string memberId) => Server(ctx).KickGuildMemberAsync(ctx.PlayerId, memberId);
+
+        /// <summary>Le chef ou un officier lance une guerre (3, 5 ou 10 manches) avec l'ordre de passage choisi.</summary>
+        [CloudCodeFunction("StartWar")]
+        public Task<GuildResponse> StartWar(IExecutionContext ctx, int size, System.Collections.Generic.List<string> order, int generatorVersion) =>
+            Server(ctx).StartWarAsync(ctx.PlayerId, size, order, generatorVersion);
     }
 }

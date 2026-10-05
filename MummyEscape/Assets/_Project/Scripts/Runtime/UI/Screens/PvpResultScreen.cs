@@ -24,6 +24,7 @@ namespace MummyEscape.UI.Screens
         PvpMatch _match;
         RunSubmission _run;
         bool _sending;
+        BattleKind _lastBattleKind;
 
         protected override void Build()
         {
@@ -74,11 +75,15 @@ namespace MummyEscape.UI.Screens
             return t;
         }
 
+        /// <summary>A round of a team battle (2v2 or guild war) rather than a duel.</summary>
+        bool IsRound => _match?.Duel.BattleId != null;
+
         public void Show(PvpMatch match, RunSubmission run)
         {
             _match = match;
             _run = run;
             _record = null;
+            UIKit.SetLabel(_again, IsRound ? "Retour au combat" : "Nouveau duel");
             string rival = match.HasGhost ? match.Ghost.PlayerName : null;
             _subtitle.text = rival != null ? Loc.F("contre {0} · Elo {1}", rival, match.Ghost.Elo) : Loc.T("Premier sur ce tombeau");
             _me.text = "<b>" + Loc.T("Toi") + "</b>  ·  " + OutcomeText(run.Outcome, run.TimeMs, run.Progress);
@@ -116,6 +121,7 @@ namespace MummyEscape.UI.Screens
             var r = pvp == null ? null : await pvp.SubmitRunAsync(_run, App.Online.PlayerName);
             if (this == null) return;
             _sending = false;
+            if (r?.Battle != null) _lastBattleKind = r.Battle.Kind;
 
             if (r == null || r.Error == PvpServiceFactory.NetworkError)
             {
@@ -134,6 +140,12 @@ namespace MummyEscape.UI.Screens
                 return;
             }
 
+            if (IsRound)
+            {
+                ShowRound(r);
+                SetButtons(true, false);
+                return;
+            }
             if (!r.Resolved)
             {
                 _title.text = Loc.T("COURSE ENREGISTRÉE");
@@ -162,10 +174,52 @@ namespace MummyEscape.UI.Screens
             SetButtons(true, false);
         }
 
+        /// <summary>The round's verdict, the battle's score and, once it is over, the team's result and Elo.</summary>
+        void ShowRound(SubmitRunResponse r)
+        {
+            var b = r.Battle;
+            bool duo = b?.Kind == BattleKind.Duo;
+            if (!r.Resolved)
+            {
+                _title.text = Loc.T("MANCHE COURUE");
+                UIKit.TintTitle(_title, UIKit.Turquoise);
+                _note.text = Loc.T("Ton vis-à-vis n'a pas encore couru cette manche : elle se décidera quand il l'aura fait.");
+            }
+            else
+            {
+                bool win = r.Result == DuelResult.Win, draw = r.Result == DuelResult.Draw;
+                _title.text = Loc.T(win ? "MANCHE GAGNÉE !" : draw ? "MANCHE NULLE" : "MANCHE PERDUE");
+                UIKit.TintTitle(_title, win ? UIKit.Gold : draw ? UIKit.Sand : UIKit.Danger);
+                App.Audio.Play(win ? Sfx.Win : draw ? Sfx.Coin : Sfx.Death);
+                _note.text = "";
+            }
+            if (b == null) return;
+            bool mineA = b.A.TeamId == b.ViewerTeam;
+            var (wa, wb) = TeamLogic.Score(b);
+            int mine = mineA ? wa : wb, theirs = mineA ? wb : wa;
+            if (b.Finished)
+            {
+                var result = mineA ? b.Result : DuelResolver.Invert(b.Result);
+                int delta = r.EloAfter - r.EloBefore;
+                string color = delta > 0 ? "#40E0D0" : delta < 0 ? "#D65440" : "#9C8B70";
+                string verdict = result == DuelResult.Win ? Loc.T(duo ? "Ton duo gagne le combat" : "Ta guilde gagne la guerre")
+                               : result == DuelResult.Loss ? Loc.T(duo ? "Ton duo perd le combat" : "Ta guilde perd la guerre")
+                               : Loc.T("Égalité");
+                _elo.text = $"{mine} – {theirs}  ·  {verdict}"; // noloc
+                _note.text = (duo ? Loc.T("Elo 2v2") : Loc.T("Elo de guerre")) + $" {r.EloBefore} → {r.EloAfter}  <color={color}>({(delta > 0 ? "+" : "")}{delta})</color>"; // noloc
+            }
+            else
+            {
+                _elo.text = Loc.F("Score {0} – {1}", mine, theirs);
+                if (_note.text.Length == 0) _note.text = Loc.T("Le combat continue : tes coéquipiers courent les manches suivantes.");
+            }
+        }
+
         /// <summary>Saves the duel on the phone right away (the server's copy replaces it on the next visit to the duels).</summary>
         void Keep(SubmitRunResponse r)
         {
             // A forfeit before anyone raced the tomb leaves nothing to watch.
+            if (IsRound) return; // rounds are watched from their battle
             if (_run.Outcome == RunOutcome.Abandoned && !_match.HasGhost) return;
             _record = new DuelRecord
             {
@@ -208,6 +262,14 @@ namespace MummyEscape.UI.Screens
 
         async void Again()
         {
+            if (IsRound)
+            {
+                App.Game.Abandon();
+                Router.Reset<MainMenuScreen>();
+                Router.Open<PvpScreen>();
+                TeamView.OpenBattleHome(Router, _lastBattleKind);
+                return;
+            }
             _again.interactable = _menu.interactable = false;
             _note.text = Loc.T("Recherche d'un adversaire…");
             var duel = App.Pvp == null ? null : await App.Pvp.FindDuelAsync();

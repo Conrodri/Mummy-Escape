@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using MummyEscape.Core;
 using MummyEscape.Services;
 using UnityEngine;
@@ -61,7 +62,9 @@ namespace MummyEscape.UI.Screens
             Tile(grid, null, "Vie", out _);
             _lifeSlot = (RectTransform)grid.GetChild(3).Find("Values/Value");
 
-            _rewards = UIKit.Row(panel.transform, 64, 16).GetComponent<RectTransform>();
+            // Rewards: chips on as many lines as they need (a record and the expert's time rarely fit side by side).
+            _rewards = UIKit.Rect("Rewards", panel.transform); // noloc
+            UIKit.Column(_rewards, RewardGap, 0);
 
             _primary = UIKit.Button(panel.transform, "Niveau suivant", OnPrimary, 40, ButtonStyle.Primary);
             UIKit.Size(_primary, 112);
@@ -149,34 +152,23 @@ namespace MummyEscape.UI.Screens
             UIKit.Stretch(ankhs);
 
             // Rewards.
-            UIKit.ClearChildren(_rewards);
-            bool any = false;
+            var rewards = new List<(Sprite icon, string text, Color tint)>();
             if (outcome.NewBest && outcome.PreviousBestOverPar >= 0)
-            {
-                UIKit.Chip(_rewards, UISprites.Podium, Loc.F("Nouveau record ! ({0} → {1})", LevelResult.FormatScore(outcome.PreviousBestOverPar, outcome.PreviousBestTimeMs), LevelResult.FormatScore(result.OverPar, result.TimeMs)), UIKit.Turquoise, 60);
-                any = true;
-            }
+                rewards.Add((UISprites.Podium, Loc.F("Nouveau record ! ({0} → {1})", LevelResult.FormatScore(outcome.PreviousBestOverPar, outcome.PreviousBestTimeMs), LevelResult.FormatScore(result.OverPar, result.TimeMs)), UIKit.Turquoise));
             else if (outcome.NewBest)
-            {
-                UIKit.Chip(_rewards, UISprites.Check, Loc.T("Premier passage !"), UIKit.Turquoise, 60);
-                any = true;
-            }
+                rewards.Add((UISprites.Check, Loc.T("Premier passage !"), UIKit.Turquoise));
             if (outcome.CoinsEarned > 0)
-            {
-                UIKit.Chip(_rewards, UIKit.Art.Scarab, "+" + outcome.CoinsEarned, UIKit.Gold, 60);
-                any = true;
-            }
+                rewards.Add((UIKit.Art.Scarab, "+" + outcome.CoinsEarned, UIKit.Gold));
             if (result.Won && result.TargetMs > 0)
             {
                 // The expert mummy (a simulated player) ran this same maze: its time is the one to beat.
                 bool beaten = result.TimeMs <= result.TargetMs;
-                UIKit.Chip(_rewards, beaten ? UISprites.Check : UISprites.Podium,
+                rewards.Add((beaten ? UISprites.Check : UISprites.Podium,
                     beaten ? Loc.F("Momie experte battue ! ({0})", LevelResult.FormatTime(result.TargetMs))
                            : Loc.F("Momie experte : {0}", LevelResult.FormatTime(result.TargetMs)),
-                    beaten ? UIKit.Turquoise : UIKit.Dim, 60);
-                any = true;
+                    beaten ? UIKit.Turquoise : UIKit.Dim));
             }
-            _rewards.gameObject.SetActive(any);
+            LayOutRewards(rewards);
 
             var next = Progression.Next(result.Level);
             _primaryIsNext = result.Won && next.HasValue;
@@ -185,6 +177,50 @@ namespace MummyEscape.UI.Screens
             // Get the next tombs generating while the player reads the recap.
             App.Game.Prefetch(result.Level);
             if (_primaryIsNext) App.Game.Prefetch(next.Value);
+        }
+
+        const float RewardHeight = 60;
+        const float RewardGap = 12;
+        const float RewardSpacing = 16;
+        /// <summary>Inside width of the panel (940 wide, 44 of padding on each side).</summary>
+        const float RewardWidth = 940 - 2 * 44;
+
+        /// <summary>
+        /// Fills the rewards line after line: a chip goes on the current line while it fits, else starts a new one; a chip
+        /// wider than the panel gets the whole line and its text shrinks.
+        /// </summary>
+        void LayOutRewards(List<(Sprite icon, string text, Color tint)> rewards)
+        {
+            UIKit.ClearChildren(_rewards);
+            _rewards.gameObject.SetActive(rewards.Count > 0);
+            HorizontalLayoutGroup line = null;
+            float used = 0;
+            int lines = 0;
+            foreach (var (icon, text, tint) in rewards)
+            {
+                if (line == null) { line = UIKit.Row(_rewards, RewardHeight, RewardSpacing); lines++; }
+                var label = UIKit.Chip(line.transform, icon, text, tint, RewardHeight);
+                var chip = (RectTransform)label.transform.parent;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(chip);
+                float w = LayoutUtility.GetPreferredWidth(chip);
+                if (w > RewardWidth)
+                {
+                    label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    UIKit.FitText(label, 16);
+                    UIKit.Size(label, RewardHeight - 16, 0, 1);
+                    UIKit.Size(chip, RewardHeight, RewardWidth);
+                    w = RewardWidth;
+                }
+                if (used > 0 && used + RewardSpacing + w > RewardWidth)
+                {
+                    line = UIKit.Row(_rewards, RewardHeight, RewardSpacing);
+                    lines++;
+                    chip.SetParent(line.transform, false);
+                    used = w;
+                }
+                else used += (used > 0 ? RewardSpacing : 0) + w;
+            }
+            UIKit.Size(_rewards, lines == 0 ? 0 : lines * RewardHeight + (lines - 1) * RewardGap);
         }
 
         IEnumerator PopStars(RectTransform row, int count)

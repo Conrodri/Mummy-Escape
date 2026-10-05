@@ -7,16 +7,19 @@ namespace MummyEscape.Visual
     public enum CosmeticSlot { Mummy, Color, Torch, Hat, Shoes }
 
     /// <summary>Silhouette of the mummy.</summary>
+    /// <summary>Animated effect of a legendary colour (casino): the bandages change every frame.</summary>
+    public enum LegendaryFx { None, Rainbow, Fire, Galaxy, Aurora, Gold, Storm, Spectre, Neon, Prism, Magma }
+
     public enum MummyShape { Classic, Cat, Jackal }
 
     /// <summary>Texture painted over the bandages (on top of the colours).</summary>
     public enum BandagePattern { Plain, Hieroglyphs, Moss, Stone, Circuit, Lava }
 
-    public enum TorchStyle { Classic, Scepter, Lantern, Bone, Plasma, Obsidian, Ankh, Was, Crook, Papyrus, Cobra, Crystal, OilLamp, Moon, Feather, Sistrum }
+    public enum TorchStyle { Classic, Scepter, Lantern, Bone, Plasma, Obsidian, Ankh, Was, Crook, Papyrus, Cobra, Crystal, OilLamp, Moon, Feather, Sistrum, GuildBanner }
 
-    public enum HatStyle { None, Explorer, Nemes, Lotus, BrokenHelm, CyberEars, SunDisk, Pschent, Khepresh, Atef, MaatFeather, Vulture, HathorHorns, ScarabCirclet, Turban, Nefertiti }
+    public enum HatStyle { None, Explorer, Nemes, Lotus, BrokenHelm, CyberEars, SunDisk, Pschent, Khepresh, Atef, MaatFeather, Vulture, HathorHorns, ScarabCirclet, Turban, Nefertiti, GuildCrown }
 
-    public enum ShoeStyle { None, Slippers, GoldSandals, MudBoots, StoneBoots, JetBoots, ObsidianHooves, PapyrusSandals, LapisSandals, CrocBoots, WingedSandals, ScarabClogs, SilverGreaves, DesertBoots, RubyPointed, LotusSlippers }
+    public enum ShoeStyle { None, Slippers, GoldSandals, MudBoots, StoneBoots, JetBoots, ObsidianHooves, PapyrusSandals, LapisSandals, CrocBoots, WingedSandals, ScarabClogs, SilverGreaves, DesertBoots, RubyPointed, LotusSlippers, GuildGreaves }
 
     /// <summary>One shop item. Only the fields of its <see cref="Slot"/> matter.</summary>
     public sealed class SkinDef
@@ -44,6 +47,9 @@ namespace MummyEscape.Visual
         public Color32 Eyes;
         /// <summary>Tint of the classic torch's light (themed torches have their own).</summary>
         public Color Torch;
+        /// <summary>Legendary colours (casino) are animated: see <see cref="ArtLibrary.LegendaryFrames"/>.</summary>
+        public LegendaryFx Fx;
+        public bool Legendary => Fx != LegendaryFx.None;
         // Torch, hat, shoes
         public TorchStyle TorchStyle;
         public HatStyle Hat;
@@ -73,6 +79,9 @@ namespace MummyEscape.Visual
         public string Key => $"{Mummy.Id}_{Color.Id}_{Torch.Id}_{Hat.Id}_{Shoes.Id}";
 
         /// <summary>Colour of the torch light: the colour's tint for the classic torch, the torch's own otherwise.</summary>
+        /// <summary>The outfit changes over time (a legendary colour): drawn with <see cref="MummyAnimator"/>.</summary>
+        public bool Animated => Color != null && Color.Legendary;
+
         public UnityEngine.Color Light => Torch.TorchStyle == TorchStyle.Classic ? Color.Torch : Torch.Torch;
     }
 
@@ -213,14 +222,14 @@ namespace MummyEscape.Visual
         public static SkinDef Get(string id)
         {
             foreach (var s in All) if (s.Id == id) return s;
-            return PvpSkins.Resolve(id) ?? All[0];
+            return PvpSkins.Resolve(id) ?? LegendarySkins.Resolve(id) ?? All[0];
         }
 
         /// <summary>Item of that slot, or the slot's default when the id is unknown or belongs to another slot.</summary>
         public static SkinDef Get(string id, CosmeticSlot slot)
         {
             foreach (var s in All) if (s.Id == id && s.Slot == slot) return s;
-            var pvp = PvpSkins.Resolve(id);
+            var pvp = PvpSkins.Resolve(id) ?? LegendarySkins.Resolve(id);
             if (pvp != null && pvp.Slot == slot) return pvp;
             foreach (var s in All) if (s.Slot == slot && s.Price == 0) return s;
             return All[0];

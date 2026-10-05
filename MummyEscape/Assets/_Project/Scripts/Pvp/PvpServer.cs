@@ -38,24 +38,32 @@ namespace MummyEscape.Pvp
         Task<List<DuelRecord>> UpdateHistoryAsync(string playerId, Action<List<DuelRecord>> mutate);
         /// <summary>Dossier de triche d'un joueur (neuf si absent), dans un espace que les joueurs ne lisent pas : modifié puis réécrit.</summary>
         Task<CheatDossier> UpdateDossierAsync(string playerId, Action<CheatDossier> mutate);
+        /// <summary>
+        /// Objet partagé côté serveur (combats, duos, guildes, index, files) : lu (null si absent), passé à
+        /// <paramref name="mutate"/> qui renvoie la valeur à écrire, puis réécrit. Lecture seule si <paramref name="mutate"/>
+        /// est null. Renvoie la valeur finale.
+        /// </summary>
+        Task<T> UpdateSharedAsync<T>(string collection, string key, Func<T, T> mutate) where T : class;
     }
 
     /// <summary>
     /// Duels différés contre fantôme : FindDuel donne un tombeau (et le fantôme d'un adversaire proche en Elo s'il y en a un),
     /// SubmitRun rejoue la course, désigne le gagnant et met à jour l'Elo des deux joueurs.
     /// </summary>
-    public sealed class PvpServer
+    public sealed partial class PvpServer
     {
         readonly IPvpStore _store;
         readonly Func<DateTime> _utcNow;
         readonly Func<int> _newSeed;
+        readonly Func<double> _random;
 
-        public PvpServer(IPvpStore store, Func<DateTime> utcNow = null, Func<int> newSeed = null)
+        public PvpServer(IPvpStore store, Func<DateTime> utcNow = null, Func<int> newSeed = null, Func<double> random = null)
         {
             _store = store;
             _utcNow = utcNow ?? (() => DateTime.UtcNow);
             var rng = new Random();
             _newSeed = newSeed ?? (() => { lock (rng) return rng.Next(1, int.MaxValue); });
+            _random = random ?? (() => { lock (rng) return rng.NextDouble(); });
         }
 
         long NowMs => new DateTimeOffset(DateTime.SpecifyKind(_utcNow(), DateTimeKind.Utc)).ToUnixTimeMilliseconds();
@@ -100,11 +108,9 @@ namespace MummyEscape.Pvp
                 {
                     // Relancer la recherche ne change pas d'adversaire.
                     var current = await Update(me);
-                    return new FindDuelResponse { MatchId = pending.MatchId, Seed = pending.Seed, Ghost = pending.Ghost, MyElo = current.Elo };
+                    return new FindDuelResponse { MatchId = pending.MatchId, Seed = pending.Seed, Ghost = pending.Ghost, MyElo = current.Elo, BattleId = pending.BattleId, Slot = pending.Slot };
                 }
-                // Duel jamais envoyé : abandon.
-                await ResolveAsync(me, pending, new RunSubmission { MatchId = pending.MatchId, Outcome = RunOutcome.Abandoned }, null);
-                await _store.SetPendingAsync(me, null);
+                await DropPendingAsync(me, pending);
             }
 
             var data = await Update(me);
@@ -140,8 +146,16 @@ namespace MummyEscape.Pvp
                 verified = new RunSubmission { MatchId = pending.MatchId, Outcome = RunOutcome.Abandoned };
             }
             verified.Look = PlayerLook.Sanitize(run.Look);
+            if (Titles.Get(verified.Look?.Title)?.IsDuel == true)
+            {
+                // Duel titles are checked against the protected data: nobody shows "Légende de diamant" without the league.
+                var mine = await _store.ReadPlayersAsync(new[] { me });
+                mine.TryGetValue(me, out var data);
+                verified.Look.Title = Titles.Check(verified.Look.Title, data);
+            }
             await _store.SetPendingAsync(me, null);
-            var response = await ResolveAsync(me, pending, verified, playerName);
+            var response = pending.BattleId != null ? await ResolveBattleRunAsync(me, pending, verified, playerName)
+                                                    : await ResolveAsync(me, pending, verified, playerName);
             response.Error = error;
             return response;
         }
@@ -211,6 +225,9 @@ namespace MummyEscape.Pvp
             });
             await _store.SubmitEloAsync(me, mine.Elo);
             await _store.SubmitEloAsync(ghost.PlayerId, theirs.Elo);
+            // Every duel win also counts for the winner's guild.
+            if (resultForMe == DuelResult.Win) await AddGuildPointsAsync(mine.GuildId, me, TeamConfig.PointsPerDuelWin);
+            else if (resultForMe == DuelResult.Loss) await AddGuildPointsAsync(theirs.GuildId, ghost.PlayerId, TeamConfig.PointsPerDuelWin);
             await ForgetBoardIfChangedAsync(Math.Max(mine.Elo, theirs.Elo), me, ghost.PlayerId);
 
             // Le duel dans l'historique des deux joueurs, de quoi le revoir des deux points de vue.
@@ -285,6 +302,21 @@ namespace MummyEscape.Pvp
             var data = await Update(me, d =>
             {
                 response.Error = SealShop.TryBuy(d, itemId);
+                response.Ok = response.Error == null;
+            });
+            response.Seals = data.Seals;
+            response.UnlockedRewards = data.UnlockedRewards;
+            return response;
+        }
+
+        /// <summary>Un tour de la roue des sceaux du casino : prix, tirage et gain décidés ici, jamais par le client.</summary>
+        public async Task<WheelSpinResponse> SpinSealWheelAsync(string me)
+        {
+            var response = new WheelSpinResponse();
+            var data = await Update(me, d =>
+            {
+                response.Error = Casino.SpinSeals(d, _random(), _random(), out var result);
+                response.Result = result;
                 response.Ok = response.Error == null;
             });
             response.Seals = data.Seals;

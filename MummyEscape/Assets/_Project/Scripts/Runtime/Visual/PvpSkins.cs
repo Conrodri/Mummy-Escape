@@ -52,6 +52,8 @@ namespace MummyEscape.Visual
 
         static SkinDef Build(string id)
         {
+            var legendary = LegendarySkins.Resolve(id);
+            if (legendary != null) return legendary;
             switch (id)
             {
                 case "pvp_shop_scales":
@@ -64,6 +66,16 @@ namespace MummyEscape.Visual
                     return new SkinDef { Id = id, Name = "Bastet des étoiles", Slot = CosmeticSlot.Mummy, Pvp = true, Shape = MummyShape.Cat, Pattern = BandagePattern.Circuit };
                 case "pvp_shop_diamond":
                     return Colour(id, "Momie de diamant", new Color32(200, 238, 255, 255), new Color32(104, 160, 214, 255), new Color32(255, 255, 255, 255), new Color(0.7f, 0.9f, 1f));
+
+                // Guild tiers (TeamConfig.GuildSkinTiers): royal purple and gold, for every member of the guild.
+                case "pvp_guild_banner":
+                    return new SkinDef { Id = id, Name = "Étendard de guilde", Slot = CosmeticSlot.Torch, Pvp = true, TorchStyle = TorchStyle.GuildBanner, Torch = new Color(0.78f, 0.5f, 1f) };
+                case "pvp_guild_livery":
+                    return Colour(id, "Livrée de guilde", new Color32(122, 70, 176, 255), new Color32(64, 32, 104, 255), new Color32(255, 206, 84, 255), new Color(0.8f, 0.55f, 1f));
+                case "pvp_guild_crown":
+                    return new SkinDef { Id = id, Name = "Couronne de guilde", Slot = CosmeticSlot.Hat, Pvp = true, Hat = HatStyle.GuildCrown };
+                case "pvp_guild_boots":
+                    return new SkinDef { Id = id, Name = "Jambières de guilde", Slot = CosmeticSlot.Shoes, Pvp = true, Shoes = ShoeStyle.GuildGreaves };
             }
 
             // Season rewards: pvp_{yyyy-MM}_rank_{league|top100} and pvp_{yyyy-MM}_participation_{n}.
@@ -165,11 +177,15 @@ namespace MummyEscape.Visual
                 // Half the rivals keep the basic piece: an outfit full of rare items on everyone would look odd.
                 return rng.Next(2) == 0 ? items[0].Id : items[rng.Next(items.Count)].Id;
             }
-            return new PlayerLook
+            var look = new PlayerLook
             {
                 Mummy = Pick(CosmeticSlot.Mummy), Color = Pick(CosmeticSlot.Color), Torch = Pick(CosmeticSlot.Torch),
                 Hat = Pick(CosmeticSlot.Hat), Shoes = Pick(CosmeticSlot.Shoes),
             };
+            // A few rivals show off a title, rarely a legendary colour.
+            if (rng.Next(3) == 0) look.Title = Titles.All[rng.Next(Titles.All.Count)].Id;
+            if (rng.Next(25) == 0) look.Color = LegendarySkins.All[rng.Next(LegendarySkins.All.Count)].Id;
+            return look;
         }
 
         public static void ClearCache()

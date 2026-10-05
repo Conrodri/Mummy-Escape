@@ -70,6 +70,9 @@ namespace MummyEscape.Pvp
     {
         public string MatchId;
         public int Seed;
+        /// <summary>Combat d'équipe dont c'est une manche (2v2 ou guerre), null pour un duel.</summary>
+        public string BattleId;
+        public int Slot;
         /// <summary>Null si aucun fantôme n'était disponible : la course du joueur devient un fantôme.</summary>
         public GhostRun Ghost;
         public long CreatedAtUnixMs;
@@ -127,6 +130,13 @@ namespace MummyEscape.Pvp
         public League HighestLeague = League.Bronze;
         /// <summary>Identifiants des skins PvP obtenus (classement, participation, boutique PvP).</summary>
         public List<string> UnlockedRewards = new List<string>();
+
+        /// <summary>Duos 2v2 du joueur (<see cref="TeamConfig.MaxDuosPerPlayer"/> au plus).</summary>
+        public List<string> Duos = new List<string>();
+        /// <summary>Invitations à former un duo, reçues d'amis.</summary>
+        public List<DuoInvite> DuoInvites = new List<DuoInvite>();
+        /// <summary>Guilde du joueur, null s'il n'en a pas.</summary>
+        public string GuildId;
     }
 
     /// <summary>Profil renvoyé au client.</summary>
@@ -159,7 +169,10 @@ namespace MummyEscape.Pvp
         /// <summary>Fantôme à affronter, ou null si le joueur court en premier.</summary>
         public GhostRun Ghost;
         public int MyElo;
-        public string Error;   // "LOCKED" si l'acte 3 n'est pas atteint, "OUTDATED" si le jeu n'a pas la version du serveur
+        /// <summary>Combat d'équipe dont c'est une manche, null pour un duel.</summary>
+        public string BattleId;
+        public int Slot;
+        public string Error;   // "LOCKED" si l'acte 3 n'est pas atteint, "OUTDATED" si le jeu n'a pas la version du serveur, "NOT_YOUR_TURN"
     }
 
     /// <summary>Réponse de SubmitRun.</summary>
@@ -175,6 +188,8 @@ namespace MummyEscape.Pvp
         public int SealsGained;
         /// <summary>Solde de sceaux après le duel.</summary>
         public int Seals;
+        /// <summary>Pour une manche d'un combat d'équipe : le combat, vu par ce joueur.</summary>
+        public TeamBattle Battle;
         public string Error;   // "INVALID_RUN", "NO_PENDING_DUEL"
     }
 
@@ -232,6 +247,8 @@ namespace MummyEscape.Pvp
     public class PlayerLook
     {
         public string Mummy, Color, Torch, Hat, Shoes;
+        /// <summary>Titre choisi par le joueur (<see cref="Titles"/>), affiché sous son nom.</summary>
+        public string Title;
 
         public const int MaxIdLength = 40;
 
@@ -239,8 +256,12 @@ namespace MummyEscape.Pvp
         public static PlayerLook Sanitize(PlayerLook look)
         {
             if (look == null) return null;
-            var clean = new PlayerLook { Mummy = Id(look.Mummy), Color = Id(look.Color), Torch = Id(look.Torch), Hat = Id(look.Hat), Shoes = Id(look.Shoes) };
-            return clean.Mummy == null && clean.Color == null && clean.Torch == null && clean.Hat == null && clean.Shoes == null ? null : clean;
+            var clean = new PlayerLook
+            {
+                Mummy = Id(look.Mummy), Color = Id(look.Color), Torch = Id(look.Torch), Hat = Id(look.Hat), Shoes = Id(look.Shoes),
+                Title = Titles.Get(Id(look.Title))?.Id,
+            };
+            return clean.Mummy == null && clean.Color == null && clean.Torch == null && clean.Hat == null && clean.Shoes == null && clean.Title == null ? null : clean;
         }
 
         static string Id(string id)

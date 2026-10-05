@@ -78,7 +78,7 @@ namespace MummyEscape.UI.Screens
             FitMummy();
             _stars.text = App.Save.TotalStars.ToString();
             _coins.text = App.Save.Data.Coins.ToString();
-            _mummy.sprite = App.Art.MummyPortrait(App.Save.Loadout);
+            MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)
                 : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName) : Loc.F("Invité : {0}", online.PlayerName);

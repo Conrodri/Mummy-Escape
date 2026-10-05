@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MummyEscape.Pvp;
@@ -23,7 +24,22 @@ namespace MummyEscape.Online
             public PlayerPvpData Data;
             public PendingDuel Pending;
             public List<DuelRecord> History;
+            // Team objects (duos, guilds, battles) and their indexes.
+            public List<Duo> Duos;
+            public List<Guild> Guilds;
+            public List<TeamBattle> Battles;
+            public List<DuoSummary> DuoIndex;
+            public List<GuildSummary> GuildIndex;
         }
+
+        static readonly (string name, string tag)[] DemoGuilds =
+        {
+            ("Fils d'Anubis", "ANUB"), ("Scarabées d'Or", "SCAR"), ("Vents du Désert", "VENT"), ("Gardiens du Nil", "NIL"), // noloc
+            ("Ombres de Karnak", "KRNK"), ("Lames de Sekhmet", "LAME"), // noloc
+        };
+
+        /// <summary>Simulated members given to a guild the player creates offline, so a 10v10 war can be tried.</summary>
+        const int DemoRecruits = 11;
 
         static readonly string[] DemoNames =
         {
@@ -56,8 +72,81 @@ namespace MummyEscape.Online
                 lock (_names) _names[ghost.PlayerId] = ghost.PlayerName;
                 return ghost;
             };
+            // Teams offline: every other player is simulated (friends accept at once, rivals run their rounds at once).
+            _server.IsBot = id => id != Me;
+            _server.BotName = BotNameOf;
+            _server.BotRun = (id, seed, elo) =>
+            {
+                lock (_rng)
+                {
+                    var g = PvpBots.Make(_rng, elo, seed, id, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                    return new SlotRun
+                    {
+                        PlayerId = id, PlayerName = BotNameOf(id), Look = Visual.PvpSkins.RandomLook(_rng), Outcome = g.Outcome,
+                        TimeMs = g.TimeMs, Progress = g.Progress, Inputs = g.Inputs, RunAtUnixMs = g.CreatedAtUnixMs,
+                    };
+                }
+            };
+            _server.BotSide = (kind, slots, elo) =>
+            {
+                lock (_rng)
+                {
+                    string team = "botteam_" + _rng.Next(); // noloc
+                    var order = new List<string>();
+                    if (kind == BattleKind.Duo)
+                    {
+                        string a = team + "_a", b = team + "_b"; // noloc
+                        order.AddRange(new[] { a, b, a });
+                    }
+                    else for (int i = 0; i < slots; i++) order.Add(team + "_" + i);
+                    foreach (var id in order.Distinct())
+                        lock (_names) _names[id] = DemoNames[_rng.Next(DemoNames.Length)] + "#" + (1000 + _rng.Next(9000));
+                    var g = DemoGuilds[_rng.Next(DemoGuilds.Length)];
+                    string name = kind == BattleKind.Duo ? BotNameOf(order[0]) + " & " + BotNameOf(order[1]) : $"[{g.tag}] {g.name}";
+                    return TeamLogic.NewSide(team, name, Math.Max(PvpConfig.MinElo, elo + _rng.Next(-120, 121)), order, BotNameOf);
+                }
+            };
             Load();
             SeedDemoRivals();
+            SeedDemoGuilds();
+        }
+
+        string BotNameOf(string id)
+        {
+            lock (_names) if (_names.TryGetValue(id, out var n)) return n;
+            if (id.StartsWith("demo-")) return id.Substring(5); // offline friends are "demo-Name#1234" // noloc
+            return PvpBots.NameOf(id);
+        }
+
+        /// <summary>A few guilds to find and join offline (the same every launch).</summary>
+        void SeedDemoGuilds()
+        {
+            if (_store.Shared.ContainsKey(PvpServer.IndexCollection + "/" + PvpServer.GuildIndexKey)) return;
+            var rng = new System.Random(0x6e11d);
+            var index = new List<GuildSummary>();
+            for (int g = 0; g < DemoGuilds.Length; g++)
+            {
+                var guild = new Guild { Id = "demo_guild_" + g, Name = DemoGuilds[g].name, Tag = DemoGuilds[g].tag, WarElo = 850 + rng.Next(500) }; // noloc
+                int members = 6 + rng.Next(20);
+                for (int i = 0; i < members; i++)
+                {
+                    string id = $"gm_{g}_{i}"; // noloc
+                    string name = DemoNames[rng.Next(DemoNames.Length)] + "#" + (1000 + rng.Next(9000));
+                    _names[id] = name;
+                    int points = rng.Next(0, 120);
+                    guild.Members.Add(new GuildMember { PlayerId = id, Name = name, Role = i == 0 ? GuildRole.Leader : i < 3 ? GuildRole.Officer : GuildRole.Member, Points = points });
+                    guild.Points += points;
+                }
+                guild.WarWins = rng.Next(30);
+                guild.WarLosses = rng.Next(30);
+                _store.Shared[PvpServer.GuildsCollection + "/" + guild.Id] = guild;
+                index.Add(new GuildSummary
+                {
+                    Id = guild.Id, Name = guild.Name, Tag = guild.Tag, MemberCount = guild.Members.Count, Points = guild.Points,
+                    WarElo = guild.WarElo, WarWins = guild.WarWins, WarLosses = guild.WarLosses,
+                });
+            }
+            _store.Shared[PvpServer.IndexCollection + "/" + PvpServer.GuildIndexKey] = index;
         }
 
         // ------------------------------------------------------------------ storage
@@ -75,6 +164,9 @@ namespace MummyEscape.Online
                     if (s.Data.LastSeason != null && string.IsNullOrEmpty(s.Data.LastSeason.Season)) s.Data.LastSeason = null;
                     s.Data.OpponentsToday ??= new Dictionary<string, int>();
                     s.Data.UnlockedRewards ??= new List<string>();
+                    s.Data.Duos ??= new List<string>();
+                    s.Data.DuoInvites ??= new List<DuoInvite>();
+                    if (string.IsNullOrEmpty(s.Data.GuildId)) s.Data.GuildId = null;
                     if (s.Data.SeasonDuels > 0) s.Data.Ranked = true; // demo saves made before the flag existed
                     // Demo saves made before the month's record existed: the overall record is the closest guess.
                     if (s.Data.SeasonDuels > 0 && s.Data.SeasonWins + s.Data.SeasonLosses + s.Data.SeasonDraws == 0)
@@ -90,6 +182,7 @@ namespace MummyEscape.Online
                 if (s.Pending != null && !string.IsNullOrEmpty(s.Pending.MatchId))
                 {
                     if (s.Pending.Ghost != null && string.IsNullOrEmpty(s.Pending.Ghost.GhostId)) s.Pending.Ghost = null;
+                    if (string.IsNullOrEmpty(s.Pending.BattleId)) s.Pending.BattleId = null;
                     if (s.Pending.Ghost != null && s.Pending.Ghost.Look != null && string.IsNullOrEmpty(s.Pending.Ghost.Look.Mummy)) s.Pending.Ghost.Look = null;
                     _store.Pending[Me] = s.Pending;
                 }
@@ -103,16 +196,68 @@ namespace MummyEscape.Online
                     }
                     _store.History[Me] = s.History;
                 }
+                LoadTeams(s);
             }
             catch (Exception e) { Debug.LogWarning("[Pvp] Unreadable demo data: " + e.Message); }
         }
+
+        /// <summary>Team objects back in the store; JsonUtility turns null objects into empty ones, so the nulls go back.</summary>
+        void LoadTeams(Stored s)
+        {
+            foreach (var d in s.Duos ?? new List<Duo>())
+            {
+                if (string.IsNullOrEmpty(d.ActiveBattle)) d.ActiveBattle = null;
+                _store.Shared[PvpServer.DuosCollection + "/" + d.Id] = d;
+            }
+            foreach (var g in s.Guilds ?? new List<Guild>())
+            {
+                if (string.IsNullOrEmpty(g.ActiveWar)) g.ActiveWar = null;
+                _store.Shared[PvpServer.GuildsCollection + "/" + g.Id] = g;
+                foreach (var m in g.Members) _names[m.PlayerId] = m.Name;
+            }
+            foreach (var b in s.Battles ?? new List<TeamBattle>())
+            {
+                if (b.B != null && string.IsNullOrEmpty(b.B.TeamId)) b.B = null;
+                foreach (var side in new[] { b.A, b.B })
+                {
+                    if (side == null) continue;
+                    for (int k = 0; k < side.Runs.Count; k++)
+                    {
+                        var r = side.Runs[k];
+                        if (r == null || string.IsNullOrEmpty(r.PlayerId)) side.Runs[k] = null;
+                        else if (r.Look != null && string.IsNullOrEmpty(r.Look.Mummy)) r.Look = null;
+                    }
+                    for (int k = 0; k < side.Order.Count && k < side.Names.Count; k++) _names[side.Order[k]] = side.Names[k];
+                }
+                _store.Shared[PvpServer.BattlesCollection + "/" + b.Id] = b;
+            }
+            if (s.DuoIndex != null) _store.Shared[PvpServer.IndexCollection + "/" + PvpServer.DuoIndexKey] = s.DuoIndex;
+            if (s.GuildIndex != null && s.GuildIndex.Count > 0) _store.Shared[PvpServer.IndexCollection + "/" + PvpServer.GuildIndexKey] = s.GuildIndex;
+        }
+
+        T SharedOf<T>(string collection, string key) where T : class =>
+            _store.Shared.TryGetValue(collection + "/" + key, out var v) ? v as T : null;
 
         void Persist()
         {
             _store.Players.TryGetValue(Me, out var data);
             _store.Pending.TryGetValue(Me, out var pending);
             _store.History.TryGetValue(Me, out var history);
-            PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(new Stored { Data = data, Pending = pending, History = history }));
+            var stored = new Stored
+            {
+                Data = data, Pending = pending, History = history,
+                Duos = _store.Shared.Values.OfType<Duo>().ToList(),
+                Guilds = _store.Shared.Values.OfType<Guild>().ToList(),
+                Battles = _store.Shared.Values.OfType<TeamBattle>().ToList(),
+                DuoIndex = SharedOf<List<DuoSummary>>(PvpServer.IndexCollection, PvpServer.DuoIndexKey),
+                GuildIndex = SharedOf<List<GuildSummary>>(PvpServer.IndexCollection, PvpServer.GuildIndexKey),
+            };
+            // Only the battles still listed by a duo or a guild are kept.
+            var kept = new HashSet<string>(stored.Duos.SelectMany(d => d.RecentBattles.Append(d.ActiveBattle))
+                                                       .Concat(stored.Guilds.SelectMany(g => g.RecentWars.Append(g.ActiveWar))).Where(id => id != null));
+            if (pending?.BattleId != null) kept.Add(pending.BattleId);
+            stored.Battles.RemoveAll(b => !kept.Contains(b.Id));
+            PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(stored));
             PlayerPrefs.Save();
         }
 
@@ -169,11 +314,77 @@ namespace MummyEscape.Online
 
         public Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId) => Run(() => _server.BuyWithSealsAsync(Me, itemId));
 
+        public Task<WheelSpinResponse> SpinSealWheelAsync() => Run(() => _server.SpinSealWheelAsync(Me));
+
         public Task SyncSoloStarsAsync(int stars) => Task.CompletedTask; // read live from the save
 
         public Task<DuelHistoryResponse> GetHistoryAsync() => Run(() => _server.GetHistoryAsync(Me));
 
         public Task<ReportResponse> ReportCheatAsync(string matchId) => Run(() => _server.ReportCheatAsync(Me, matchId));
+
+        // ------------------------------------------------------------------ teams
+
+        static int Gen => Core.DifficultyTable.GeneratorVersion;
+
+        public Task<TeamsResponse> GetTeamsAsync() => Run(() => _server.GetTeamsAsync(Me));
+
+        public Task<TeamActionResponse> InviteDuoAsync(string friendId, string playerName) => Run(() => _server.InviteDuoAsync(Me, playerName, friendId));
+
+        public Task<TeamActionResponse> RespondDuoAsync(string inviteId, bool accept, string playerName) =>
+            Run(() => _server.RespondDuoAsync(Me, playerName, inviteId, accept));
+
+        public Task<TeamActionResponse> LeaveDuoAsync(string duoId) => Run(() => _server.LeaveDuoAsync(Me, duoId));
+
+        public Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst) => Run(() => _server.FindDuoMatchAsync(Me, duoId, meFirst, Gen));
+
+        public Task<DuoBoardResponse> GetDuoBoardAsync(int limit) => Run(async () =>
+        {
+            var board = await _server.GetDuoBoardAsync(limit);
+            // A demo ranking around the player's duos.
+            var rng = new System.Random(0xd00);
+            for (int i = 0; i < 20; i++)
+            {
+                string a = DemoNames[rng.Next(DemoNames.Length)], b = DemoNames[rng.Next(DemoNames.Length)];
+                int w = rng.Next(4, 40), l = rng.Next(4, 40);
+                board.Rows.Add(new DuoSummary { Id = "demo_duo_" + i, Name = a + " & " + b, Elo = 1000 + (w - l) * 12 + rng.Next(-60, 61), Wins = w, Losses = l }); // noloc
+            }
+            board.Rows = board.Rows.OrderByDescending(r => r.Elo).Take(limit).ToList();
+            return board;
+        });
+
+        public Task<FindDuelResponse> StartBattleRunAsync(string battleId) => Run(() => _server.StartBattleRunAsync(Me, battleId, Gen));
+
+        public Task<TeamBattle> GetBattleAsync(string battleId) => Run(() => _server.GetBattleAsync(Me, battleId));
+
+        public Task<GuildResponse> GetGuildAsync() => Run(() => _server.GetGuildAsync(Me));
+
+        public Task<GuildResponse> CreateGuildAsync(string name, string tag, string playerName) => Run(async () =>
+        {
+            var r = await _server.CreateGuildAsync(Me, playerName, name, tag);
+            if (r.Guild == null) return r;
+            // Offline, a few simulated recruits join at once.
+            for (int i = 0; i < DemoRecruits; i++)
+            {
+                string id = "recruit_" + r.Guild.Id + "_" + i; // noloc
+                lock (_rng) lock (_names) _names[id] = DemoNames[_rng.Next(DemoNames.Length)] + "#" + (1000 + _rng.Next(9000));
+                await _server.JoinGuildAsync(id, BotNameOf(id), r.Guild.Id);
+            }
+            return await _server.GetGuildAsync(Me);
+        });
+
+        public Task<GuildSearchResponse> SearchGuildsAsync(string query, int limit) => Run(() => _server.SearchGuildsAsync(query, limit));
+
+        public Task<GuildSearchResponse> GetGuildBoardAsync(int limit) => Run(() => _server.GetGuildBoardAsync(limit));
+
+        public Task<GuildResponse> JoinGuildAsync(string guildId, string playerName) => Run(() => _server.JoinGuildAsync(Me, playerName, guildId));
+
+        public Task<GuildResponse> LeaveGuildAsync() => Run(() => _server.LeaveGuildAsync(Me));
+
+        public Task<GuildResponse> SetGuildRoleAsync(string memberId, bool officer) => Run(() => _server.SetGuildRoleAsync(Me, memberId, officer));
+
+        public Task<GuildResponse> KickGuildMemberAsync(string memberId) => Run(() => _server.KickGuildMemberAsync(Me, memberId));
+
+        public Task<GuildResponse> StartWarAsync(int size, List<string> order) => Run(() => _server.StartWarAsync(Me, size, order, Gen));
 
         public async Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit)
         {

@@ -322,6 +322,41 @@ namespace MummyEscape.Pvp.Server
             throw new Exception("Signalement non enregistré pour " + playerId, last);
         }
 
+        // ------------------------------------------------------------------ team objects (custom items)
+
+        /// <summary>
+        /// Combats, duos, guildes, index et files : un « private custom item » par objet (illisible par les joueurs), réécrit
+        /// sous verrou d'écriture. <paramref name="mutate"/> peut être rappelé si un autre écrivain passe avant ; s'il renvoie
+        /// null, rien n'est écrit.
+        /// </summary>
+        public async Task<T> UpdateSharedAsync<T>(string collection, string key, Func<T, T> mutate) where T : class
+        {
+            Exception last = null;
+            for (int attempt = 0; attempt < SharedWriteRetries; attempt++)
+            {
+                var res = await _api.CloudSaveData.GetPrivateCustomItemsAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, collection, new List<string> { key });
+                var item = res.Data.Results.FirstOrDefault(i => i.Key == key);
+                var value = FromItem<T>(item?.Value);
+                if (mutate == null) return value;
+                value = mutate(value);
+                if (value == null) return null;
+                var body = item?.WriteLock == null ? new SetItemBody(key, ToToken(value)) : new SetItemBody(key, ToToken(value), item.WriteLock);
+                try
+                {
+                    await _api.CloudSaveData.SetPrivateCustomItemAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, collection, body);
+                    return value;
+                }
+                catch (Exception e)
+                {
+                    last = e;
+                    await Task.Delay(50 * (attempt + 1));
+                }
+            }
+            throw new Exception($"Écriture refusée : {collection}/{key}", last);
+        }
+
+        const int SharedWriteRetries = 8;
+
         // ------------------------------------------------------------------ verified ranking cache (custom items)
 
         static string BoardKey(string season) => "board_" + season;

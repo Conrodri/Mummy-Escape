@@ -149,20 +149,21 @@ namespace MummyEscape.UI.Screens
             _flash.color = new Color(_flash.color.r, _flash.color.g, _flash.color.b, 0f);
             _vs.localScale = Vector3.zero;
 
-            Fill(_me, App.Art.MummyPortrait(myLook), string.IsNullOrEmpty(myName) ? Loc.T("Toi") : myName, LeagueLine(myElo), false);
+            Fill(_me, myLook, string.IsNullOrEmpty(myName) ? Loc.T("Toi") : myName,
+                 TitleBook.Line(TitleBook.Equipped(App), true) + LeagueLine(myElo), false);
             if (ghost != null)
-                Fill(_rival, App.Art.MummyPortrait(PvpSkins.Loadout(ghost.Look)),
-                     string.IsNullOrEmpty(ghost.PlayerName) ? Loc.T("Momie anonyme") : ghost.PlayerName, LeagueLine(ghost.Elo), false);
+                Fill(_rival, PvpSkins.Loadout(ghost.Look), string.IsNullOrEmpty(ghost.PlayerName) ? Loc.T("Momie anonyme") : ghost.PlayerName,
+                     TitleBook.Line(ghost.Look?.Title, true) + LeagueLine(ghost.Elo), false);
             else
-                Fill(_rival, App.Art.MummyPortrait(SkinCatalog.Classic), Loc.T("Personne… encore"),
+                Fill(_rival, SkinCatalog.Classic, Loc.T("Personne… encore"),
                      Loc.T("Ta course deviendra le fantôme du prochain challenger"), true);
             Place(0f);
             App.Audio.Play(Sfx.Versus);
         }
 
-        static void Fill(Side side, Sprite portrait, string name, string info, bool unknown)
+        void Fill(Side side, Loadout look, string name, string info, bool unknown)
         {
-            side.Portrait.sprite = portrait;
+            MummyAnimator.Show(side.Portrait, App.Art, look);
             side.Portrait.color = unknown ? Silhouette : Color.white;
             side.Mystery.gameObject.SetActive(unknown);
             side.Name.text = name;

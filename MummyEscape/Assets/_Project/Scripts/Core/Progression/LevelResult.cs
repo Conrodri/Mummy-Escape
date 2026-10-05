@@ -122,6 +122,8 @@ namespace MummyEscape.Core
         public int Deaths;
         /// <summary>Mazes drawn so far for this level: the next run plays maze number Runs (a new tomb every time).</summary>
         public int Runs;
+        /// <summary>Quickest escape, whatever its moves (0 = none yet or legacy save): the speed titles count these.</summary>
+        public int FastestMs;
 
         public bool HasBest => Completions > 0 && BestOverPar >= 0;
 
@@ -130,6 +132,7 @@ namespace MummyEscape.Core
             if (!r.Won) { Deaths++; return false; }
             bool first = !HasBest;
             Completions++;
+            if (r.TimeMs > 0 && (FastestMs == 0 || r.TimeMs < FastestMs)) FastestMs = r.TimeMs;
             bool improved = first || LevelResult.CompareRuns(r.OverPar, r.TimeMs, BestOverPar, BestTimeMs) < 0;
             if (improved) { BestOverPar = r.OverPar; BestTimeMs = r.TimeMs; BestMoves = r.Moves; BestHpLeft = r.HpLeft; }
             BestStars = Math.Max(BestStars, r.Stars);
@@ -145,6 +148,7 @@ namespace MummyEscape.Core
             BestStars = Math.Max(BestStars, o.BestStars);
             Completions = Math.Max(Completions, o.Completions);
             Deaths = Math.Max(Deaths, o.Deaths);
+            if (o.FastestMs > 0 && (FastestMs == 0 || o.FastestMs < FastestMs)) FastestMs = o.FastestMs;
             // Never replay a maze already drawn on either device.
             Runs = Math.Max(Runs, o.Runs);
         }

@@ -104,6 +104,20 @@ namespace MummyEscape.Pvp
             return Task.FromResult(h);
         }
 
+        /// <summary>Objets partagés (combats, duos, guildes…), par collection puis clé.</summary>
+        public readonly Dictionary<string, object> Shared = new Dictionary<string, object>();
+
+        public Task<T> UpdateSharedAsync<T>(string collection, string key, Func<T, T> mutate) where T : class
+        {
+            string k = collection + "/" + key;
+            Shared.TryGetValue(k, out var current);
+            var value = current as T;
+            if (mutate == null) return Task.FromResult(value);
+            value = mutate(value);
+            if (value == null) Shared.Remove(k); else Shared[k] = value;
+            return Task.FromResult(value);
+        }
+
         public Task<CheatDossier> UpdateDossierAsync(string playerId, Action<CheatDossier> mutate)
         {
             if (!Dossiers.TryGetValue(playerId, out var f)) Dossiers[playerId] = f = new CheatDossier { PlayerId = playerId };

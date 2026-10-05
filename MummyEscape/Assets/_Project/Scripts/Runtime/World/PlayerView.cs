@@ -75,7 +75,7 @@ namespace MummyEscape.World
         {
             _look = look;
             _dressed = true;
-            _sprite.sprite = _art.Mummy(look);
+            MummyAnimator.Show(_sprite, _art, look);
             _torchColor = look.Light;
             _torch.color = _torchColor;
         }

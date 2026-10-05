@@ -164,11 +164,22 @@ namespace MummyEscape.Visual
         /// In-game mummy in its outfit, holding the torch handle; the flame is a separate sprite so it can go out.
         /// The canvas is 32x40 (room for hats) with the pivot 16 px up, so the body sits where a 32x32 tile sprite would.
         /// </summary>
-        public Sprite Mummy(Loadout look) => CachedMummy("mummy_" + look.Key, () => PaintMummy(look));
+        public Sprite Mummy(Loadout look, int frame = 0)
+        {
+            frame = look.Animated ? frame % LegendaryFrames : 0;
+            return CachedMummy("mummy_" + look.Key + (frame > 0 ? "_f" + frame : ""), () => PaintMummy(look, frame));
+        }
 
         /// <summary>Mummy with its torch lit, for menus, shop and icon.</summary>
-        public Sprite MummyPortrait(Loadout look) =>
-            CachedMummy("portrait_" + look.Key, () => PaintMummy(look).Blit(PaintFlame(look.Light, 0), 0, 0));
+        public Sprite MummyPortrait(Loadout look, int frame = 0)
+        {
+            frame = look.Animated ? frame % LegendaryFrames : 0;
+            return CachedMummy("portrait_" + look.Key + (frame > 0 ? "_f" + frame : ""),
+                               () => PaintMummy(look, frame).Blit(PaintFlame(look.Light, 0), 0, 0));
+        }
+
+        /// <summary>Frames in the loop of a legendary colour (<see cref="MummyAnimator"/> plays them).</summary>
+        public const int LegendaryFrames = 8;
 
         public const int TorchFlameFrames = 3;
         public Sprite TorchFlame(Color tint, int frame) =>
@@ -895,7 +906,7 @@ namespace MummyEscape.Visual
         /// Layers, back to front: body (silhouette, colours, bandage texture), face, shoes, hat, then the torch and the
         /// fist over its grip. Pixel rows 0-31 match a tile sprite; rows 32-39 only hold tall hats and ears.
         /// </summary>
-        static Px PaintMummy(Loadout look)
+        static Px PaintMummy(Loadout look, int frame = 0)
         {
             var c = look.Color;
             var p = new Px(32, MummyHeight);
@@ -915,7 +926,8 @@ namespace MummyEscape.Visual
                 for (int x = 9; x < 23; x++)
                     if (p.Get(x, y).a == 255 && ((x + y) % 5 != 0)) p.Set(x, y, c.Shadow);
             for (int y = 13; y <= 16; y += 3) { p.Rect(6, y, 9, y, c.Shadow); p.Rect(22, y, 25, y, c.Shadow); }
-            Texture(p, look.Mummy.Pattern);
+            // A legendary colour covers the act textures with its own animated one.
+            if (!c.Legendary) Texture(p, look.Mummy.Pattern);
             // Dark eye band + glowing eyes.
             p.Rect(11, 22, 21, 24, new Color32(30, 24, 20, 255));
             p.Rect(12, 23, 14, 23, c.Eyes); p.Rect(18, 23, 20, 23, c.Eyes);
@@ -940,7 +952,109 @@ namespace MummyEscape.Visual
             // Bandaged fist over the grip.
             p.Rect(23, 13, 26, 16, c.Bandage);
             p.Rect(23, 14, 26, 14, c.Shadow);
+            if (c.Legendary) PaintLegendary(p, c.Fx, frame);
             return p;
+        }
+
+        static bool Same(Color32 a, Color32 b) => a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+
+        /// <summary>
+        /// Repaints the marker-coloured body (<see cref="LegendarySkins.MarkBandage"/>, folds in <see cref="LegendarySkins.MarkShadow"/>)
+        /// with the frame's effect, then scatters a few sparkles in the air around the mummy.
+        /// </summary>
+        static void PaintLegendary(Px p, LegendaryFx fx, int frame)
+        {
+            float t = frame / (float)LegendaryFrames;
+            for (int y = 0; y < p.H; y++)
+                for (int x = 0; x < p.W; x++)
+                {
+                    var col = p.Get(x, y);
+                    bool fold = Same(col, LegendarySkins.MarkShadow);
+                    if (!fold && !Same(col, LegendarySkins.MarkBandage)) continue;
+                    var c = LegendaryPixel(fx, x, y, t, frame);
+                    p.Set(x, y, fold ? Color32.Lerp(c, new Color32(0, 0, 0, 255), 0.36f) : c);
+                }
+            Color32 glint = Color.Lerp(LegendarySkins.Accent(fx), Color.white, 0.55f);
+            var halo = new Color32(glint.r, glint.g, glint.b, 170);
+            for (int k = 0; k < 3; k++)
+            {
+                int sx = 3 + (int)(Px.Hash(k, frame, 71) * 26), sy = 4 + (int)(Px.Hash(frame, k, 13) * 32);
+                if (p.Get(sx, sy).a != 0) continue;
+                p.Set(sx, sy, new Color32(255, 255, 255, 255));
+                if (p.Get(sx + 1, sy).a == 0) p.Set(sx + 1, sy, halo);
+                if (p.Get(sx - 1, sy).a == 0) p.Set(sx - 1, sy, halo);
+                if (p.Get(sx, sy + 1).a == 0) p.Set(sx, sy + 1, halo);
+                if (p.Get(sx, sy - 1).a == 0) p.Set(sx, sy - 1, halo);
+            }
+        }
+
+        static Color32 Hsv(float h, float s, float v) => Color.HSVToRGB(h - Mathf.Floor(h), Mathf.Clamp01(s), Mathf.Clamp01(v));
+
+        /// <summary>Colour of one body pixel of a legendary skin at time <paramref name="t"/> (0-1 over the loop).</summary>
+        static Color32 LegendaryPixel(LegendaryFx fx, int x, int y, float t, int frame)
+        {
+            const float Tau = Mathf.PI * 2f;
+            switch (fx)
+            {
+                case LegendaryFx.Rainbow:
+                    return Hsv(y / 28f + x / 80f - t, 0.8f, 1f);
+                case LegendaryFx.Fire:
+                {
+                    float heat = 1.1f - y / 34f + 0.3f * Mathf.Sin(Tau * (x / 8f + t)) + 0.3f * Px.Hash(x, y / 2 - frame, 5);
+                    return heat > 1f ? new Color32(255, 240, 150, 255) : heat > 0.72f ? new Color32(255, 150, 40, 255)
+                         : heat > 0.45f ? new Color32(230, 70, 30, 255) : new Color32(150, 20, 34, 255);
+                }
+                case LegendaryFx.Galaxy:
+                {
+                    if (Px.Hash(x, y, frame + 100) > 0.95f) return new Color32(255, 255, 255, 255);
+                    if (Px.Hash(x, y, 7) > 0.96f) return new Color32(255, 190, 255, 255);
+                    float k = 0.5f + 0.5f * Mathf.Sin(Tau * (x / 12f + y / 16f + t));
+                    return Color32.Lerp(new Color32(36, 18, 92, 255), new Color32(150, 50, 190, 255), k);
+                }
+                case LegendaryFx.Aurora:
+                {
+                    float wave = Mathf.Sin(Tau * (x / 14f + t) + y / 5f);
+                    if (wave > 0.85f) return new Color32(255, 130, 220, 255);
+                    float glow = 0.5f + 0.5f * Mathf.Sin(Tau * (y / 9f - t));
+                    return Hsv(0.36f + 0.12f * wave, 0.75f, 0.45f + 0.55f * glow);
+                }
+                case LegendaryFx.Gold:
+                {
+                    float band = (x + y) / 24f - t;
+                    band -= Mathf.Floor(band);
+                    return band < 0.1f ? new Color32(255, 252, 220, 255) : band < 0.2f ? new Color32(255, 226, 120, 255)
+                         : Color32.Lerp(new Color32(240, 186, 50, 255), new Color32(186, 124, 30, 255), y / 40f);
+                }
+                case LegendaryFx.Storm:
+                {
+                    bool strike = frame % 4 < 2;
+                    int cx = 16 + Mathf.RoundToInt(Mathf.Sin(y * 0.9f + frame * 2f) * 3f);
+                    if (strike && x == cx) return new Color32(235, 250, 255, 255);
+                    if (strike && Mathf.Abs(x - cx) == 1) return new Color32(120, 190, 255, 255);
+                    if (Px.Hash(x, y, frame) > 0.93f) return new Color32(90, 150, 255, 255);
+                    return strike ? new Color32(44, 58, 150, 255) : new Color32(28, 36, 104, 255);
+                }
+                case LegendaryFx.Spectre:
+                {
+                    if (Px.Hash(x, y + frame * 3, 31) > 0.93f) return new Color32(225, 255, 250, 255);
+                    float k = 0.5f + 0.5f * Mathf.Sin(Tau * (t + y / 20f));
+                    return Color32.Lerp(new Color32(16, 86, 90, 255), new Color32(140, 255, 226, 255), k);
+                }
+                case LegendaryFx.Neon:
+                {
+                    int stripe = ((y + frame) / 2) % 3;
+                    return stripe == 0 ? new Color32(255, 60, 200, 255) : stripe == 1 ? new Color32(60, 240, 255, 255) : new Color32(48, 20, 72, 255);
+                }
+                case LegendaryFx.Prism:
+                    if (Px.Hash(x, y, frame + 40) > 0.95f) return new Color32(255, 255, 255, 255);
+                    return Hsv((x - y) / 20f + t, 0.35f, 1f);
+                default: // Magma
+                {
+                    float flow = Mathf.Sin(x * 0.8f + Tau * t) + Mathf.Sin(y * 0.55f - Tau * t);
+                    return flow > 1.3f ? new Color32(255, 222, 90, 255) : flow > 0.85f ? new Color32(255, 120, 30, 255)
+                         : flow > 0.45f ? new Color32(180, 40, 20, 255) : new Color32(42, 20, 22, 255);
+                }
+            }
         }
 
         static Px Layer(System.Action<Px> paint)
@@ -1171,6 +1285,14 @@ namespace MummyEscape.Visual
                     p.Set(12, 3, sheen); p.Set(17, 3, sheen); p.Rect(12, 5, 14, 5, Gold); p.Rect(17, 5, 19, 5, Gold);
                     break;
                 }
+                case ShoeStyle.GuildGreaves:
+                    // Royal purple plates with gold rims and a gem on each knee (guild reward).
+                    p.Rect(11, 1, 15, 2, GuildGold); p.Rect(16, 1, 20, 2, GuildGold);
+                    p.Rect(12, 3, 14, 7, GuildPurple); p.Rect(17, 3, 19, 7, GuildPurple);
+                    p.Rect(14, 3, 14, 7, GuildPurpleDark); p.Rect(19, 3, 19, 7, GuildPurpleDark);
+                    p.Rect(12, 7, 14, 7, GuildGold); p.Rect(17, 7, 19, 7, GuildGold);
+                    p.Set(13, 5, GuildGem); p.Set(18, 5, GuildGem);
+                    break;
                 case ShoeStyle.SilverGreaves:
                     p.Rect(11, 1, 15, 2, MetalDark); p.Rect(16, 1, 20, 2, MetalDark);
                     p.Rect(12, 3, 14, 7, Metal); p.Rect(17, 3, 19, 7, Metal);
@@ -1303,6 +1425,21 @@ namespace MummyEscape.Visual
                     p.Rect(22, 29, 22, 33, Gold); p.Set(21, 33, Gold); p.Set(22, 34, new Color32(200, 40, 40, 255));
                     break;
                 }
+                case HatStyle.GuildCrown:
+                {
+                    // Crenellated gold crown on a purple band, a gem on each point (guild reward).
+                    p.Rect(10, 26, 22, 29, GuildPurple);
+                    p.Rect(10, 26, 22, 26, GuildPurpleDark);
+                    p.Rect(10, 29, 22, 30, GuildGold);
+                    for (int x = 10; x <= 22; x += 3)
+                    {
+                        p.Rect(x, 31, x, 33, GuildGold);
+                        p.Set(x, 34, GuildGem);
+                    }
+                    p.Rect(15, 27, 17, 28, GuildGold);
+                    p.Set(16, 27, GuildGem);
+                    break;
+                }
                 case HatStyle.Pschent:
                 {
                     // Double crown: red deshret around the white hedjet.
@@ -1411,11 +1548,25 @@ namespace MummyEscape.Visual
             }
         }
 
+        static readonly Color32 GuildPurple = new Color32(122, 70, 176, 255);
+        static readonly Color32 GuildPurpleDark = new Color32(70, 36, 112, 255);
+        static readonly Color32 GuildGold = new Color32(255, 206, 84, 255);
+        static readonly Color32 GuildGem = new Color32(230, 160, 255, 255);
+
         /// <summary>Torch handle and cup in the right hand. Every style holds its flame in the same spot.</summary>
         static void PaintTorch(Px p, TorchStyle style)
         {
             switch (style)
             {
+                case TorchStyle.GuildBanner:
+                    // A gold staff flying the guild's purple pennant (guild reward).
+                    p.Rect(25, 9, 26, 20, GuildGold); p.Rect(26, 9, 26, 20, GuildPurpleDark);
+                    p.Rect(27, 13, 30, 19, GuildPurple);
+                    p.Rect(27, 13, 30, 13, GuildPurpleDark);
+                    p.Set(30, 14, Clear); p.Set(30, 18, Clear); // swallowtail
+                    p.Set(28, 16, GuildGold); p.Set(29, 16, GuildGold); p.Set(28, 17, GuildGem);
+                    p.Rect(23, 21, 28, 22, GuildGold); p.Rect(23, 21, 28, 21, GuildPurpleDark);
+                    break;
                 case TorchStyle.Scepter:
                     p.Rect(25, 9, 26, 20, Gold); p.Rect(26, 9, 26, 20, GoldDark);
                     p.Rect(25, 11, 26, 11, Lapis); p.Rect(25, 18, 26, 18, Lapis);

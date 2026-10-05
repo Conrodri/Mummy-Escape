@@ -50,6 +50,8 @@ namespace MummyEscape.UI.Screens
             _countryButton = UIKit.Button(actions.transform, "Pays", () => Router.Open<CountryPickerScreen>(), 34);
             UIKit.Size(_countryButton, -1, -1, 1);
             UIKit.Size(UIKit.Button(actions.transform, "Partager", ShareCode, 34), -1, -1, 1);
+            var titles = UIKit.Button(actions.transform, "Titres", () => Router.Open<TitlesScreen>(), 34);
+            UIKit.Size(titles, -1, -1, 1);
 
             _tabs = new UIKit.Segmented(body, new[] { "Amis", "Demandes" }, i => { _tab = i; Reload(); });
 
@@ -62,8 +64,9 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
-            _portrait.sprite = App.Art.MummyPortrait(App.Save.Loadout);
-            _name.text = App.Online.PlayerName;
+            MummyAnimator.Show(_portrait, App.Art, App.Save.Loadout);
+            string title = TitleBook.Equipped(App);
+            _name.text = App.Online.PlayerName + (title == null ? "" : "  " + TitleBook.Line(title));
             _code.text = Loc.T(App.Online.IsAvailable ? "Ton code ami : donne-le à tes amis"
                        : App.Online.IsDemo ? "Démo hors ligne (amis fictifs)" : "Hors ligne");
             string country = App.Save.Country;

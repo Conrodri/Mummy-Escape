@@ -83,8 +83,19 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(rules, 18);
             UIKit.Size(rules, 110);
 
+            // Team modes: 2v2 with a friend, guilds and their wars.
+            var teams = UIKit.Row(list, 104, 16);
+            var duo = UIKit.Button(teams.transform, "2v2", () => Router.Open<DuoScreen>(), 34, ButtonStyle.Primary);
+            UIKit.Size(duo, -1, -1, 1);
+            var guild = UIKit.Button(teams.transform, "Guilde", () => Router.Open<GuildScreen>(), 34, ButtonStyle.Primary);
+            UIKit.Size(guild, -1, -1, 1);
+
             var actions = UIKit.Row(list, 96, 16);
-            UIKit.Size(UIKit.Button(actions.transform, "Classement mensuel", () => Router.Open<PvpLeaderboardScreen>(), 30), -1, -1, 1);
+            var board = UIKit.Button(actions.transform, "Classement", () => Router.Open<PvpLeaderboardScreen>(), 30);
+            UIKit.FitText(board.GetComponentInChildren<Text>(), 18);
+            UIKit.Size(board, -1, -1, 1);
+            var titles = UIKit.Button(actions.transform, "Titres", () => Router.Open<TitlesScreen>(), 30);
+            UIKit.Size(titles, -1, -1, 1);
             _claim = UIKit.Button(actions.transform, "Récompenses", Claim, 30, ButtonStyle.Primary);
             UIKit.FitText(_claim.GetComponentInChildren<Text>(), 18);
             UIKit.Size(_claim, -1, -1, 1);

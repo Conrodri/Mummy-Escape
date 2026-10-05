@@ -118,12 +118,18 @@ namespace MummyEscape.UI.Screens
         /// </summary>
         internal static UIKit.Segmented Categories(Transform body, UIRouter router, int selected)
         {
-            return new UIKit.Segmented(body, new[] { "Solo", "Duel" }, i =>
+            return new UIKit.Segmented(body, new[] { "Solo", "Duel", "2v2", "Guildes" }, i =>
             {
                 if (i == selected) return;
+                if (router.Current is TeamLeaderboardScreen team && i >= 2)
+                {
+                    team.Show(i == 3); // 2v2 ⇄ guilds on the same screen
+                    return;
+                }
                 router.Reset<MainMenuScreen>();
                 if (i == 0) router.Open<LeaderboardScreen>();
-                else router.Open<PvpLeaderboardScreen>();
+                else if (i == 1) router.Open<PvpLeaderboardScreen>();
+                else router.Open<TeamLeaderboardScreen>().Show(i == 3);
             }, 96);
         }
 

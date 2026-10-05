@@ -74,8 +74,9 @@ namespace MummyEscape.World
         }
 
         /// <summary>Sets up the run to replay (<paramref name="inputs"/> null: nobody to show on this side).</summary>
-        public void Load(Level level, IList<RunInput> inputs, Loadout look, Loadout rivalLook, TombTheme theme)
+        public void Load(Level level, IList<RunInput> inputs, Loadout look, Loadout rivalLook, TombTheme theme, bool spectator = false)
         {
+            _maze.Spectator = spectator;
             _player.SetTheme(theme, _unlit);
             _level = level;
             _inputs = inputs;
@@ -247,15 +248,15 @@ namespace MummyEscape.World
             return rig;
         }
 
-        /// <summary>Shows the duel from the start, paused.</summary>
-        public void Open(DuelRecord duel, Level level, TombTheme theme)
+        /// <summary>Shows the duel from the start, paused (<paramref name="spectator"/>: traps and points of interest hidden).</summary>
+        public void Open(DuelRecord duel, Level level, TombTheme theme, bool spectator = false)
         {
             _duel = duel;
             gameObject.SetActive(true);
             var me = PvpSkins.Loadout(duel.Me?.Look);
             var rival = PvpSkins.Loadout(duel.Rival?.Look);
-            _top.Load(level, duel.Me?.Inputs, me, rival, theme);
-            _bottom.Load(level, duel.Rival?.Inputs, rival, me, theme);
+            _top.Load(level, duel.Me?.Inputs, me, rival, theme, spectator);
+            _bottom.Load(level, duel.Rival?.Inputs, rival, me, theme, spectator);
             EndMs = Mathf.Max(EndOf(duel.Me), EndOf(duel.Rival)) + TailMs;
             _timeMs = 0;
             Playing = false;

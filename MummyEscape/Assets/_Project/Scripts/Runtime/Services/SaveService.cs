@@ -22,6 +22,10 @@ namespace MummyEscape.Services
         public string SelectedTorch = SkinCatalog.DefaultTorchId;
         public string SelectedHat = SkinCatalog.NoHatId;
         public string SelectedShoes = SkinCatalog.NoShoesId;
+        /// <summary>Title shown under the player's name (<see cref="Pvp.Titles"/>), empty for none.</summary>
+        public string SelectedTitle = "";
+        /// <summary>Turns of the casino's scarab wheel (statistics).</summary>
+        public int WheelSpins;
         /// <summary>Country shown in the rankings (ISO alpha-2). Empty = detect from the device.</summary>
         public string Country = "";
     }
@@ -191,6 +195,15 @@ namespace MummyEscape.Services
             return added;
         }
 
+        /// <summary>Pays scarabs for something outside the shop (founding a guild); false when the player can't afford it.</summary>
+        public bool SpendCoins(int amount)
+        {
+            if (amount < 0 || Data.Coins < amount) return false;
+            Data.Coins -= amount;
+            Save();
+            return true;
+        }
+
         /// <summary>Buys every missing piece of a collection at once, for the given price.</summary>
         public bool TryBuyAll(IEnumerable<SkinDef> items, int price)
         {
@@ -221,6 +234,30 @@ namespace MummyEscape.Services
                 default: Data.SelectedShoes = id; break;
             }
             Save();
+        }
+
+        /// <summary>Shows a title under the player's name ("" or null: none). Earning it is checked by <see cref="TitleBook"/>.</summary>
+        public void SelectTitle(string id)
+        {
+            Data.SelectedTitle = Pvp.Titles.Get(id)?.Id ?? "";
+            Save();
+        }
+
+        /// <summary>
+        /// One turn of the casino's scarab wheel: pays, draws, cashes in the prize (scarabs or a legendary colour).
+        /// Null when the player cannot pay.
+        /// </summary>
+        public Pvp.SpinResult SpinScarabWheel(System.Random rng)
+        {
+            var wheel = Pvp.Casino.Scarabs;
+            if (Data.Coins < wheel.Price) return null;
+            Data.Coins -= wheel.Price;
+            var result = Pvp.Casino.Spin(wheel, rng.NextDouble(), rng.NextDouble(), Data.OwnedSkins);
+            if (result.Kind == Pvp.PrizeKind.Currency) Data.Coins += result.Amount;
+            else if (result.Legendary != null && !Data.OwnedSkins.Contains(result.Legendary)) Data.OwnedSkins.Add(result.Legendary);
+            Data.WheelSpins++;
+            Save();
+            return result;
         }
 
         public bool IsWorn(string id) =>

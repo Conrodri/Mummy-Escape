@@ -156,6 +156,19 @@ namespace MummyEscape.World
         /// </summary>
         public bool Preview { get; private set; }
 
+        /// <summary>
+        /// Spectator view (rounds of a team battle watched by others): traps and points of interest are drawn as plain
+        /// floor, wall torches as plain wall, so nobody learns a tomb by watching. The exit stays.
+        /// </summary>
+        public bool Spectator { get; set; }
+
+        Tile Shown(Cell cell)
+        {
+            var t = _session.PerceivedTile(cell);
+            if (!Spectator || t.Type == TileType.Exit || t.Type == TileType.Floor || t.Type == TileType.Wall || t.Type == TileType.Current) return t;
+            return new Tile { Type = t.Type == TileType.WallTorch ? TileType.Wall : TileType.Floor };
+        }
+
         /// <summary>Hides the whole map at once (screen capture detected during the preview).</summary>
         public bool Concealed { get; set; }
 
@@ -236,7 +249,7 @@ namespace MummyEscape.World
 
         void Refresh(TileView tv)
         {
-            var t = _session.PerceivedTile(tv.Cell);
+            var t = Shown(tv.Cell);
             var l = tv.Look;
             l.Open = _session.IsDoorOpen(tv.Cell);
             l.Active = (t.Type == TileType.Door || t.Type == TileType.Button || t.Type == TileType.Teleporter || t.Type == TileType.Switch)

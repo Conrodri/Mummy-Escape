@@ -26,12 +26,12 @@ namespace MummyEscape.World
             _sprite.transform.SetParent(transform, false);
             if (unlit != null) _sprite.sharedMaterial = unlit; // glows faintly whatever the light
             _sprite.sortingOrder = 9; // under the player
-            _sprite.sprite = art.Mummy(SkinCatalog.Classic);
+            MummyAnimator.Show(_sprite, art, SkinCatalog.Classic);
             Hide();
         }
 
         /// <summary>Dresses the ghost in its runner's outfit (still pale and see-through).</summary>
-        public void SetLook(Loadout look) => _sprite.sprite = _art.Mummy(look);
+        public void SetLook(Loadout look) => MummyAnimator.Show(_sprite, _art, look);
 
         public void Snap(Cell c)
         {
