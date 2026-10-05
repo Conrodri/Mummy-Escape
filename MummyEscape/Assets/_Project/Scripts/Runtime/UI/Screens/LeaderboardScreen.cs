@@ -26,7 +26,7 @@ namespace MummyEscape.UI.Screens
         int _index;
         int _scope;
         Text _levelLabel, _actLabel, _info;
-        UIKit.Segmented _tabs;
+        UIKit.Segmented _tabs, _category;
         ScrollRect _scroll;
         RowView _me;
         Text _meEmpty;
@@ -57,6 +57,7 @@ namespace MummyEscape.UI.Screens
             Header("Classement");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 18);
+            _category = Categories(body, Router, 0);
 
             // Level picker.
             var picker = UIKit.Row(body, 120, 16);
@@ -111,8 +112,24 @@ namespace MummyEscape.UI.Screens
                 ? $"{LevelResult.FormatOverPar(row.OverPar)}\n<size=22><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color>{(row.Suspicious ? " <b><color=#E0903A>?</color></b>" : "")}</size>" // noloc
                 : LevelResult.FormatOverPar(row.OverPar);
 
+        /// <summary>
+        /// The two rankings, Solo (per level) and Duel (monthly Elo), one tab away from each other. Like the bottom bar,
+        /// each opens over the main menu: Back always leads home.
+        /// </summary>
+        internal static UIKit.Segmented Categories(Transform body, UIRouter router, int selected)
+        {
+            return new UIKit.Segmented(body, new[] { "Solo", "Duel" }, i =>
+            {
+                if (i == selected) return;
+                router.Reset<MainMenuScreen>();
+                if (i == 0) router.Open<LeaderboardScreen>();
+                else router.Open<PvpLeaderboardScreen>();
+            }, 96);
+        }
+
         public override void OnShow()
         {
+            _category.Select(0);
             _tabs.Select(_scope);
             Reload();
         }

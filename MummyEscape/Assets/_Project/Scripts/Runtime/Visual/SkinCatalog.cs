@@ -12,11 +12,11 @@ namespace MummyEscape.Visual
     /// <summary>Texture painted over the bandages (on top of the colours).</summary>
     public enum BandagePattern { Plain, Hieroglyphs, Moss, Stone, Circuit, Lava }
 
-    public enum TorchStyle { Classic, Scepter, Lantern, Bone, Plasma, Obsidian }
+    public enum TorchStyle { Classic, Scepter, Lantern, Bone, Plasma, Obsidian, Ankh, Was, Crook, Papyrus, Cobra, Crystal, OilLamp, Moon, Feather, Sistrum }
 
-    public enum HatStyle { None, Explorer, Nemes, Lotus, BrokenHelm, CyberEars, SunDisk }
+    public enum HatStyle { None, Explorer, Nemes, Lotus, BrokenHelm, CyberEars, SunDisk, Pschent, Khepresh, Atef, MaatFeather, Vulture, HathorHorns, ScarabCirclet, Turban, Nefertiti }
 
-    public enum ShoeStyle { None, Slippers, GoldSandals, MudBoots, StoneBoots, JetBoots, ObsidianHooves }
+    public enum ShoeStyle { None, Slippers, GoldSandals, MudBoots, StoneBoots, JetBoots, ObsidianHooves, PapyrusSandals, LapisSandals, CrocBoots, WingedSandals, ScarabClogs, SilverGreaves, DesertBoots, RubyPointed, LotusSlippers }
 
     /// <summary>One shop item. Only the fields of its <see cref="Slot"/> matter.</summary>
     public sealed class SkinDef
@@ -101,6 +101,9 @@ namespace MummyEscape.Visual
         static SkinDef Hat(string id, string name, int price, int theme, HatStyle hat) =>
             new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Hat, Theme = theme, Hat = hat };
 
+        static SkinDef Colour(string id, string name, int price, Color32 bandage, Color32 shadow, Color32 eyes, Color torch) =>
+            new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Color, Bandage = bandage, Shadow = shadow, Eyes = eyes, Torch = torch };
+
         static SkinDef Shoes(string id, string name, int price, int theme, ShoeStyle shoes) =>
             new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Shoes, Theme = theme, Shoes = shoes };
 
@@ -115,6 +118,15 @@ namespace MummyEscape.Visual
             Mummy("mummy_stone", "Momie de pierre", 200, 3, MummyShape.Classic, BandagePattern.Stone),
             Mummy("mummy_circuit", "Momie cybernétique", 240, 4, MummyShape.Classic, BandagePattern.Circuit),
             Mummy("mummy_lava", "Momie de braise", 280, 5, MummyShape.Classic, BandagePattern.Lava),
+            // Silhouettes wearing the act textures (Jackal + Lava and Cat + Circuit are duel rewards).
+            Mummy("mummy_cat_glyphs", "Bastet aux hiéroglyphes", 220, 0, MummyShape.Cat, BandagePattern.Hieroglyphs),
+            Mummy("mummy_jackal_glyphs", "Chacal aux hiéroglyphes", 240, 0, MummyShape.Jackal, BandagePattern.Hieroglyphs),
+            Mummy("mummy_cat_moss", "Bastet des marais", 260, 0, MummyShape.Cat, BandagePattern.Moss),
+            Mummy("mummy_jackal_moss", "Chacal des marais", 280, 0, MummyShape.Jackal, BandagePattern.Moss),
+            Mummy("mummy_cat_stone", "Bastet de pierre", 300, 0, MummyShape.Cat, BandagePattern.Stone),
+            Mummy("mummy_jackal_stone", "Chacal de pierre", 320, 0, MummyShape.Jackal, BandagePattern.Stone),
+            Mummy("mummy_jackal_circuit", "Chacal cybernétique", 360, 0, MummyShape.Jackal, BandagePattern.Circuit),
+            Mummy("mummy_cat_lava", "Bastet de braise", 400, 0, MummyShape.Cat, BandagePattern.Lava),
 
             // ---- Colours (the original skins): they recolour any mummy.
             new SkinDef { Id = DefaultSkinId, Name = "Momie du Nil", Price = 0,
@@ -129,6 +141,16 @@ namespace MummyEscape.Visual
                 Bandage = new Color32(59, 91, 169, 255), Shadow = new Color32(30, 47, 94, 255), Eyes = new Color32(255, 211, 110, 255), Torch = new Color(0.55f, 0.7f, 1f) },
             new SkinDef { Id = "scarab", Name = "Scarabée sacré", Price = 400,
                 Bandage = new Color32(31, 111, 107, 255), Shadow = new Color32(14, 59, 57, 255), Eyes = new Color32(155, 255, 92, 255), Torch = new Color(0.7f, 1f, 0.5f) },
+            Colour("sand", "Momie des sables", 80, new Color32(214, 178, 120, 255), new Color32(160, 124, 76, 255), new Color32(255, 240, 180, 255), new Color(1f, 0.75f, 0.45f)),
+            Colour("rose", "Rose du désert", 140, new Color32(226, 150, 160, 255), new Color32(160, 90, 104, 255), new Color32(255, 255, 255, 255), new Color(1f, 0.6f, 0.7f)),
+            Colour("copper", "Cuivre ancien", 160, new Color32(184, 110, 64, 255), new Color32(116, 64, 36, 255), new Color32(120, 240, 210, 255), new Color(1f, 0.6f, 0.35f)),
+            Colour("ivory", "Ivoire royal", 180, new Color32(246, 240, 224, 255), new Color32(196, 184, 160, 255), new Color32(80, 140, 255, 255), new Color(1f, 0.9f, 0.7f)),
+            Colour("amethyst", "Améthyste", 200, new Color32(150, 100, 200, 255), new Color32(90, 56, 130, 255), new Color32(255, 220, 120, 255), new Color(0.8f, 0.55f, 1f)),
+            Colour("turquoise", "Turquoise du Sinaï", 220, new Color32(64, 200, 190, 255), new Color32(28, 120, 120, 255), new Color32(255, 250, 200, 255), new Color(0.5f, 1f, 0.95f)),
+            Colour("crimson", "Sang de Seth", 260, new Color32(170, 40, 48, 255), new Color32(96, 18, 26, 255), new Color32(255, 200, 80, 255), new Color(1f, 0.4f, 0.3f)),
+            Colour("frost", "Givre du Nil", 280, new Color32(200, 228, 246, 255), new Color32(130, 166, 200, 255), new Color32(60, 120, 255, 255), new Color(0.7f, 0.85f, 1f)),
+            Colour("silver", "Argent lunaire", 320, new Color32(190, 196, 206, 255), new Color32(120, 126, 138, 255), new Color32(150, 220, 255, 255), new Color(0.8f, 0.9f, 1f)),
+            Colour("ebony", "Ébène et or", 450, new Color32(40, 34, 30, 255), new Color32(16, 12, 10, 255), new Color32(242, 201, 76, 255), new Color(1f, 0.8f, 0.4f)),
 
             // ---- Torches.
             Torch(DefaultTorchId, "Torche de bois", 0, 0, TorchStyle.Classic, new Color(1f, 0.72f, 0.42f)),
@@ -137,6 +159,16 @@ namespace MummyEscape.Visual
             Torch("torch_bone", "Torche d'os", 200, 3, TorchStyle.Bone, new Color(0.75f, 1f, 0.6f)),
             Torch("torch_plasma", "Torche à plasma", 250, 4, TorchStyle.Plasma, new Color(0.45f, 0.95f, 1f)),
             Torch("torch_obsidian", "Torche d'obsidienne", 300, 5, TorchStyle.Obsidian, new Color(1f, 0.4f, 0.2f)),
+            Torch("torch_lamp", "Lampe à huile", 120, 0, TorchStyle.OilLamp, new Color(1f, 0.7f, 0.35f)),
+            Torch("torch_papyrus", "Gerbe de papyrus", 150, 0, TorchStyle.Papyrus, new Color(0.75f, 1f, 0.55f)),
+            Torch("torch_crook", "Crosse du pharaon", 180, 0, TorchStyle.Crook, new Color(1f, 0.85f, 0.5f)),
+            Torch("torch_ankh", "Ankh de vie", 200, 0, TorchStyle.Ankh, new Color(0.5f, 1f, 0.9f)),
+            Torch("torch_was", "Sceptre ouas", 220, 0, TorchStyle.Was, new Color(0.6f, 0.75f, 1f)),
+            Torch("torch_feather", "Bâton à plume", 240, 0, TorchStyle.Feather, new Color(1f, 0.95f, 0.8f)),
+            Torch("torch_sistrum", "Sistre d'Hathor", 260, 0, TorchStyle.Sistrum, new Color(1f, 0.8f, 0.55f)),
+            Torch("torch_cobra", "Bâton du cobra", 300, 0, TorchStyle.Cobra, new Color(0.6f, 1f, 0.4f)),
+            Torch("torch_moon", "Croissant de Khonsou", 340, 0, TorchStyle.Moon, new Color(0.75f, 0.85f, 1f)),
+            Torch("torch_crystal", "Cristal d'améthyste", 400, 0, TorchStyle.Crystal, new Color(0.95f, 0.55f, 1f)),
 
             // ---- Hats.
             Hat(NoHatId, "Tête nue", 0, 0, HatStyle.None),
@@ -146,6 +178,15 @@ namespace MummyEscape.Visual
             Hat("hat_helm", "Heaume de bronze brisé", 200, 3, HatStyle.BrokenHelm),
             Hat("hat_cyber", "Oreilles d'Anubis", 250, 4, HatStyle.CyberEars),
             Hat("hat_sun", "Disque de Râ", 300, 5, HatStyle.SunDisk),
+            Hat("hat_feather", "Coiffe de Maât", 120, 0, HatStyle.MaatFeather),
+            Hat("hat_turban", "Turban du désert", 140, 0, HatStyle.Turban),
+            Hat("hat_scarab", "Diadème du scarabée", 180, 0, HatStyle.ScarabCirclet),
+            Hat("hat_horns", "Cornes d'Hathor", 220, 0, HatStyle.HathorHorns),
+            Hat("hat_khepresh", "Couronne bleue", 260, 0, HatStyle.Khepresh),
+            Hat("hat_vulture", "Coiffe du vautour", 300, 0, HatStyle.Vulture),
+            Hat("hat_atef", "Couronne atef", 340, 0, HatStyle.Atef),
+            Hat("hat_nefertiti", "Couronne de Néfertiti", 380, 0, HatStyle.Nefertiti),
+            Hat("hat_pschent", "Pschent des Deux Terres", 450, 0, HatStyle.Pschent),
 
             // ---- Shoes.
             Shoes(NoShoesId, "Pieds bandés", 0, 0, ShoeStyle.None),
@@ -155,6 +196,15 @@ namespace MummyEscape.Visual
             Shoes("shoes_stone", "Bottes de pierre", 200, 3, ShoeStyle.StoneBoots),
             Shoes("shoes_jet", "Bottes à réacteurs", 250, 4, ShoeStyle.JetBoots),
             Shoes("shoes_hooves", "Sabots d'obsidienne", 300, 5, ShoeStyle.ObsidianHooves),
+            Shoes("shoes_papyrus", "Sandales de papyrus", 90, 0, ShoeStyle.PapyrusSandals),
+            Shoes("shoes_desert", "Bottes du désert", 120, 0, ShoeStyle.DesertBoots),
+            Shoes("shoes_lotus", "Chaussons de lotus", 150, 0, ShoeStyle.LotusSlippers),
+            Shoes("shoes_lapis", "Sandales de lapis", 180, 0, ShoeStyle.LapisSandals),
+            Shoes("shoes_scarab", "Sabots du scarabée", 220, 0, ShoeStyle.ScarabClogs),
+            Shoes("shoes_ruby", "Babouches de rubis", 260, 0, ShoeStyle.RubyPointed),
+            Shoes("shoes_croc", "Bottes de Sobek", 300, 0, ShoeStyle.CrocBoots),
+            Shoes("shoes_greaves", "Jambières d'argent", 340, 0, ShoeStyle.SilverGreaves),
+            Shoes("shoes_winged", "Sandales ailées d'Horus", 400, 0, ShoeStyle.WingedSandals),
         };
 
         /// <summary>Items every player owns from the start: one per slot.</summary>

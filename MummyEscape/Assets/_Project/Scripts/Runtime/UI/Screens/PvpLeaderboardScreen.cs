@@ -10,7 +10,7 @@ namespace MummyEscape.UI.Screens
     /// <summary>Monthly duel ranking by Elo: this month (live) or last month (final standings, which set the rewards).</summary>
     public sealed class PvpLeaderboardScreen : UIScreen
     {
-        public override NavTab Tab => NavTab.Duel;
+        public override NavTab Tab => NavTab.Ranking;
 
         const int Top = 100;
         static readonly Color Gold1 = new Color32(255, 215, 90, 255);
@@ -18,7 +18,7 @@ namespace MummyEscape.UI.Screens
         static readonly Color Bronze = new Color32(214, 140, 72, 255);
 
         readonly List<RowView> _rows = new List<RowView>();
-        UIKit.Segmented _tabs;
+        UIKit.Segmented _tabs, _category;
         Text _info, _meEmpty;
         ScrollRect _scroll;
         RowView _me;
@@ -35,9 +35,10 @@ namespace MummyEscape.UI.Screens
         protected override void Build()
         {
             UIKit.Backdrop(Root);
-            Header("Classement des duels");
+            Header("Classement");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 18);
+            _category = LeaderboardScreen.Categories(body, Router, 1);
 
             _tabs = new UIKit.Segmented(body, new[] { "Ce mois-ci", "Mois dernier" }, i => { _seasonsAgo = i; Reload(); });
             _info = UIKit.Label(body, "", 30, UIKit.Dim);
@@ -85,6 +86,7 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
+            _category.Select(1);
             _tabs.Select(_seasonsAgo);
             Reload();
         }

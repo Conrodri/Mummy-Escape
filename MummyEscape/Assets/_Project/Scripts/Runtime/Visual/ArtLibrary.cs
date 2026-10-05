@@ -1118,6 +1118,101 @@ namespace MummyEscape.Visual
                     p.Rect(11, 5, 15, 5, new Color32(255, 110, 30, 255)); p.Rect(16, 5, 20, 5, new Color32(255, 110, 30, 255));
                     break;
                 }
+                case ShoeStyle.PapyrusSandals:
+                {
+                    var straw = new Color32(214, 186, 116, 255);
+                    var strawDark = new Color32(150, 124, 70, 255);
+                    p.Rect(11, 1, 15, 1, straw); p.Rect(16, 1, 20, 1, straw);
+                    p.Rect(11, 0, 15, 0, strawDark); p.Rect(16, 0, 20, 0, strawDark);
+                    p.Rect(12, 3, 14, 3, strawDark); p.Rect(17, 3, 19, 3, strawDark);
+                    p.Set(13, 2, straw); p.Set(18, 2, straw); p.Set(13, 5, strawDark); p.Set(18, 5, strawDark);
+                    break;
+                }
+                case ShoeStyle.LapisSandals:
+                    p.Rect(11, 1, 15, 1, Gold); p.Rect(16, 1, 20, 1, Gold);
+                    p.Rect(11, 0, 15, 0, GoldDark); p.Rect(16, 0, 20, 0, GoldDark);
+                    p.Rect(12, 2, 14, 2, Lapis); p.Rect(17, 2, 19, 2, Lapis);
+                    p.Rect(12, 4, 14, 4, Lapis); p.Rect(17, 4, 19, 4, Lapis);
+                    p.Set(13, 3, Lapis); p.Set(18, 3, Lapis); p.Set(13, 5, Gold); p.Set(18, 5, Gold);
+                    break;
+                case ShoeStyle.CrocBoots:
+                {
+                    var croc = new Color32(74, 124, 62, 255);
+                    var scale = new Color32(44, 84, 40, 255);
+                    var belly = new Color32(176, 190, 120, 255);
+                    p.Rect(10, 1, 15, 6, croc); p.Rect(16, 1, 21, 6, croc);
+                    for (int y = 2; y <= 5; y++)
+                        for (int x = 10; x <= 21; x++)
+                            if ((x + y) % 3 == 0) p.Set(x, y, scale);
+                    p.Rect(10, 1, 15, 1, belly); p.Rect(16, 1, 21, 1, belly);
+                    for (int x = 10; x <= 21; x += 2) p.Set(x, 7, new Color32(244, 240, 220, 255)); // teeth on the cuff
+                    p.Set(11, 3, Gold); p.Set(20, 3, Gold); // eyes on the toes
+                    break;
+                }
+                case ShoeStyle.WingedSandals:
+                {
+                    var wing = new Color32(246, 244, 236, 255);
+                    var wingDark = new Color32(180, 176, 170, 255);
+                    p.Rect(11, 1, 15, 1, Gold); p.Rect(16, 1, 20, 1, Gold);
+                    p.Rect(12, 3, 14, 3, GoldDark); p.Rect(17, 3, 19, 3, GoldDark);
+                    // Little wings at the ankles.
+                    p.Rect(9, 5, 11, 5, wing); p.Rect(8, 6, 10, 6, wing); p.Set(7, 7, wing); p.Rect(9, 4, 11, 4, wingDark);
+                    p.Rect(20, 5, 22, 5, wing); p.Rect(21, 6, 23, 6, wing); p.Set(24, 7, wing); p.Rect(20, 4, 22, 4, wingDark);
+                    break;
+                }
+                case ShoeStyle.ScarabClogs:
+                {
+                    var shell = new Color32(40, 140, 150, 255);
+                    var shellDark = new Color32(20, 80, 100, 255);
+                    var sheen = new Color32(140, 230, 220, 255);
+                    p.Rect(11, 1, 15, 4, shell); p.Rect(16, 1, 20, 4, shell);
+                    p.Rect(11, 0, 15, 0, shellDark); p.Rect(16, 0, 20, 0, shellDark);
+                    p.Rect(13, 1, 13, 4, shellDark); p.Rect(18, 1, 18, 4, shellDark); // wing case seam
+                    p.Set(12, 3, sheen); p.Set(17, 3, sheen); p.Rect(12, 5, 14, 5, Gold); p.Rect(17, 5, 19, 5, Gold);
+                    break;
+                }
+                case ShoeStyle.SilverGreaves:
+                    p.Rect(11, 1, 15, 2, MetalDark); p.Rect(16, 1, 20, 2, MetalDark);
+                    p.Rect(12, 3, 14, 7, Metal); p.Rect(17, 3, 19, 7, Metal);
+                    p.Rect(14, 3, 14, 7, MetalDark); p.Rect(19, 3, 19, 7, MetalDark);
+                    p.Rect(12, 5, 14, 5, MetalDark); p.Rect(17, 5, 19, 5, MetalDark);
+                    p.Set(13, 6, Turquoise); p.Set(18, 6, Turquoise);
+                    break;
+                case ShoeStyle.DesertBoots:
+                {
+                    var leather = new Color32(150, 100, 60, 255);
+                    var leatherDark = new Color32(96, 60, 34, 255);
+                    var lace = new Color32(236, 220, 180, 255);
+                    p.Rect(11, 1, 15, 6, leather); p.Rect(16, 1, 20, 6, leather);
+                    p.Rect(11, 0, 15, 0, leatherDark); p.Rect(16, 0, 20, 0, leatherDark);
+                    p.Rect(11, 6, 15, 6, leatherDark); p.Rect(16, 6, 20, 6, leatherDark);
+                    p.Set(13, 2, lace); p.Set(13, 4, lace); p.Set(18, 2, lace); p.Set(18, 4, lace);
+                    p.Set(12, 3, lace); p.Set(14, 3, lace); p.Set(17, 3, lace); p.Set(19, 3, lace);
+                    break;
+                }
+                case ShoeStyle.RubyPointed:
+                {
+                    var ruby = new Color32(178, 30, 60, 255);
+                    var rubyDark = new Color32(110, 14, 34, 255);
+                    p.Rect(11, 1, 14, 4, ruby); p.Rect(17, 1, 20, 4, ruby);
+                    p.Rect(11, 1, 14, 1, rubyDark); p.Rect(17, 1, 20, 1, rubyDark);
+                    // Long curled tips.
+                    p.Rect(9, 2, 10, 2, ruby); p.Set(8, 3, ruby); p.Set(8, 4, ruby); p.Set(9, 5, Gold);
+                    p.Rect(21, 2, 22, 2, ruby); p.Set(23, 3, ruby); p.Set(23, 4, ruby); p.Set(22, 5, Gold);
+                    p.Set(13, 4, Gold); p.Set(18, 4, Gold);
+                    break;
+                }
+                case ShoeStyle.LotusSlippers:
+                {
+                    var pink = new Color32(236, 150, 180, 255);
+                    var pinkDark = new Color32(180, 90, 120, 255);
+                    var white = new Color32(252, 238, 244, 255);
+                    p.Rect(11, 1, 15, 3, pink); p.Rect(16, 1, 20, 3, pink);
+                    p.Rect(11, 0, 15, 0, pinkDark); p.Rect(16, 0, 20, 0, pinkDark);
+                    for (int x = 11; x <= 20; x += 2) p.Set(x, 4, pink); // petal tips
+                    p.Set(13, 2, white); p.Set(18, 2, white); p.Set(12, 4, new Color32(90, 160, 80, 255)); p.Set(19, 4, new Color32(90, 160, 80, 255));
+                    break;
+                }
             }
         }
 
@@ -1208,6 +1303,111 @@ namespace MummyEscape.Visual
                     p.Rect(22, 29, 22, 33, Gold); p.Set(21, 33, Gold); p.Set(22, 34, new Color32(200, 40, 40, 255));
                     break;
                 }
+                case HatStyle.Pschent:
+                {
+                    // Double crown: red deshret around the white hedjet.
+                    var red = new Color32(176, 40, 40, 255);
+                    var redDark = new Color32(110, 20, 24, 255);
+                    var white = new Color32(244, 238, 226, 255);
+                    var whiteDark = new Color32(190, 180, 164, 255);
+                    p.Ellipse(15, 33, 4, 5, white);
+                    p.Rect(13, 34, 13, 37, whiteDark); p.Circle(15, 38, 1, white, true);
+                    p.Rect(10, 26, 22, 30, red); p.Rect(10, 26, 22, 26, redDark);
+                    p.Rect(20, 30, 22, 35, red); p.Rect(22, 30, 22, 35, redDark); // tall back of the red crown
+                    p.Line(12, 30, 10, 33, Gold); p.Set(11, 34, Gold); // the curl
+                    p.Rect(16, 27, 16, 29, Gold); p.Set(16, 30, Gold);
+                    break;
+                }
+                case HatStyle.Khepresh:
+                {
+                    var blue = new Color32(44, 74, 170, 255);
+                    p.Ellipse(16, 28, 7, 7, blue);
+                    p.Rect(8, 19, 24, 25, Clear);
+                    for (int y = 27; y <= 34; y += 2)
+                        for (int x = 10 + (y / 2) % 2; x <= 22; x += 2)
+                            if (p.Get(x, y).a > 0) p.Set(x, y, Gold);
+                    p.Rect(9, 26, 23, 26, Gold);
+                    p.Rect(16, 27, 16, 29, Gold); p.Set(15, 29, Gold); p.Set(16, 30, new Color32(200, 40, 40, 255));
+                    break;
+                }
+                case HatStyle.Atef:
+                {
+                    var white = new Color32(244, 238, 226, 255);
+                    var feather = new Color32(214, 222, 236, 255);
+                    p.Poly(white, new Vector2(12.5f, 26.5f), new Vector2(19.5f, 26.5f), new Vector2(16, 37.5f));
+                    p.Rect(10, 28, 11, 36, feather); p.Rect(21, 28, 22, 36, feather);
+                    p.Rect(10, 30, 11, 30, Lapis); p.Rect(21, 30, 22, 30, Lapis); p.Rect(10, 33, 11, 33, Lapis); p.Rect(21, 33, 22, 33, Lapis);
+                    p.Rect(6, 27, 26, 27, Gold); p.Set(6, 28, Gold); p.Set(26, 28, Gold); // ram horns
+                    p.Rect(10, 26, 22, 26, GoldDark);
+                    p.Set(16, 38, new Color32(200, 40, 40, 255));
+                    break;
+                }
+                case HatStyle.MaatFeather:
+                {
+                    var white = new Color32(248, 246, 240, 255);
+                    var quill = new Color32(170, 166, 160, 255);
+                    p.Rect(10, 27, 22, 28, Gold); p.Rect(10, 27, 22, 27, Lapis);
+                    p.Rect(15, 29, 17, 37, white); p.Rect(16, 29, 16, 36, quill);
+                    p.Set(16, 38, white); p.Set(17, 38, white); p.Set(18, 37, white); // the tip bends over
+                    break;
+                }
+                case HatStyle.Vulture:
+                {
+                    p.Ellipse(16, 27, 7, 5, Gold);
+                    p.Rect(8, 19, 24, 25, Clear);
+                    // Wings folded down the sides of the head.
+                    for (int y = 17; y <= 27; y++)
+                    {
+                        var c = y % 2 == 0 ? Gold : Lapis;
+                        p.Rect(8, y, 10, y, c); p.Rect(22, y, 24, y, c);
+                    }
+                    p.Rect(9, 26, 23, 26, GoldDark);
+                    p.Rect(15, 27, 17, 30, Gold); p.Set(16, 31, Gold); p.Set(15, 29, Black); p.Set(17, 29, Black); // head at the brow
+                    p.Set(16, 27, new Color32(200, 40, 40, 255));
+                    break;
+                }
+                case HatStyle.HathorHorns:
+                {
+                    var ivory = new Color32(240, 230, 200, 255);
+                    var ivoryDark = new Color32(180, 166, 130, 255);
+                    p.Rect(10, 27, 22, 28, Gold);
+                    p.Line(12, 29, 9, 31, ivory); p.Line(9, 31, 9, 34, ivory); p.Line(9, 34, 11, 37, ivory); p.Line(10, 31, 10, 34, ivoryDark);
+                    p.Line(20, 29, 23, 31, ivory); p.Line(23, 31, 23, 34, ivory); p.Line(23, 34, 21, 37, ivory); p.Line(22, 31, 22, 34, ivoryDark);
+                    p.Circle(16, 33, 3, new Color32(210, 50, 40, 255), true);
+                    p.Set(15, 34, new Color32(255, 140, 80, 255));
+                    break;
+                }
+                case HatStyle.ScarabCirclet:
+                    p.Rect(10, 27, 22, 27, Gold); p.Rect(10, 26, 22, 26, GoldDark);
+                    p.Ellipse(16, 29, 2, 2, Turquoise); p.Set(16, 32, Turquoise);
+                    p.Rect(16, 28, 16, 30, Lapis);
+                    p.Line(13, 29, 11, 31, Gold); p.Line(19, 29, 21, 31, Gold); // wings
+                    break;
+                case HatStyle.Turban:
+                {
+                    var cream = new Color32(240, 226, 196, 255);
+                    var orange = new Color32(222, 130, 50, 255);
+                    p.Ellipse(16, 29, 8, 5, cream);
+                    p.Rect(8, 22, 24, 25, Clear);
+                    for (int y = 26; y <= 34; y++)
+                        for (int x = 8; x <= 24; x++)
+                            if ((x + y) % 4 == 0 && p.Get(x, y).a > 0) p.Set(x, y, orange);
+                    p.Circle(16, 29, 1, new Color32(200, 30, 60, 255), true); p.Set(16, 29, new Color32(255, 140, 160, 255));
+                    p.Line(16, 31, 18, 37, new Color32(250, 250, 250, 255)); p.Set(19, 37, new Color32(250, 250, 250, 255));
+                    break;
+                }
+                case HatStyle.Nefertiti:
+                {
+                    var blue = new Color32(50, 84, 168, 255);
+                    var blueDark = new Color32(28, 50, 110, 255);
+                    p.Poly(blue, new Vector2(10.5f, 26), new Vector2(21.5f, 26), new Vector2(23.5f, 38.5f), new Vector2(8.5f, 38.5f));
+                    p.Rect(9, 38, 23, 38, blueDark);
+                    p.Rect(10, 26, 22, 27, Gold);
+                    for (int x = 11; x <= 21; x += 3) p.Set(x, 27, x % 2 == 0 ? new Color32(200, 40, 40, 255) : Turquoise);
+                    p.Line(10, 31, 22, 35, Gold); // the ribbon
+                    p.Rect(16, 28, 16, 29, Gold); p.Set(16, 30, new Color32(200, 40, 40, 255));
+                    break;
+                }
             }
         }
 
@@ -1267,6 +1467,99 @@ namespace MummyEscape.Visual
                     p.Rect(24, 21, 27, 21, hot);
                     break;
                 }
+                case TorchStyle.Ankh:
+                    p.Rect(25, 9, 26, 17, Gold); p.Rect(26, 9, 26, 17, GoldDark);
+                    p.Rect(22, 18, 29, 18, Gold); p.Set(22, 17, GoldDark); p.Set(29, 17, GoldDark);
+                    p.Rect(23, 19, 23, 22, Gold); p.Rect(28, 19, 28, 22, GoldDark); p.Rect(23, 22, 28, 22, Gold); // the loop holds the flame
+                    p.Set(25, 18, Turquoise); p.Set(26, 18, Turquoise);
+                    break;
+                case TorchStyle.Was:
+                {
+                    var lapisDark = new Color32(30, 50, 110, 255);
+                    p.Rect(25, 10, 26, 20, Lapis); p.Rect(26, 10, 26, 20, lapisDark);
+                    p.Set(24, 9, Lapis); p.Set(27, 9, Lapis); p.Set(24, 8, lapisDark); p.Set(27, 8, lapisDark); // forked foot
+                    p.Rect(25, 18, 26, 18, Gold); p.Rect(25, 11, 26, 11, Gold);
+                    p.Rect(23, 21, 28, 22, Lapis); p.Rect(21, 22, 22, 22, Lapis); p.Set(28, 23, Lapis); // animal head
+                    p.Set(26, 22, Gold);
+                    break;
+                }
+                case TorchStyle.Crook:
+                    for (int y = 9; y <= 20; y++) p.Rect(25, y, 26, y, (y / 2) % 2 == 0 ? Gold : Lapis);
+                    p.Rect(23, 21, 28, 22, Gold); p.Rect(23, 21, 28, 21, GoldDark);
+                    p.Rect(29, 22, 29, 26, Gold); p.Rect(30, 23, 30, 25, GoldDark); p.Set(28, 27, Gold); p.Set(27, 27, Lapis); // the hook
+                    break;
+                case TorchStyle.Papyrus:
+                {
+                    var stem = new Color32(96, 156, 64, 255);
+                    var stemDark = new Color32(56, 100, 40, 255);
+                    var tie = new Color32(206, 164, 92, 255);
+                    p.Rect(25, 9, 26, 20, stem); p.Rect(26, 9, 26, 20, stemDark);
+                    p.Rect(25, 18, 26, 18, tie);
+                    p.Poly(stem, new Vector2(25.5f, 19.5f), new Vector2(21.5f, 23.5f), new Vector2(29.5f, 23.5f));
+                    p.Rect(22, 22, 29, 22, new Color32(150, 204, 92, 255));
+                    for (int x = 22; x <= 29; x += 2) p.Set(x, 23, tie);
+                    break;
+                }
+                case TorchStyle.Cobra:
+                {
+                    var bronze = new Color32(176, 120, 60, 255);
+                    var scale = new Color32(90, 150, 70, 255);
+                    var red = new Color32(230, 40, 40, 255);
+                    p.Rect(25, 9, 26, 19, bronze); p.Rect(26, 9, 26, 19, new Color32(112, 72, 36, 255));
+                    p.Set(24, 10, scale); p.Set(27, 11, scale); p.Set(24, 18, scale); p.Set(27, 19, scale); // coiled around the staff
+                    p.Rect(23, 20, 28, 22, scale); p.Rect(22, 21, 22, 22, scale); p.Rect(29, 21, 29, 22, scale); // the hood
+                    p.Rect(24, 20, 27, 20, Gold);
+                    p.Set(24, 22, red); p.Set(27, 22, red);
+                    break;
+                }
+                case TorchStyle.Crystal:
+                {
+                    var violet = new Color32(150, 80, 220, 255);
+                    var light = new Color32(224, 176, 255, 255);
+                    p.Rect(25, 9, 26, 19, Metal); p.Rect(26, 9, 26, 19, MetalDark);
+                    p.Poly(violet, new Vector2(25.5f, 18), new Vector2(22, 21.5f), new Vector2(29, 21.5f));
+                    p.Rect(23, 21, 28, 22, violet);
+                    p.Set(24, 22, light); p.Set(25, 21, light); p.Set(25, 20, light);
+                    break;
+                }
+                case TorchStyle.OilLamp:
+                {
+                    var clay = new Color32(186, 96, 56, 255);
+                    var clayDark = new Color32(126, 60, 34, 255);
+                    p.Rect(25, 9, 26, 17, new Color32(116, 74, 38, 255)); p.Rect(26, 9, 26, 17, new Color32(78, 48, 24, 255));
+                    p.Ellipse(25, 20, 3, 2, clay);
+                    p.Rect(22, 18, 28, 18, clayDark);
+                    p.Rect(28, 21, 29, 22, clay); p.Set(29, 22, clayDark); // spout
+                    p.Set(23, 20, Gold); p.Set(26, 20, Gold);
+                    break;
+                }
+                case TorchStyle.Moon:
+                {
+                    var moon = new Color32(214, 224, 244, 255);
+                    p.Rect(25, 9, 26, 20, Metal); p.Rect(26, 9, 26, 20, MetalDark);
+                    p.Rect(23, 21, 28, 22, Metal);
+                    // Crescent cradling the flame.
+                    p.Set(22, 22, moon); p.Rect(21, 23, 21, 27, moon); p.Set(22, 28, moon); p.Set(23, 29, moon);
+                    p.Set(22, 23, moon); p.Set(22, 27, moon);
+                    break;
+                }
+                case TorchStyle.Feather:
+                {
+                    var white = new Color32(248, 246, 240, 255);
+                    p.Rect(25, 9, 26, 20, Gold); p.Rect(26, 9, 26, 20, GoldDark);
+                    p.Rect(23, 21, 28, 22, Gold); p.Rect(23, 21, 28, 21, GoldDark);
+                    // A white feather tied under the cup.
+                    p.Set(27, 20, new Color32(200, 40, 40, 255));
+                    p.Rect(28, 14, 29, 20, white); p.Rect(28, 14, 28, 19, new Color32(170, 166, 160, 255)); p.Set(29, 13, white);
+                    break;
+                }
+                case TorchStyle.Sistrum:
+                    p.Rect(25, 9, 26, 19, Gold); p.Rect(26, 9, 26, 19, GoldDark);
+                    p.Rect(23, 20, 28, 21, Gold);
+                    p.Rect(22, 21, 22, 28, Gold); p.Rect(29, 21, 29, 28, GoldDark); p.Rect(23, 29, 28, 29, Gold); // U frame
+                    p.Rect(21, 24, 30, 24, Metal); p.Rect(21, 27, 30, 27, Metal); // rattling rods
+                    p.Set(21, 25, MetalDark); p.Set(30, 25, MetalDark);
+                    break;
                 default:
                 {
                     var wood = new Color32(116, 74, 38, 255);

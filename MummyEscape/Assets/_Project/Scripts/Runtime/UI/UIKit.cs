@@ -243,10 +243,14 @@ namespace MummyEscape.UI
                     _buttons[i] = Button(track.transform, labels[i], () => { Select(index); onSelect?.Invoke(index); }, 30, ButtonStyle.Ghost);
                     Rounded(_buttons[i].image, (height - 12) / 2f);
                     _labels[i] = _buttons[i].GetComponentInChildren<Text>();
-                    FitText(_labels[i], 18);
+                    // Narrow tabs: keep only a small side margin so the text can stay big.
+                    _labels[i].rectTransform.offsetMin = new Vector2(6, _labels[i].rectTransform.offsetMin.y);
+                    _labels[i].rectTransform.offsetMax = new Vector2(-6, _labels[i].rectTransform.offsetMax.y);
                     // Equal shares of the track whatever the label lengths (shrinking the text if needed).
                     Size(_buttons[i], -1, 0, 1);
                 }
+                // One line per tab, every tab at the size of the longest label ("Mummies" never splits in two).
+                track.gameObject.AddComponent<OneLineLabels>().Init(_labels, 30, 16);
             }
 
             public void SetLabel(int i, string text) => _labels[i].text = Loc.T(text);
@@ -743,6 +747,60 @@ namespace MummyEscape.UI
                 v.color = (Color32)((Color)v.color * c);
                 vh.SetUIVertex(v, i);
             }
+        }
+    }
+
+    /// <summary>
+    /// Keeps a set of labels on one line each, all at the largest size where the longest still fits its box (tabs).
+    /// Recomputed only when the widths or the texts change.
+    /// </summary>
+    public sealed class OneLineLabels : MonoBehaviour
+    {
+        Text[] _labels;
+        int _max, _min;
+        float _lastWidth = -1f;
+        string _lastTexts;
+
+        public void Init(Text[] labels, int maxSize, int minSize)
+        {
+            _labels = labels;
+            _max = maxSize;
+            _min = minSize;
+            foreach (var t in labels)
+            {
+                t.resizeTextForBestFit = false;
+                t.horizontalOverflow = HorizontalWrapMode.Overflow;
+                t.verticalOverflow = VerticalWrapMode.Overflow;
+            }
+        }
+
+        void LateUpdate()
+        {
+            if (_labels == null || _labels.Length == 0) return;
+            float width = float.MaxValue;
+            string texts = "";
+            foreach (var t in _labels)
+            {
+                width = Mathf.Min(width, t.rectTransform.rect.width);
+                texts += t.text + "|"; // noloc
+            }
+            if (width <= 0f || (Mathf.Approximately(width, _lastWidth) && texts == _lastTexts)) return;
+            _lastWidth = width;
+            _lastTexts = texts;
+
+            int size = _max;
+            foreach (var t in _labels)
+                while (size > _min && WidthAt(t, size) > width) size--;
+            foreach (var t in _labels) t.fontSize = size;
+        }
+
+        static float WidthAt(Text t, int size)
+        {
+            var settings = t.GetGenerationSettings(new Vector2(float.MaxValue, float.MaxValue));
+            settings.fontSize = size;
+            settings.resizeTextForBestFit = false;
+            settings.scaleFactor = 1f;
+            return t.cachedTextGeneratorForLayout.GetPreferredWidth(t.text, settings);
         }
     }
 }
