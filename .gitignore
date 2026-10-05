@@ -66,3 +66,7 @@ upload_certificate.pem
 
 # --- Module Cloud Code (server/) ---
 server/**/[Bb]in/
+
+# Unity crash-recovery scene
+MummyEscape/Assets/_Recovery/
+MummyEscape/Assets/_Recovery.meta
