@@ -1,6 +1,6 @@
 # Mummy Rush — Terms of use
 
-Version 1 — updated October 6, 2026. English translation: the French version prevails.
+Version 2 — updated October 6, 2026. English translation: the French version prevails.
 
 ## Purpose
 
@@ -8,7 +8,18 @@ These terms govern the use of the game Mummy Rush, published by [NOM DE L'ÉDITE
 
 ## The game
 
-The game is free. It can be played offline; the online features (leaderboards, friends, account, backup) are optional. They are provided without any guarantee of permanent availability and may change or stop; your local progress then remains playable.
+The game is free, with optional purchases. It can be played offline; the online features (leaderboards, friends, duels, guilds, chat, account, backup) are optional. They are provided without any guarantee of permanent availability and may change or stop; your local progress then remains playable.
+
+## Energy
+
+The first act is free to play. After that, each solo game costs one energy point (10 at most) and each duel or 2v2 match one combat energy point (3 at most); a point comes back every 6 minutes. A short, optional ad gives energy back a few times a day; the premium pass removes these limits for its season.
+
+## Purchases
+
+Golden scarabs are bought with real money on Google Play, at the price shown before the purchase. They are used to get the premium pass, pass tiers, scarabs and cosmetic items, which give no advantage in the game. They have no monetary value and can be neither exchanged nor refunded, except for your statutory rights.  
+A purchase is credited once it has been verified with Google. Golden scarabs are kept by our server and tied to your Google Play Games account: connect it before buying. They are lost if you delete your account.  
+By confirming a purchase, you ask for the digital content to be supplied immediately and you waive your 14-day right of withdrawal (French Consumer Code, art. L221-28 13°).  
+The scarab wheel offers random draws whose odds are shown; it is not offered in countries that ban such draws. If you are a minor, ask a parent before any purchase. If something goes wrong with a purchase, write to us.
 
 ## Age
 

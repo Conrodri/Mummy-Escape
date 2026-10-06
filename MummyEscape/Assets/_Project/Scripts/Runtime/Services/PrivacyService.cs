@@ -33,7 +33,7 @@ namespace MummyEscape.Services
     public sealed class PrivacyService
     {
         /// <summary>Bump when the privacy policy or the terms change materially: players are asked again.</summary>
-        public const int PolicyVersion = 1;
+        public const int PolicyVersion = 2;
 
         /// <summary>Age of digital consent per EU/EEA country (GDPR art. 8, national choices between 13 and 16).</summary>
         static readonly Dictionary<string, int> ConsentAge = new Dictionary<string, int>

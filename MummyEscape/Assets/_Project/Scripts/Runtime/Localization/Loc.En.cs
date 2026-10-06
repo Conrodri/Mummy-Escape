@@ -1019,6 +1019,7 @@ namespace MummyEscape
             ["Scarabées"] = "Scarabs",
             ["Pour la boutique et la roue du casino."] = "For the shop and the casino wheel.",
             ["Achats facultatifs : tout le jeu se joue sans payer. Si tu es mineur, demande l'accord d'un parent avant d'acheter."] = "Purchases are optional: the whole game can be played for free. If you're a minor, ask a parent before buying.",
+            ["En achetant, tu demandes à recevoir tes scarabées dorés tout de suite et renonces au délai de rétractation de 14 jours. Ils sont gardés en ligne, sur ton compte Google Play Jeux."] = "By buying, you ask to get your golden scarabs right away and waive the 14-day withdrawal period. They are kept online, on your Google Play Games account.",
             ["dont {0} offerts"] = "incl. {0} free",
             ["Pass premium actif · palier {0}/{1}"] = "Premium pass active · tier {0}/{1}",
             ["Skin légendaire, set de 10 pièces, parties illimitées · {0} scarabées dorés"] = "Legendary skin, 10-piece set, unlimited games · {0} golden scarabs",

@@ -14,9 +14,9 @@ Write to [ADRESSE E-MAIL DE CONTACT] from any address, with the subject "Mummy R
 
 ## What is deleted
 
-Your profile and its ID, your account (login and password), your nickname, your leaderboard scores, your friends and friend requests, your shared progress and your online backup.
+Your profile and its ID, your account (login and password), your nickname, your leaderboard scores, your friends and friend requests, your shared progress and your online backup, your Elo and your duel and 2v2 history, your duos, your place in your guild, your messages and shared replays, and your wallet (golden scarabs, passes, paid items).
 
 ## What is kept
 
-Nothing else is kept by the publisher. Our provider's (Unity) technical logs are erased according to its own retention period. The progress saved on your phone remains available offline; you can erase it in Settings › Privacy or by uninstalling the game.
+Proof of purchase (order ID, product, date, player ID), for 10 years, as accounting law requires. Duels already played stay in your opponents' history, tied to an ID that no longer leads anywhere. Nothing else is kept by the publisher. Our provider's (Unity) technical logs are erased according to its own retention period. The progress saved on your phone remains available offline; you can erase it in Settings › Privacy or by uninstalling the game.
 

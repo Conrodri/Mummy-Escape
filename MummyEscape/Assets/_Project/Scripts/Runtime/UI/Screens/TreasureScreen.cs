@@ -80,6 +80,8 @@ namespace MummyEscape.UI.Screens
                 }
             }
 
+            Hint("En achetant, tu demandes à recevoir tes scarabées dorés tout de suite et renonces au délai de rétractation de 14 jours. Ils sont gardés en ligne, sur ton compte Google Play Jeux.");
+
             Section("Pass de saison", null);
             PassCard();
 

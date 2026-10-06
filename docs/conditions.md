@@ -1,6 +1,6 @@
 # Mummy Rush — Conditions d'utilisation
 
-Version 1 — mise à jour le 6 octobre 2026.
+Version 2 — mise à jour le 6 octobre 2026.
 
 ## Objet
 
@@ -8,7 +8,18 @@ Ces conditions encadrent l'utilisation du jeu Mummy Rush, édité par [NOM DE L'
 
 ## Le jeu
 
-Le jeu est gratuit. Il se joue hors ligne ; les fonctions en ligne (classements, amis, compte, sauvegarde) sont facultatives. Elles sont fournies sans garantie de disponibilité permanente et peuvent évoluer ou s'arrêter ; ta progression locale reste alors jouable.
+Le jeu est gratuit, avec des achats facultatifs. Il se joue hors ligne ; les fonctions en ligne (classements, amis, duels, guildes, tchat, compte, sauvegarde) sont facultatives. Elles sont fournies sans garantie de disponibilité permanente et peuvent évoluer ou s'arrêter ; ta progression locale reste alors jouable.
+
+## Énergie
+
+Le premier acte se joue librement. Ensuite, chaque partie solo coûte un point d'énergie (10 au plus) et chaque duel ou match 2v2 un point d'énergie de combat (3 au plus) ; un point revient toutes les 6 minutes. Une courte publicité, facultative, rend de l'énergie quelques fois par jour ; le pass premium supprime ces limites pendant sa saison.
+
+## Achats
+
+Les scarabées dorés s'achètent avec de l'argent réel sur Google Play, au prix affiché avant l'achat. Ils servent à obtenir le pass premium, des paliers du pass, des scarabées et des objets cosmétiques, qui ne donnent aucun avantage en jeu. Ils n'ont aucune valeur monétaire et ne sont ni échangeables ni remboursables, sauf droits que tu tiens de la loi.  
+Un achat est crédité après vérification auprès de Google. Les scarabées dorés sont gardés par notre serveur et attachés à ton compte Google Play Jeux : connecte-le avant d'acheter. Ils sont perdus si tu supprimes ton compte.  
+En confirmant un achat, tu demandes que le contenu numérique te soit fourni immédiatement et tu renonces à ton droit de rétractation de 14 jours (Code de la consommation, art. L221-28 13°).  
+La roue des scarabées propose des tirages au hasard dont les chances sont affichées ; elle n'est pas proposée dans les pays qui interdisent ces tirages. Si tu es mineur, demande l'accord d'un parent avant tout achat. En cas de problème avec un achat, écris-nous.
 
 ## Âge
 
