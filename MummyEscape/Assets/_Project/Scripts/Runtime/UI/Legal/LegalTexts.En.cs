@@ -30,6 +30,8 @@ namespace MummyEscape.UI.Legal
             "• Your best scores per level (moves above the ideal path and time), public in the leaderboards, with your country only if you chose one.\n" +
             "• Your friends, your friend requests and your \"online\" status, visible to your friends.\n" +
             "• Your progress (furthest level, stars), visible to your friends only if you turn on sharing (off by default).\n" +
+            "• If you use the chat: your messages, their date and the replays you share there, visible to the members of the channel (global, your guild, or the friend you write to). " +
+            "Each channel keeps its last 100 messages, the oldest ones being erased as new ones arrive. Your blocks and reports are kept too, for moderation.\n" +
             "• If you create an account (optional): your login, your password (stored encrypted by our provider, never readable by us) " +
             "and a backup of your progress, so you can restore it on another device.\n" +
             "• Technical data required by the service (IP address, device model, error logs), used for its operation and security.",
@@ -112,15 +114,17 @@ namespace MummyEscape.UI.Legal
             "The game is free. It can be played offline; the online features (leaderboards, friends, account, backup) are optional. " +
             "They are provided without any guarantee of permanent availability and may change or stop; your local progress then remains playable.",
             "# Age",
-            "Below the digital age of consent in your country (15 in France), online mode is only available with the consent of a parent or legal guardian.",
+            "Below the digital age of consent in your country (15 in France), online mode is only available with the consent of a parent or legal guardian. Global chat is closed to minors; guild chat and messages between friends can be turned off in the game.",
             "# Your account",
             "The account is optional and consists of a login and a password, which you must keep secret. " +
             "Since no email address is requested, a forgotten password cannot be recovered. " +
             "You can delete your account and all your online data at any time from the game.",
             "# Code of conduct",
             "You may not choose an insulting, discriminatory or sexual nickname, or one impersonating someone else, " +
-            "cheat (modifying the game, automation, exploiting bugs) or disrupt the service. " +
-            "In case of breach, the scores concerned may be removed and the profile deleted.",
+            "cheat (modifying the game, automation, exploiting bugs) or disrupt the service.\n" +
+            "In the chat, insults, harassment, hateful or sexual content, sharing contact details and links are forbidden. " +
+            "Any player can report a message or block its author; a message reported by several players is hidden until it is reviewed.\n" +
+            "In case of breach, the messages and scores concerned may be removed, the chat suspended and the profile deleted.",
             "# Intellectual property",
             "The game, its graphics, its music and its code are protected. You are granted a personal, non-commercial right of use.",
             "# Liability",

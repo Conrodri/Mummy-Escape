@@ -210,6 +210,7 @@ namespace MummyEscape.Pvp
                 return m;
             });
             if (!settledNow) return match;
+            await RecordRelayAsync(match);
             if (duoA != null) await SettleRelayDuoAsync(duoA.Id, eloA + match.EloDeltaA, match.Result);
             if (duoB != null) await SettleRelayDuoAsync(duoB.Id, eloB + match.EloDeltaB, DuelResolver.Invert(match.Result));
             var winners = match.Result == DuelResult.Win ? match.A : match.Result == DuelResult.Loss ? match.B : null;

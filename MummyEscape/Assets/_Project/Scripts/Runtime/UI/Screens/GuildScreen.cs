@@ -220,6 +220,10 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(stats, 16);
             UIKit.Size(stats, 36);
 
+            // The guild's channel in the chat.
+            var talk = UIKit.Button(_list, "Tchat de guilde", () => Router.Open<ChatScreen>().OpenGuild(), 32, ButtonStyle.Primary);
+            UIKit.Size(talk, 92);
+
             // Guild skins.
             UIKit.SectionTitle(_list, "Skins de guilde");
             var how = UIKit.Label(_list, Loc.F("Chaque victoire d'un membre rapporte des points : duel +{0}, 2v2 +{1}, manche de guerre +{2}, guerre gagnée +{3} par manche.",

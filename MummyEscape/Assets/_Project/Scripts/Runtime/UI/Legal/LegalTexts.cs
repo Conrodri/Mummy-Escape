@@ -38,6 +38,8 @@ namespace MummyEscape.UI.Legal
             "• Tes meilleurs scores par niveau (coups au-dessus du chemin idéal et temps), publics dans les classements, avec ton pays seulement si tu l'as choisi.\n" +
             "• Tes amis, tes demandes d'ami et ton statut « en ligne », visibles de tes amis.\n" +
             "• Ta progression (niveau atteint, étoiles), visible de tes amis seulement si tu actives le partage (désactivé par défaut).\n" +
+            "• Si tu utilises le tchat : tes messages, leur date et les replays que tu y partages, visibles des membres du canal (global, ta guilde, ou l'ami à qui tu écris). " +
+            "Chaque canal garde ses 100 derniers messages, les plus anciens sont effacés au fur et à mesure. Tes blocages et tes signalements sont aussi conservés, pour la modération.\n" +
             "• Si tu crées un compte (facultatif) : ton identifiant de connexion, ton mot de passe (conservé chiffré par notre prestataire, jamais lisible par nous) " +
             "et une copie de sauvegarde de ta progression, pour la retrouver sur un autre appareil.\n" +
             "• Les données techniques indispensables au service (adresse IP, modèle d'appareil, journaux d'erreurs), utilisées pour son fonctionnement et sa sécurité.",
@@ -122,15 +124,17 @@ namespace MummyEscape.UI.Legal
             "Le jeu est gratuit. Il se joue hors ligne ; les fonctions en ligne (classements, amis, compte, sauvegarde) sont facultatives. " +
             "Elles sont fournies sans garantie de disponibilité permanente et peuvent évoluer ou s'arrêter ; ta progression locale reste alors jouable.",
             "# Âge",
-            "Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne n'est accessible qu'avec l'accord d'un parent ou tuteur légal.",
+            "Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne n'est accessible qu'avec l'accord d'un parent ou tuteur légal. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.",
             "# Ton compte",
             "Le compte est facultatif et se compose d'un identifiant et d'un mot de passe, que tu dois garder secrets. " +
             "Aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. " +
             "Tu peux supprimer ton compte et toutes tes données en ligne à tout moment depuis le jeu.",
             "# Règles de conduite",
             "Il est interdit de choisir un pseudonyme injurieux, discriminatoire, à caractère sexuel ou usurpant l'identité d'autrui, " +
-            "de tricher (modification du jeu, automatisation, exploitation de failles) ou de perturber le service. " +
-            "En cas de manquement, les scores concernés peuvent être retirés et le profil supprimé.",
+            "de tricher (modification du jeu, automatisation, exploitation de failles) ou de perturber le service.\n" +
+            "Dans le tchat, sont interdits les insultes, le harcèlement, les propos haineux ou à caractère sexuel, le partage de coordonnées et les liens. " +
+            "Tout joueur peut signaler un message ou bloquer son auteur ; un message signalé par plusieurs joueurs est masqué en attendant son examen.\n" +
+            "En cas de manquement, les messages et scores concernés peuvent être retirés, le tchat suspendu et le profil supprimé.",
             "# Propriété intellectuelle",
             "Le jeu, ses graphismes, ses musiques et son code sont protégés. Tu disposes d'un droit d'usage personnel et non commercial.",
             "# Responsabilité",

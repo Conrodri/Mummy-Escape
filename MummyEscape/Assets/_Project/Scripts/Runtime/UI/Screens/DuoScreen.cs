@@ -98,6 +98,11 @@ namespace MummyEscape.UI.Screens
             _friends = friends;
             if (!_busy) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : coéquipiers et adversaires simulés") + "</color>" : "";
             Fill();
+            // The server's 2v2 history: the replays of matches played on another phone, both relays complete.
+            var history = await App.Pvp.GetRelayHistoryAsync();
+            if (request != _request || this == null || history?.Matches == null) return;
+            RelayReplayStore.Merge(history.Matches, App.Online.PlayerId);
+            Fill();
         }
 
         void Fill()

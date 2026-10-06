@@ -23,6 +23,7 @@ This data stays on the device; you can erase it at any time (Settings › Privac
 • Your best scores per level (moves above the ideal path and time), public in the leaderboards, with your country only if you chose one.  
 • Your friends, your friend requests and your "online" status, visible to your friends.  
 • Your progress (furthest level, stars), visible to your friends only if you turn on sharing (off by default).  
+• If you use the chat: your messages, their date and the replays you share there, visible to the members of the channel (global, your guild, or the friend you write to). Each channel keeps its last 100 messages, the oldest ones being erased as new ones arrive. Your blocks and reports are kept too, for moderation.  
 • If you create an account (optional): your login, your password (stored encrypted by our provider, never readable by us) and a backup of your progress, so you can restore it on another device.  
 • Technical data required by the service (IP address, device model, error logs), used for its operation and security.
 

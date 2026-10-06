@@ -184,6 +184,8 @@ namespace MummyEscape.UI.Screens
             progress.text = f.Online ? Loc.T("En ligne") : "…";
             UIKit.FitText(progress, 16);
             UIKit.Size(progress, 32);
+            // Write to the friend (the chat's private conversation).
+            UIKit.IconButton(h.transform, UISprites.Chat, () => Router.Open<ChatScreen>().OpenDirect(f.PlayerId, f.Name), 84);
             UIKit.Size(UIKit.Image(h.transform, UISprites.Next, UIKit.Gold), 40, 40);
             LoadProgress(f, portrait, halo, title, badges.transform, progress);
         }

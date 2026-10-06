@@ -23,6 +23,7 @@ Ces données restent sur l'appareil ; tu peux les effacer à tout moment (Param�
 • Tes meilleurs scores par niveau (coups au-dessus du chemin idéal et temps), publics dans les classements, avec ton pays seulement si tu l'as choisi.  
 • Tes amis, tes demandes d'ami et ton statut « en ligne », visibles de tes amis.  
 • Ta progression (niveau atteint, étoiles), visible de tes amis seulement si tu actives le partage (désactivé par défaut).  
+• Si tu utilises le tchat : tes messages, leur date et les replays que tu y partages, visibles des membres du canal (global, ta guilde, ou l'ami à qui tu écris). Chaque canal garde ses 100 derniers messages, les plus anciens sont effacés au fur et à mesure. Tes blocages et tes signalements sont aussi conservés, pour la modération.  
 • Si tu crées un compte (facultatif) : ton identifiant de connexion, ton mot de passe (conservé chiffré par notre prestataire, jamais lisible par nous) et une copie de sauvegarde de ta progression, pour la retrouver sur un autre appareil.  
 • Les données techniques indispensables au service (adresse IP, modèle d'appareil, journaux d'erreurs), utilisées pour son fonctionnement et sa sécurité.
 

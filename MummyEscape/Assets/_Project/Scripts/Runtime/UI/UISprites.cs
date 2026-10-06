@@ -22,7 +22,7 @@ namespace MummyEscape.UI
         public static Sprite Ring { get; private set; }
         public static Sprite RadialGlow { get; private set; }
 
-        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal, Arrow, Flag, Wheel, Palette, Torch, Crown, Boot, Mummy;
+        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal, Arrow, Flag, Wheel, Palette, Torch, Crown, Boot, Mummy, Chat, Send;
 
         public static void Init()
         {
@@ -113,6 +113,10 @@ namespace MummyEscape.UI
             Crown = Icon(p => Min(Box(p, 64, 36, 42, 10, 4), Min(Poly(p, 22, 40, 54, 40, 22, 100), Min(Poly(p, 42, 40, 86, 40, 64, 108), Poly(p, 74, 40, 106, 40, 106, 100)))));
             Boot = Icon(p => Min(Box(p, 52, 72, 18, 36, 6), Box(p, 70, 30, 40, 12, 8)));
             Mummy = Icon(p => Max(Min(Disc(p, 64, 92, 22), Box(p, 64, 40, 28, 38, 14)), -Min(Seg(p, 36, 56, 92, 64, 5), Seg(p, 36, 34, 92, 42, 5))));
+            // A speech bubble, its tail at the bottom left.
+            Chat = Icon(p => Min(Box(p, 64, 74, 48, 34, 18), Poly(p, 30, 50, 30, 16, 62, 50)));
+            // A paper plane, pointing right.
+            Send = Icon(p => Max(Poly(p, 14, 110, 14, 18, 116, 64) - 2f, -Poly(p, 6, 82, 6, 46, 50, 64)));
         }
 
         // ------------------------------------------------------------------ shapes

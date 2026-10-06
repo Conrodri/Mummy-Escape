@@ -10,7 +10,7 @@ namespace MummyEscape.UI.Screens
 
         Text _stars, _coins, _gold;
         PassBanner _pass;
-        Image _mummy, _glow;
+        Image _mummy, _glow, _chatDot;
         RectTransform _stage;
         Text _online;
 
@@ -36,6 +36,12 @@ namespace MummyEscape.UI.Screens
             goldPlate.GetComponent<Image>().raycastTarget = true;
             goldPlate.AddComponent<Button>().onClick.AddListener(() => Router.Open<TreasureScreen>());
             UIKit.Size(UIKit.Rect("Spacer", top.transform), -1, -1, 1);
+            // The chat, with a dot when a friend or the guild wrote.
+            var chat = UIKit.IconButton(top.transform, UISprites.Chat, () => Router.Open<ChatScreen>(), 92);
+            _chatDot = UIKit.Image(chat.transform, UISprites.Circle, UIKit.Danger, false, "Dot"); // noloc
+            UIKit.Place(_chatDot.rectTransform, 1, 1, 28, 28, -10, -10);
+            _chatDot.enabled = false;
+            Online.ChatState.Changed += () => { if (_chatDot != null) _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId); };
             UIKit.IconButton(top.transform, UISprites.Gear, () => Router.Open<SettingsScreen>(), 92);
 
             var title = UIKit.Title(column, "MUMMY\nRUSH", 150);
@@ -93,6 +99,8 @@ namespace MummyEscape.UI.Screens
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)
                 : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName) : Loc.F("Invité : {0}", online.PlayerName);
+            _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId);
+            _ = Online.ChatState.RefreshAsync(App.Pvp);
             if (ProfileSetupScreen.Needed(App)) Router.Open<ProfileSetupScreen>();
         }
 

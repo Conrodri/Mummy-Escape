@@ -105,6 +105,38 @@ namespace MummyEscape.Online
             Save();
         }
 
+        /// <summary>
+        /// The server's history (<see cref="IPvpService.GetRelayHistoryAsync"/>): each judged match replaces the phone's copy
+        /// (both relays as the server replayed them), or comes in if the phone never had it (played on another device).
+        /// </summary>
+        public static void Merge(IEnumerable<RelayMatch> matches, string me)
+        {
+            if (matches == null || string.IsNullOrEmpty(me)) return;
+            Load();
+            bool changed = false;
+            foreach (var m in matches)
+            {
+                var mine = m?.SideOf(me);
+                if (mine == null || !m.Settled || m.A == null || m.B == null) continue;
+                var known = _recent.Find(r => r.Id == m.Id) ?? _saved.Find(r => r.Id == m.Id);
+                var record = known ?? new RelayRecord { Me = me, PlayedAtUnixMs = m.CreatedAtUnixMs };
+                if (known != null && known.Resolved && known.Match?.Settled == true && known.Match.A?.Inputs != null && known.Match.B?.Inputs != null) continue;
+                record.Match = m;
+                record.Resolved = true;
+                record.Result = mine == m.A ? m.Result : DuelResolver.Invert(m.Result);
+                record.EloDelta = mine == m.A ? m.EloDeltaA : m.EloDeltaB;
+                _recent.RemoveAll(r => r.Id == m.Id);
+                _recent.Add(record);
+                int kept = _saved.FindIndex(r => r.Id == m.Id);
+                if (kept >= 0) _saved[kept] = record;
+                changed = true;
+            }
+            if (!changed) return;
+            _recent.Sort((a, b) => b.PlayedAtUnixMs.CompareTo(a.PlayedAtUnixMs));
+            if (_recent.Count > PvpConfig.HistorySize) _recent.RemoveRange(PvpConfig.HistorySize, _recent.Count - PvpConfig.HistorySize);
+            Save();
+        }
+
         /// <summary>Keeps a match apart; false when the <see cref="SavedSize"/> places are taken.</summary>
         public static bool Keep(RelayRecord record)
         {

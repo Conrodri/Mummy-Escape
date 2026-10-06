@@ -376,6 +376,24 @@ namespace MummyEscape.Online
 
         public Task<RelayResultResponse> GetRelayResultAsync(string matchId) => Run(() => _server.RelayResultAsync(Me, matchId));
 
+        public Task<RelayHistoryResponse> GetRelayHistoryAsync() => Run(() => _server.GetRelayHistoryAsync(Me));
+
+        public Task<ChatPage> GetChatAsync(string channel, long afterSeq) => Run(() => _server.GetChatAsync(Me, channel, afterSeq));
+
+        public Task<ChatSendResponse> SendChatAsync(string channel, string text, string playerName) =>
+            Run(() => _server.SendChatAsync(Me, playerName, channel, text));
+
+        public Task<ChatInboxResponse> GetChatInboxAsync() => Run(() => _server.GetChatInboxAsync(Me));
+
+        public Task<ReportResponse> BlockChatAsync(string playerId, bool block) => Run(() => _server.BlockChatAsync(Me, playerId, block));
+
+        public Task<ReportResponse> ReportChatAsync(string channel, long seq) => Run(() => _server.ReportChatAsync(Me, channel, seq));
+
+        public Task<ChatSendResponse> ShareReplayAsync(string kind, string matchId, string channel, string text, string playerName) =>
+            Run(() => _server.ShareReplayAsync(Me, playerName, kind, matchId, channel, text));
+
+        public Task<SharedReplayResponse> GetSharedReplayAsync(string id) => Run(() => _server.GetSharedReplayAsync(Me, id));
+
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Run(() => _server.StartLiveDuelAsync(Me, Gen, matchKey, a, b));
 

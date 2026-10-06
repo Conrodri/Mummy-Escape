@@ -114,6 +114,29 @@ namespace MummyEscape.Online
         public Task<RelayResultResponse> GetRelayResultAsync(string matchId) =>
             Call("GetRelayResult", Args("matchId", matchId), e => new RelayResultResponse { Error = e });
 
+        public Task<RelayHistoryResponse> GetRelayHistoryAsync() => Call<RelayHistoryResponse>("GetRelayHistory", null, _ => null);
+
+        public Task<ChatPage> GetChatAsync(string channel, long afterSeq) =>
+            Call("GetChat", Args("channel", channel, "afterSeq", afterSeq), e => new ChatPage { Channel = channel, Error = e });
+
+        public Task<ChatSendResponse> SendChatAsync(string channel, string text, string playerName) =>
+            Call("SendChat", Args("channel", channel, "text", text ?? "", "playerName", playerName ?? ""), e => new ChatSendResponse { Error = e });
+
+        public Task<ChatInboxResponse> GetChatInboxAsync() => Call("GetChatInbox", null, e => new ChatInboxResponse { Error = e });
+
+        public Task<ReportResponse> BlockChatAsync(string playerId, bool block) =>
+            Call("BlockChat", Args("playerId", playerId, "block", block), e => new ReportResponse { Error = e });
+
+        public Task<ReportResponse> ReportChatAsync(string channel, long seq) =>
+            Call("ReportChat", Args("channel", channel, "seq", seq), e => new ReportResponse { Error = e });
+
+        public Task<ChatSendResponse> ShareReplayAsync(string kind, string matchId, string channel, string text, string playerName) =>
+            Call("ShareReplay", Args("kind", kind, "matchId", matchId, "channel", channel, "text", text ?? "", "playerName", playerName ?? ""),
+                 e => new ChatSendResponse { Error = e });
+
+        public Task<SharedReplayResponse> GetSharedReplayAsync(string id) =>
+            Call("GetSharedReplay", Args("id", id), e => new SharedReplayResponse { Error = e });
+
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b), e => new LiveDuelResponse { Error = e });
 

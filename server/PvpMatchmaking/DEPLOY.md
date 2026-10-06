@@ -43,6 +43,14 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
    - `pvp_history` : donnée joueur **protégée**, les 10 derniers duels du joueur avec les deux courses de chacun (les replays).
      Le premier sur un tombeau y a un duel « en attente », complété quand quelqu'un affronte son fantôme.
    - `pvp_reports` : données « custom » **privées**, un dossier de triche par joueur signalé (clé = son identifiant).
+   - `pvp_relay_history` : données « custom » **privées**, les 10 derniers matchs 2v2 jugés de chaque joueur (clé = son
+     identifiant), les deux relais complets : l'historique et les replays 2v2 (`GetRelayHistory`).
+   - `pvp_chat` : données « custom » **privées**, un canal par clé (`global`, `guild_<id>`, `dm_<id1>_<id2>`), ses 100
+     derniers messages.
+   - `pvp_chat_inbox` : données « custom » **privées**, par joueur : conversations privées, joueurs bloqués, anti-spam,
+     signalements du jour et suspension (`BannedUntilUnixMs`).
+   - `pvp_chat_reports` : données « custom » **privées**, un dossier de messages signalés par auteur (clé = son identifiant).
+   - `pvp_shared_replays` : données « custom » **privées**, la copie de chaque replay partagé dans le tchat (clé = son id).
 
 ## Signalements de triche
 
@@ -52,6 +60,21 @@ Un joueur peut signaler l'adversaire d'un duel de son historique (`ReportCheat`,
 dans les logs (Dashboard › Cloud Code › Logs). Aucune sanction automatique : on examine les dossiers depuis le Dashboard
 (Cloud Save › Custom Items › `pvp_reports`). Pour revoir un duel signalé, la même graine et les mêmes actions rejouent la
 course à l'identique (`RunReplay`).
+
+## Tchat
+
+Trois canaux : global (fermé aux mineurs côté jeu), guilde (membres seulement, vérifié par le serveur) et messages privés
+(`GetChat`, `SendChat`, `GetChatInbox`, `BlockChat`, `ReportChat`). Le jeu interroge le serveur toutes les 4 s quand le
+tchat est ouvert. Le serveur nettoie chaque message (200 caractères, liens et insultes masqués), limite le débit
+(1,5 s entre deux messages, 12 par minute) et refuse un message privé si le destinataire a bloqué l'auteur.
+`ShareReplay` copie un duel de `pvp_history` ou un match 2v2 jugé dans `pvp_shared_replays` et le poste dans le canal ;
+`GetSharedReplay` le rend à qui le touche.
+
+Modération : un message signalé par 3 joueurs différents est masqué et copié dans `pvp_chat_reports` (10 signalements par
+joueur et par jour). Pour suspendre un joueur, mettre `BannedUntilUnixMs` (millisecondes Unix) dans sa clé de
+`pvp_chat_inbox` (Cloud Save › Custom Items) ; le jeu affiche la date de fin. Pour retirer un message, passer son
+`Hidden` à `true` dans le canal de `pvp_chat`. Au-delà de quelques milliers de joueurs actifs dans le tchat, passer à
+Vivox (Unity) plutôt que d'interroger Cloud Save.
 
 ## Versions
 

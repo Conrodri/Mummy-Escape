@@ -26,7 +26,8 @@ namespace MummyEscape.UI.Screens
         RawImage _topView, _bottomView;
         Side _me, _rival;
         Text _status, _waiting, _title;
-        Button _play, _speed, _report;
+        Button _play, _speed, _report, _share;
+        bool _sharedRelay;
         Image _playIcon;
         Slider _timeline;
         DuelRecord _duel;
@@ -56,9 +57,11 @@ namespace MummyEscape.UI.Screens
             UIKit.Place((RectTransform)back.transform, 0, 0.5f, 92, 92, 36, 0);
             var title = _title = UIKit.Title(header.transform, "Revoir le duel", 50);
             UIKit.FitText(title, 30);
-            UIKit.Stretch(title.rectTransform, 150, 0, 150, 0);
+            UIKit.Stretch(title.rectTransform, 250, 0, 250, 0);
             _report = UIKit.IconButton(header.transform, UISprites.Flag, Report, 92, ButtonStyle.Danger);
             UIKit.Place((RectTransform)_report.transform, 1, 0.5f, 92, 92, -36, 0);
+            _share = UIKit.IconButton(header.transform, UISprites.Share, Share, 92);
+            UIKit.Place((RectTransform)_share.transform, 1, 0.5f, 92, 92, -140, 0);
 
             // The two views (drawn by the replay cameras behind the canvas) and their overlays.
             var views = UIKit.Rect("Views", Root); // noloc
@@ -160,7 +163,7 @@ namespace MummyEscape.UI.Screens
         /// Opens a 2v2 match: the player's duo on top, the rival duo below, each view following its duo's runner of the
         /// moment (over to the teammate's maze at each relay plate).
         /// </summary>
-        public void ShowRelay(RelayRecord record)
+        public void ShowRelay(RelayRecord record, bool shared = false)
         {
             _duel = null;
             _relay = record;
@@ -170,13 +173,15 @@ namespace MummyEscape.UI.Screens
             _title.text = Loc.T("Revoir le match");
             var mine = record.Mine;
             var rival = record.Rival;
-            _me.Tag.text = Loc.T("TON DUO");
-            _rival.Tag.text = Loc.T("DUO ADVERSE");
+            _sharedRelay = shared;
+            _me.Tag.text = Loc.T(shared ? "DUO" : "TON DUO");
+            _rival.Tag.text = Loc.T(shared ? "DUO" : "DUO ADVERSE");
             FillRelay(_me, mine);
             FillRelay(_rival, rival);
             bool rivalRun = rival?.Inputs != null && rival.Inputs.Count > 0;
             _waiting.text = rivalRun ? "" : Loc.T("Le relais du duo adverse n'est pas encore arrivé.");
             _report.gameObject.SetActive(false);
+            _share.gameObject.SetActive(!shared && record.Resolved);
             _status.text = Loc.T("Chargement…");
             SetPlaying(false);
             LoadRelay(record);
@@ -224,13 +229,14 @@ namespace MummyEscape.UI.Screens
             _rig.OpenRelay(map, record.Mine, record.Rival, theme);
             _rig.Speed = 1f;
             _speed.GetComponentInChildren<Text>().text = "x1"; // noloc
-            _status.text = RelayVerdict(record);
+            _status.text = RelayVerdict(record, _sharedRelay);
             SetPlaying(true);
         }
 
-        static string RelayVerdict(RelayRecord r)
+        static string RelayVerdict(RelayRecord r, bool shared)
         {
             string result = Loc.T(r.Result == DuelResult.Win ? "Victoire" : r.Result == DuelResult.Draw ? "Match nul" : "Défaite");
+            if (shared) return (r.Mine?.Name ?? "?") + " · " + result; // noloc
             if (!r.Resolved) return result + " · " + Loc.T("verdict du serveur en attente");
             return result + " · " + Loc.F("Elo 2v2 {0}", r.NewElo) + " (" + (r.EloDelta > 0 ? "+" : "") + r.EloDelta + ")"; // noloc
         }
@@ -258,6 +264,7 @@ namespace MummyEscape.UI.Screens
             _waiting.text = duel.Rival == null ? Loc.T("Personne n'a encore couru contre ton fantôme : le duel se complétera quand un adversaire l'aura affronté.") : "";
             _report.gameObject.SetActive(duel.Rival != null && !spectator);
             _report.interactable = !duel.Reported;
+            _share.gameObject.SetActive(!spectator && duel.Resolved && duel.Rival != null);
             _status.text = Loc.T("Chargement…");
             SetPlaying(false);
             Load(duel);
@@ -449,6 +456,13 @@ namespace MummyEscape.UI.Screens
         }
 
         static int EndOfInputs(DuelRun run) => run.Inputs.Count == 0 ? 0 : RunActions.MsOf(run.Inputs[run.Inputs.Count - 1].Tick);
+
+        /// <summary>Shares the replay on screen in the chat (the server copies it from its own data).</summary>
+        void Share()
+        {
+            if (_relay != null && !_sharedRelay) Router.Open<ShareReplayDialog>().Configure(ChatConfig.RelayReplay, _relay.Id);
+            else if (_duel != null && !_spectator) Router.Open<ShareReplayDialog>().Configure(ChatConfig.DuelReplay, _duel.MatchId);
+        }
 
         void Report()
         {

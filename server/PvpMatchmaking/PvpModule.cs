@@ -160,6 +160,38 @@ namespace MummyEscape.Pvp.Server
         public Task<ReportResponse> ReportRelayQuit(IExecutionContext ctx, string matchId, string quitterId) =>
             Server(ctx).ReportRelayQuitAsync(ctx.PlayerId, matchId, quitterId);
 
+        /// <summary>Les 10 derniers matchs 2v2 du joueur, les deux relais de chacun (replays).</summary>
+        [CloudCodeFunction("GetRelayHistory")]
+        public Task<RelayHistoryResponse> GetRelayHistory(IExecutionContext ctx) => Server(ctx).GetRelayHistoryAsync(ctx.PlayerId);
+
+        // ------------------------------------------------------------------ tchat
+
+        /// <summary>Les messages d'un canal ("global", "guild", "dm:" + joueur) après un numéro.</summary>
+        [CloudCodeFunction("GetChat")]
+        public Task<ChatPage> GetChat(IExecutionContext ctx, string channel, long afterSeq) => Server(ctx).GetChatAsync(ctx.PlayerId, channel, afterSeq);
+
+        [CloudCodeFunction("SendChat")]
+        public Task<ChatSendResponse> SendChat(IExecutionContext ctx, string channel, string text, string playerName) =>
+            Server(ctx).SendChatAsync(ctx.PlayerId, playerName, channel, text);
+
+        [CloudCodeFunction("GetChatInbox")]
+        public Task<ChatInboxResponse> GetChatInbox(IExecutionContext ctx) => Server(ctx).GetChatInboxAsync(ctx.PlayerId);
+
+        [CloudCodeFunction("BlockChat")]
+        public Task<ReportResponse> BlockChat(IExecutionContext ctx, string playerId, bool block) => Server(ctx).BlockChatAsync(ctx.PlayerId, playerId, block);
+
+        /// <summary>Signale un message : copié dans le dossier de son auteur (Cloud Save › pvp_chat_reports), masqué à 3 signalements.</summary>
+        [CloudCodeFunction("ReportChat")]
+        public Task<ReportResponse> ReportChat(IExecutionContext ctx, string channel, long seq) => Server(ctx).ReportChatAsync(ctx.PlayerId, channel, seq);
+
+        /// <summary>Partage un replay du joueur (duel ou 2v2) dans un canal : le serveur le copie depuis ses propres données.</summary>
+        [CloudCodeFunction("ShareReplay")]
+        public Task<ChatSendResponse> ShareReplay(IExecutionContext ctx, string kind, string matchId, string channel, string text, string playerName) =>
+            Server(ctx).ShareReplayAsync(ctx.PlayerId, playerName, kind, matchId, channel, text);
+
+        [CloudCodeFunction("GetSharedReplay")]
+        public Task<SharedReplayResponse> GetSharedReplay(IExecutionContext ctx, string id) => Server(ctx).GetSharedReplayAsync(ctx.PlayerId, id);
+
         // --- Duel en direct
 
         /// <summary>Crée le duel de deux joueurs de la même ligue qui se sont trouvés dans un salon (l'hôte l'appelle).</summary>

@@ -12,7 +12,7 @@ The game is free. It can be played offline; the online features (leaderboards, f
 
 ## Age
 
-Below the digital age of consent in your country (15 in France), online mode is only available with the consent of a parent or legal guardian.
+Below the digital age of consent in your country (15 in France), online mode is only available with the consent of a parent or legal guardian. Global chat is closed to minors; guild chat and messages between friends can be turned off in the game.
 
 ## Your account
 
@@ -20,7 +20,9 @@ The account is optional and consists of a login and a password, which you must k
 
 ## Code of conduct
 
-You may not choose an insulting, discriminatory or sexual nickname, or one impersonating someone else, cheat (modifying the game, automation, exploiting bugs) or disrupt the service. In case of breach, the scores concerned may be removed and the profile deleted.
+You may not choose an insulting, discriminatory or sexual nickname, or one impersonating someone else, cheat (modifying the game, automation, exploiting bugs) or disrupt the service.  
+In the chat, insults, harassment, hateful or sexual content, sharing contact details and links are forbidden. Any player can report a message or block its author; a message reported by several players is hidden until it is reviewed.  
+In case of breach, the messages and scores concerned may be removed, the chat suspended and the profile deleted.
 
 ## Intellectual property
 

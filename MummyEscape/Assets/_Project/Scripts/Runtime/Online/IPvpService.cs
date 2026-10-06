@@ -64,6 +64,21 @@ namespace MummyEscape.Online
         /// <summary>"Quit and report": the teammate who left the match.</summary>
         Task<ReportResponse> ReportRelayQuitAsync(string matchId, string quitterId);
 
+        /// <summary>The player's last 2v2 matches (<see cref="ChatConfig.RelayHistorySize"/>), both relays of each. Null on failure.</summary>
+        Task<RelayHistoryResponse> GetRelayHistoryAsync();
+
+        // --- Chat: "global", "guild" or ChatConfig.Direct(friend) ---
+        /// <summary>The messages of a channel after <paramref name="afterSeq"/>.</summary>
+        Task<ChatPage> GetChatAsync(string channel, long afterSeq);
+        Task<ChatSendResponse> SendChatAsync(string channel, string text, string playerName);
+        /// <summary>Private conversations, blocked players, the last message number of the global and guild channels.</summary>
+        Task<ChatInboxResponse> GetChatInboxAsync();
+        Task<ReportResponse> BlockChatAsync(string playerId, bool block);
+        Task<ReportResponse> ReportChatAsync(string channel, long seq);
+        /// <summary>Shares one of the player's replays (<see cref="ChatConfig.DuelReplay"/> or relay) in a channel.</summary>
+        Task<ChatSendResponse> ShareReplayAsync(string kind, string matchId, string channel, string text, string playerName);
+        Task<SharedReplayResponse> GetSharedReplayAsync(string id);
+
         // --- Guilds ---
         Task<GuildResponse> GetGuildAsync();
         Task<GuildResponse> CreateGuildAsync(string name, string tag, string playerName);

@@ -12,7 +12,7 @@ Le jeu est gratuit. Il se joue hors ligne ; les fonctions en ligne (classements,
 
 ## Âge
 
-Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne n'est accessible qu'avec l'accord d'un parent ou tuteur légal.
+Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne n'est accessible qu'avec l'accord d'un parent ou tuteur légal. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.
 
 ## Ton compte
 
@@ -20,7 +20,9 @@ Le compte est facultatif et se compose d'un identifiant et d'un mot de passe, qu
 
 ## Règles de conduite
 
-Il est interdit de choisir un pseudonyme injurieux, discriminatoire, à caractère sexuel ou usurpant l'identité d'autrui, de tricher (modification du jeu, automatisation, exploitation de failles) ou de perturber le service. En cas de manquement, les scores concernés peuvent être retirés et le profil supprimé.
+Il est interdit de choisir un pseudonyme injurieux, discriminatoire, à caractère sexuel ou usurpant l'identité d'autrui, de tricher (modification du jeu, automatisation, exploitation de failles) ou de perturber le service.  
+Dans le tchat, sont interdits les insultes, le harcèlement, les propos haineux ou à caractère sexuel, le partage de coordonnées et les liens. Tout joueur peut signaler un message ou bloquer son auteur ; un message signalé par plusieurs joueurs est masqué en attendant son examen.  
+En cas de manquement, les messages et scores concernés peuvent être retirés, le tchat suspendu et le profil supprimé.
 
 ## Propriété intellectuelle
 
