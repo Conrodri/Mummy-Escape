@@ -26,6 +26,9 @@ namespace MummyEscape.UI.Screens
         int _size = TeamConfig.WarSizes[0];
         bool _busy;
         UIKit.Segmented _social;
+        // In a guild: overview, wars or members.
+        UIKit.Segmented _tabs;
+        int _tab;
         int _request;
 
         protected override void Build()
@@ -38,6 +41,7 @@ namespace MummyEscape.UI.Screens
             _info = UIKit.Label(body, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 64);
+            _tabs = new UIKit.Segmented(body, new[] { "Aperçu", "Guerre", "Membres" }, i => { _tab = i; _scroll.verticalNormalizedPosition = 1f; Fill(); }, 76);
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 16;
@@ -93,6 +97,8 @@ namespace MummyEscape.UI.Screens
         void Fill()
         {
             UIKit.ClearChildren(_list);
+            _tabs.Root.SetActive(_guild?.Guild != null);
+            _tabs.Select(_tab);
             if (_guild == null) return;
             if (_guild.Guild == null) FillNoGuild();
             else FillGuild(_guild.Guild);
@@ -221,6 +227,13 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(stats, 16);
             UIKit.Size(stats, 36);
 
+            if (_tab == 1) { FillWars(g, boss); return; }
+            if (_tab == 2)
+            {
+                foreach (var m in g.Members.OrderByDescending(x => x.Role).ThenByDescending(x => x.Points)) MemberRow(g, m, me);
+                return;
+            }
+
             // The guild's channel in the chat.
             var talk = UIKit.Button(_list, "Tchat de guilde", () => Router.Open<ChatScreen>().OpenGuild(), 32, ButtonStyle.Primary);
             UIKit.Size(talk, 92);
@@ -233,23 +246,20 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(how, 64);
             foreach (var (need, reward) in TeamConfig.GuildSkinTiers) SkinTier(g, need, reward);
 
-            // Wars.
-            UIKit.SectionTitle(_list, "Guerre de guildes");
+            var board = UIKit.Button(_list, "Classement des guildes", () => Router.Open<TeamLeaderboardScreen>().Show(true), 30);
+            UIKit.Size(board, 88);
+            var leave = UIKit.Button(_list, "Quitter la guilde", Leave, 28, ButtonStyle.Danger);
+            UIKit.Size(leave, 84);
+        }
+
+        void FillWars(Guild g, bool boss)
+        {
             var active = _guild.Wars.FirstOrDefault(w => w.Id == g.ActiveWar);
             if (active != null) TeamView.BattleCard(_list, active, _guild.Me, Router, RunRound);
             else if (boss) WarLauncher(g);
             else UIKit.Size(UIKit.Label(_list, "Le chef et les officiers lancent les guerres et choisissent l'ordre de passage.", 26, UIKit.Dim), 70);
             foreach (var w in _guild.Wars)
                 if (w != active) TeamView.BattleCard(_list, w, _guild.Me, Router, null);
-
-            // Members.
-            UIKit.SectionTitle(_list, "Membres");
-            foreach (var m in g.Members.OrderByDescending(x => x.Role).ThenByDescending(x => x.Points)) MemberRow(g, m, me);
-
-            var board = UIKit.Button(_list, "Classement des guildes", () => Router.Open<TeamLeaderboardScreen>().Show(true), 30);
-            UIKit.Size(board, 88);
-            var leave = UIKit.Button(_list, "Quitter la guilde", Leave, 28, ButtonStyle.Danger);
-            UIKit.Size(leave, 84);
         }
 
         void SkinTier(Guild g, int need, string reward)
