@@ -215,17 +215,21 @@ namespace MummyEscape.Online
 
         void SeedDemoFriends()
         {
-            AddDemoFriend("Nefertari#2041", true, "2-4", 31);
-            AddDemoFriend("Imhotep#7310", false, "1-9", 22);
-            AddDemoFriend("Tiye#5562", true, "3-2", 47);
+            AddDemoFriend("Nefertari#2041", true, "2-4", 31, 1480);
+            AddDemoFriend("Imhotep#7310", false, "1-9", 22, 0);
+            AddDemoFriend("Tiye#5562", true, "3-2", 47, 1720);
             _requests.Add(new FriendRequest { PlayerId = "demo-req", Name = "Ahmose#8127" });
         }
 
-        void AddDemoFriend(string name, bool online, string furthest, int stars)
+        void AddDemoFriend(string name, bool online, string furthest, int stars, int elo)
         {
             string id = "demo-" + name;
             _friends.Add(new FriendInfo { PlayerId = id, Name = name, Online = online });
-            var snapshot = new ProgressSnapshot { FurthestLevel = furthest, TotalStars = stars };
+            var snapshot = new ProgressSnapshot
+            {
+                FurthestLevel = furthest, TotalStars = stars, Elo = elo,
+                Look = Visual.PvpSkins.RandomLook(new System.Random(name.Length * 7919 + name[0])),
+            };
             var rng = new Pcg32(Pcg32.Hash(3, (ulong)name.Length * 7919 + name[0]));
             foreach (var lvl in DifficultyTable.AllLevels())
             {

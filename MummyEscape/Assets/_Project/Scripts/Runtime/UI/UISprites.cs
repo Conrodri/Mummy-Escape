@@ -22,7 +22,7 @@ namespace MummyEscape.UI
         public static Sprite Ring { get; private set; }
         public static Sprite RadialGlow { get; private set; }
 
-        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal, Arrow, Flag;
+        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal, Arrow, Flag, Wheel, Palette, Torch, Crown, Boot, Mummy;
 
         public static void Init()
         {
@@ -96,6 +96,23 @@ namespace MummyEscape.UI
                                    Min(Min(Seg(p, 88, 40, 22, 106, 11), Seg(p, 110, 18, 92, 36, 13)), Seg(p, 76, 26, 102, 52, 10))));
             // Feather of Maat in a ring: the seals earned in duels.
             Seal = Icon(p => Min(Annulus(p, 64, 64, 52, 9), Min(Len((p.x - 64) * 2.2f, (p.y - 70) * 0.95f) - 30f, Seg(p, 64, 24, 64, 44, 7))));
+            // A wheel of fortune: rim, spokes and hub (the casino).
+            Wheel = Icon(p =>
+            {
+                float d = Annulus(p, 64, 64, 48, 12);
+                for (int k = 0; k < 4; k++)
+                {
+                    float a = k * Mathf.PI / 4f;
+                    d = Min(d, Seg(p, 64 - 46 * Mathf.Cos(a), 64 - 46 * Mathf.Sin(a), 64 + 46 * Mathf.Cos(a), 64 + 46 * Mathf.Sin(a), 7));
+                }
+                return Min(d, Disc(p, 64, 64, 13));
+            });
+            // Shop categories.
+            Palette = Icon(p => Max(Disc(p, 64, 64, 50), -Min(Min(Disc(p, 44, 82, 9), Disc(p, 70, 92, 9)), Min(Disc(p, 90, 70, 9), Disc(p, 80, 34, 14)))));
+            Torch = Icon(p => Min(Box(p, 64, 40, 9, 30, 4), Min(Box(p, 64, 72, 20, 6, 3), Len((p.x - 64) * 1.3f, (p.y - 96) * 0.8f) - 17f)));
+            Crown = Icon(p => Min(Box(p, 64, 36, 42, 10, 4), Min(Poly(p, 22, 40, 54, 40, 22, 100), Min(Poly(p, 42, 40, 86, 40, 64, 108), Poly(p, 74, 40, 106, 40, 106, 100)))));
+            Boot = Icon(p => Min(Box(p, 52, 72, 18, 36, 6), Box(p, 70, 30, 40, 12, 8)));
+            Mummy = Icon(p => Max(Min(Disc(p, 64, 92, 22), Box(p, 64, 40, 28, 38, 14)), -Min(Seg(p, 36, 56, 92, 64, 5), Seg(p, 36, 34, 92, 42, 5))));
         }
 
         // ------------------------------------------------------------------ shapes

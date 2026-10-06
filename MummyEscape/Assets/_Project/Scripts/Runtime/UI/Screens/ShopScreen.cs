@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MummyEscape.Core;
 using MummyEscape.Pvp;
@@ -9,97 +10,157 @@ using UnityEngine.UI;
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// Cosmetics bought with scarabs (earned by collecting new stars): one tab per slot (mummy, colour, torch, hat,
-    /// shoes) plus the act collections, sold whole for less, and the duel tab where Maât's seals (won in duels) buy
-    /// the league skins. Every card previews the item on the current outfit. IAP can be plugged in later.
+    /// Cosmetics bought with scarabs (earned by collecting new stars). The season pass banner and the Treasure (real
+    /// money) sit on top; then three sections: Skins (one category per slot: mummy, colour, torch, hat, shoes), the act
+    /// Collections, sold whole for less, and the Seals, where Maât's seals (won in duels) buy the league skins.
+    /// Every card shows the item alone; a tap opens it up close (<see cref="ItemZoomScreen"/>), where it is bought or put on.
+    /// The casino has its own tab in the bottom bar (<see cref="CasinoScreen"/>).
     /// </summary>
     public sealed class ShopScreen : UIScreen
     {
         public override NavTab Tab => NavTab.Shop;
 
-        const int Columns = 4;
-        const float CardHeight = 340;
+        const int Columns = 3;
+        const float CardHeight = 380;
 
-        static readonly string[] Tabs = { "Thèmes", "Momies", "Couleurs", "Torches", "Chapeaux", "Pieds", "Duel", "Casino" };
-        static readonly CosmeticSlot[] TabSlots = { CosmeticSlot.Mummy, CosmeticSlot.Mummy, CosmeticSlot.Color, CosmeticSlot.Torch, CosmeticSlot.Hat, CosmeticSlot.Shoes, CosmeticSlot.Mummy, CosmeticSlot.Color };
-        const int DuelTab = 6;
-        const int CasinoTab = 7;
-        const float WheelSize = 540;
-        const float SpinSeconds = 4f;
-        static readonly Color LegendaryColor = new Color32(255, 96, 220, 255);
+        static readonly string[] Sections = { "Skins", "Collections", "Sceaux" };
+        const int SkinsSection = 0, SetsSection = 1, SealsSection = 2;
+        static readonly (string name, CosmeticSlot slot)[] Categories =
+        {
+            ("Momies", CosmeticSlot.Mummy), ("Couleurs", CosmeticSlot.Color), ("Torches", CosmeticSlot.Torch),
+            ("Chapeaux", CosmeticSlot.Hat), ("Pieds", CosmeticSlot.Shoes),
+        };
 
         internal static readonly Color WornFill = new Color32(30, 92, 84, 255);
         internal static readonly Color WornRim = new Color(0.25f, 0.88f, 0.8f, 0.6f);
+        static Color LegendaryColor => CasinoScreen.LegendaryColor;
 
         Text _coins, _stars, _seals, _gold, _note;
-        Image _outfit;
-        UIKit.Segmented _tabs;
+        PassBanner _pass;
+        UIKit.Segmented _sections;
+        RectTransform _categories;
+        readonly List<(Image plate, Image icon, Text label)> _chips = new List<(Image, Image, Text)>();
         RectTransform _list;
         ScrollRect _scroll;
-        int _tab = 1;
+        int _section;
+        int _category;
         bool _busy;
         int _request;
-        readonly System.Random _rng = new System.Random();
-        /// <summary>A wheel is turning: no other spin until it stops.</summary>
-        bool _spinning;
-        /// <summary>Last outcome of each wheel, kept across rebuilds of the tab.</summary>
-        readonly Dictionary<string, string> _wheelNote = new Dictionary<string, string>();
-        /// <summary>Where each wheel stopped, so a rebuilt tab shows it still on its last prize.</summary>
-        readonly Dictionary<string, float> _wheelAngle = new Dictionary<string, float>();
 
         protected override void Build()
         {
             UIKit.Backdrop(Root);
             Header("Boutique");
             var body = Body(190, 40, 40);
-            UIKit.Column(body, 20);
+            UIKit.Column(body, 16);
 
-            // The current outfit, the wallet and how to fill it.
-            var top = UIKit.Panel(body, "Outfit"); // noloc
-            top.raycastTarget = false;
-            UIKit.Size(top, 230);
-            var row = top.gameObject.AddComponent<HorizontalLayoutGroup>();
-            row.padding = new RectOffset(24, 30, 15, 15);
-            row.spacing = 24;
-            row.childAlignment = TextAnchor.MiddleLeft;
-            row.childControlWidth = row.childControlHeight = true;
-            row.childForceExpandWidth = row.childForceExpandHeight = false;
-            _outfit = UIKit.Image(top.transform, null, Color.white);
-            _outfit.preserveAspect = true;
-            UIKit.Size(_outfit, 200, 170);
-            var side = UIKit.Rect("Side", top.transform);
-            UIKit.Size(side, 200, 0, 1);
-            UIKit.Column(side, 10, 0, TextAnchor.MiddleLeft);
-            // Stars unlock the act collections, scarabs pay for them.
-            var wallet = UIKit.Row(side, 72, 14);
-            wallet.childAlignment = TextAnchor.MiddleLeft;
-            _stars = UIKit.Chip(wallet.transform, UIKit.Art.Star, "", null, 62);
-            _coins = UIKit.Chip(wallet.transform, UIKit.Art.Scarab, "", UIKit.Gold, 62);
-            _seals = UIKit.Chip(wallet.transform, UISprites.Seal, "", UIKit.Turquoise, 62);
-            _gold = UIKit.Chip(wallet.transform, UIKit.Art.GoldScarab, "", TreasureScreen.GoldColor, 62);
-            // The real-money side: golden scarabs, exclusives and the season pass.
-            var premium = UIKit.Row(side, 76, 14);
-            var treasure = UIKit.Button(premium.transform, "Trésor", () => Router.Open<TreasureScreen>(), 28, ButtonStyle.Primary);
-            UIKit.Size(treasure, -1, -1, 1);
-            var pass = UIKit.Button(premium.transform, "Pass de saison", () => Router.Open<PassScreen>(), 28);
-            UIKit.FitText(pass.GetComponentInChildren<Text>(), 16);
-            UIKit.Size(pass, -1, -1, 1);
+            // Wallet: stars unlock the act items, scarabs pay for them, seals buy the duel skins; golden scarabs open the Treasure.
+            var wallet = UIKit.Row(body, 68, 12);
+            wallet.childAlignment = TextAnchor.MiddleCenter;
+            _stars = UIKit.Chip(wallet.transform, UIKit.Art.Star, "", null, 64);
+            _coins = UIKit.Chip(wallet.transform, UIKit.Art.Scarab, "", UIKit.Gold, 64);
+            _seals = UIKit.Chip(wallet.transform, UISprites.Seal, "", UIKit.Turquoise, 64);
+            _gold = UIKit.Chip(wallet.transform, UIKit.Art.GoldScarab, "", TreasureScreen.GoldColor, 64);
+            var goldPlate = _gold.transform.parent;
+            var plus = UIKit.Image(goldPlate, UISprites.Plus, TreasureScreen.GoldColor, false, "Plus"); // noloc
+            UIKit.Size(plus, 30, 30);
+            goldPlate.GetComponent<Image>().raycastTarget = true;
+            goldPlate.gameObject.AddComponent<Button>().onClick.AddListener(() => Router.Open<TreasureScreen>());
+            goldPlate.gameObject.AddComponent<PressScale>();
 
-            _tabs = new UIKit.Segmented(body, Tabs, i => { _tab = i; Refresh(); _scroll.verticalNormalizedPosition = 1f; }, 80);
+            _pass = new PassBanner(body, 170, () => Router.Open<PassScreen>());
+            TreasureStrip(body);
+
+            _sections = new UIKit.Segmented(body, Sections, i =>
+            {
+                _section = i;
+                Refresh();
+                _scroll.verticalNormalizedPosition = 1f;
+            }, 88);
+
+            // The slot categories of the Skins section: large icon chips.
+            _categories = UIKit.Row(body, 112, 10).GetComponent<RectTransform>();
+            for (int i = 0; i < Categories.Length; i++) CategoryChip(i);
+
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 16;
         }
 
+        /// <summary>The way to the Treasure: golden scarabs and the exclusive skins.</summary>
+        void TreasureStrip(Transform parent)
+        {
+            var strip = UIKit.Plate(parent, Color.white, 26, new Color(1f, 0.85f, 0.4f, 0.6f), false, "Treasure"); // noloc
+            UIFx.Gradient(strip, new Color32(120, 86, 26, 255), new Color32(60, 40, 12, 255));
+            UIKit.Size(strip, 92);
+            strip.raycastTarget = true;
+            var btn = strip.gameObject.AddComponent<Button>();
+            btn.targetGraphic = strip;
+            btn.onClick.AddListener(() => { App.Audio.Play(Sfx.Click, 0f); Router.Open<TreasureScreen>(); });
+            strip.gameObject.AddComponent<PressScale>().Amount = 0.98f;
+            var inner = UIKit.Stretch(UIKit.Rect("Inner", strip.transform)); // noloc
+            UIFx.Shine(inner, 5.5f, 0.1f);
+            var row = inner.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.padding = new RectOffset(20, 26, 8, 8);
+            row.spacing = 16;
+            row.childAlignment = TextAnchor.MiddleLeft;
+            row.childControlWidth = row.childControlHeight = true;
+            row.childForceExpandWidth = row.childForceExpandHeight = false;
+            var icon = UIKit.Image(inner, UIKit.Art.GoldScarab, Color.white);
+            UIKit.Size(icon, 64, 64);
+            UIFx.Pulse(icon, 0.06f, 1.8f);
+            var text = UIKit.Label(inner, "", 28, new Color32(255, 236, 180, 255), TextAnchor.MiddleLeft, FontStyle.Bold);
+            text.text = Loc.T("Trésor") + "  <size=22><color=#E8D6A8>" + Loc.T("skins exclusifs et scarabées dorés") + "</color></size>"; // noloc
+            UIKit.FitText(text, 16);
+            UIKit.Size(text, -1, -1, 1);
+            UIKit.Size(UIKit.Image(inner, UISprites.Next, new Color(1f, 0.9f, 0.6f, 0.8f)), 36, 36);
+        }
+
+        void CategoryChip(int index)
+        {
+            var plate = UIKit.Plate(_categories, UIKit.SurfaceHi, 24, UIKit.Rim, false, "Category"); // noloc
+            UIKit.Size(plate, -1, 0, 1);
+            plate.raycastTarget = true;
+            var btn = plate.gameObject.AddComponent<Button>();
+            btn.targetGraphic = plate;
+            btn.onClick.AddListener(() =>
+            {
+                App.Audio.Play(Sfx.Click, 0f);
+                _category = index;
+                Refresh();
+                _scroll.verticalNormalizedPosition = 1f;
+            });
+            plate.gameObject.AddComponent<PressScale>();
+            var icon = UIKit.Image(plate.transform, CategoryIcon(Categories[index].slot), UIKit.Dim, false, "Icon"); // noloc
+            UIKit.Place(icon.rectTransform, 0.5f, 1f, 50, 50, 0, -12);
+            var label = UIKit.Label(plate.transform, Categories[index].name, 24, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(label, 14);
+            UIKit.BottomBand(label.rectTransform, 38, 8);
+            _chips.Add((plate, icon, label));
+        }
+
+        static Sprite CategoryIcon(CosmeticSlot slot)
+        {
+            switch (slot)
+            {
+                case CosmeticSlot.Color: return UISprites.Palette;
+                case CosmeticSlot.Torch: return UISprites.Torch;
+                case CosmeticSlot.Hat: return UISprites.Crown;
+                case CosmeticSlot.Shoes: return UISprites.Boot;
+                default: return UISprites.Mummy;
+            }
+        }
+
         public override void OnShow()
         {
             _busy = false;
-            _spinning = false; // a spin cut short by leaving the screen was already paid and cashed in
-            _tabs.Select(_tab);
+            _sections.Select(_section);
             Refresh();
             _scroll.verticalNormalizedPosition = 1f;
             LoadSeals();
         }
+
+        public override void OnHide() => App.PublishLookIfChanged();
 
         /// <summary>The seals and duel rewards live on the server: fetched once if the duel home was never opened.</summary>
         async void LoadSeals()
@@ -119,31 +180,47 @@ namespace MummyEscape.UI.Screens
             var pvp = App.PvpProfile?.Data;
             _seals.transform.parent.gameObject.SetActive(App.Pvp != null);
             _seals.text = (pvp?.Seals ?? 0).ToString();
-            MummyAnimator.Show(_outfit, App.Art, save.Loadout);
+            _pass.Refresh(App);
+
+            _categories.gameObject.SetActive(_section == SkinsSection);
+            for (int i = 0; i < _chips.Count; i++)
+            {
+                bool on = i == _category;
+                var (plate, icon, label) = _chips[i];
+                plate.color = on ? new Color32(84, 64, 30, 255) : UIKit.SurfaceHi;
+                var rim = plate.transform.Find("Rim")?.GetComponent<Image>();
+                if (rim != null) rim.color = on ? UIKit.Gold : UIKit.Rim;
+                icon.color = label.color = on ? UIKit.Gold : UIKit.Dim;
+            }
+
             UIKit.ClearChildren(_list);
             _note = null;
-            if (_tab == 0) { FillSets(); return; }
-            if (_tab == DuelTab) { FillDuel(pvp); return; }
-            if (_tab == CasinoTab) { FillCasino(pvp); return; }
+            _cardIndex = 0;
+            if (_section == SetsSection) { FillSets(); return; }
+            if (_section == SealsSection) { FillSeals(pvp); return; }
 
-            // One continuous grid, classics first then act after act (each card wears its act's tag):
-            // per-act sections would leave a single card per row.
-            var items = new List<SkinDef>(SkinCatalog.InSlot(TabSlots[_tab]));
+            var slot = Categories[_category].slot;
+            // One continuous grid, classics first then act after act (each card wears its act's tag).
+            var items = new List<SkinDef>(SkinCatalog.InSlot(slot));
             items.Sort((a, b) => a.Theme != b.Theme ? a.Theme.CompareTo(b.Theme) : a.Price.CompareTo(b.Price));
-            // Duel rewards the player owns come last, ready to wear (they are never sold here).
-            items.AddRange(PvpSkins.Owned(save.Data.OwnedSkins, TabSlots[_tab]));
-            // So do the casino's legendaries.
-            if (TabSlots[_tab] == CosmeticSlot.Color) items.AddRange(LegendarySkins.OwnedScarabLegendaries(save.Data.OwnedSkins));
-            // And the treasure exclusives and pass rewards.
+            // Duel rewards, casino legendaries, treasure exclusives and pass rewards the player owns come last, ready to wear.
+            items.AddRange(PvpSkins.Owned(save.Data.OwnedSkins, slot));
+            if (slot == CosmeticSlot.Color) items.AddRange(LegendarySkins.OwnedScarabLegendaries(save.Data.OwnedSkins));
             foreach (var s in Monetization.PremiumSkins.All)
-                if (s.Slot == TabSlots[_tab] && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
-            for (int i = 0; i < items.Count; i += Columns)
+                if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
+            Grid(items.Count, (parent, i) => ItemCard(parent, items[i]));
+        }
+
+        /// <summary>Rows of <see cref="Columns"/> cards, each popping in shortly after the previous one.</summary>
+        void Grid(int count, Action<Transform, int> card)
+        {
+            for (int i = 0; i < count; i += Columns)
             {
                 var cards = UIKit.Row(_list, CardHeight, 14);
                 for (int k = 0; k < Columns; k++)
                 {
                     // Every column gets the same share of the width, whatever the names in it.
-                    if (i + k < items.Count) ItemCard(cards.transform, items[i + k]);
+                    if (i + k < count) card(cards.transform, i + k);
                     else UIKit.Size(UIKit.Rect("Spacer", cards.transform), -1, 0, 1);
                 }
             }
@@ -153,6 +230,76 @@ namespace MummyEscape.UI.Screens
 
         static Color ThemeColor(int act) => Color.Lerp(TombTheme.ForAct(act).Accent, UIKit.Sand, 0.25f);
 
+        static (string tag, Color color) TagOf(SkinDef item)
+        {
+            if (item.Legendary) return (Loc.T("Légendaire"), LegendaryColor);
+            if (item.Badge != null) return (Loc.T(item.Badge), TreasureScreen.GoldColor);
+            if (item.Pvp) return (Loc.T("Duel"), UIKit.Turquoise);
+            if (item.Theme == 0) return (Loc.T("Classique"), new Color32(200, 186, 160, 255));
+            return (Loc.F("Acte {0}", item.Theme), ThemeColor(item.Theme));
+        }
+
+        static string Origin(SkinDef item)
+        {
+            if (item.Legendary) return Loc.T("Exclusivité du casino ou du pass : bandages animés.");
+            if (item.Badge != null) return Loc.T("Exclusivité du Trésor et du Pass de saison.");
+            if (item.Pvp) return Loc.T("Récompense des duels.");
+            if (item.Theme == 0) return Loc.T("Pièce classique, toujours en vente.");
+            return Loc.F("Collection de l'{0}.", ThemeName(item.Theme));
+        }
+
+        // ------------------------------------------------------------------ cards
+
+        /// <summary>
+        /// A shop card: tag, the item on a glow, its name, and a footer with its price or state. The whole card opens the zoom.
+        /// </summary>
+        Image Card(Transform parent, SkinDef item, string tag, Color tagColor, bool worn, bool locked, Sprite priceIcon, string price, Color priceColor, Action onTap)
+        {
+            var card = UIKit.Plate(parent, Color.white, 28, worn ? WornRim : new Color(tagColor.r, tagColor.g, tagColor.b, 0.4f), false, item.Id);
+            UIFx.Gradient(card, worn ? (Color)new Color32(40, 112, 102, 255) : new Color32(64, 51, 39, 255),
+                                worn ? (Color)new Color32(22, 66, 60, 255) : new Color32(36, 28, 21, 255));
+            UIKit.Size(card, -1, 0, 1);
+            card.raycastTarget = true;
+            var btn = card.gameObject.AddComponent<Button>();
+            btn.targetGraphic = card;
+            btn.onClick.AddListener(() => { App.Audio.Play(Sfx.Click, 0f); onTap(); });
+            card.gameObject.AddComponent<PressScale>();
+            UIKit.Column(card.transform, 4, 14, TextAnchor.MiddleCenter);
+
+            var tagText = UIKit.Label(card.transform, tag.ToUpperInvariant(), 20, tagColor, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(tagText, 14);
+            UIKit.Size(tagText, 28, 0);
+
+            var stage = UIKit.Rect("Stage", card.transform); // noloc
+            UIKit.Size(stage, 180, 0, -1, 1);
+            UIFx.Halo(stage, new Color(tagColor.r, tagColor.g, tagColor.b, item.Legendary ? 0.55f : 0.3f), 260);
+            var preview = ItemPreview.Create(stage, item);
+            UIKit.Stretch(preview.rectTransform, 10, 6, 10, 6);
+            if (locked) Lock(preview, 64);
+
+            var name = UIKit.Label(card.transform, item.Name, 24, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(name, 15);
+            UIKit.Size(name, 58, 0);
+
+            // Footer pill: price with its currency, or the state.
+            var pill = UIKit.Plate(card.transform, worn ? new Color(0, 0, 0, 0.25f) : new Color(0, 0, 0, 0.45f), 24, null, false, "Price"); // noloc
+            UIKit.Size(pill, 52, 0);
+            var h = pill.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.padding = new RectOffset(12, 12, 6, 6);
+            h.spacing = 8;
+            h.childAlignment = TextAnchor.MiddleCenter;
+            h.childControlWidth = h.childControlHeight = true;
+            h.childForceExpandWidth = h.childForceExpandHeight = false;
+            if (priceIcon != null) UIKit.Size(UIKit.Image(pill.transform, priceIcon, worn ? UIKit.Turquoise : Color.white), 36, 36);
+            var priceText = UIKit.Label(pill.transform, "", 24, priceColor, TextAnchor.MiddleCenter, FontStyle.Bold);
+            priceText.text = price;
+            priceText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            UIKit.Size(priceText, 40);
+            return card;
+        }
+
+        int _cardIndex;
+
         void ItemCard(Transform parent, SkinDef item)
         {
             var save = App.Save;
@@ -160,31 +307,24 @@ namespace MummyEscape.UI.Screens
             bool worn = save.IsWorn(item.Id);
             bool locked = !owned && save.TotalStars < item.MinStars;
             bool affordable = !locked && save.Data.Coins >= item.Price;
+            var (tag, color) = TagOf(item);
 
-            var card = UIKit.Plate(parent, worn ? WornFill : UIKit.SurfaceHi, 28, worn ? WornRim : UIKit.Rim, false, item.Id);
-            UIKit.Size(card, -1, 0, 1);
-            UIKit.Column(card.transform, 2, 12, TextAnchor.MiddleCenter);
-            var tag = UIKit.Label(card.transform, item.Legendary ? Loc.T("Légendaire").ToUpperInvariant()
-                                  : item.Badge != null ? Loc.T(item.Badge).ToUpperInvariant()
-                                  : item.Pvp ? Loc.T("Duel").ToUpperInvariant() : item.Theme == 0 ? Loc.T("Classique") : Loc.F("Acte {0}", item.Theme).ToUpperInvariant(), 20,
-                                  item.Legendary ? LegendaryColor : item.Badge != null ? TreasureScreen.GoldColor
-                                  : item.Pvp ? UIKit.Turquoise : item.Theme == 0 ? UIKit.Dim : ThemeColor(item.Theme), TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.FitText(tag, 14);
-            UIKit.Size(tag, 28, 0);
-            var preview = ItemPreview.Create(card.transform, item);
-            UIKit.Size(preview, 150, 0);
-            if (locked) Lock(preview, 64);
-            var name = UIKit.Label(card.transform, item.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.FitText(name, 15);
-            UIKit.Size(name, 58, 0);
+            Sprite icon; string price; Color priceColor;
+            if (worn) { icon = UISprites.Check; price = Loc.T("Équipé"); priceColor = UIKit.Turquoise; }
+            else if (owned) { icon = null; price = Loc.T("Possédé"); priceColor = UIKit.Sand; }
+            else if (locked) { icon = UIKit.Art.Star; price = item.MinStars.ToString(); priceColor = UIKit.Dim; }
+            else { icon = UIKit.Art.Scarab; price = item.Price.ToString(); priceColor = affordable ? UIKit.Gold : UIKit.Danger; }
 
-            string label = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper")
-                         : locked ? Loc.F("{0} étoiles requises", item.MinStars) : Loc.F("{0} scarabées", item.Price);
-            var btn = UIKit.Button(card.transform, label, () => OnItem(item), 22,
-                                   !worn && (owned || affordable) ? ButtonStyle.Primary : ButtonStyle.Secondary);
-            btn.interactable = !worn && (owned || affordable);
-            UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
-            UIKit.Size(btn, 66, 0);
+            var card = Card(parent, item, tag, color, worn, locked, icon, price, priceColor, () =>
+            {
+                string action = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper")
+                              : locked ? Loc.F("{0} étoiles requises", item.MinStars)
+                              : affordable ? Loc.F("Acheter · {0} scarabées", item.Price) : Loc.F("Il te faut {0} scarabées", item.Price);
+                string detail = Origin(item) + (locked ? "\n" + Loc.F("Débloqué à {0} étoiles (tu en as {1}).", item.MinStars, save.TotalStars) : "");
+                Router.Open<ItemZoomScreen>().Show(item, tag, color, detail, action,
+                    !worn && (owned || affordable) ? () => OnItem(item) : (Action)null);
+            });
+            UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
         }
 
         /// <summary>Greys out a preview and puts a padlock over it (not enough stars yet).</summary>
@@ -208,13 +348,13 @@ namespace MummyEscape.UI.Screens
             Refresh();
         }
 
-        /// <summary>One wide card per act: the whole collection worn, bought at once for less, or put on in one tap.</summary>
+        // ------------------------------------------------------------------ collections
+
+        /// <summary>One wide card per act: the collection on a mummy, its pieces, bought at once for less or put on in one tap.</summary>
         void FillSets()
         {
             var save = App.Save;
-            var intro = UIKit.Label(_list, "Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (25 par acte). L'ensemble complet coûte 20 % de moins.", 26, UIKit.Dim);
-            UIKit.FitText(intro, 18);
-            UIKit.Size(intro, 84);
+            Intro("Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (25 par acte). L'ensemble complet coûte 20 % de moins.");
             for (int act = 1; act <= DifficultyTable.ActCount; act++)
             {
                 var set = SkinCatalog.ThemeSet(act);
@@ -231,31 +371,53 @@ namespace MummyEscape.UI.Screens
                 int minStars = act * SkinCatalog.StarsPerTheme;
                 bool locked = missingPrice > 0 && save.TotalStars < minStars;
                 bool affordable = !locked && save.Data.Coins >= price;
+                var accent = ThemeColor(act);
+                var theme = TombTheme.ForAct(act);
 
-                var card = UIKit.Plate(_list, worn ? WornFill : UIKit.SurfaceHi, 28, worn ? WornRim : UIKit.Rim, false, "Set" + act); // noloc
-                UIKit.Size(card, 280);
+                var card = UIKit.Plate(_list, Color.white, 30, worn ? WornRim : new Color(accent.r, accent.g, accent.b, 0.5f), false, "Set" + act); // noloc
+                UIFx.Gradient(card, Color.Lerp(theme.Wall, Color.black, 0.2f), Color.Lerp(theme.FloorDark, Color.black, 0.55f));
+                UIKit.Size(card, 300);
                 var row = card.gameObject.AddComponent<HorizontalLayoutGroup>();
-                row.padding = new RectOffset(20, 26, 18, 18);
-                row.spacing = 20;
+                row.padding = new RectOffset(16, 26, 18, 18);
+                row.spacing = 18;
                 row.childAlignment = TextAnchor.MiddleLeft;
                 row.childControlWidth = row.childControlHeight = true;
                 row.childForceExpandWidth = row.childForceExpandHeight = false;
 
-                var preview = Portrait(card.transform, look);
-                UIKit.Size(preview, 230, 190);
+                var stage = UIKit.Rect("Stage", card.transform); // noloc
+                UIKit.Size(stage, 260, 230);
+                UIFx.Halo(stage, new Color(accent.r, accent.g, accent.b, 0.45f), 320);
+                var preview = UIKit.Image(stage, null, Color.white);
+                preview.preserveAspect = true;
+                UIKit.Stretch(preview.rectTransform);
+                MummyAnimator.Show(preview, App.Art, look);
                 if (locked) Lock(preview, 80);
-                var info = UIKit.Rect("Info", card.transform);
+
+                var info = UIKit.Rect("Info", card.transform); // noloc
                 UIKit.Size(info, -1, 0, 1);
                 UIKit.Column(info, 6, 0, TextAnchor.MiddleLeft);
-
-                var title = UIKit.Label(info, ThemeName(act), 30, ThemeColor(act), TextAnchor.MiddleLeft, FontStyle.Bold);
+                var title = UIKit.Label(info, ThemeName(act), 30, accent, TextAnchor.MiddleLeft, FontStyle.Bold);
                 UIKit.FitText(title, 18);
-                UIKit.Size(title, 48);
-                var names = new List<string>();
-                foreach (var s in set) names.Add(Loc.T(s.Name));
-                var pieces = UIKit.Label(info, string.Join(" · ", names), 22, UIKit.Dim, TextAnchor.MiddleLeft);
-                UIKit.FitText(pieces, 16);
-                UIKit.Size(pieces, 76);
+                UIKit.Size(title, 46);
+
+                // The pieces, each on its own.
+                var pieces = UIKit.Row(info, 76, 8);
+                pieces.childAlignment = TextAnchor.MiddleLeft;
+                foreach (var s in set)
+                {
+                    bool has = save.Data.OwnedSkins.Contains(s.Id);
+                    var chip = UIKit.Plate(pieces.transform, new Color(0, 0, 0, has ? 0.25f : 0.45f), 16, has ? (Color?)WornRim : null, false, s.Id);
+                    UIKit.Size(chip, 76, 76);
+                    var icon = ItemPreview.Create(chip.transform, s);
+                    UIKit.Stretch(icon.rectTransform, 6, 6, 6, 6);
+                    var piece = s;
+                    chip.raycastTarget = true;
+                    chip.gameObject.AddComponent<Button>().onClick.AddListener(() =>
+                    {
+                        var (tag, color) = TagOf(piece);
+                        Router.Open<ItemZoomScreen>().Show(piece, tag, color, Origin(piece), Loc.T("Fermer"), () => { });
+                    });
+                }
 
                 int a = act;
                 string label = worn ? Loc.T("Équipé") : missingPrice == 0 ? Loc.T("Tout équiper")
@@ -264,7 +426,8 @@ namespace MummyEscape.UI.Screens
                 var btn = UIKit.Button(info, label, () => OnSet(a, price), 26, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);
                 btn.interactable = usable;
                 UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
-                UIKit.Size(btn, 76);
+                UIKit.Size(btn, 78);
+                UIFx.PopIn(card, (act - 1) * 0.06f, 0.94f);
             }
         }
 
@@ -283,15 +446,22 @@ namespace MummyEscape.UI.Screens
             Refresh();
         }
 
+        void Intro(string text)
+        {
+            var intro = UIKit.Label(_list, text, 26, UIKit.Dim);
+            UIKit.FitText(intro, 18);
+            UIKit.Size(intro, 84);
+        }
+
+        // ------------------------------------------------------------------ seals
+
         /// <summary>
         /// Maât's seal shop: skins bought with seals (first win of the day, daily chest), each from a league up.
         /// The purchase goes through the server, which holds the seals.
         /// </summary>
-        void FillDuel(PlayerPvpData d)
+        void FillSeals(PlayerPvpData d)
         {
-            var intro = UIKit.Label(_list, "Les sceaux de Maât se gagnent en duel (1re victoire du jour, coffre quotidien). Chaque article demande d'avoir atteint sa ligue.", 26, UIKit.Dim);
-            UIKit.FitText(intro, 18);
-            UIKit.Size(intro, 84);
+            Intro("Les sceaux de Maât se gagnent en duel (1re victoire du jour, coffre quotidien). Chaque article demande d'avoir atteint sa ligue.");
             _note = UIKit.Label(_list, "", 26, UIKit.Sand);
             UIKit.FitText(_note, 18);
             UIKit.Size(_note, 44);
@@ -304,15 +474,7 @@ namespace MummyEscape.UI.Screens
                 var def = PvpSkins.ShopItem(item.Id);
                 if (def != null) items.Add((item, def));
             }
-            for (int i = 0; i < items.Count; i += Columns)
-            {
-                var cards = UIKit.Row(_list, CardHeight, 14);
-                for (int k = 0; k < Columns; k++)
-                {
-                    if (i + k < items.Count) SealCard(cards.transform, items[i + k].item, items[i + k].def, d);
-                    else UIKit.Size(UIKit.Rect("Spacer", cards.transform), -1, 0, 1);
-                }
-            }
+            Grid(items.Count, (parent, i) => SealCard(parent, items[i].item, items[i].def, d));
         }
 
         void SealCard(Transform parent, SealItem item, SkinDef def, PlayerPvpData d)
@@ -322,28 +484,24 @@ namespace MummyEscape.UI.Screens
             bool worn = save.IsWorn(item.Id);
             bool leagueOk = d != null && d.HighestLeague >= item.MinLeague;
             bool affordable = leagueOk && d.Seals >= item.Price;
+            string tag = Loc.F("Ligue {0}", Loc.T(PvpSkins.LeagueName(item.MinLeague)));
+            var color = owned || leagueOk ? PvpSkins.LeagueColor(item.MinLeague) : UIKit.Danger;
 
-            var card = UIKit.Plate(parent, worn ? WornFill : UIKit.SurfaceHi, 28, worn ? WornRim : UIKit.Rim, false, item.Id);
-            UIKit.Size(card, -1, 0, 1);
-            UIKit.Column(card.transform, 2, 12, TextAnchor.MiddleCenter);
-            var tag = UIKit.Label(card.transform, Loc.F("Ligue {0}", Loc.T(PvpSkins.LeagueName(item.MinLeague))).ToUpperInvariant(), 20,
-                                  owned || leagueOk ? PvpSkins.LeagueColor(item.MinLeague) : UIKit.Danger, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.FitText(tag, 14);
-            UIKit.Size(tag, 28, 0);
-            var preview = ItemPreview.Create(card.transform, def);
-            UIKit.Size(preview, 150, 0);
-            if (!owned && !leagueOk) Lock(preview, 64);
-            var name = UIKit.Label(card.transform, def.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.FitText(name, 15);
-            UIKit.Size(name, 58, 0);
+            Sprite icon; string price; Color priceColor;
+            if (worn) { icon = UISprites.Check; price = Loc.T("Équipé"); priceColor = UIKit.Turquoise; }
+            else if (owned) { icon = null; price = Loc.T("Possédé"); priceColor = UIKit.Sand; }
+            else { icon = UISprites.Seal; price = item.Price.ToString(); priceColor = affordable ? UIKit.Turquoise : UIKit.Danger; }
 
-            string label = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("{0} sceaux", item.Price);
-            bool usable = !_busy && !worn && (owned || affordable);
             string id = item.Id;
-            var btn = UIKit.Button(card.transform, label, () => OnSealItem(id, owned), 22, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);
-            btn.interactable = usable;
-            UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
-            UIKit.Size(btn, 66, 0);
+            var card = Card(parent, def, tag, color, worn, !owned && !leagueOk, icon, price, priceColor, () =>
+            {
+                string action = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper")
+                              : !leagueOk ? Loc.F("Ligue {0} requise", Loc.T(PvpSkins.LeagueName(item.MinLeague)))
+                              : affordable ? Loc.F("Acheter · {0} sceaux", item.Price) : Loc.F("Il te faut {0} sceaux", item.Price);
+                Router.Open<ItemZoomScreen>().Show(def, tag, color, Loc.T("Boutique des sceaux de Maât : les skins des ligues de duel."), action,
+                    !_busy && !worn && (owned || affordable) ? () => OnSealItem(id, owned) : (Action)null);
+            });
+            UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
         }
 
         async void OnSealItem(string id, bool owned)
@@ -373,242 +531,6 @@ namespace MummyEscape.UI.Screens
             else note = PvpScreen.ErrorText(r?.Error);
             Refresh();
             if (_note != null) _note.text = note;
-        }
-
-        /// <summary>A mummy preview; legendary colours play their animation.</summary>
-        Image Portrait(Transform parent, Loadout look)
-        {
-            var img = UIKit.Image(parent, null, Color.white);
-            MummyAnimator.Show(img, App.Art, look);
-            return img;
-        }
-
-        // ------------------------------------------------------------------ casino
-
-        /// <summary>
-        /// The casino: two wheels, one paid in scarabs (drawn here, the scarabs live in the save), one in seals (drawn by
-        /// the server). Each turn has a 0.5 % chance of an exclusive animated legendary colour; the odds are shown in full.
-        /// </summary>
-        void FillCasino(PlayerPvpData d)
-        {
-            var intro = UIKit.Label(_list, "Chaque tour de roue a 0,5 % de chance de donner un skin LÉGENDAIRE animé, introuvable ailleurs. Les autres cases rendent des scarabées ou des sceaux.", 26, UIKit.Dim);
-            UIKit.FitText(intro, 18);
-            UIKit.Size(intro, 84);
-            WheelCard(Casino.Scarabs, false, d);
-            WheelCard(Casino.Seals, true, d);
-        }
-
-        void WheelCard(WheelDef wheel, bool seals, PlayerPvpData d)
-        {
-            var save = App.Save;
-            var card = UIKit.Plate(_list, UIKit.SurfaceHi, 28, UIKit.Rim, false, "Wheel " + wheel.Id); // noloc
-            UIKit.Size(card, 1150);
-            UIKit.Column(card.transform, 14, 24, TextAnchor.UpperCenter);
-
-            var title = UIKit.Title(card.transform, seals ? "Roue des sceaux" : "Roue des scarabées", 48, seals ? UIKit.Turquoise : UIKit.Gold);
-            UIKit.FitText(title, 28);
-            UIKit.Size(title, 64);
-
-            var holder = UIKit.Rect("Holder", card.transform); // noloc
-            UIKit.Size(holder, WheelSize + 20);
-            var disc = UIKit.Place(UIKit.Rect("Disc", holder), 0.5f, 0.5f, WheelSize, WheelSize); // noloc
-            BuildWheel(disc, wheel, seals);
-            if (_wheelAngle.TryGetValue(wheel.Id, out float angle)) disc.localRotation = Quaternion.Euler(0, 0, angle);
-            var pointer = UIKit.Image(holder, UIKit.Art.White, UIKit.Danger, false, "Pointer"); // noloc
-            UIKit.Place(pointer.rectTransform, 0.5f, 1f, 46, 46, 0, -16);
-            pointer.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
-            UIKit.DropShadow(pointer, 4, 0.5f);
-
-            // The legendaries of this wheel, worn by the player's mummy (a check on those already won).
-            var row = UIKit.Row(card.transform, 150, 6);
-            var owned = seals ? (ICollection<string>)(d?.UnlockedRewards ?? new List<string>()) : save.Data.OwnedSkins;
-            foreach (var id in wheel.Legendaries)
-            {
-                var def = SkinCatalog.Get(id);
-                var slot = UIKit.Rect(id, row.transform);
-                UIKit.Size(slot, 150, -1, 1); // an empty rect: without a height the row would give it none
-                var preview = ItemPreview.Create(slot, def);
-                preview.preserveAspect = true;
-                UIKit.Stretch(preview.rectTransform);
-                if (owned.Contains(id) || save.Data.OwnedSkins.Contains(id))
-                {
-                    var check = UIKit.Image(slot, UISprites.Check, UIKit.Success, false, "Owned"); // noloc
-                    UIKit.Place(check.rectTransform, 1f, 0f, 40, 40, -20, 20);
-                }
-            }
-            var names = new List<string>();
-            foreach (var id in wheel.Legendaries) names.Add(Loc.T(SkinCatalog.Get(id).Name));
-            var legend = UIKit.Label(card.transform, string.Join(" · ", names), 22, LegendaryColor, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.FitText(legend, 14);
-            UIKit.Size(legend, 60);
-
-            var odds = UIKit.Label(card.transform, OddsText(wheel, seals), 22, UIKit.Dim);
-            UIKit.FitText(odds, 14);
-            UIKit.Size(odds, 70);
-
-            bool online = !seals || App.Pvp != null;
-            bool can = !_spinning && online && (seals ? d != null && d.Seals >= wheel.Price : save.Data.Coins >= wheel.Price);
-            string label = !online ? Loc.T("Duels hors ligne")
-                         : seals ? Loc.F("Lancer · {0} sceaux", wheel.Price) : Loc.F("Lancer · {0} scarabées", wheel.Price);
-            var result = UIKit.Label(card.transform, "", 30, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
-            Button btn = null;
-            btn = UIKit.Button(card.transform, label, () => OnSpin(wheel, seals, disc, result, btn), 36, can ? ButtonStyle.Primary : ButtonStyle.Secondary);
-            btn.interactable = can;
-            UIKit.Rounded(btn.image, 50);
-            UIKit.Size(btn, 104);
-            result.transform.SetAsLastSibling();
-            UIKit.FitText(result, 18);
-            UIKit.Size(result, 56);
-            _wheelNote.TryGetValue(wheel.Id, out var note);
-            result.text = note ?? "";
-        }
-
-        /// <summary>Equal wedges clockwise from the top, the legendary one in pink; a hub with the wheel's currency.</summary>
-        void BuildWheel(RectTransform disc, WheelDef wheel, bool seals)
-        {
-            int n = wheel.Segments.Length;
-            float step = 360f / n;
-            var rim = UIKit.Image(disc, UISprites.Circle, UIKit.Gold, false, "Rim"); // noloc
-            UIKit.Stretch(rim.rectTransform, -10, -10, -10, -10);
-            for (int i = 0; i < n; i++)
-            {
-                var seg = wheel.Segments[i];
-                var wedge = UIKit.Image(disc, UISprites.Circle, WedgeColor(seg, i), false, "Wedge" + i); // noloc
-                UIKit.Stretch(wedge.rectTransform);
-                wedge.type = Image.Type.Filled;
-                wedge.fillMethod = Image.FillMethod.Radial360;
-                wedge.fillOrigin = (int)Image.Origin360.Top;
-                wedge.fillClockwise = true;
-                wedge.fillAmount = 1f / n;
-                wedge.rectTransform.localRotation = Quaternion.Euler(0, 0, -i * step);
-
-                // The label sits along the wedge's middle, reading from the rim.
-                var arm = UIKit.Rect("Arm" + i, disc); // noloc
-                UIKit.Stretch(arm);
-                arm.localRotation = Quaternion.Euler(0, 0, -(i + 0.5f) * step);
-                string text = seg.Kind == PrizeKind.Legendary ? Loc.T("LÉGENDE") : seg.Kind == PrizeKind.Nothing ? Loc.T("Rien") : "+" + seg.Amount;
-                var label = UIKit.Label(arm, text, seg.Kind == PrizeKind.Legendary ? 30 : 38, seg.Kind == PrizeKind.Legendary ? Color.white : UIKit.Sand,
-                                        TextAnchor.MiddleCenter, FontStyle.Bold);
-                UIKit.Place(label.rectTransform, 0.5f, 0.5f, 170, 56, 0, WheelSize * 0.33f);
-                UIKit.DropShadow(label, 3, 0.6f);
-            }
-            var hub = UIKit.Image(disc, UISprites.Circle, UIKit.Surface, false, "Hub"); // noloc
-            UIKit.Place(hub.rectTransform, 0.5f, 0.5f, 150, 150);
-            var icon = UIKit.Image(hub.transform, seals ? UISprites.Seal : UIKit.Art.Scarab, seals ? UIKit.Turquoise : UIKit.Gold, false, "Icon"); // noloc
-            icon.preserveAspect = true;
-            UIKit.Place(icon.rectTransform, 0.5f, 0.5f, 92, 92);
-        }
-
-        static Color WedgeColor(WheelSegment seg, int i)
-        {
-            if (seg.Kind == PrizeKind.Legendary) return LegendaryColor;
-            if (seg.Kind == PrizeKind.Nothing) return new Color32(40, 30, 24, 255);
-            if (seg.Amount >= 250) return new Color32(196, 150, 50, 255);
-            return i % 2 == 0 ? new Color32(96, 70, 44, 255) : new Color32(132, 98, 58, 255);
-        }
-
-        static string OddsText(WheelDef wheel, bool seals)
-        {
-            var parts = new List<string>();
-            foreach (var seg in wheel.Segments)
-            {
-                string what = seg.Kind == PrizeKind.Legendary ? Loc.T("légendaire")
-                            : seg.Kind == PrizeKind.Nothing ? Loc.T("rien") : "+" + seg.Amount;
-                parts.Add($"{what} {Percent(seg.Weight)}"); // noloc
-            }
-            return Loc.T("Chances :") + " " + string.Join(" · ", parts);
-        }
-
-        static string Percent(int weight)
-        {
-            string s = (weight * 100f / Casino.WeightTotal).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-            return (Loc.Current == Loc.Lang.En ? s : s.Replace('.', ',')) + " %"; // noloc
-        }
-
-        void OnSpin(WheelDef wheel, bool seals, RectTransform disc, Text result, Button btn)
-        {
-            if (_spinning) return;
-            if (seals) { SpinSeals(wheel, disc, result, btn); return; }
-            var r = App.Save.SpinScarabWheel(_rng);
-            if (r == null) return;
-            _spinning = true;
-            btn.interactable = false;
-            result.text = "";
-            // The price leaves the wallet now, the prize lands when the wheel stops.
-            _coins.text = (App.Save.Data.Coins - (r.Kind == PrizeKind.Currency ? r.Amount : 0)).ToString();
-            StartCoroutine(Turn(disc, wheel, r, () => Landed(wheel, r, false)));
-        }
-
-        async void SpinSeals(WheelDef wheel, RectTransform disc, Text result, Button btn)
-        {
-            if (App.Pvp == null) return;
-            _spinning = true;
-            btn.interactable = false;
-            result.text = "";
-            var r = await App.Pvp.SpinSealWheelAsync();
-            if (this == null) return;
-            if (r == null || !r.Ok || r.Result == null)
-            {
-                _spinning = false;
-                _wheelNote[wheel.Id] = PvpScreen.ErrorText(r?.Error);
-                Refresh();
-                return;
-            }
-            App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
-            if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
-            _seals.text = (r.Seals - (r.Result.Kind == PrizeKind.Currency ? r.Result.Amount : 0)).ToString();
-            StartCoroutine(Turn(disc, wheel, r.Result, () => Landed(wheel, r.Result, true)));
-        }
-
-        /// <summary>Spins the disc several turns and slows it down onto the drawn wedge, ticking at every wedge.</summary>
-        System.Collections.IEnumerator Turn(RectTransform disc, WheelDef wheel, SpinResult r, System.Action done)
-        {
-            float step = 360f / wheel.Segments.Length;
-            float start = disc != null ? disc.localEulerAngles.z : 0f;
-            float target = (r.Segment + 0.5f + Random.Range(-0.35f, 0.35f)) * step;
-            float end = start - Mathf.Repeat(start, 360f) + 360f * 6f + target;
-            int lastTick = (int)(start / step);
-            for (float t = 0f; t < SpinSeconds; t += Time.unscaledDeltaTime)
-            {
-                if (disc == null) break; // the tab changed: the prize is already in
-                float k = 1f - Mathf.Pow(1f - t / SpinSeconds, 3f);
-                float z = Mathf.Lerp(start, end, k);
-                disc.localRotation = Quaternion.Euler(0, 0, z);
-                int tick = (int)(z / step);
-                if (tick != lastTick)
-                {
-                    lastTick = tick;
-                    App.Audio.Play(Sfx.Click);
-                }
-                yield return null;
-            }
-            if (disc != null) disc.localRotation = Quaternion.Euler(0, 0, end);
-            _wheelAngle[wheel.Id] = Mathf.Repeat(end, 360f);
-            done();
-        }
-
-        void Landed(WheelDef wheel, SpinResult r, bool seals)
-        {
-            _spinning = false;
-            string note;
-            if (r.Legendary != null)
-            {
-                // Wear it right away: that is what the player wants to see.
-                App.Save.GrantSkins(new[] { r.Legendary });
-                App.Save.SelectSkin(r.Legendary);
-                App.Audio.Play(Sfx.Win);
-                note = $"<color=#{ColorUtility.ToHtmlStringRGB(LegendaryColor)}>" + Loc.F("LÉGENDAIRE ! {0} est à toi !", Loc.T(SkinCatalog.Get(r.Legendary).Name)) + "</color>"; // noloc
-            }
-            else if (r.Kind == PrizeKind.Currency)
-            {
-                App.Audio.Play(Sfx.Coin);
-                bool jackpot = wheel.Segments[r.Segment].Kind == PrizeKind.Legendary;
-                note = jackpot ? Loc.F("Case légendaire ! Tu as déjà tous ses skins : +{0}", r.Amount)
-                     : seals ? Loc.F("+{0} sceaux", r.Amount) : Loc.F("+{0} scarabées", r.Amount);
-            }
-            else note = Loc.T("Pas de chance… retente !");
-            _wheelNote[wheel.Id] = note;
-            Refresh();
         }
     }
 }

@@ -87,6 +87,14 @@ namespace MummyEscape.UI.Screens
         public override bool IsModal => true;
         RectTransform _list;
         ScrollRect _scroll;
+        Action _picked;
+
+        /// <summary>Called once the player picked a country (the screen under this modal refreshes).</summary>
+        public CountryPickerScreen OnPicked(Action picked)
+        {
+            _picked = picked;
+            return this;
+        }
 
         protected override void Build()
         {
@@ -122,7 +130,9 @@ namespace MummyEscape.UI.Screens
         {
             App.SetCountry(code);
             Router.Close(this);
-            if (Router.Current is FriendsScreen friends) friends.OnShow();
+            var picked = _picked;
+            _picked = null;
+            picked?.Invoke();
         }
     }
 

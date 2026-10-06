@@ -374,12 +374,32 @@ namespace MummyEscape.App
             Online.Country = Save.Country;
         }
 
-        public ProgressSnapshot BuildProgressSnapshot() => new ProgressSnapshot
+        public ProgressSnapshot BuildProgressSnapshot()
         {
-            FurthestLevel = Save.FurthestUnlocked().ToString(),
-            TotalStars = Save.TotalStars,
-            Records = Save.Data.Records,
-        };
+            var look = Visual.PvpSkins.Look(Save.Loadout);
+            look.Title = TitleBook.Equipped(this);
+            var pvp = PvpProfile?.Data;
+            return new ProgressSnapshot
+            {
+                FurthestLevel = Save.FurthestUnlocked().ToString(),
+                TotalStars = Save.TotalStars,
+                Records = Save.Data.Records,
+                Look = look,
+                Elo = pvp != null && pvp.TotalDuels > 0 ? pvp.Elo : 0,
+            };
+        }
+
+        string _publishedLook;
+
+        /// <summary>Republishes the progression when the outfit or the title changed (friends see the new look).</summary>
+        public void PublishLookIfChanged()
+        {
+            var snapshot = BuildProgressSnapshot();
+            string key = JsonUtility.ToJson(snapshot.Look) + snapshot.Elo;
+            if (key == _publishedLook) return;
+            _publishedLook = key;
+            _ = PublishProgress();
+        }
 
         T Child<T>(string name) where T : Component
         {

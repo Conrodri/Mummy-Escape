@@ -28,6 +28,8 @@ namespace MummyEscape.Services
         public int WheelSpins;
         /// <summary>Country shown in the rankings (ISO alpha-2). Empty = detect from the device.</summary>
         public string Country = "";
+        /// <summary>The name and country were chosen at the first online connection (<see cref="UI.Screens.ProfileSetupScreen"/>).</summary>
+        public bool ProfileDone;
 
         // ---- Real-money economy (see Monetization): golden scarabs, daily game limits, season pass.
         /// <summary>Golden scarabs, bought in the store (10 € = 100) or earned on the pass.</summary>
@@ -124,6 +126,7 @@ namespace MummyEscape.Services
             Data.Coins = Math.Max(Data.Coins, other.Coins);
             foreach (var s in other.OwnedSkins) if (!Data.OwnedSkins.Contains(s)) Data.OwnedSkins.Add(s);
             if (string.IsNullOrEmpty(Data.Country)) Data.Country = other.Country ?? "";
+            Data.ProfileDone |= other.ProfileDone;
             MergeEconomy(other);
             bool changed = JsonUtility.ToJson(Data) != before;
             if (changed) Save();

@@ -9,7 +9,7 @@ namespace MummyEscape.UI.Screens
         public override NavTab Tab => NavTab.Home;
 
         Text _stars, _coins, _gold;
-        Button _pass;
+        PassBanner _pass;
         Image _mummy, _glow;
         RectTransform _stage;
         Text _online;
@@ -72,12 +72,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Rounded(playBtn.image, 62);
 
             // The season pass, with what is waiting to be collected.
-            var passRow = UIKit.Rect("PassRow", column);
-            UIKit.Size(passRow, 84);
-            _pass = UIKit.Button(passRow, "Pass", () => Router.Open<PassScreen>(), 30);
-            UIKit.Place((RectTransform)_pass.transform, 0.5f, 0.5f, 620, 84);
-            UIKit.Rounded(_pass.image, 42);
-            UIKit.FitText(_pass.GetComponentInChildren<Text>(), 18);
+            _pass = new PassBanner(column, 150, () => Router.Open<PassScreen>());
 
             // Duel, solo, rankings, friends and the shop are in the bottom bar (NavBar).
 
@@ -93,13 +88,12 @@ namespace MummyEscape.UI.Screens
             _stars.text = App.Save.TotalStars.ToString();
             _coins.text = App.Save.Data.Coins.ToString();
             _gold.text = App.Save.Gold.ToString();
-            int claimable = App.Save.ClaimableCount;
-            UIKit.SetLabel(_pass, Loc.F("Pass · palier {0}/{1}", App.Save.PassTier, Monetization.BattlePass.Tiers)
-                                  + (claimable > 0 ? "  ·  " + Loc.P(claimable, "{0} récompense", "{0} récompenses") : ""));
+            _pass.Refresh(App);
             MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)
                 : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName) : Loc.F("Invité : {0}", online.PlayerName);
+            if (ProfileSetupScreen.Needed(App)) Router.Open<ProfileSetupScreen>();
         }
 
         void Update()

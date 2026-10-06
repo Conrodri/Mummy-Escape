@@ -29,7 +29,7 @@ namespace MummyEscape.UI
                 return;
             }
             var animator = img.GetComponent<MummyAnimator>();
-            if (animator != null) Object.Destroy(animator);
+            if (animator != null) animator.enabled = false; // MummyAnimator.Show turns it back on
             img.sprite = art.ItemIcon(item);
         }
     }

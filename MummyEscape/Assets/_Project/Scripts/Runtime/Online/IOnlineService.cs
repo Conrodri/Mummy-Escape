@@ -51,6 +51,10 @@ namespace MummyEscape.Online
         public string FurthestLevel;
         public int TotalStars;
         public List<LevelRecord> Records = new List<LevelRecord>();
+        /// <summary>Outfit and title shown on the friends list (null in snapshots published before they existed).</summary>
+        public Pvp.PlayerLook Look;
+        /// <summary>Duel rating (0 = never played a duel).</summary>
+        public int Elo;
     }
 
     /// <summary>Offline = no session; Guest = anonymous player (tied to this install); Account = username + password.</summary>

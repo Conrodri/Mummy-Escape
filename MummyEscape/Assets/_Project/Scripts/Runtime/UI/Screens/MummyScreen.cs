@@ -75,6 +75,9 @@ namespace MummyEscape.UI.Screens
             OnShow();
         }
 
+        // Friends see the outfit and title chosen here.
+        public override void OnHide() => App.PublishLookIfChanged();
+
         public override void OnShow()
         {
             _tabs.Select(_tab);

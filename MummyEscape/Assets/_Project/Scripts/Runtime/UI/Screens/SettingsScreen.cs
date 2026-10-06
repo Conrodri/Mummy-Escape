@@ -45,10 +45,25 @@ namespace MummyEscape.UI.Screens
             var row = UIKit.Row(comfort, UIKit.ButtonHeight, 20);
             UIKit.Size(UIKit.Button(row.transform, "Mon compte", () => Router.Open<AccountScreen>()), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Confidentialité", () => Router.Open<PrivacyScreen>()), -1, -1, 1);
+#if !UNITY_IOS
+            // Apple's guidelines discourage quit buttons; on iOS the home gesture closes the app.
+            UIKit.Size(UIKit.Button(comfort, "Quitter le jeu", AskQuit, UIKit.TextSize, ButtonStyle.Danger), UIKit.ButtonHeight);
+#endif
 
             var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · " + Loc.F("générateur v{0}", Core.DifficultyTable.GeneratorVersion), 28, UIKit.Dim); // noloc
             UIKit.BottomBand(version.rectTransform, 50, 30);
         }
+
+        void AskQuit() =>
+            Router.Open<ConfirmDialog>().Configure("Quitter Mummy Escape ?", "Ta progression est enregistrée.", "Quitter", () =>
+            {
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#else
+                Application.Quit();
+#endif
+                return System.Threading.Tasks.Task.FromResult<string>(null);
+            });
 
         /// <summary>"Langue : Français", or "Langue : automatique (English)" when following the device.</summary>
         public void RefreshLanguage()
