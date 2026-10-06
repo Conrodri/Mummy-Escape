@@ -154,6 +154,8 @@ namespace MummyEscape.UI.Screens
         public SimulatedStore(UIRouter router) => _router = router;
         public bool IsReady => true;
         public string LocalizedPrice(string productId) => null;
+        public System.Collections.Generic.IReadOnlyList<UnfinishedPurchase> Unfinished => System.Array.Empty<UnfinishedPurchase>();
+        public void Finish(string transactionId) { }
 
         public Task<PurchaseOutcome> BuyAsync(string productId)
         {

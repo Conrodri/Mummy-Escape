@@ -37,7 +37,29 @@ namespace MummyEscape.Monetization
             return r == null ? "NETWORK" : r.Error; // noloc
         }
 
-        public static Task RefreshAsync(GameApp app) => Available(app) ? RunAsync(app, p => p.GetWalletAsync()) : Task.CompletedTask;
+        /// <summary>Credits a paid purchase on the server, then lets the store finish it. Returns the error code, or null.</summary>
+        public static async Task<string> CreditAsync(GameApp app, string productId, string transactionId)
+        {
+            string error = await RunAsync(app, p => p.VerifyPurchaseAsync(productId, transactionId));
+            // Credited now or before: done. Anything else stays unfinished, to be tried again (Google refunds it in the end).
+            if (error == null || error == "ALREADY_CREDITED") Store.Provider?.Finish(transactionId); // noloc
+            return error;
+        }
+
+        /// <summary>The purchases paid while the game stopped before crediting them.</summary>
+        public static async Task RecoverAsync(GameApp app)
+        {
+            if (!Available(app) || Store.Provider == null) return;
+            foreach (var p in new System.Collections.Generic.List<UnfinishedPurchase>(Store.Provider.Unfinished))
+                await CreditAsync(app, p.ProductId, p.TransactionId);
+        }
+
+        public static async Task RefreshAsync(GameApp app)
+        {
+            if (!Available(app)) return;
+            await RecoverAsync(app);
+            await RunAsync(app, p => p.GetWalletAsync());
+        }
 
         public static string ErrorText(string code)
         {

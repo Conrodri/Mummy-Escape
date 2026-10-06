@@ -1,0 +1,26 @@
+{
+    "name": "MummyEscape.Store.UnityIap",
+    "rootNamespace": "MummyEscape.Monetization",
+    "references": [
+        "MummyEscape.Runtime",
+        "MummyEscape.Pvp",
+        "Unity.Purchasing",
+        "Unity.Purchasing.Stores"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MUMMY_IAP"
+    ],
+    "versionDefines": [
+        { "name": "com.unity.purchasing", "expression": "5.0.0", "define": "MUMMY_IAP" }
+    ],
+    "noEngineReferences": false
+}

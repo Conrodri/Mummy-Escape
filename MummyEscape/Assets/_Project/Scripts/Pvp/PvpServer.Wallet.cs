@@ -71,12 +71,23 @@ namespace MummyEscape.Pvp
 
         static Wallet WalletOf(PlayerPvpData d) => d.Wallet ??= new Wallet();
 
-        public async Task<WalletResponse> GetWalletAsync(string me) =>
-            new WalletResponse { Wallet = WalletOf(await Update(me)) };
+        public async Task<WalletResponse> GetWalletAsync(string me)
+        {
+            if (!Developers.Is(me)) return new WalletResponse { Wallet = WalletOf(await Update(me)) };
+            // L'équipe a le pass de chaque saison, offert à la première ouverture du portefeuille.
+            var season = BattlePass.At(_utcNow());
+            var data = await Update(me, d =>
+            {
+                var w = WalletOf(d);
+                if (!w.Passes.Contains(season.Id)) w.Passes.Add(season.Id);
+                if (!w.Skins.Contains(season.Legendary)) w.Skins.Add(season.Legendary);
+            });
+            return new WalletResponse { Wallet = WalletOf(data) };
+        }
 
         /// <summary>Le pass de la saison en cours, qui lève les limites d'énergie.</summary>
         async Task<bool> HasPassAsync(string playerId) =>
-            WalletOf(await Update(playerId)).Passes.Contains(BattlePass.At(_utcNow()).Id);
+            Developers.Is(playerId) || WalletOf(await Update(playerId)).Passes.Contains(BattlePass.At(_utcNow()).Id);
 
         /// <summary>
         /// Crédite un pack de scarabées dorés acheté sur le Play Store, après l'avoir vérifié auprès de Google ; rappeler avec le

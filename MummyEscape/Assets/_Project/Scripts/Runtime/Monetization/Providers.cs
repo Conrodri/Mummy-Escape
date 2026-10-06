@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace MummyEscape.Monetization
@@ -25,13 +26,26 @@ namespace MummyEscape.Monetization
         public string Error;
     }
 
-    /// <summary>The platform store (Google Play Billing, App Store) behind a purchasing SDK such as Unity IAP.</summary>
+    /// <summary>A purchase paid in the store that the game has not finished yet (not yet credited by the server).</summary>
+    public struct UnfinishedPurchase
+    {
+        public string ProductId;
+        public string TransactionId;
+    }
+
+    /// <summary>
+    /// The platform store (Google Play Billing, App Store) behind a purchasing SDK such as Unity IAP. A paid purchase stays
+    /// unfinished until <see cref="Finish"/>, called once the server has credited it: if the game stops in between, the
+    /// store hands it back on the next start (<see cref="Unfinished"/>), and Google refunds what is never finished.
+    /// </summary>
     public interface IStoreProvider
     {
         bool IsReady { get; }
         /// <summary>The price as the store shows it in the player's currency, null while unknown.</summary>
         string LocalizedPrice(string productId);
         Task<PurchaseOutcome> BuyAsync(string productId);
+        IReadOnlyList<UnfinishedPurchase> Unfinished { get; }
+        void Finish(string transactionId);
     }
 
     /// <summary>

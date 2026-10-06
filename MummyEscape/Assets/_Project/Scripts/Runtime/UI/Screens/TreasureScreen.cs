@@ -223,7 +223,7 @@ namespace MummyEscape.UI.Screens
             {
                 // The server checks the purchase with Google before crediting it.
                 _busy = true;
-                string error = await GoldWallet.RunAsync(App, p => p.VerifyPurchaseAsync(pack.ProductId, r.TransactionId));
+                string error = await GoldWallet.CreditAsync(App, pack.ProductId, r.TransactionId);
                 _busy = false;
                 if (this == null) return;
                 if (error == null)
