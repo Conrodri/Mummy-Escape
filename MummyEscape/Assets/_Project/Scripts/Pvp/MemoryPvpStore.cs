@@ -29,6 +29,24 @@ namespace MummyEscape.Pvp
         public Task<int> GetSoloStarsAsync(string playerId) =>
             Task.FromResult(SoloStars.TryGetValue(playerId, out int s) ? s : 0);
 
+        public Task DeleteSharedAsync(string collection, string key)
+        {
+            Shared.Remove(collection + "/" + key);
+            return Task.CompletedTask;
+        }
+
+        public Task DeletePlayerAsync(string playerId)
+        {
+            Players.Remove(playerId);
+            Pending.Remove(playerId);
+            History.Remove(playerId);
+            Dossiers.Remove(playerId);
+            Board.Remove(playerId);
+            LastBoard.Remove(playerId);
+            BoardCache.Clear();
+            return Task.CompletedTask;
+        }
+
         public Task<PlayerPvpData> UpdatePlayerAsync(string playerId, Action<PlayerPvpData> mutate)
         {
             if (!Players.TryGetValue(playerId, out var d)) Players[playerId] = d = new PlayerPvpData();

@@ -192,6 +192,12 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("GetSharedReplay")]
         public Task<SharedReplayResponse> GetSharedReplay(IExecutionContext ctx, string id) => Server(ctx).GetSharedReplayAsync(ctx.PlayerId, id);
 
+        [CloudCodeFunction("ExportPvpData")]
+        public Task<PvpDataExportResponse> ExportPvpData(IExecutionContext ctx) => Server(ctx).ExportPlayerDataAsync(ctx.PlayerId);
+
+        [CloudCodeFunction("DeletePvpData")]
+        public Task<ReportResponse> DeletePvpData(IExecutionContext ctx) => Server(ctx).DeletePlayerDataAsync(ctx.PlayerId);
+
         // --- Duel en direct
 
         /// <summary>Crée le duel de deux joueurs de la même ligue qui se sont trouvés dans un salon (l'hôte l'appelle).</summary>

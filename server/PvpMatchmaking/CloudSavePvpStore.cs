@@ -357,6 +357,43 @@ namespace MummyEscape.Pvp.Server
 
         const int SharedWriteRetries = 8;
 
+        public async Task DeleteSharedAsync(string collection, string key)
+        {
+            try { await _api.CloudSaveData.DeletePrivateCustomItemAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, collection, key, null); }
+            catch (Exception e) { _logger.LogInformation("Rien à effacer ({c}/{k}) : {msg}", collection, key, e.Message); }
+        }
+
+        // ------------------------------------------------------------------ erasure (account deletion)
+
+        /// <summary>Compte de service (Dashboard › Secret Manager) : seul autorisé à retirer un joueur du classement.</summary>
+        public const string ServiceAccountKeySecret = "UGS_SERVICE_ACCOUNT_KEY";
+        public const string ServiceAccountSecretSecret = "UGS_SERVICE_ACCOUNT_SECRET";
+
+        static readonly Lazy<IAdminApiClient> Admin =
+            new Lazy<IAdminApiClient>(Unity.Services.CloudCode.Apis.Admin.AdminApiClient.Create);
+
+        public async Task DeletePlayerAsync(string playerId)
+        {
+            foreach (var key in new[] { PlayerDataKey, PendingDuelKey, HistoryKey })
+            {
+                try { await _api.CloudSaveData.DeleteProtectedItemAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, playerId, key, null); }
+                catch (Exception e) { _logger.LogInformation("Rien à effacer ({k}) : {msg}", key, e.Message); }
+            }
+            await DeleteSharedAsync(ReportsCustomId, playerId);
+            try
+            {
+                var key = await _api.SecretManager.GetSecret(_ctx, ServiceAccountKeySecret);
+                var secret = await _api.SecretManager.GetSecret(_ctx, ServiceAccountSecretSecret);
+                await Admin.Value.Leaderboards.DeleteLeaderboardPlayerScoreAllLiveLeaderboardsAsync(_ctx, key.Value, secret.Value,
+                    Guid.Parse(_ctx.ProjectId), Guid.Parse(_ctx.EnvironmentId), playerId);
+            }
+            catch (Exception e)
+            {
+                // Sans compte de service, l'entrée reste jusqu'à la suppression du joueur par Unity (Authentication).
+                _logger.LogWarning("Entrée du classement non effacée pour {p} : {msg}", playerId, e.Message);
+            }
+        }
+
         // ------------------------------------------------------------------ verified ranking cache (custom items)
 
         static string BoardKey(string season) => "board_" + season;

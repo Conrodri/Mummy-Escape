@@ -137,6 +137,12 @@ namespace MummyEscape.Online
         public Task<SharedReplayResponse> GetSharedReplayAsync(string id) =>
             Call("GetSharedReplay", Args("id", id), e => new SharedReplayResponse { Error = e });
 
+        public Task<PvpDataExportResponse> ExportDataAsync() =>
+            Call("ExportPvpData", null, e => new PvpDataExportResponse { Error = e });
+
+        public Task<ReportResponse> DeleteDataAsync() =>
+            Call("DeletePvpData", null, e => new ReportResponse { Error = e });
+
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b), e => new LiveDuelResponse { Error = e });
 

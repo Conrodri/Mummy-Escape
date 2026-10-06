@@ -44,6 +44,13 @@ namespace MummyEscape.Pvp
         /// est null. Renvoie la valeur finale.
         /// </summary>
         Task<T> UpdateSharedAsync<T>(string collection, string key, Func<T, T> mutate) where T : class;
+        /// <summary>Efface un objet partagé (rien si absent).</summary>
+        Task DeleteSharedAsync(string collection, string key);
+        /// <summary>
+        /// Efface tout ce que le stockage garde au nom du joueur : données PvP, duel en cours, historique, dossier de triche et
+        /// son entrée dans le classement.
+        /// </summary>
+        Task DeletePlayerAsync(string playerId);
     }
 
     /// <summary>

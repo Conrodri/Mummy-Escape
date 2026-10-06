@@ -92,6 +92,14 @@ namespace MummyEscape.Pvp
         public string ReportsDay;
         /// <summary>Tchat coupé jusqu'à cet instant (posé à la main depuis le Dashboard après examen des signalements).</summary>
         public long BannedUntilUnixMs;
+        /// <summary>Les canaux où le joueur a écrit (clés de stockage) : de quoi effacer ou exporter ses messages.</summary>
+        public List<string> Posted = new List<string>();
+        /// <summary>Les replays qu'il a partagés.</summary>
+        public List<string> SharedReplays = new List<string>();
+        /// <summary>Ses amis, envoyés par son jeu : seuls eux peuvent lui écrire en privé.</summary>
+        public List<string> Contacts = new List<string>();
+        /// <summary>Mineur d'après son choix de confidentialité : le tchat global lui est fermé.</summary>
+        public bool Minor;
     }
 
     [Serializable]

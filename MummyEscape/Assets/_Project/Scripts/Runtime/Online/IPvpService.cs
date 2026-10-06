@@ -79,6 +79,12 @@ namespace MummyEscape.Online
         Task<ChatSendResponse> ShareReplayAsync(string kind, string matchId, string channel, string text, string playerName);
         Task<SharedReplayResponse> GetSharedReplayAsync(string id);
 
+        // --- Data rights ---
+        /// <summary>Everything the PvP server holds about the player (profile, history, duos, guild, chat).</summary>
+        Task<PvpDataExportResponse> ExportDataAsync();
+        /// <summary>Erases the player's PvP data on the server (guild, duos, messages, history, leaderboard).</summary>
+        Task<ReportResponse> DeleteDataAsync();
+
         // --- Guilds ---
         Task<GuildResponse> GetGuildAsync();
         Task<GuildResponse> CreateGuildAsync(string name, string tag, string playerName);

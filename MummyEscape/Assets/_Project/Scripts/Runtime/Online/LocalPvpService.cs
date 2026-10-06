@@ -421,6 +421,8 @@ namespace MummyEscape.Online
             Run(() => _server.ShareReplayAsync(Me, playerName, kind, matchId, channel, text));
 
         public Task<SharedReplayResponse> GetSharedReplayAsync(string id) => Run(() => _server.GetSharedReplayAsync(Me, id));
+        public Task<PvpDataExportResponse> ExportDataAsync() => Run(() => _server.ExportPlayerDataAsync(Me));
+        public Task<ReportResponse> DeleteDataAsync() => Run(() => _server.DeletePlayerDataAsync(Me));
 
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Run(() => _server.StartLiveDuelAsync(Me, Gen, matchKey, a, b));

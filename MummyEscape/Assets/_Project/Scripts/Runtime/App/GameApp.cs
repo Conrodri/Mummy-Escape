@@ -343,6 +343,12 @@ namespace MummyEscape.App
                 if (!service.IsAvailable) return service is OfflineOnlineService ? null : Loc.F("Connexion impossible : {0}", Loc.T(service.Status));
                 Online = service;
             }
+            // The PvP server first: once the account is gone, nobody can ask it to forget the player any more.
+            if (Pvp is IPvpService pvp)
+            {
+                var erased = await pvp.DeleteDataAsync();
+                if (erased == null || !erased.Ok) return erased?.Error ?? Loc.T("Connexion impossible. Vérifie ton accès à Internet.");
+            }
             string error = await Online.DeleteAccountAsync();
             if (error != null) return error;
             _cloudDirty = false;
@@ -356,11 +362,18 @@ namespace MummyEscape.App
         public async Task<string> ExportPersonalData()
         {
             string online = Online.IsAvailable || Online.IsDemo ? await Online.ExportOnlineDataAsync() : "null";
+            string pvp = "null";
+            if ((Online.IsAvailable || Online.IsDemo) && Pvp is IPvpService service)
+            {
+                var export = await service.ExportDataAsync();
+                if (export?.Data != null) pvp = JsonUtility.ToJson(export.Data, true);
+            }
             return "{\n\"exportedAtUtc\": \"" + System.DateTime.UtcNow.ToString("o") + "\",\n" +
                    "\"game\": \"Mummy Rush " + Application.version + "\",\n" +
                    "\"privacyChoices\": " + JsonUtility.ToJson(Privacy.Data, true) + ",\n" +
                    "\"localSave\": " + JsonUtility.ToJson(Save.Data, true) + ",\n" +
-                   "\"online\": " + (string.IsNullOrEmpty(online) ? "null" : online) + "\n}";
+                   "\"online\": " + (string.IsNullOrEmpty(online) ? "null" : online) + ",\n" +
+                   "\"pvp\": " + pvp + "\n}";
         }
 
         /// <summary>Erases the progression and the choices stored on this device (the welcome screen shows again).</summary>

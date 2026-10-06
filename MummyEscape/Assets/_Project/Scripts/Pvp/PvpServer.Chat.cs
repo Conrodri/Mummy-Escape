@@ -97,6 +97,7 @@ namespace MummyEscape.Pvp
                 if (box.SentThisMinute >= ChatConfig.MaxPerMinute) { refused = "TOO_FAST"; return box; }
                 box.SentThisMinute++;
                 box.LastSentUnixMs = now;
+                if (!box.Posted.Contains(key)) box.Posted.Add(key);
                 return box;
             });
             if (refused != null) return new ChatSendResponse { Error = refused };
@@ -251,8 +252,15 @@ namespace MummyEscape.Pvp
 
             var (key, _) = await ChannelKeyAsync(me, channel);
             if (key == null) return new ChatSendResponse { Error = "NO_ACCESS" };
+            var posted = await PostAsync(me, playerName, channel, text, replayRef);
+            if (!posted.Ok) return posted;
             await Shared<SharedReplay>(SharedReplaysCollection, shared.Id, _ => shared);
-            return await PostAsync(me, playerName, channel, text, replayRef);
+            await Inbox(me, box =>
+            {
+                box.SharedReplays.Add(shared.Id);
+                return box;
+            });
+            return posted;
         }
 
         public async Task<SharedReplayResponse> GetSharedReplayAsync(string me, string id)
