@@ -82,6 +82,9 @@ namespace MummyEscape.Visual
 
         public string Key => $"{Mummy.Id}_{Color.Id}_{Torch.Id}_{Hat.Id}_{Shoes.Id}";
 
+        /// <summary>A colour or a mummy shown alone: the classic outfit (no hat, no shoes) with just that item.</summary>
+        public static Loadout Bare(SkinDef item) => SkinCatalog.Classic.With(item);
+
         /// <summary>Colour of the torch light: the colour's tint for the classic torch, the torch's own otherwise.</summary>
         /// <summary>The outfit changes over time (a legendary colour): drawn with <see cref="MummyAnimator"/>.</summary>
         public bool Animated => Color != null && Color.Legendary;

@@ -118,7 +118,7 @@ namespace MummyEscape.UI.Screens
             _bar.fillAmount = max ? 1f : xp % BattlePass.XpPerTier / (float)BattlePass.XpPerTier;
             _xp.text = max ? Loc.T("Pass terminé !") : Loc.F("{0} / {1} XP vers le palier {2}", xp % BattlePass.XpPerTier, BattlePass.XpPerTier, tier + 1);
             _gold.text = save.Gold.ToString();
-            MummyAnimator.Show(_legendary, App.Art, save.Loadout.With(SkinCatalog.Get(season.Legendary)));
+            ItemPreview.Show(_legendary, SkinCatalog.Get(season.Legendary));
             _perks.text = save.HasPass
                 ? Loc.T("Pass premium actif : parties illimitées, et toutes les récompenses premium à récupérer.")
                 : Loc.F("Premium : le skin légendaire « {0} » tout de suite, un set de 10 pièces (une tous les 10 paliers), 30 scarabées dorés et des parties illimitées.",
@@ -172,7 +172,7 @@ namespace MummyEscape.UI.Screens
             if (reward.Kind == PassRewardKind.Skin)
             {
                 var def = SkinCatalog.Get(reward.SkinId);
-                MummyAnimator.Show(icon, App.Art, save.Loadout.With(def));
+                ItemPreview.Show(icon, def);
                 label = Loc.T(def.Name);
             }
             else

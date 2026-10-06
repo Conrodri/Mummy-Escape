@@ -252,8 +252,7 @@ namespace MummyEscape.UI.Screens
             var def = SkinCatalog.Get(reward);
             bool unlocked = g.Points >= need;
             UIKit.ListItem(_list, 112, null, out var h, unlocked);
-            var portrait = UIKit.Image(h.transform, App.Art.MummyPortrait(SkinCatalog.Classic.With(def)), Color.white, false, "Portrait"); // noloc
-            portrait.preserveAspect = true;
+            var portrait = ItemPreview.Create(h.transform, def);
             UIKit.Size(portrait, 92, 92, 0);
             var name = UIKit.Label(h.transform, Loc.T(def.Name), 30, unlocked ? UIKit.Gold : UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
             UIKit.FitText(name, 18);

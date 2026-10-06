@@ -171,7 +171,7 @@ namespace MummyEscape.UI.Screens
                                   : item.Pvp ? UIKit.Turquoise : item.Theme == 0 ? UIKit.Dim : ThemeColor(item.Theme), TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(tag, 14);
             UIKit.Size(tag, 28, 0);
-            var preview = Portrait(card.transform, save.Loadout.With(item));
+            var preview = ItemPreview.Create(card.transform, item);
             UIKit.Size(preview, 150, 0);
             if (locked) Lock(preview, 64);
             var name = UIKit.Label(card.transform, item.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
@@ -218,7 +218,7 @@ namespace MummyEscape.UI.Screens
             for (int act = 1; act <= DifficultyTable.ActCount; act++)
             {
                 var set = SkinCatalog.ThemeSet(act);
-                var look = save.Loadout;
+                var look = SkinCatalog.Classic; // the collection alone, not over the current outfit
                 int missingPrice = 0;
                 bool worn = true;
                 foreach (var s in set)
@@ -330,7 +330,7 @@ namespace MummyEscape.UI.Screens
                                   owned || leagueOk ? PvpSkins.LeagueColor(item.MinLeague) : UIKit.Danger, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(tag, 14);
             UIKit.Size(tag, 28, 0);
-            var preview = Portrait(card.transform, save.Loadout.With(def));
+            var preview = ItemPreview.Create(card.transform, def);
             UIKit.Size(preview, 150, 0);
             if (!owned && !leagueOk) Lock(preview, 64);
             var name = UIKit.Label(card.transform, def.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
@@ -426,8 +426,8 @@ namespace MummyEscape.UI.Screens
             {
                 var def = SkinCatalog.Get(id);
                 var slot = UIKit.Rect(id, row.transform);
-                UIKit.Size(slot, -1, -1, 1);
-                var preview = Portrait(slot, save.Loadout.With(def));
+                UIKit.Size(slot, 150, -1, 1); // an empty rect: without a height the row would give it none
+                var preview = ItemPreview.Create(slot, def);
                 preview.preserveAspect = true;
                 UIKit.Stretch(preview.rectTransform);
                 if (owned.Contains(id) || save.Data.OwnedSkins.Contains(id))

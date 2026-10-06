@@ -151,7 +151,8 @@ namespace MummyEscape.UI.Screens
 
             var preview = UIKit.Image(card.transform, null, Color.white);
             preview.raycastTarget = false;
-            MummyAnimator.Show(preview, App.Art, save.Loadout.With(item));
+            preview.preserveAspect = true;
+            ItemPreview.Show(preview, item);
             UIKit.Size(preview, 170, 0);
             var name = UIKit.Label(card.transform, item.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(name, 15);

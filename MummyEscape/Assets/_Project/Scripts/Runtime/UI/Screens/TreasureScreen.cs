@@ -128,7 +128,7 @@ namespace MummyEscape.UI.Screens
             var season = BattlePass.Current;
             UIKit.ListItem(_list, 200, () => Router.Open<PassScreen>(), out var h);
             var preview = UIKit.Image(h.transform, null, Color.white);
-            MummyAnimator.Show(preview, App.Art, save.Loadout.With(SkinCatalog.Get(season.Legendary)));
+            ItemPreview.Show(preview, SkinCatalog.Get(season.Legendary));
             preview.preserveAspect = true;
             UIKit.Size(preview, 170, 150, 0);
             var col = UIKit.Rect("Text", h.transform); // noloc
@@ -157,7 +157,8 @@ namespace MummyEscape.UI.Screens
                                   def.Legendary ? new Color32(255, 96, 220, 255) : GoldColor, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.Size(tag, 28, 0);
             var preview = UIKit.Image(card.transform, null, Color.white);
-            MummyAnimator.Show(preview, App.Art, save.Loadout.With(def));
+            preview.preserveAspect = true;
+            ItemPreview.Show(preview, def);
             UIKit.Size(preview, 150, 0);
             var name = UIKit.Label(card.transform, def.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(name, 15);

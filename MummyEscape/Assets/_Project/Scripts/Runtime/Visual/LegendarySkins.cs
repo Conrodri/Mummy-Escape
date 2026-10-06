@@ -10,6 +10,14 @@ namespace MummyEscape.Visual
     /// </summary>
     public static class LegendarySkins
     {
+        /// <summary>
+        /// The body is first painted in these two marker colours, then <see cref="ArtLibrary"/> repaints every pixel of
+        /// them with the effect of the frame (nothing else in the outfit uses them).
+        /// </summary>
+        public static readonly Color32 MarkBandage = new Color32(201, 77, 203, 255);
+        public static readonly Color32 MarkShadow = new Color32(103, 39, 105, 255);
+
+        // (Declared before All: static fields are set in file order, and All reads them.)
         public static readonly IReadOnlyList<SkinDef> All = new[]
         {
             // Scarab wheel.
@@ -25,13 +33,6 @@ namespace MummyEscape.Visual
             Def("pvp_leg_prism", "Prisme de diamant", LegendaryFx.Prism, new Color32(120, 200, 255, 255), new Color(0.85f, 0.95f, 1f)),
             Def("pvp_leg_apophis", "Lave d'Apophis", LegendaryFx.Magma, new Color32(255, 230, 80, 255), new Color(1f, 0.4f, 0.15f)),
         };
-
-        /// <summary>
-        /// The body is first painted in these two marker colours, then <see cref="ArtLibrary"/> repaints every pixel of
-        /// them with the effect of the frame (nothing else in the outfit uses them).
-        /// </summary>
-        public static readonly Color32 MarkBandage = new Color32(201, 77, 203, 255);
-        public static readonly Color32 MarkShadow = new Color32(103, 39, 105, 255);
 
         static SkinDef Def(string id, string name, LegendaryFx fx, Color32 eyes, Color torch) => new SkinDef
         {

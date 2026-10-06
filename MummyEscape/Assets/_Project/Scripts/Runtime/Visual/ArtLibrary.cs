@@ -181,6 +181,48 @@ namespace MummyEscape.Visual
                                () => PaintMummy(look, frame).Blit(PaintFlame(look.Light, 0), 0, 0));
         }
 
+        /// <summary>
+        /// A torch, hat or shoes on its own (shop and reward cards), cropped to the item and centred on a square canvas.
+        /// Colours and mummies are shown on a mummy instead (<see cref="Loadout.Bare"/>).
+        /// </summary>
+        public Sprite ItemIcon(SkinDef item) => Cached("item_" + item.Id, () => Cropped(PaintItem(item)));
+
+        static Px PaintItem(SkinDef item)
+        {
+            var l = Layer(p =>
+            {
+                if (item.Slot == CosmeticSlot.Hat) PaintHat(p, item.Hat);
+                else if (item.Slot == CosmeticSlot.Shoes) PaintShoes(p, item.Shoes);
+                else PaintTorch(p, item.TorchStyle);
+            });
+            l = Tinted(l, item.Tint);
+            if (item.Slot == CosmeticSlot.Torch) l.Blit(PaintFlame(item.Torch, 0), 0, 0);
+            return l;
+        }
+
+        /// <summary>The opaque part of a layer on a square canvas with a 1 px margin (empty layers stay as they are).</summary>
+        static Px Cropped(Px l)
+        {
+            int x0 = l.W, y0 = l.H, x1 = -1, y1 = -1;
+            for (int y = 0; y < l.H; y++)
+                for (int x = 0; x < l.W; x++)
+                    if (l.Get(x, y).a != 0)
+                    {
+                        x0 = Mathf.Min(x0, x); x1 = Mathf.Max(x1, x);
+                        y0 = Mathf.Min(y0, y); y1 = Mathf.Max(y1, y);
+                    }
+            if (x1 < 0) return l;
+            // At least 16 px wide, so small items (sandals) are not blown up past the big ones.
+            int w = x1 - x0 + 1, h = y1 - y0 + 1, size = Mathf.Max(Mathf.Max(w, h), 16) + 2;
+            var p = new Px(size, size);
+            p.Fill(Clear);
+            int ox = (size - w) / 2 - x0, oy = (size - h) / 2 - y0;
+            for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                    p.Set(x + ox, y + oy, l.Get(x, y));
+            return p;
+        }
+
         /// <summary>Frames in the loop of a legendary colour (<see cref="MummyAnimator"/> plays them).</summary>
         public const int LegendaryFrames = 8;
 
