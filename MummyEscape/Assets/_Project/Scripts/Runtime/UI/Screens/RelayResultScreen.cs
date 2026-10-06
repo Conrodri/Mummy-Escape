@@ -19,8 +19,9 @@ namespace MummyEscape.UI.Screens
         const string LimitError = "LIMIT"; // noloc
 
         Text _title, _mine, _rival, _elo, _note;
-        Button _again, _menu, _report;
+        Button _again, _menu, _report, _watch;
         RelayOutcome _outcome;
+        RelayRecord _record;
         bool _sending;
 
         protected override void Build()
@@ -47,6 +48,8 @@ namespace MummyEscape.UI.Screens
 
             _again = UIKit.Button(panel.transform, "Nouveau match", Again, 40, ButtonStyle.Primary);
             UIKit.Size(_again, 112);
+            _watch = UIKit.Button(panel.transform, "Revoir le match", Watch, 34);
+            UIKit.Size(_watch, 92);
             _report = UIKit.Button(panel.transform, "Quitter et signaler", Report, 34);
             UIKit.Size(_report, 92);
             _menu = UIKit.Button(panel.transform, "Retour au 2v2", Menu, UIKit.TextSize, ButtonStyle.Ghost);
@@ -80,6 +83,8 @@ namespace MummyEscape.UI.Screens
             UIKit.SetLabel(_menu, mateLeft ? "Quitter" : "Retour au 2v2");
             _again.gameObject.SetActive(!mateLeft);
             _note.text = mateLeft ? Loc.F("{0} a quitté la partie : ton duo perd le match.", mateName) : "";
+            _record = RelayReplayStore.Of(match, outcome.Me, outcome.Starter, outcome.Inputs, outcome.RivalInputs, outcome.Result);
+            RelayReplayStore.Put(_record);
             _ = Send();
         }
 
@@ -112,6 +117,17 @@ namespace MummyEscape.UI.Screens
                 if (this == null || _outcome != o) return;
                 r = await pvp.GetRelayResultAsync(o.Match.Id);
             }
+            // The replay takes the server's copy: both relays as it replayed them, and its verdict.
+            var record = _record;
+            if (record != null && r != null && r.Error == null && !r.Pending && r.Match?.A != null && r.Match.B != null)
+            {
+                record.Match = r.Match;
+                record.Resolved = true;
+                record.Result = r.Result;
+                record.EloDelta = r.EloDelta;
+                record.NewElo = r.NewElo;
+                RelayReplayStore.Put(record);
+            }
             if (this == null || _outcome != o) return;
             _sending = false;
             if (r == null || r.Error != null)
@@ -143,6 +159,14 @@ namespace MummyEscape.UI.Screens
             _note.text = r?.Ok == true ? Loc.T("Signalement envoyé. Merci !") : r?.Error == LimitError ? Loc.T("Trop de signalements aujourd'hui.") : Loc.T("Signalement impossible.");
             await Task.Delay(900);
             if (this != null) Menu();
+        }
+
+        void Watch()
+        {
+            var record = _record;
+            if (record == null) return;
+            Menu();
+            Router.Open<ReplayScreen>().ShowRelay(record);
         }
 
         void Again()

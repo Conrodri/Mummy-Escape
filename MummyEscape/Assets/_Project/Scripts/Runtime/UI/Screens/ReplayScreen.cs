@@ -25,11 +25,13 @@ namespace MummyEscape.UI.Screens
         RectTransform _topArea, _bottomArea;
         RawImage _topView, _bottomView;
         Side _me, _rival;
-        Text _status, _waiting;
+        Text _status, _waiting, _title;
         Button _play, _speed, _report;
         Image _playIcon;
         Slider _timeline;
         DuelRecord _duel;
+        RelayRecord _relay;
+        int _limitMs = PvpConfig.TimeLimitMs;
         bool _spectator;
         string _verdict;
         int _load;
@@ -52,7 +54,7 @@ namespace MummyEscape.UI.Screens
             UIKit.TopBand(header.rectTransform, 150);
             var back = UIKit.IconButton(header.transform, UISprites.Back, () => Router.Back(), 92);
             UIKit.Place((RectTransform)back.transform, 0, 0.5f, 92, 92, 36, 0);
-            var title = UIKit.Title(header.transform, "Revoir le duel", 50);
+            var title = _title = UIKit.Title(header.transform, "Revoir le duel", 50);
             UIKit.FitText(title, 30);
             UIKit.Stretch(title.rectTransform, 150, 0, 150, 0);
             _report = UIKit.IconButton(header.transform, UISprites.Flag, Report, 92, ButtonStyle.Danger);
@@ -154,9 +156,99 @@ namespace MummyEscape.UI.Screens
         public void ShowRound(DuelRecord round, string topTeam, string bottomTeam, string verdict) =>
             Show(round, true, topTeam, bottomTeam, verdict);
 
+        /// <summary>
+        /// Opens a 2v2 match: the player's duo on top, the rival duo below, each view following its duo's runner of the
+        /// moment (over to the teammate's maze at each relay plate).
+        /// </summary>
+        public void ShowRelay(RelayRecord record)
+        {
+            _duel = null;
+            _relay = record;
+            _spectator = false;
+            _verdict = null;
+            _limitMs = RelayConfig.TimeLimitMs;
+            _title.text = Loc.T("Revoir le match");
+            var mine = record.Mine;
+            var rival = record.Rival;
+            _me.Tag.text = Loc.T("TON DUO");
+            _rival.Tag.text = Loc.T("DUO ADVERSE");
+            FillRelay(_me, mine);
+            FillRelay(_rival, rival);
+            bool rivalRun = rival?.Inputs != null && rival.Inputs.Count > 0;
+            _waiting.text = rivalRun ? "" : Loc.T("Le relais du duo adverse n'est pas encore arrivé.");
+            _report.gameObject.SetActive(false);
+            _status.text = Loc.T("Chargement…");
+            SetPlaying(false);
+            LoadRelay(record);
+        }
+
+        static void FillRelay(Side side, RelaySide relay)
+        {
+            var s = relay?.Verified;
+            var run = relay == null ? null : new DuelRun
+            {
+                PlayerName = relay.Name,
+                Outcome = s == null ? RunOutcome.TimedOut : s.Finished ? RunOutcome.Finished : s.Lost ? RunOutcome.Died : RunOutcome.TimedOut,
+                TimeMs = s?.TimeMs ?? 0,
+                Inputs = new System.Collections.Generic.List<RunInput>(),
+            };
+            if (relay?.Inputs != null)
+                foreach (var i in relay.Inputs) run.Inputs.Add(new RunInput { Tick = i.Tick, Direction = i.Direction });
+            Fill(side, run, null);
+        }
+
+        async void LoadRelay(RelayRecord record)
+        {
+            int load = ++_load;
+            var match = record.Match;
+            if (match.GeneratorVersion != 0 && match.GeneratorVersion != DifficultyTable.GeneratorVersion)
+            {
+                _status.text = Loc.T("Match joué sur une ancienne version du jeu : il ne peut plus être rejoué.");
+                return;
+            }
+            RelayMap map;
+            try { map = await Task.Run(() => PvpServer.RelayArenaFor(match.Seed)); }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[Pvp] Replay relay not generated: " + e.Message);
+                _status.text = Loc.T("Ce match ne peut pas être rejoué.");
+                return;
+            }
+            if (load != _load || this == null || !isActiveAndEnabled) return;
+
+            var theme = TombTheme.ForAct(RelayArena.LevelFor(match.Seed).Act);
+            App.Art.SetTheme(theme);
+            App.Lighting.SetTheme(theme);
+            App.Lighting.SetMood(true);
+            if (_rig == null) _rig = ReplayRig.Create(App.transform, App);
+            _rig.OpenRelay(map, record.Mine, record.Rival, theme);
+            _rig.Speed = 1f;
+            _speed.GetComponentInChildren<Text>().text = "x1"; // noloc
+            _status.text = RelayVerdict(record);
+            SetPlaying(true);
+        }
+
+        static string RelayVerdict(RelayRecord r)
+        {
+            string result = Loc.T(r.Result == DuelResult.Win ? "Victoire" : r.Result == DuelResult.Draw ? "Match nul" : "Défaite");
+            if (!r.Resolved) return result + " · " + Loc.T("verdict du serveur en attente");
+            return result + " · " + Loc.F("Elo 2v2 {0}", r.NewElo) + " (" + (r.EloDelta > 0 ? "+" : "") + r.EloDelta + ")"; // noloc
+        }
+
+        /// <summary>A relay's step on screen ("2/4 · "), null for a duel.</summary>
+        static string Steps(ReplayView view)
+        {
+            if (!(view.Track is RelayTrack relay)) return null;
+            int total = relay.Race.Map.Segments;
+            return Loc.F("Étape {0} / {1}", Mathf.Min(relay.Race.Segment + 1, total), total) + " · ";
+        }
+
         void Show(DuelRecord duel, bool spectator, string topTag, string bottomTag, string verdict)
         {
             _duel = duel;
+            _relay = null;
+            _limitMs = PvpConfig.TimeLimitMs;
+            _title.text = Loc.T("Revoir le duel");
             _spectator = spectator;
             _verdict = verdict;
             _me.Tag.text = Loc.T(topTag);
@@ -264,7 +356,7 @@ namespace MummyEscape.UI.Screens
 
         void Update()
         {
-            if (_rig == null || !_rig.gameObject.activeSelf || _duel == null) return;
+            if (_rig == null || !_rig.gameObject.activeSelf || _duel == null && _relay == null) return;
 
             if (_pendingSeek >= 0f && Time.unscaledTime - _lastSeek >= SeekEvery)
             {
@@ -286,7 +378,7 @@ namespace MummyEscape.UI.Screens
         {
             if (_rig == null || !_rig.gameObject.activeSelf) return;
             Draw(_rig.Top, _topView, _topArea, true);
-            Draw(_rig.Bottom, _bottomView, _bottomArea, _duel?.Rival != null);
+            Draw(_rig.Bottom, _bottomView, _bottomArea, _relay != null || _duel?.Rival != null);
         }
 
         /// <summary>The picture of one replay view, under that side's overlays.</summary>
@@ -351,9 +443,9 @@ namespace MummyEscape.UI.Screens
             var s = view.Session;
             side.State.text = s.Status == SessionStatus.Won ? "<color=#40E0D0>" + Loc.F("SORTI · {0}", LevelResult.FormatTime(run.TimeMs)) + "</color>" // noloc
                 : s.Status == SessionStatus.Dead ? "<color=#D65440>" + Loc.T("MORT") + "</color>" // noloc
-                : _rig.TimeMs >= PvpConfig.TimeLimitMs ? Loc.T("TEMPS ÉCOULÉ")
+                : _rig.TimeMs >= _limitMs ? Loc.T("TEMPS ÉCOULÉ")
                 : run.Outcome == RunOutcome.Abandoned && played >= run.Inputs.Count && _rig.TimeMs > EndOfInputs(run) ? Loc.T("ABANDON")
-                : LevelResult.FormatTime(Mathf.Min(_rig.TimeMs, PvpConfig.TimeLimitMs));
+                : (Steps(view) ?? "") + LevelResult.FormatTime(Mathf.Min(_rig.TimeMs, _limitMs));
         }
 
         static int EndOfInputs(DuelRun run) => run.Inputs.Count == 0 ? 0 : RunActions.MsOf(run.Inputs[run.Inputs.Count - 1].Tick);

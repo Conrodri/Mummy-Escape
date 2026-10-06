@@ -106,8 +106,12 @@ namespace MummyEscape.UI.Screens
             var rules = UIKit.Label(_list, "En direct contre un autre duo, sur les mêmes labyrinthes. Chacun a le sien : tu cours jusqu'à ta dalle, elle libère ton coéquipier, qui te libère à son tour… Le premier duo sorti gagne. Une momie morte fait perdre son duo.", 24, UIKit.Dim);
             UIKit.FitText(rules, 16);
             UIKit.Size(rules, 100);
-            if (_teams == null) return;
+            if (_teams != null) FillTeams();
+            FillReplays();
+        }
 
+        void FillTeams()
+        {
             if (_teams.Invites.Count > 0)
             {
                 UIKit.SectionTitle(_list, "Invitations");
@@ -142,6 +146,79 @@ namespace MummyEscape.UI.Screens
                     UIKit.Size(hint, 60);
                 }
             }
+        }
+
+        /// <summary>The matches kept apart (until the player removes them), then the last ones played, to watch again.</summary>
+        void FillReplays()
+        {
+            var saved = RelayReplayStore.Saved;
+            UIKit.SectionTitle(_list, Loc.F("Replays enregistrés ({0}/{1})", saved.Count, RelayReplayStore.SavedSize));
+            if (saved.Count == 0)
+            {
+                var hint = UIKit.Label(_list, "Enregistre un match (+) pour le garder : il restera ici tant que tu ne le retires pas.", 24, UIKit.Dim, TextAnchor.MiddleLeft);
+                UIKit.FitText(hint, 16);
+                UIKit.Size(hint, 60);
+            }
+            foreach (var record in saved)
+            {
+                var r = record;
+                var h = MatchRow(r);
+                UIKit.IconButton(h.transform, UISprites.Close, () => { RelayReplayStore.Forget(r.Id); Fill(); }, 72);
+                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(r), 84);
+            }
+
+            UIKit.SectionTitle(_list, "Derniers matchs");
+            var recent = RelayReplayStore.Recent;
+            var note = UIKit.Label(_list, recent.Count == 0 ? "Tes 10 derniers matchs 2v2 apparaîtront ici, à revoir des deux côtés."
+                                                          : "Les 10 derniers, à revoir des deux côtés. Les plus anciens laissent la place aux nouveaux.", 24, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.FitText(note, 16);
+            UIKit.Size(note, 60);
+            foreach (var record in recent)
+            {
+                var r = record;
+                var h = MatchRow(r);
+                bool kept = RelayReplayStore.IsSaved(r.Id);
+                var keep = UIKit.IconButton(h.transform, kept ? UISprites.Check : UISprites.Plus, () => Keep(r), 72);
+                keep.interactable = !kept;
+                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(r), 84);
+            }
+        }
+
+        void Keep(RelayRecord r)
+        {
+            if (RelayReplayStore.Keep(r)) App.Audio.Play(Sfx.Coin);
+            else _info.text = Loc.T("Les 10 places sont prises : retire un replay enregistré pour garder celui-ci.");
+            Fill();
+        }
+
+        void Watch(RelayRecord r)
+        {
+            if (_busy || _search != null) return;
+            Router.Open<ReplayScreen>().ShowRelay(r);
+        }
+
+        /// <summary>One match: result, rival duo, date and Elo change; the caller adds the buttons at the end.</summary>
+        HorizontalLayoutGroup MatchRow(RelayRecord r)
+        {
+            UIKit.ListItem(_list, 132, () => Watch(r), out var h);
+            var color = r.Result == DuelResult.Win ? UIKit.Gold : r.Result == DuelResult.Draw ? UIKit.Sand : UIKit.Danger;
+            var badge = UIKit.Image(h.transform, UISprites.Circle, r.Resolved ? color : UIKit.Dim, false, "Result"); // noloc
+            UIKit.Size(badge, 84, 84, 0);
+            var letter = UIKit.Title(badge.transform, r.Result == DuelResult.Win ? Loc.T("V") : r.Result == DuelResult.Draw ? Loc.T("N") : Loc.T("D"), 44, UIKit.Ink);
+            UIKit.Stretch(letter.rectTransform);
+
+            var col = UIKit.Rect("Text", h.transform); // noloc
+            UIKit.Size(col, -1, -1, 1);
+            UIKit.Column(col, 2, 0, TextAnchor.MiddleLeft);
+            var name = UIKit.Label(col, Loc.F("contre {0}", r.Rival?.Name ?? "—"), 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold); // noloc
+            UIKit.FitText(name, 20);
+            UIKit.Size(name, 44);
+            string when = System.DateTimeOffset.FromUnixTimeMilliseconds(r.PlayedAtUnixMs).ToLocalTime().ToString("dd/MM HH:mm"); // noloc
+            string elo = r.Resolved ? "  ·  Elo " + (r.EloDelta > 0 ? "+" : "") + r.EloDelta : ""; // noloc
+            var sub = UIKit.Label(col, (r.Mine?.Name ?? "") + "  ·  " + when + elo, 24, UIKit.Dim, TextAnchor.MiddleLeft); // noloc
+            UIKit.FitText(sub, 16);
+            UIKit.Size(sub, 34);
+            return h;
         }
 
         void InviteRow(DuoInvite invite)

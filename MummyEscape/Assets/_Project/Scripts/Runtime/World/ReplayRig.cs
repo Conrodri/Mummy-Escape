@@ -9,6 +9,90 @@ using UnityEngine.Rendering.Universal;
 namespace MummyEscape.World
 {
     /// <summary>
+    /// What a replay view plays: one run, or a duo's relay (whose maze on screen follows whoever is running). Built
+    /// afresh from the start on every seek: the rules are deterministic.
+    /// </summary>
+    public interface IReplayTrack
+    {
+        /// <summary>The maze on screen.</summary>
+        GameSession Session { get; }
+        /// <summary>The mummy running it.</summary>
+        Loadout Look { get; }
+        /// <summary>Plays every action up to <paramref name="tick"/>; the last step played, if any.</summary>
+        StepResult? AdvanceTo(int tick);
+        /// <summary>Actions played by <paramref name="tick"/>.</summary>
+        int CountTo(int tick);
+    }
+
+    /// <summary>A duel run.</summary>
+    public sealed class RunTrack : IReplayTrack
+    {
+        readonly RunReplay _replay;
+        readonly IList<RunInput> _inputs;
+
+        public RunTrack(Level level, IList<RunInput> inputs, Loadout look)
+        {
+            _inputs = inputs ?? new List<RunInput>();
+            _replay = new RunReplay(level, _inputs);
+            Look = look;
+        }
+
+        public GameSession Session => _replay.Session;
+        public Loadout Look { get; }
+        public StepResult? AdvanceTo(int tick) => _replay.AdvanceTo(tick);
+
+        public int CountTo(int tick)
+        {
+            int n = 0;
+            while (n < _inputs.Count && _inputs[n].Tick <= tick) n++;
+            return n;
+        }
+    }
+
+    /// <summary>A duo's relay: both mazes on one clock, the one on screen being the runner's of the moment.</summary>
+    public sealed class RelayTrack : IReplayTrack
+    {
+        readonly RelayRace _race;
+        readonly IList<RelayInput> _inputs;
+        readonly Loadout[] _looks;
+        int _next;
+
+        /// <param name="looks">The runner of each maze.</param>
+        public RelayTrack(RelayMap map, IList<RelayInput> inputs, Loadout[] looks)
+        {
+            _race = new RelayRace(map);
+            _inputs = inputs ?? new List<RelayInput>();
+            _looks = looks;
+        }
+
+        public RelayRace Race => _race;
+        /// <summary>The maze running, or the one where the relay ended.</summary>
+        public int Maze => _race.Status == RelayStatus.Finished ? RelayMap.MazeOf(_race.Segment - 1) : _race.ActiveMaze;
+        public GameSession Session => _race.Session(Maze);
+        public Loadout Look => _looks[Maze];
+
+        public StepResult? AdvanceTo(int tick)
+        {
+            StepResult? last = null;
+            while (_next < _inputs.Count && _inputs[_next].Tick <= tick && !_race.IsOver && !_race.Invalid)
+            {
+                var input = _inputs[_next++];
+                if (!RunActions.TryDecode(input.Direction, out var action)) break;
+                var r = _race.Apply(input.Maze, action, input.Tick);
+                if (r.HasValue) last = r;
+            }
+            return last;
+        }
+
+        public int CountTo(int tick)
+        {
+            int n = 0;
+            while (n < _inputs.Count && _inputs[n].Tick <= tick) n++;
+            return n;
+        }
+    }
+
+    /// <summary>
     /// One side of a duel replay: its own copy of the tomb (far from the game's, so the two never meet), the mummy
     /// replaying that player's actions, the rival's ghost when that player could see it, and a camera drawing it all
     /// into a part of the screen. The fog is that player's own: what they had seen, what they remembered.
@@ -23,15 +107,14 @@ namespace MummyEscape.World
         GhostView _ghost;
         Camera _cam;
         Material _unlit;
-        Level _level;
-        IList<RunInput> _inputs;
-        Loadout _look;
+        System.Func<IReplayTrack> _make;
+        bool _hasRunner;
         Coroutine _anim;
         float _angle;
         bool _ended;
 
-        public RunReplay Replay { get; private set; }
-        public GameSession Session => Replay?.Session;
+        public IReplayTrack Track { get; private set; }
+        public GameSession Session => Track?.Session;
         public Camera Cam => _cam;
         /// <summary>Actions played so far (the input strip lights them up).</summary>
         public int Played { get; private set; }
@@ -74,13 +157,16 @@ namespace MummyEscape.World
         }
 
         /// <summary>Sets up the run to replay (<paramref name="inputs"/> null: nobody to show on this side).</summary>
-        public void Load(Level level, IList<RunInput> inputs, Loadout look, Loadout rivalLook, TombTheme theme, bool spectator = false)
+        public void Load(Level level, IList<RunInput> inputs, Loadout look, Loadout rivalLook, TombTheme theme, bool spectator = false) =>
+            Load(() => new RunTrack(level, inputs, look), inputs != null, rivalLook, theme, spectator);
+
+        /// <summary>Sets up any track (<paramref name="make"/> builds it from the start; <paramref name="hasRunner"/> false: nobody to show).</summary>
+        public void Load(System.Func<IReplayTrack> make, bool hasRunner, Loadout rivalLook, TombTheme theme, bool spectator = false)
         {
             _maze.Spectator = spectator;
             _player.SetTheme(theme, _unlit);
-            _level = level;
-            _inputs = inputs;
-            _look = look;
+            _make = make;
+            _hasRunner = hasRunner;
             _ghost.SetLook(rivalLook);
             Seek(0);
         }
@@ -90,13 +176,19 @@ namespace MummyEscape.World
         {
             StopAllCoroutines();
             _anim = null;
-            Replay = new RunReplay(_level, _inputs ?? new List<RunInput>());
-            Replay.AdvanceTo(RunActions.TickOf(ms));
-            Played = CountPlayed(ms);
-            _maze.Build(Replay.Session);
-            _player.gameObject.SetActive(_inputs != null);
+            Track = _make();
+            Track.AdvanceTo(RunActions.TickOf(ms));
+            Played = _hasRunner ? Track.CountTo(RunActions.TickOf(ms)) : 0;
+            ShowMaze();
+        }
+
+        /// <summary>The maze on screen built afresh, its runner where he stands, the camera on him.</summary>
+        void ShowMaze()
+        {
+            _maze.Build(Session);
+            _player.gameObject.SetActive(_hasRunner);
             _player.ResetVisual();
-            _player.SetSkin(_look);
+            _player.SetSkin(Track.Look);
             _player.Place(Session.Position);
             _player.SetBlind(Session.IsBlind);
             _player.SetTorchLit(Session.TorchLit);
@@ -108,22 +200,23 @@ namespace MummyEscape.World
             _ghost.Hide();
         }
 
-        int CountPlayed(int ms)
-        {
-            if (_inputs == null) return 0;
-            int tick = RunActions.TickOf(ms), n = 0;
-            while (n < _inputs.Count && _inputs[n].Tick <= tick) n++;
-            return n;
-        }
-
         /// <summary>Plays the actions up to <paramref name="ms"/>, animated at <paramref name="speed"/>.</summary>
         public void PlayTo(int ms, float speed)
         {
-            if (Replay == null || _inputs == null) return;
+            if (Track == null || !_hasRunner) return;
+            var shown = Session;
             var before = Session.Position;
-            var r = Replay.AdvanceTo(RunActions.TickOf(ms));
-            Played = CountPlayed(ms);
+            var r = Track.AdvanceTo(RunActions.TickOf(ms));
+            Played = Track.CountTo(RunActions.TickOf(ms));
             if (r == null) return;
+            if (Session != shown)
+            {
+                // A relay plate pressed: over to the teammate's maze.
+                StopAllCoroutines();
+                _anim = null;
+                ShowMaze();
+                return;
+            }
 
             _maze.RefreshSprites();
             _player.SetBlind(Session.IsBlind);
@@ -205,7 +298,7 @@ namespace MummyEscape.World
         {
             StopAllCoroutines();
             _maze.Clear();
-            Replay = null;
+            Track = null;
             _ghost.Hide();
             _cam.enabled = false;
             _cam.targetTexture = null;
@@ -227,6 +320,7 @@ namespace MummyEscape.World
 
         ReplayView _top, _bottom;
         DuelRecord _duel;
+        bool _relay;
         float _timeMs;
 
         public ReplayView Top => _top;
@@ -252,6 +346,7 @@ namespace MummyEscape.World
         public void Open(DuelRecord duel, Level level, TombTheme theme, bool spectator = false)
         {
             _duel = duel;
+            _relay = false;
             gameObject.SetActive(true);
             var me = PvpSkins.Loadout(duel.Me?.Look);
             var rival = PvpSkins.Loadout(duel.Rival?.Look);
@@ -260,6 +355,38 @@ namespace MummyEscape.World
             EndMs = Mathf.Max(EndOf(duel.Me), EndOf(duel.Rival)) + TailMs;
             _timeMs = 0;
             Playing = false;
+        }
+
+        /// <summary>
+        /// Shows a 2v2 match from the start, paused: one duo's relay on top, the other's below, each view following the
+        /// duo's runner of the moment. No ghosts: the duos run separate copies of the mazes.
+        /// </summary>
+        public void OpenRelay(RelayMap map, RelaySide top, RelaySide bottom, TombTheme theme)
+        {
+            _duel = null;
+            _relay = true;
+            gameObject.SetActive(true);
+            var nobody = PvpSkins.Loadout(null);
+            _top.Load(() => new RelayTrack(map, top?.Inputs, Looks(top)), top?.Inputs != null, nobody, theme);
+            _bottom.Load(() => new RelayTrack(map, bottom?.Inputs, Looks(bottom)), bottom?.Inputs != null, nobody, theme);
+            EndMs = Mathf.Max(EndOf(top), EndOf(bottom)) + TailMs;
+            _timeMs = 0;
+            Playing = false;
+        }
+
+        static Loadout[] Looks(RelaySide side)
+        {
+            var looks = new Loadout[RelayConfig.Mazes];
+            for (int m = 0; m < looks.Length; m++) looks[m] = PvpSkins.Loadout(side?.RunnerOf(m)?.Look);
+            return looks;
+        }
+
+        /// <summary>When a relay stops: its last action (the arrival, the fatal step), or its verified time.</summary>
+        static int EndOf(RelaySide side)
+        {
+            if (side?.Inputs == null) return 0;
+            int last = side.Inputs.Count > 0 ? RunActions.MsOf(side.Inputs[side.Inputs.Count - 1].Tick) : 0;
+            return Mathf.Max(last, side.Verified?.TimeMs ?? 0);
         }
 
         /// <summary>When a run stops: its time (exit, death, time limit), or its last action for a forfeit.</summary>
@@ -285,11 +412,12 @@ namespace MummyEscape.World
             _bottom.Clear();
             gameObject.SetActive(false);
             _duel = null;
+            _relay = false;
         }
 
         void Update()
         {
-            if (_duel == null || !Playing) return;
+            if (_duel == null && !_relay || !Playing) return;
             _timeMs = Mathf.Min(EndMs, _timeMs + Time.unscaledDeltaTime * 1000f * Speed);
             _top.PlayTo(TimeMs, Speed);
             _bottom.PlayTo(TimeMs, Speed);

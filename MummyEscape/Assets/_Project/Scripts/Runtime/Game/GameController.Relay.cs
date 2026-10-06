@@ -23,6 +23,8 @@ namespace MummyEscape.Game
         public DuelResult Result;
         public RelaySummary Mine, Rival;
         public List<RelayInput> Inputs;
+        /// <summary>The rival duo's relay as it was received (the server's copy replaces it in the replays).</summary>
+        public List<RelayInput> RivalInputs;
         public List<string> Quitters;
         /// <summary>The teammate left the match: the player may quit and report him.</summary>
         public string PartnerQuit;
@@ -433,6 +435,7 @@ namespace MummyEscape.Game
                 Rival = rival,
                 Result = RelayJudge.Resolve(mine, rival),
                 Inputs = MyRace == null ? new List<RelayInput>() : new List<RelayInput>(MyRace.Inputs),
+                RivalInputs = RivalRace == null ? new List<RelayInput>() : new List<RelayInput>(RivalRace.Inputs),
                 Quitters = new List<string>(Quitters),
                 PartnerQuit = Quitters.Find(q => q != Relay.Me && MySide.Has(q)),
             };
