@@ -13,7 +13,7 @@ namespace MummyEscape.Online
     /// against simulated rivals (<see cref="PvpBots"/>), and a demo ranking fills the leaderboard. The player's PvP data
     /// is kept in PlayerPrefs, apart from the real save.
     /// </summary>
-    public sealed class LocalPvpService : IPvpService
+    public sealed partial class LocalPvpService : IPvpService
     {
         const string PrefsKey = "pvp_demo";
         const string Me = "local";
@@ -89,6 +89,8 @@ namespace MummyEscape.Online
             };
             _server.BotSide = (kind, slots, elo) =>
             {
+                // A war is fought against one of the demo guilds, which records it.
+                if (kind == BattleKind.GuildWar && DemoWarSide(slots, elo) is BattleSide guild) return guild;
                 lock (_rng)
                 {
                     string team = "botteam_" + _rng.Next(); // noloc
@@ -109,6 +111,7 @@ namespace MummyEscape.Online
             Load();
             SeedDemoRivals();
             SeedDemoGuilds();
+            EnrollDemoMembers();
         }
 
         string BotNameOf(string id)
@@ -257,7 +260,17 @@ namespace MummyEscape.Online
                                                        .Concat(stored.Guilds.SelectMany(g => g.RecentWars.Append(g.ActiveWar))).Where(id => id != null));
             if (pending?.BattleId != null) kept.Add(pending.BattleId);
             stored.Battles.RemoveAll(b => !kept.Contains(b.Id));
-            PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(stored));
+            // JsonUtility.ToJson fills the null entries of a list with empty objects, in the live objects too: a round not run
+            // yet would come out as a run "finished in 0 ms". The holes are put back afterwards.
+            var holes = new List<(List<SlotRun> runs, int slot)>();
+            foreach (var b in stored.Battles)
+                foreach (var side in new[] { b.A, b.B })
+                    if (side != null)
+                        for (int k = 0; k < side.Runs.Count; k++)
+                            if (side.Runs[k] == null) holes.Add((side.Runs, k));
+            string json = JsonUtility.ToJson(stored);
+            foreach (var (runs, slot) in holes) runs[slot] = null;
+            PlayerPrefs.SetString(PrefsKey, json);
             PlayerPrefs.Save();
         }
 
@@ -378,12 +391,27 @@ namespace MummyEscape.Online
 
         public Task<RelayHistoryResponse> GetRelayHistoryAsync() => Run(() => _server.GetRelayHistoryAsync(Me));
 
-        public Task<ChatPage> GetChatAsync(string channel, long afterSeq) => Run(() => _server.GetChatAsync(Me, channel, afterSeq));
+        public Task<ChatPage> GetChatAsync(string channel, long afterSeq) => Run(async () =>
+        {
+            SeedDemoChat();
+            var guild = MyGuild();
+            if (guild != null) SeedGuildChat(guild, new System.Random(guild.Id.GetHashCode()));
+            await AmbientAsync(channel);
+            return await _server.GetChatAsync(Me, channel, afterSeq);
+        });
 
-        public Task<ChatSendResponse> SendChatAsync(string channel, string text, string playerName) =>
-            Run(() => _server.SendChatAsync(Me, playerName, channel, text));
+        public async Task<ChatSendResponse> SendChatAsync(string channel, string text, string playerName)
+        {
+            var r = await Run(() => _server.SendChatAsync(Me, playerName, channel, text));
+            if (r?.Ok == true) _ = ReplyLaterAsync(channel, text ?? "");
+            return r;
+        }
 
-        public Task<ChatInboxResponse> GetChatInboxAsync() => Run(() => _server.GetChatInboxAsync(Me));
+        public Task<ChatInboxResponse> GetChatInboxAsync() => Run(() =>
+        {
+            SeedDemoChat();
+            return _server.GetChatInboxAsync(Me);
+        });
 
         public Task<ReportResponse> BlockChatAsync(string playerId, bool block) => Run(() => _server.BlockChatAsync(Me, playerId, block));
 
@@ -415,7 +443,13 @@ namespace MummyEscape.Online
 
         public Task<ReportResponse> ReportRelayQuitAsync(string matchId, string quitterId) => Run(() => _server.ReportRelayQuitAsync(Me, matchId, quitterId));
 
-        public Task<GuildResponse> GetGuildAsync() => Run(() => _server.GetGuildAsync(Me));
+        public Task<GuildResponse> GetGuildAsync() => Run(async () =>
+        {
+            SeedDemoWars();
+            var r = await _server.GetGuildAsync(Me);
+            await AnnounceWarsAsync(r);
+            return r;
+        });
 
         public Task<GuildResponse> CreateGuildAsync(string name, string tag, string playerName) => Run(async () =>
         {
@@ -428,14 +462,27 @@ namespace MummyEscape.Online
                 lock (_rng) lock (_names) _names[id] = DemoNames[_rng.Next(DemoNames.Length)] + "#" + (1000 + _rng.Next(9000));
                 await _server.JoinGuildAsync(id, BotNameOf(id), r.Guild.Id);
             }
+            EnrollDemoMembers();
             return await _server.GetGuildAsync(Me);
         });
 
-        public Task<GuildSearchResponse> SearchGuildsAsync(string query, int limit) => Run(() => _server.SearchGuildsAsync(query, limit));
+        public Task<GuildSearchResponse> SearchGuildsAsync(string query, int limit) => Run(() =>
+        {
+            SeedDemoWars();
+            return _server.SearchGuildsAsync(query, limit);
+        });
 
         public Task<GuildSearchResponse> GetGuildBoardAsync(int limit) => Run(() => _server.GetGuildBoardAsync(limit));
 
-        public Task<GuildResponse> JoinGuildAsync(string guildId, string playerName) => Run(() => _server.JoinGuildAsync(Me, playerName, guildId));
+        public Task<GuildResponse> JoinGuildAsync(string guildId, string playerName) => Run(async () =>
+        {
+            SeedDemoWars();
+            EnrollDemoMembers();
+            var r = await _server.JoinGuildAsync(Me, playerName, guildId);
+            if (r.Guild == null) return r;
+            await WelcomeAsync(playerName);
+            return await _server.GetGuildAsync(Me);
+        });
 
         public Task<GuildResponse> LeaveGuildAsync() => Run(() => _server.LeaveGuildAsync(Me));
 
@@ -443,7 +490,12 @@ namespace MummyEscape.Online
 
         public Task<GuildResponse> KickGuildMemberAsync(string memberId) => Run(() => _server.KickGuildMemberAsync(Me, memberId));
 
-        public Task<GuildResponse> StartWarAsync(int size, List<string> order) => Run(() => _server.StartWarAsync(Me, size, order, Gen));
+        public Task<GuildResponse> StartWarAsync(int size, List<string> order) => Run(async () =>
+        {
+            var r = await _server.StartWarAsync(Me, size, order, Gen);
+            await AnnounceWarsAsync(r);
+            return r;
+        });
 
         public async Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit)
         {
