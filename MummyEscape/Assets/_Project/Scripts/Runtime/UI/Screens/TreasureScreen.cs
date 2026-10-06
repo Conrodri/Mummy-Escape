@@ -51,6 +51,14 @@ namespace MummyEscape.UI.Screens
             _note.text = "";
             Refresh();
             _scroll.verticalNormalizedPosition = 1f;
+            SyncWallet();
+        }
+
+        /// <summary>The golden wallet as the server has it (another phone may have spent or bought).</summary>
+        async void SyncWallet()
+        {
+            await GoldWallet.RefreshAsync(App);
+            if (this != null && gameObject.activeInHierarchy) Refresh();
         }
 
         void Refresh()
@@ -196,6 +204,12 @@ namespace MummyEscape.UI.Screens
         async void BuyPack(GoldPack pack)
         {
             if (_busy || !Store.Available) return;
+            if (!GoldWallet.CanPurchase(App))
+            {
+                _note.text = GoldWallet.Available(App) ? Loc.T("Connecte ton compte Google Play Jeux avant un achat : tes scarabées dorés y restent attachés.")
+                                                     : GoldWallet.ErrorText("OFFLINE");
+                return;
+            }
             _busy = true;
             Refresh();
             PurchaseOutcome r;
@@ -203,12 +217,21 @@ namespace MummyEscape.UI.Screens
             catch (System.Exception e) { r = new PurchaseOutcome { Error = e.Message }; }
             if (this == null) return;
             _busy = false;
-            if (r.Ok && App.Save.CreditPurchase(r.TransactionId, pack.Gold + pack.Bonus))
+            if (r.Ok)
             {
-                App.Audio.Play(Sfx.Coin);
-                _note.text = Loc.F("+{0} scarabées dorés. Merci !", pack.Gold + pack.Bonus);
+                // The server checks the purchase with Google before crediting it.
+                _busy = true;
+                string error = await GoldWallet.RunAsync(App, p => p.VerifyPurchaseAsync(pack.ProductId, r.TransactionId));
+                _busy = false;
+                if (this == null) return;
+                if (error == null)
+                {
+                    App.Audio.Play(Sfx.Coin);
+                    _note.text = Loc.F("+{0} scarabées dorés. Merci !", pack.Gold + pack.Bonus);
+                }
+                else _note.text = GoldWallet.ErrorText(error);
             }
-            else if (!r.Ok && !r.Cancelled) _note.text = Loc.T("Achat impossible : réessaie plus tard.");
+            else if (!r.Cancelled) _note.text = Loc.T("Achat impossible : réessaie plus tard.");
             Refresh();
         }
 
@@ -246,9 +269,14 @@ namespace MummyEscape.UI.Screens
             }
             if (!EnoughGold(app, router, item.Gold, showPacks)) return;
             router.Open<OfferDialog>().Configure(Loc.T(def.Name), Loc.F("L'acheter pour {0} scarabées dorés ?", item.Gold),
-                (Loc.F("Acheter · {0} dorés", item.Gold), ButtonStyle.Primary, () =>
+                (Loc.F("Acheter · {0} dorés", item.Gold), ButtonStyle.Primary, async () =>
                 {
-                    if (!save.BuyWithGold(item)) return;
+                    string error = await GoldWallet.RunAsync(app, p => p.BuyGoldItemAsync(item.SkinId));
+                    if (error != null && !save.Data.OwnedSkins.Contains(item.SkinId))
+                    {
+                        router.Open<OfferDialog>().Configure(Loc.T(def.Name), GoldWallet.ErrorText(error), ("OK", ButtonStyle.Primary, null)); // noloc
+                        return;
+                    }
                     save.SelectSkin(item.SkinId);
                     app.Audio.Play(Sfx.Win);
                     done?.Invoke(true);
@@ -260,9 +288,12 @@ namespace MummyEscape.UI.Screens
         {
             if (!EnoughGold(offer.Gold)) return;
             Router.Open<OfferDialog>().Configure("Scarabées", Loc.F("Échanger {0} scarabées dorés contre {1} scarabées ?", offer.Gold, offer.Scarabs),
-                (Loc.F("Échanger · {0} dorés", offer.Gold), ButtonStyle.Primary, () =>
+                (Loc.F("Échanger · {0} dorés", offer.Gold), ButtonStyle.Primary, async () =>
                 {
-                    if (!App.Save.BuyScarabs(offer)) return;
+                    string error = await GoldWallet.RunAsync(App, p => p.BuyScarabsAsync(offer.Id));
+                    if (this == null) return;
+                    if (error != null) { _note.text = GoldWallet.ErrorText(error); Refresh(); return; }
+                    App.Save.ReceiveScarabs(offer.Scarabs);
                     App.Audio.Play(Sfx.Coin);
                     _note.text = Loc.F("+{0} scarabées", offer.Scarabs);
                     Refresh();
@@ -275,6 +306,11 @@ namespace MummyEscape.UI.Screens
 
         internal static bool EnoughGold(App.GameApp app, UIRouter router, int price, System.Action showPacks)
         {
+            if (!GoldWallet.Available(app))
+            {
+                router.Open<OfferDialog>().Configure("Scarabées dorés", GoldWallet.ErrorText("OFFLINE"), ("OK", ButtonStyle.Primary, null)); // noloc
+                return false;
+            }
             int missing = price - app.Save.Gold;
             if (missing <= 0) return true;
             router.Open<OfferDialog>().Configure("Pas assez de scarabées dorés", Loc.F("Il t'en manque {0}.", missing),

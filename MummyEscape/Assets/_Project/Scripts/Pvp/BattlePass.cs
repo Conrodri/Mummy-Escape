@@ -95,15 +95,14 @@ namespace MummyEscape.Monetization
         }
 
         /// <summary>The latest season already started (the first one before its date).</summary>
-        public static PassSeason Current
+        public static PassSeason Current => At(DateTime.UtcNow);
+
+        /// <summary>The season running at <paramref name="utc"/> (the server judges with its own clock).</summary>
+        public static PassSeason At(DateTime utc)
         {
-            get
-            {
-                var now = DateTime.UtcNow;
-                var current = Seasons[0];
-                foreach (var s in Seasons) if (s.StartUtc <= now) current = s;
-                return current;
-            }
+            var current = Seasons[0];
+            foreach (var s in Seasons) if (s.StartUtc <= utc) current = s;
+            return current;
         }
 
         /// <summary>When the season ends (the next one's start), null while no next season is planned.</summary>

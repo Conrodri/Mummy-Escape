@@ -20,12 +20,12 @@ namespace MummyEscape.Pvp
             return name.Length <= LiveDuelConfig.MaxNameLength ? name : name.Substring(0, LiveDuelConfig.MaxNameLength);
         }
 
-        static LiveDuelist Duelist(LiveDuelist claimed, int elo) => new LiveDuelist
+        async Task<LiveDuelist> DuelistAsync(LiveDuelist claimed, int elo) => new LiveDuelist
         {
             PlayerId = claimed.PlayerId,
             Name = CleanName(claimed.Name),
             Elo = elo,
-            Look = Developers.Restrict(PlayerLook.Sanitize(claimed.Look), claimed.PlayerId),
+            Look = await VerifiedLookAsync(claimed.Look, claimed.PlayerId),
         };
 
         async Task<string> LiveRefusalAsync(string me, int generatorVersion, string matchKey)
@@ -56,13 +56,15 @@ namespace MummyEscape.Pvp
             if (Leagues.FromElo(dataA.Elo) != Leagues.FromElo(dataB.Elo)) return new LiveDuelResponse { Error = "DIVISION" };
             string spent = await SpendEnergyAsync(new[] { a.PlayerId, b.PlayerId });
             if (spent != null) return new LiveDuelResponse { Error = spent };
+            var duelistA = await DuelistAsync(a, dataA.Elo);
+            var duelistB = await DuelistAsync(b, dataB.Elo);
             var duel = await Shared<LiveDuel>(LiveCollection, id, d => d ?? new LiveDuel
             {
                 Id = id,
                 Seed = _newSeed(),
                 GeneratorVersion = DifficultyTable.GeneratorVersion,
-                A = Duelist(a, dataA.Elo),
-                B = Duelist(b, dataB.Elo),
+                A = duelistA,
+                B = duelistB,
                 CreatedAtUnixMs = NowMs,
             });
             return new LiveDuelResponse { Match = duel };
@@ -90,13 +92,14 @@ namespace MummyEscape.Pvp
             var data = await Update(me);
             int seed = _newSeed();
             var bot = PvpBots.Make(new Random(seed), data.Elo, seed, "bot_" + seed, NowMs);
+            var duelistMine = await DuelistAsync(mine, data.Elo);
             bot.PlayerName = BotName?.Invoke(bot.PlayerId) ?? bot.PlayerName;
             var duel = await Shared<LiveDuel>(LiveCollection, id, d => d ?? new LiveDuel
             {
                 Id = id,
                 Seed = seed,
                 GeneratorVersion = DifficultyTable.GeneratorVersion,
-                A = Duelist(mine, data.Elo),
+                A = duelistMine,
                 B = new LiveDuelist
                 {
                     PlayerId = bot.PlayerId, Name = bot.PlayerName, Elo = bot.Elo, Look = bot.Look, Bot = true,
@@ -143,7 +146,7 @@ namespace MummyEscape.Pvp
                     verified = new RunSubmission { MatchId = matchId, Outcome = RunOutcome.Abandoned };
                 }
             }
-            verified.Look = Developers.Restrict(PlayerLook.Sanitize(run.Look), me);
+            verified.Look = await VerifiedLookAsync(run.Look, me);
             if (Titles.Get(verified.Look?.Title)?.IsDuel == true)
             {
                 var mine = await _store.ReadPlayersAsync(new[] { me });

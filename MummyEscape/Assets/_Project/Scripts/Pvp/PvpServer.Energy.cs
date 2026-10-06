@@ -17,7 +17,7 @@ namespace MummyEscape.Pvp
         bool IsHuman(string id) => !string.IsNullOrEmpty(id) && !id.StartsWith("bot_") && IsBot?.Invoke(id) != true;
 
         /// <summary>Le pass de la saison lève la limite.</summary>
-        Task<bool> UnlimitedAsync(string playerId) => Task.FromResult(false);
+        Task<bool> UnlimitedAsync(string playerId) => HasPassAsync(playerId);
 
         async Task<bool> HasEnergyAsync(string playerId) =>
             !IsHuman(playerId) || await UnlimitedAsync(playerId) || Energy.Left((await Update(playerId)).Energy, EnergyConfig.PvpMax, NowMs) > 0;

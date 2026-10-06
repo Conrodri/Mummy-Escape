@@ -143,6 +143,9 @@ namespace MummyEscape.Pvp
         /// <summary>Elo du dernier duo dissous du joueur (0 : aucun), d'où part son prochain duo.</summary>
         public int LastDuoElo;
 
+        /// <summary>Scarabées dorés, pass et skins payants : seul le serveur y touche.</summary>
+        public Wallet Wallet = new Wallet();
+
         /// <summary>Invitations à former un duo, reçues d'amis.</summary>
         public List<DuoInvite> DuoInvites = new List<DuoInvite>();
         /// <summary>Guilde du joueur, null s'il n'en a pas.</summary>

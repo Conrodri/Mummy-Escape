@@ -80,6 +80,7 @@ namespace MummyEscape.Pvp
             {
                 Seasons.Roll(d, _utcNow());
                 d.Energy ??= new EnergyMeter();
+                d.Wallet ??= new Wallet();
                 mutate?.Invoke(d);
             });
 
@@ -176,7 +177,7 @@ namespace MummyEscape.Pvp
                 error = "INVALID_RUN";
                 verified = new RunSubmission { MatchId = pending.MatchId, Outcome = RunOutcome.Abandoned };
             }
-            verified.Look = Developers.Restrict(PlayerLook.Sanitize(run.Look), me);
+            verified.Look = await VerifiedLookAsync(run.Look, me);
             if (Titles.Get(verified.Look?.Title)?.IsDuel == true)
             {
                 // Duel titles are checked against the protected data: nobody shows "Légende de diamant" without the league.

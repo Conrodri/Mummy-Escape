@@ -60,7 +60,7 @@ namespace MummyEscape.Online
         public LocalPvpService(Func<int> soloStars)
         {
             _soloStars = soloStars;
-            _server = new PvpServer(_store);
+            _server = new PvpServer(_store) { AllowTestPurchases = true };
             _store.MakeGhost = (player, elo) =>
             {
                 GhostRun ghost;
@@ -425,6 +425,14 @@ namespace MummyEscape.Online
         public Task<PvpDataExportResponse> ExportDataAsync() => Run(() => _server.ExportPlayerDataAsync(Me));
         public Task<ReportResponse> DeleteDataAsync() => Run(() => _server.DeletePlayerDataAsync(Me));
         public Task<EnergyResponse> RefillEnergyAsync() => Run(() => _server.RefillEnergyAsync(Me));
+        public Task<WalletResponse> GetWalletAsync() => Run(() => _server.GetWalletAsync(Me));
+        public Task<WalletResponse> VerifyPurchaseAsync(string productId, string purchaseToken) => Run(() => _server.VerifyPurchaseAsync(Me, productId, purchaseToken));
+        public Task<WalletResponse> BuyPassAsync() => Run(() => _server.BuyPassAsync(Me));
+        public Task<WalletResponse> BuyTiersAsync() => Run(() => _server.BuyTiersAsync(Me));
+        public Task<WalletResponse> BuyScarabsAsync(string offerId) => Run(() => _server.BuyScarabsAsync(Me, offerId));
+        public Task<WalletResponse> BuyGoldItemAsync(string skinId) => Run(() => _server.BuyGoldItemAsync(Me, skinId));
+        public Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers) =>
+            Run(() => _server.ClaimPassRewardsAsync(Me, season, freeTiers, premiumTiers));
 
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Run(() => _server.StartLiveDuelAsync(Me, Gen, matchKey, a, b));

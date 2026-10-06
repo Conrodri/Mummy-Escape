@@ -7,47 +7,39 @@ using MummyEscape.Pvp;
 namespace MummyEscape.Services
 {
     /// <summary>
-    /// The real-money side of the save: golden scarabs, the solo energy and the season pass. Kept on the device
-    /// and in the cloud copy like the scarabs; receipts are not checked by a server yet.
+    /// The real-money side of the save: the copy of the golden wallet (kept by the PvP server), the solo energy and the
+    /// season pass progress (kept on the device and in the cloud copy).
     /// </summary>
     public sealed partial class SaveService
     {
-        // ------------------------------------------------------------------ golden scarabs
+        // ------------------------------------------------------------------ golden scarabs (a copy of the server's wallet)
 
         public int Gold => Data.GoldScarabs;
 
-        /// <summary>Credits a store purchase once per transaction; false when it was already credited.</summary>
-        public bool CreditPurchase(string transactionId, int gold)
+        /// <summary>
+        /// Takes the wallet the server sent: its golden scarabs, its passes and its paid skins. What the server does not
+        /// list stays as it is on the device (a skin is never taken away here; the server just won't show it to others).
+        /// </summary>
+        public void ApplyWallet(Wallet wallet)
         {
-            if (string.IsNullOrEmpty(transactionId) || gold <= 0 || Data.Purchases.Contains(transactionId)) return false;
-            Data.Purchases.Add(transactionId);
-            Data.GoldScarabs += gold;
+            if (wallet == null) return;
+            Data.GoldScarabs = wallet.Gold;
+            foreach (var s in wallet.Passes) if (!Data.PassesOwned.Contains(s)) Data.PassesOwned.Add(s);
+            foreach (var s in wallet.Skins) if (!Data.OwnedSkins.Contains(s)) Data.OwnedSkins.Add(s);
+            if (wallet.ClaimsSeason == BattlePass.Current.Id)
+            {
+                RollPass();
+                foreach (int t in wallet.FreeClaimed) if (!Data.PassFreeClaimed.Contains(t)) Data.PassFreeClaimed.Add(t);
+                foreach (int t in wallet.PremiumClaimed) if (!Data.PassPremiumClaimed.Contains(t)) Data.PassPremiumClaimed.Add(t);
+            }
             Save();
-            return true;
         }
 
-        bool SpendGold(int amount)
+        /// <summary>Scarabs bought with golden scarabs (the server took the gold).</summary>
+        public void ReceiveScarabs(int scarabs)
         {
-            if (amount < 0 || Data.GoldScarabs < amount) return false;
-            Data.GoldScarabs -= amount;
-            return true;
-        }
-
-        public bool BuyScarabs(ScarabOffer offer)
-        {
-            if (!SpendGold(offer.Gold)) return false;
-            Data.Coins += offer.Scarabs;
+            Data.Coins += Math.Max(0, scarabs);
             Save();
-            return true;
-        }
-
-        /// <summary>Buys a treasure exclusive with golden scarabs.</summary>
-        public bool BuyWithGold(GoldItem item)
-        {
-            if (Data.OwnedSkins.Contains(item.SkinId) || !SpendGold(item.Gold)) return false;
-            Data.OwnedSkins.Add(item.SkinId);
-            Save();
-            return true;
         }
 
         // ------------------------------------------------------------------ solo energy
@@ -118,26 +110,12 @@ namespace MummyEscape.Services
             if (save) Save();
         }
 
-        /// <summary>Buys the paid pass of the season with golden scarabs: its legendary comes at once.</summary>
-        public bool BuyPass()
+        /// <summary>Moves 10 tiers ahead (to the start of the tier 10 above), once the server took the golden scarabs.</summary>
+        public void SkipTiers()
         {
-            var season = BattlePass.Current;
-            if (HasPass || !SpendGold(GoldShop.PassPrice)) return false;
-            Data.PassesOwned.Add(season.Id);
-            if (!Data.OwnedSkins.Contains(season.Legendary)) Data.OwnedSkins.Add(season.Legendary);
-            Save();
-            return true;
-        }
-
-        /// <summary>Skips 10 tiers (to the start of the tier 10 above) for golden scarabs.</summary>
-        public bool BuyTiers()
-        {
-            int tier = PassTier;
-            if (tier >= BattlePass.Tiers || !SpendGold(GoldShop.TierBundlePrice)) return false;
-            int target = Math.Min(BattlePass.Tiers, tier + GoldShop.TierBundleSize);
+            int target = Math.Min(BattlePass.Tiers, PassTier + GoldShop.TierBundleSize);
             Data.PassXp = Math.Max(Data.PassXp, target * BattlePass.XpPerTier);
             Save();
-            return true;
         }
 
         public bool IsClaimed(int tier, bool premium) => premium ? Data.PassPremiumClaimed.Contains(tier) : Data.PassFreeClaimed.Contains(tier);
@@ -145,32 +123,20 @@ namespace MummyEscape.Services
         public bool CanClaim(int tier, bool premium) =>
             tier >= 1 && tier <= PassTier && !IsClaimed(tier, premium) && (!premium || HasPass);
 
-        /// <summary>Collects one reward of the pass; returns it, or a None reward when it cannot be collected.</summary>
+        public static PassReward RewardOf(int tier, bool premium) => premium ? BattlePass.Premium(BattlePass.Current, tier) : BattlePass.Free(tier);
+
+        /// <summary>Golden scarabs and skins of the pass are given by the server (the wallet); scarabs by the device.</summary>
+        public static bool FromServer(PassReward reward) => reward.Kind == PassRewardKind.Gold || reward.Kind == PassRewardKind.Skin;
+
+        /// <summary>Collects one scarab reward of the pass; returns it, or a None reward when it cannot be collected here.</summary>
         public PassReward Claim(int tier, bool premium)
         {
-            if (!CanClaim(tier, premium)) return default;
-            var reward = premium ? BattlePass.Premium(BattlePass.Current, tier) : BattlePass.Free(tier);
+            var reward = RewardOf(tier, premium);
+            if (!CanClaim(tier, premium) || FromServer(reward)) return default;
             (premium ? Data.PassPremiumClaimed : Data.PassFreeClaimed).Add(tier);
-            Grant(reward);
+            if (reward.Kind == PassRewardKind.Scarabs) Data.Coins += reward.Amount;
             Save();
             return reward;
-        }
-
-        /// <summary>Collects everything reached on both tracks (the paid one only with the pass).</summary>
-        public List<PassReward> ClaimAll()
-        {
-            var rewards = new List<PassReward>();
-            for (int tier = 1; tier <= PassTier; tier++)
-                foreach (bool premium in new[] { false, true })
-                    if (CanClaim(tier, premium))
-                    {
-                        var reward = premium ? BattlePass.Premium(BattlePass.Current, tier) : BattlePass.Free(tier);
-                        (premium ? Data.PassPremiumClaimed : Data.PassFreeClaimed).Add(tier);
-                        Grant(reward);
-                        rewards.Add(reward);
-                    }
-            if (rewards.Count > 0) Save();
-            return rewards;
         }
 
         public int ClaimableCount
@@ -187,27 +153,13 @@ namespace MummyEscape.Services
             }
         }
 
-        void Grant(PassReward reward)
-        {
-            switch (reward.Kind)
-            {
-                case PassRewardKind.Scarabs: Data.Coins += reward.Amount; break;
-                case PassRewardKind.Gold: Data.GoldScarabs += reward.Amount; break;
-                case PassRewardKind.Skin:
-                    if (!Data.OwnedSkins.Contains(reward.SkinId)) Data.OwnedSkins.Add(reward.SkinId);
-                    break;
-            }
-        }
-
         /// <summary>
-        /// Cloud copy of another device: the larger golden wallet (never the sum), passes and credited purchases united,
-        /// the furthest pass progress of the same season. The solo energy stays per device.
+        /// Cloud copy of another device: passes united, the furthest pass progress of the same season. The golden scarabs
+        /// come from the server only, and the solo energy stays per device.
         /// </summary>
         void MergeEconomy(SaveData other)
         {
-            Data.GoldScarabs = Math.Max(Data.GoldScarabs, other.GoldScarabs);
             foreach (var s in other.PassesOwned ?? new List<string>()) if (!Data.PassesOwned.Contains(s)) Data.PassesOwned.Add(s);
-            foreach (var p in other.Purchases ?? new List<string>()) if (!Data.Purchases.Contains(p)) Data.Purchases.Add(p);
             RollPass();
             if (other.PassSeason != Data.PassSeason) return;
             Data.PassXp = Math.Max(Data.PassXp, other.PassXp);

@@ -149,6 +149,20 @@ namespace MummyEscape.Online
         public Task<EnergyResponse> RefillEnergyAsync() =>
             Call("RefillPvpEnergy", null, e => new EnergyResponse { Error = e });
 
+        public Task<WalletResponse> GetWalletAsync() => Call("GetWallet", null, e => new WalletResponse { Error = e });
+
+        public Task<WalletResponse> VerifyPurchaseAsync(string productId, string purchaseToken) =>
+            Call("VerifyPurchase", Args("productId", productId, "purchaseToken", purchaseToken), e => new WalletResponse { Error = e });
+
+        public Task<WalletResponse> BuyPassAsync() => Call("BuyPass", null, e => new WalletResponse { Error = e });
+        public Task<WalletResponse> BuyTiersAsync() => Call("BuyTiers", null, e => new WalletResponse { Error = e });
+        public Task<WalletResponse> BuyScarabsAsync(string offerId) => Call("BuyScarabs", Args("offerId", offerId), e => new WalletResponse { Error = e });
+        public Task<WalletResponse> BuyGoldItemAsync(string skinId) => Call("BuyGoldItem", Args("skinId", skinId), e => new WalletResponse { Error = e });
+
+        public Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers) =>
+            Call("ClaimPassRewards", Args("season", season, "freeTiers", freeTiers ?? new List<int>(), "premiumTiers", premiumTiers ?? new List<int>()),
+                 e => new WalletResponse { Error = e });
+
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b), e => new LiveDuelResponse { Error = e });
 

@@ -90,6 +90,17 @@ namespace MummyEscape.Online
         /// <summary>After a rewarded ad: one more point of combat energy (a few times a day).</summary>
         Task<EnergyResponse> RefillEnergyAsync();
 
+        // --- Golden wallet (kept by the server) ---
+        Task<WalletResponse> GetWalletAsync();
+        /// <summary>Credits a Play Store purchase once the server has checked it with Google (the Play Billing purchase token).</summary>
+        Task<WalletResponse> VerifyPurchaseAsync(string productId, string purchaseToken);
+        Task<WalletResponse> BuyPassAsync();
+        Task<WalletResponse> BuyTiersAsync();
+        Task<WalletResponse> BuyScarabsAsync(string offerId);
+        Task<WalletResponse> BuyGoldItemAsync(string skinId);
+        /// <summary>The pass rewards that give golden scarabs or a skin (the scarab ones stay on the device).</summary>
+        Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers);
+
         // --- Guilds ---
         Task<GuildResponse> GetGuildAsync();
         Task<GuildResponse> CreateGuildAsync(string name, string tag, string playerName);

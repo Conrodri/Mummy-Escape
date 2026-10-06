@@ -28,7 +28,10 @@ namespace MummyEscape.Pvp.Server
             _logger = logger;
         }
 
-        PvpServer Server(IExecutionContext ctx) => new PvpServer(new CloudSavePvpStore(_api, ctx, _logger));
+        PvpServer Server(IExecutionContext ctx) => new PvpServer(new CloudSavePvpStore(_api, ctx, _logger))
+        {
+            Purchases = new GooglePlayVerifier(_api, ctx, _logger),
+        };
 
         /// <summary>Trouve un adversaire de la ligue du joueur (fantôme proche en Elo), cherche encore (une minute), donne un
         /// bot de la ligue si le joueur l'accepte, ou fait courir le joueur en premier.</summary>
@@ -204,6 +207,32 @@ namespace MummyEscape.Pvp.Server
 
         [CloudCodeFunction("RefillPvpEnergy")]
         public Task<EnergyResponse> RefillPvpEnergy(IExecutionContext ctx) => Server(ctx).RefillEnergyAsync(ctx.PlayerId);
+
+        // ------------------------------------------------------------------ golden wallet (kept by the server)
+
+        [CloudCodeFunction("GetWallet")]
+        public Task<WalletResponse> GetWallet(IExecutionContext ctx) => Server(ctx).GetWalletAsync(ctx.PlayerId);
+
+        /// <summary>Crédite un achat du Play Store après l'avoir vérifié auprès de Google (le jeton d'achat de Google Play Billing).</summary>
+        [CloudCodeFunction("VerifyPurchase")]
+        public Task<WalletResponse> VerifyPurchase(IExecutionContext ctx, string productId, string purchaseToken) =>
+            Server(ctx).VerifyPurchaseAsync(ctx.PlayerId, productId, purchaseToken);
+
+        [CloudCodeFunction("BuyPass")]
+        public Task<WalletResponse> BuyPass(IExecutionContext ctx) => Server(ctx).BuyPassAsync(ctx.PlayerId);
+
+        [CloudCodeFunction("BuyTiers")]
+        public Task<WalletResponse> BuyTiers(IExecutionContext ctx) => Server(ctx).BuyTiersAsync(ctx.PlayerId);
+
+        [CloudCodeFunction("BuyScarabs")]
+        public Task<WalletResponse> BuyScarabs(IExecutionContext ctx, string offerId) => Server(ctx).BuyScarabsAsync(ctx.PlayerId, offerId);
+
+        [CloudCodeFunction("BuyGoldItem")]
+        public Task<WalletResponse> BuyGoldItem(IExecutionContext ctx, string skinId) => Server(ctx).BuyGoldItemAsync(ctx.PlayerId, skinId);
+
+        [CloudCodeFunction("ClaimPassRewards")]
+        public Task<WalletResponse> ClaimPassRewards(IExecutionContext ctx, string season, List<int> freeTiers, List<int> premiumTiers) =>
+            Server(ctx).ClaimPassRewardsAsync(ctx.PlayerId, season, freeTiers, premiumTiers);
 
         // --- Duel en direct
 

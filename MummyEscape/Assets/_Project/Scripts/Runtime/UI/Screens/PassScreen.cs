@@ -14,6 +14,8 @@ namespace MummyEscape.UI.Screens
     public sealed class PassScreen : UIScreen
     {
         public override NavTab Tab => NavTab.Shop;
+        /// <summary>A wallet call is on its way (claims and purchases wait for it).</summary>
+        bool _busy;
 
         static readonly Color PremiumColor = new Color32(255, 96, 220, 255);
         const float RowHeight = 150;
@@ -107,6 +109,14 @@ namespace MummyEscape.UI.Screens
             Canvas.ForceUpdateCanvases();
             int tier = Mathf.Clamp(App.Save.PassTier, 1, BattlePass.Tiers);
             _scroll.verticalNormalizedPosition = 1f - (tier - 1) / (float)(BattlePass.Tiers - 1);
+            SyncWallet();
+        }
+
+        /// <summary>The pass and its claims as the server has them (another phone may have bought or collected).</summary>
+        async void SyncWallet()
+        {
+            await GoldWallet.RefreshAsync(App);
+            if (this != null && gameObject.activeInHierarchy) Refresh();
         }
 
         void Refresh()
@@ -245,17 +255,47 @@ namespace MummyEscape.UI.Screens
                 Loc.F("Le légendaire du {0} : offert dès l'achat du Pass premium.", Loc.T(BattlePass.Current.Name)), action, onAction);
         }
 
-        void Claim(int tier, bool premium)
-        {
-            var reward = App.Save.Claim(tier, premium);
-            if (reward.Kind == PassRewardKind.None) return;
-            Collected(new List<PassReward> { reward });
-        }
+        void Claim(int tier, bool premium) => _ = ClaimAsync(new List<(int, bool)> { (tier, premium) });
 
         void ClaimAll()
         {
-            var rewards = App.Save.ClaimAll();
+            var picks = new List<(int, bool)>();
+            for (int tier = 1; tier <= App.Save.PassTier; tier++)
+                foreach (bool premium in new[] { false, true })
+                    if (App.Save.CanClaim(tier, premium)) picks.Add((tier, premium));
+            if (picks.Count > 0) _ = ClaimAsync(picks);
+        }
+
+        /// <summary>Scarab rewards are collected here; golden scarabs and skins come from the server's wallet.</summary>
+        async System.Threading.Tasks.Task ClaimAsync(List<(int tier, bool premium)> picks)
+        {
+            if (_busy) return;
+            var rewards = new List<PassReward>();
+            var free = new List<int>();
+            var paid = new List<int>();
+            foreach (var (tier, premium) in picks)
+            {
+                if (!App.Save.CanClaim(tier, premium)) continue;
+                var reward = SaveService.RewardOf(tier, premium);
+                if (SaveService.FromServer(reward)) (premium ? paid : free).Add(tier);
+                else rewards.Add(App.Save.Claim(tier, premium));
+            }
+            string error = null;
+            if (free.Count + paid.Count > 0)
+            {
+                _busy = true;
+                error = await GoldWallet.RunAsync(App, p => p.ClaimPassRewardsAsync(BattlePass.Current.Id, free, paid));
+                _busy = false;
+                if (this == null) return;
+                if (error == null)
+                {
+                    foreach (int t in free) rewards.Add(SaveService.RewardOf(t, false));
+                    foreach (int t in paid) rewards.Add(SaveService.RewardOf(t, true));
+                }
+            }
             if (rewards.Count > 0) Collected(rewards);
+            if (error != null) _note.text = GoldWallet.ErrorText(error);
+            Refresh();
         }
 
         void Collected(List<PassReward> rewards)
@@ -284,9 +324,14 @@ namespace MummyEscape.UI.Screens
             var season = BattlePass.Current;
             Router.Open<OfferDialog>().Configure("Pass premium",
                 Loc.F("Débloquer le pass premium de « {0} » pour {1} scarabées dorés ?", Loc.T(season.Name), GoldShop.PassPrice),
-                (Loc.F("Débloquer · {0} dorés", GoldShop.PassPrice), ButtonStyle.Primary, () =>
+                (Loc.F("Débloquer · {0} dorés", GoldShop.PassPrice), ButtonStyle.Primary, async () =>
                 {
-                    if (!save.BuyPass()) return;
+                    if (_busy) return;
+                    _busy = true;
+                    string error = await GoldWallet.RunAsync(App, p => p.BuyPassAsync());
+                    _busy = false;
+                    if (this == null) return;
+                    if (error != null) { _note.text = GoldWallet.ErrorText(error); Refresh(); return; }
                     save.SelectSkin(season.Legendary);
                     App.Audio.Play(Sfx.Win);
                     _note.text = Loc.F("Pass premium débloqué : {0} est à toi !", Loc.T(SkinCatalog.Get(season.Legendary).Name));
@@ -301,9 +346,15 @@ namespace MummyEscape.UI.Screens
             if (!TreasureScreen.EnoughGold(App, Router, GoldShop.TierBundlePrice, () => Router.Open<TreasureScreen>())) return;
             Router.Open<OfferDialog>().Configure("Paliers",
                 Loc.F("Avancer de {0} paliers pour {1} scarabées dorés ?", GoldShop.TierBundleSize, GoldShop.TierBundlePrice),
-                (Loc.F("Avancer · {0} dorés", GoldShop.TierBundlePrice), ButtonStyle.Primary, () =>
+                (Loc.F("Avancer · {0} dorés", GoldShop.TierBundlePrice), ButtonStyle.Primary, async () =>
                 {
-                    if (!save.BuyTiers()) return;
+                    if (_busy || save.PassTier >= BattlePass.Tiers) return;
+                    _busy = true;
+                    string error = await GoldWallet.RunAsync(App, p => p.BuyTiersAsync());
+                    _busy = false;
+                    if (this == null) return;
+                    if (error != null) { _note.text = GoldWallet.ErrorText(error); return; }
+                    save.SkipTiers();
                     App.Audio.Play(Sfx.Coin);
                     OnShow();
                     _note.text = Loc.F("Palier {0} atteint !", save.PassTier);

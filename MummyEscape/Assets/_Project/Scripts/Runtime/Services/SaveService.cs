@@ -32,7 +32,7 @@ namespace MummyEscape.Services
         public bool ProfileDone;
 
         // ---- Real-money economy (see Monetization): golden scarabs, solo energy, season pass.
-        /// <summary>Golden scarabs, bought in the store (10 € = 100) or earned on the pass.</summary>
+        /// <summary>Golden scarabs: the copy of the wallet the PvP server keeps (bought in the store, earned on the pass).</summary>
         public int GoldScarabs;
         /// <summary>Solo energy (from act 2), kept by the device; the online energy is kept by the PvP server.</summary>
         public MummyEscape.Pvp.EnergyMeter SoloEnergy = new MummyEscape.Pvp.EnergyMeter();
@@ -43,8 +43,6 @@ namespace MummyEscape.Services
         public List<string> PassesOwned = new List<string>();
         public List<int> PassFreeClaimed = new List<int>();
         public List<int> PassPremiumClaimed = new List<int>();
-        /// <summary>Store transactions already credited (a purchase reported twice is paid once).</summary>
-        public List<string> Purchases = new List<string>();
     }
 
     public struct RecordOutcome
