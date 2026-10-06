@@ -80,12 +80,12 @@ namespace MummyEscape.Visual
             Glow = ToSprite(PaintGlow(64), 64);
             Panel = ToSprite(PaintPanel(new Color32(30, 26, 22, 255), Gold), Ppu, new Vector4(10, 10, 10, 10));
             ButtonSprite = ToSprite(PaintPanel(Lapis, Gold), Ppu, new Vector4(10, 10, 10, 10));
-            Ankh = ToSprite(PaintAnkh(Gold, GoldDark), 16);
-            AnkhEmpty = ToSprite(PaintAnkh(new Color32(70, 64, 58, 255), new Color32(40, 36, 32, 255)), 16);
-            Star = ToSprite(PaintStar(Gold), 16);
-            StarEmpty = ToSprite(PaintStar(new Color32(70, 64, 58, 255)), 16);
-            Scarab = ToSprite(PaintScarabIcon(), 16);
-            Lock = ToSprite(PaintLock(), 16);
+            Ankh = Icon("ankh", () => PaintAnkh(Gold, GoldDark));
+            AnkhEmpty = Icon("ankh_empty", () => PaintAnkh(new Color32(70, 64, 58, 255), new Color32(40, 36, 32, 255)));
+            Star = Icon("star", () => PaintStar(Gold));
+            StarEmpty = Icon("star_empty", () => PaintStar(new Color32(70, 64, 58, 255)));
+            Scarab = Icon("scarab", PaintScarabIcon);
+            Lock = Icon("lock", PaintLock);
 
             Spark = ToSprite(PaintGlow(64), 64);
             var px = new Px(2, 2); px.Fill(new Color32(255, 255, 255, 255));
@@ -234,8 +234,29 @@ namespace MummyEscape.Visual
             return s;
         }
 
-        /// <summary>Tile sprites depend on the act's theme.</summary>
-        Sprite Tiled(string key, System.Func<Px> paint) => Cached($"a{T.Act}_{key}", paint);
+        /// <summary>Where hand-made (or exported, then retouched) art replaces the painters: Resources/Art/...</summary>
+        public const string TilesFolder = "Art/Tiles/", IconsFolder = "Art/Icons/";
+
+        /// <summary>
+        /// Tile sprites depend on the act's theme. A PNG at Resources/Art/Tiles/a{act}_{key} (imported as a 32 ppu sprite)
+        /// wins over the painter, so the tiles can be redrawn by hand one by one.
+        /// </summary>
+        Sprite Tiled(string key, System.Func<Px> paint)
+        {
+            string full = $"a{T.Act}_{key}";
+            if (!_cache.TryGetValue(full, out var s)) _cache[full] = s = Resources.Load<Sprite>(TilesFolder + full) ?? ToSprite(paint());
+            return s;
+        }
+
+        /// <summary>The cached tile sprites by key (the art export writes them out under these names).</summary>
+        public IEnumerable<KeyValuePair<string, Sprite>> CachedTiles()
+        {
+            foreach (var kv in _cache)
+                if (kv.Key.Length > 2 && kv.Key[0] == 'a' && char.IsDigit(kv.Key[1])) yield return kv;
+        }
+
+        /// <summary>A HUD icon: the PNG at Resources/Art/Icons/{name} (16 ppu sprite) if there is one, else the painter.</summary>
+        static Sprite Icon(string name, System.Func<Px> paint) => Resources.Load<Sprite>(IconsFolder + name) ?? ToSprite(paint(), 16);
 
         static Px Turn(Px p, bool vertical) => vertical ? p.Rotated(1) : p;
 
