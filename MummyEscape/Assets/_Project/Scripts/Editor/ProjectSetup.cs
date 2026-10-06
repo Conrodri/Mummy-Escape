@@ -17,7 +17,7 @@ namespace MummyEscape.EditorTools
         const string MaterialPath = "Assets/_Project/Art/SpriteLit.mat";
         const string UnlitMaterialPath = "Assets/_Project/Art/SpriteUnlit.mat";
 
-        [MenuItem("Mummy Escape/Setup Project (scène + réglages)", priority = 0)]
+        [MenuItem("Mummy Rush/Setup Project (scène + réglages)", priority = 0)]
         public static void Run()
         {
             Directory.CreateDirectory("Assets/_Project/Scenes");
@@ -51,10 +51,10 @@ namespace MummyEscape.EditorTools
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
-            PlayerSettings.companyName = "Mummy Escape";
-            PlayerSettings.productName = "Mummy Escape";
-            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.mummyescape.game");
-            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, "com.mummyescape.game");
+            PlayerSettings.companyName = "Mummy Rush";
+            PlayerSettings.productName = "Mummy Rush";
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.mummyrush.game");
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, "com.mummyrush.game");
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
             PlayerSettings.allowedAutorotateToLandscapeLeft = false;
             PlayerSettings.allowedAutorotateToLandscapeRight = false;

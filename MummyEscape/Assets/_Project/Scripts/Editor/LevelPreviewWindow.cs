@@ -14,7 +14,7 @@ namespace MummyEscape.EditorTools
         Vector2 _scroll;
         string _error;
 
-        [MenuItem("Mummy Escape/Level Preview", priority = 20)]
+        [MenuItem("Mummy Rush/Level Preview", priority = 20)]
         static void Open() => GetWindow<LevelPreviewWindow>("Level Preview");
 
         void OnGUI()

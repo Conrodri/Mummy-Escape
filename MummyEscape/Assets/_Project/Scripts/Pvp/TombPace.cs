@@ -1,4 +1,4 @@
-// Mummy Escape — les temps de référence d'un tombeau solo : celui d'une momie experte (à battre) et le minimum parfait.
+// Mummy Rush — les temps de référence d'un tombeau solo : celui d'une momie experte (à battre) et le minimum parfait.
 using System;
 using System.Collections.Generic;
 using MummyEscape.Core;

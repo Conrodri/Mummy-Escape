@@ -47,6 +47,7 @@ namespace MummyEscape.App
         {
             I = this;
             Application.targetFrameRate = 60;
+            LegacyData.Migrate(); // before the save and the settings are read (the game was renamed)
 
             if (spriteMaterial == null)
             {
@@ -353,7 +354,7 @@ namespace MummyEscape.App
         {
             string online = Online.IsAvailable || Online.IsDemo ? await Online.ExportOnlineDataAsync() : "null";
             return "{\n\"exportedAtUtc\": \"" + System.DateTime.UtcNow.ToString("o") + "\",\n" +
-                   "\"game\": \"Mummy Escape " + Application.version + "\",\n" +
+                   "\"game\": \"Mummy Rush " + Application.version + "\",\n" +
                    "\"privacyChoices\": " + JsonUtility.ToJson(Privacy.Data, true) + ",\n" +
                    "\"localSave\": " + JsonUtility.ToJson(Save.Data, true) + ",\n" +
                    "\"online\": " + (string.IsNullOrEmpty(online) ? "null" : online) + "\n}";

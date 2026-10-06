@@ -84,7 +84,7 @@ namespace MummyEscape.Services
             return true;
         }
 
-        /// <summary>The reward of an ad: 3 more games of that kind.</summary>
+        /// <summary>The reward of an ad: more games of that kind (<see cref="PlayLimits.AdRefill"/>).</summary>
         public void AddPlays(PlayMode mode, int count)
         {
             SetPlays(mode, PlaysLeft(mode) + count);

@@ -6,12 +6,13 @@ namespace MummyEscape.Monetization
     public enum PlayMode { Solo, Duel, Duo }
 
     /// <summary>
-    /// Free games per day: 10 solo runs, 3 live duels and 3 2v2 matches, back to full at local midnight. A rewarded ad
-    /// gives 3 more of the kind that ran out; the pass of the season lifts every limit.
+    /// Free games per day, won or lost: 10 solo runs, 3 live duels and 3 2v2 matches, back to full at local midnight.
+    /// A rewarded ad gives 3 more solo runs or 1 more match of the kind that ran out; the pass of the season lifts
+    /// every limit.
     /// </summary>
     public static class PlayLimits
     {
-        public const int AdRefill = 3;
+        public static int AdRefill(PlayMode mode) => mode == PlayMode.Solo ? 3 : 1;
 
         public static int Max(PlayMode mode) => mode == PlayMode.Solo ? 10 : 3;
     }
@@ -54,11 +55,11 @@ namespace MummyEscape.Monetization
 
         public static readonly IReadOnlyList<GoldPack> Packs = new[]
         {
-            new GoldPack { ProductId = "mummyescape.gold.10", Gold = 10, FallbackPrice = "0,99 €" }, // noloc
-            new GoldPack { ProductId = "mummyescape.gold.40", Gold = 40, FallbackPrice = "3,99 €" }, // noloc
-            new GoldPack { ProductId = "mummyescape.gold.100", Gold = 100, FallbackPrice = "9,99 €" }, // noloc
-            new GoldPack { ProductId = "mummyescape.gold.250", Gold = 250, Bonus = 50, FallbackPrice = "19,99 €" }, // noloc
-            new GoldPack { ProductId = "mummyescape.gold.700", Gold = 700, Bonus = 200, FallbackPrice = "49,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush.gold.10", Gold = 10, FallbackPrice = "0,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush.gold.40", Gold = 40, FallbackPrice = "3,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush.gold.100", Gold = 100, FallbackPrice = "9,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush.gold.250", Gold = 250, Bonus = 50, FallbackPrice = "19,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush.gold.700", Gold = 700, Bonus = 200, FallbackPrice = "49,99 €" }, // noloc
         };
 
         public static GoldPack Pack(string productId)

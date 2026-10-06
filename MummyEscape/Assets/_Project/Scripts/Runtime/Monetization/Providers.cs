@@ -6,8 +6,14 @@ namespace MummyEscape.Monetization
     public interface IAdProvider
     {
         bool IsReady { get; }
-        /// <summary>True when the player watched the ad to the end (the reward is due).</summary>
+        /// <summary>
+        /// True when the player watched the ad to the end (the reward is due). The network starts on the first one
+        /// (nothing leaves the phone before the player asks for an ad), after its consent form where the law wants it.
+        /// </summary>
         Task<bool> ShowRewardedAsync();
+        /// <summary>The network's own consent choices can be reopened (Settings › Privacy).</summary>
+        bool HasPrivacyOptions { get; }
+        void ShowPrivacyOptions(System.Action closed);
     }
 
     public struct PurchaseOutcome

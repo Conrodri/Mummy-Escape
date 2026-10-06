@@ -50,12 +50,12 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(comfort, "Quitter le jeu", AskQuit, UIKit.TextSize, ButtonStyle.Danger), UIKit.ButtonHeight);
 #endif
 
-            var version = UIKit.Label(Root, $"Mummy Escape v{Application.version} · " + Loc.F("générateur v{0}", Core.DifficultyTable.GeneratorVersion), 28, UIKit.Dim); // noloc
+            var version = UIKit.Label(Root, $"Mummy Rush v{Application.version} · " + Loc.F("générateur v{0}", Core.DifficultyTable.GeneratorVersion), 28, UIKit.Dim); // noloc
             UIKit.BottomBand(version.rectTransform, 50, 30);
         }
 
         void AskQuit() =>
-            Router.Open<ConfirmDialog>().Configure("Quitter Mummy Escape ?", "Ta progression est enregistrée.", "Quitter", () =>
+            Router.Open<ConfirmDialog>().Configure("Quitter Mummy Rush ?", "Ta progression est enregistrée.", "Quitter", () =>
             {
 #if UNITY_EDITOR
                 UnityEditor.EditorApplication.isPlaying = false;

@@ -1,10 +1,10 @@
-# Mummy Escape — Conditions d'utilisation
+# Mummy Rush — Conditions d'utilisation
 
-Version 1 — mise à jour le 2 octobre 2026.
+Version 1 — mise à jour le 6 octobre 2026.
 
 ## Objet
 
-Ces conditions encadrent l'utilisation du jeu Mummy Escape, édité par [NOM DE L'ÉDITEUR — personne physique ou société] ([ADRESSE POSTALE DE L'ÉDITEUR], [ADRESSE E-MAIL DE CONTACT]). En jouant en ligne, tu les acceptes.
+Ces conditions encadrent l'utilisation du jeu Mummy Rush, édité par [NOM DE L'ÉDITEUR — personne physique ou société] ([ADRESSE POSTALE DE L'ÉDITEUR], [ADRESSE E-MAIL DE CONTACT]). En jouant en ligne, tu les acceptes.
 
 ## Le jeu
 

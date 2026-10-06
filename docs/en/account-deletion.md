@@ -1,16 +1,16 @@
-# Mummy Escape — Delete your account and data
+# Mummy Rush — Delete your account and data
 
-This page explains how to delete your Mummy Escape account and the associated data. Mummy Escape is published by [NOM DE L'ÉDITEUR — personne physique ou société].
+This page explains how to delete your Mummy Rush account and the associated data. Mummy Rush is published by [NOM DE L'ÉDITEUR — personne physique ou société].
 
 ## From the game (immediate)
 
-1. Open Mummy Escape.  
+1. Open Mummy Rush.  
 2. Go to Settings › Privacy.  
 3. Tap "Delete my online data", then confirm.
 
 ## Without the game
 
-Write to [ADRESSE E-MAIL DE CONTACT] from any address, with the subject "Mummy Escape account deletion", giving your login (or your nickname and friend code). We delete the account within 30 days at most and confirm the deletion. To prevent abusive deletions, we may ask for proof that the account is yours (for example the friend code shown in the game).
+Write to [ADRESSE E-MAIL DE CONTACT] from any address, with the subject "Mummy Rush account deletion", giving your login (or your nickname and friend code). We delete the account within 30 days at most and confirm the deletion. To prevent abusive deletions, we may ask for proof that the account is yours (for example the friend code shown in the game).
 
 ## What is deleted
 

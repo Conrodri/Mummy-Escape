@@ -1,4 +1,4 @@
-// Mummy Escape PvP — modèles partagés entre le serveur (Cloud Code) et le client Unity.
+// Mummy Rush PvP — modèles partagés entre le serveur (Cloud Code) et le client Unity.
 // C# pur, sans dépendance Unity ni NuGet : le module serveur lie ces fichiers tels quels (server/PvpMatchmaking).
 using System;
 using System.Collections.Generic;

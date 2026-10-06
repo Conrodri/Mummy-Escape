@@ -1,4 +1,4 @@
-// Mummy Escape — règles des combats d'équipe (2v2 et guerres de guildes), sans stockage : testables telles quelles.
+// Mummy Rush — règles des combats d'équipe (2v2 et guerres de guildes), sans stockage : testables telles quelles.
 using System;
 using System.Collections.Generic;
 

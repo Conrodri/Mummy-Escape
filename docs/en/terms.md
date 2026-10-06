@@ -1,10 +1,10 @@
-# Mummy Escape — Terms of use
+# Mummy Rush — Terms of use
 
-Version 1 — updated October 2, 2026. English translation: the French version prevails.
+Version 1 — updated October 6, 2026. English translation: the French version prevails.
 
 ## Purpose
 
-These terms govern the use of the game Mummy Escape, published by [NOM DE L'ÉDITEUR — personne physique ou société] ([ADRESSE POSTALE DE L'ÉDITEUR], [ADRESSE E-MAIL DE CONTACT]). By playing online, you accept them.
+These terms govern the use of the game Mummy Rush, published by [NOM DE L'ÉDITEUR — personne physique ou société] ([ADRESSE POSTALE DE L'ÉDITEUR], [ADRESSE E-MAIL DE CONTACT]). By playing online, you accept them.
 
 ## The game
 

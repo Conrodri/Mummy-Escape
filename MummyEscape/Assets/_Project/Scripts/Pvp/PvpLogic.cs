@@ -1,4 +1,4 @@
-// Mummy Escape PvP — règles du jeu en C# pur, testables sans serveur.
+// Mummy Rush PvP — règles du jeu en C# pur, testables sans serveur.
 using System;
 using System.Collections.Generic;
 using System.Globalization;

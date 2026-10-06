@@ -5,7 +5,7 @@
 ## Nom de l'application (30 caractères max)
 
 ```
-Mummy Escape
+Mummy Rush
 ```
 
 ## Description courte (80 caractères max)

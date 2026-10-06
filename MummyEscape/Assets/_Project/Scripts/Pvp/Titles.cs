@@ -1,4 +1,4 @@
-// Mummy Escape — titres affichés sous le nom du joueur (profil, écran VS, duel, replays).
+// Mummy Rush — titres affichés sous le nom du joueur (profil, écran VS, duel, replays).
 // C# pur, partagé avec le serveur : il vérifie les titres de duel avant de les montrer aux adversaires.
 using System;
 using System.Collections.Generic;

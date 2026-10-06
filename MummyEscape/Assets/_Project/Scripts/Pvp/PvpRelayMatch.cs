@@ -1,4 +1,4 @@
-// Mummy Escape PvP — un match 2v2 en relais : les deux duos, leurs coureurs, leurs relais, et qui l'emporte.
+// Mummy Rush PvP — un match 2v2 en relais : les deux duos, leurs coureurs, leurs relais, et qui l'emporte.
 using System;
 using System.Collections.Generic;
 

@@ -1,4 +1,4 @@
-// Mummy Escape PvP — le temps qu'une action bloque la suivante : personne ne peut aller plus vite que le jeu n'anime.
+// Mummy Rush PvP — le temps qu'une action bloque la suivante : personne ne peut aller plus vite que le jeu n'anime.
 using System;
 using MummyEscape.Core;
 

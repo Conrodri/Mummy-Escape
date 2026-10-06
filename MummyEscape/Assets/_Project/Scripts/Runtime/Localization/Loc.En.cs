@@ -9,7 +9,7 @@ namespace MummyEscape
         {
             // ---------------------------------------------------------------- menu, shop, settings
             ["MUMMY\nESCAPE"] = "MUMMY\nESCAPE",
-            ["MUMMY ESCAPE"] = "MUMMY ESCAPE",
+            ["MUMMY RUSH"] = "MUMMY RUSH",
             ["Échappe-toi du tombeau… à l'aveugle."] = "Escape the tomb… in the dark.",
             ["JOUER"] = "PLAY",
             ["Classement"] = "Leaderboard",
@@ -328,7 +328,7 @@ namespace MummyEscape
             ["Inviter"] = "Invite",
             ["Le code contient un # suivi de 4 chiffres."] = "The code contains a # followed by 4 digits.",
             ["Joueur introuvable."] = "Player not found.",
-            ["Ajoute-moi sur Mummy Escape ! Mon code ami : {0}"] = "Add me on Mummy Escape! My friend code: {0}",
+            ["Ajoute-moi sur Mummy Rush ! Mon code ami : {0}"] = "Add me on Mummy Rush! My friend code: {0}",
             ["le plus loin"] = "furthest",
             ["étoiles"] = "stars",
             ["Niveau"] = "Level",
@@ -373,14 +373,14 @@ namespace MummyEscape
             // ---------------------------------------------------------------- first launch, privacy
             ["Conditions"] = "Terms",
             ["Avant de jouer"] = "Before you play",
-            ["Mummy Escape se joue sans connexion : dans ce mode, rien ne quitte ton téléphone.\n\n" +
+            ["Mummy Rush se joue sans connexion : dans ce mode, rien ne quitte ton téléphone.\n\n" +
              "Le mode en ligne ajoute les classements, les amis et un compte facultatif pour retrouver ta progression sur un autre appareil. " +
              "Il envoie alors à notre prestataire (Unity) un identifiant aléatoire, ton pseudonyme et tes scores.\n\n" +
-             "Ni publicité, ni pistage, ni adresse e-mail."] =
-                "Mummy Escape can be played without a connection: in that mode, nothing leaves your phone.\n\n" +
+             "Ni pistage, ni adresse e-mail. Les publicités (Google) ne s'affichent que si tu choisis d'en regarder une pour rejouer."] =
+                "Mummy Rush can be played without a connection: in that mode, nothing leaves your phone.\n\n" +
                 "Online mode adds leaderboards, friends and an optional account to restore your progress on another device. " +
                 "It then sends our provider (Unity) a random ID, your nickname and your scores.\n\n" +
-                "No ads, no tracking, no email address.",
+                "No tracking, no email address. Ads (Google) are only shown if you choose to watch one to play more.",
             ["Jouer en ligne"] = "Play online",
             ["Jouer hors ligne"] = "Play offline",
             ["Tu peux changer d'avis à tout moment dans Paramètres › Confidentialité."] = "You can change your mind at any time in Settings › Privacy.",
@@ -424,7 +424,7 @@ namespace MummyEscape
             ["Supprimer mes données en ligne"] = "Delete my online data",
             ["Effacer les données de ce téléphone"] = "Erase the data on this phone",
             ["Informations"] = "Information",
-            ["Ni publicité, ni mesure d'audience, ni traceur, ni adresse e-mail."] = "No ads, no analytics, no trackers, no email address.",
+            ["Ni mesure d'audience, ni traceur, ni adresse e-mail. Publicité (Google AdMob) seulement quand tu choisis d'en regarder une."] = "No analytics, no trackers, no email address. Ads (Google AdMob) only when you choose to watch one.",
             ["Politique de confidentialité"] = "Privacy policy",
             ["Conditions d'utilisation"] = "Terms of use",
             ["Contacter l'éditeur"] = "Contact the publisher",
@@ -668,7 +668,7 @@ namespace MummyEscape
 
             // Bottom bar and saved replays
             ["Solo"] = "Solo",
-            ["Quitter Mummy Escape ?"] = "Quit Mummy Escape?",
+            ["Quitter Mummy Rush ?"] = "Quit Mummy Rush?",
             ["Ta progression est enregistrée."] = "Your progress is saved.",
             ["Replays enregistrés ({0}/{1})"] = "Saved replays ({0}/{1})",
             ["Les 10 places sont prises : touche le replay à remplacer."] = "All 10 slots are taken: tap the replay to replace.",
@@ -879,7 +879,9 @@ namespace MummyEscape
             ["Tu as joué tes {0} matchs 2v2 gratuits du jour."] = "You've played your {0} free 2v2 matches for today.",
             ["Ils reviennent à minuit."] = "They come back at midnight.",
             ["Regarde une courte pub pour {0} parties de plus, ou prends le Pass : plus aucune limite."] = "Watch a short ad for {0} more games, or get the Pass: no more limits.",
+            ["Regarde une courte pub pour un match de plus, ou prends le Pass : plus aucune limite."] = "Watch a short ad for one more match, or get the Pass: no more limits.",
             ["Regarder une pub (+{0})"] = "Watch an ad (+{0})",
+            ["Choix publicitaires"] = "Ad choices",
             ["Pub indisponible pour le moment"] = "No ad available right now",
             ["Plus de parties"] = "Out of games",
             ["Voir le Pass"] = "See the Pass",

@@ -1,4 +1,4 @@
-// Mummy Escape — combats d'équipe en différé : les duels 2v2 (duo d'amis, 3 manches) et les guerres de guildes (3, 5 ou
+// Mummy Rush — combats d'équipe en différé : les duels 2v2 (duo d'amis, 3 manches) et les guerres de guildes (3, 5 ou
 // 10 manches). C# pur, partagé entre le serveur (Cloud Code) et le jeu.
 using System;
 using System.Collections.Generic;

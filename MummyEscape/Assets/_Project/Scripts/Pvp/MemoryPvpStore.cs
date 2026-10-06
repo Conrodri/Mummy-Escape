@@ -1,4 +1,4 @@
-// Mummy Escape PvP — stockage en mémoire : tests, et duels hors ligne contre des adversaires simulés.
+// Mummy Rush PvP — stockage en mémoire : tests, et duels hors ligne contre des adversaires simulés.
 using System;
 using System.Collections.Generic;
 using System.Linq;

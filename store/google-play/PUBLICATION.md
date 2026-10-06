@@ -1,7 +1,7 @@
-# Publier Mummy Escape sur Google Play
+# Publier Mummy Rush sur Google Play
 
 Ce qui est **déjà prêt** dans le dépôt :
-- **AAB signé :** menu *Mummy Escape › Build › Google Play (AAB signé)*, ou `unity command mummy_build_play`. Il produit `MummyEscape/Builds/Android/MummyEscape.aab` (IL2CPP, ARM64, API cible 36, min 25).
+- **AAB signé :** menu *Mummy Rush › Build › Google Play (AAB signé)*, ou `unity command mummy_build_play`. Il produit `MummyEscape/Builds/Android/MummyRush.aab` (IL2CPP, ARM64, API cible 36, min 25).
 - **Clé d'envoi :** `~/.mummyescape/` (hors dépôt), avec le certificat `upload_certificate.pem`.
 - **Code de version :** calculé depuis la version (`0.1.0` → `10001`). Monter la version dans *Project Settings › Player › Version* avant chaque envoi.
 - **Fiche :** textes dans [`fiche-fr-FR.md`](fiche-fr-FR.md) et sa traduction anglaise [`fiche-en-US.md`](fiche-en-US.md), visuels dans [`graphics/`](graphics/).
@@ -15,7 +15,7 @@ Ce qui est **déjà prêt** dans le dépôt :
 ## 0. Avant tout (une fois)
 1. **Sauvegarder `~/.mummyescape/`** (gestionnaire de mots de passe, clé USB…). Sans cette clé, impossible d'envoyer une mise à jour sans passer par une réinitialisation auprès de Google.
 2. **Remplir `LegalTexts.cs`** : éditeur, adresse, e-mail de contact, médiateur. Ensuite :
-   - relancer *Mummy Escape › Legal › Export…* ;
+   - relancer *Mummy Rush › Legal › Export…* ;
    - committer et pousser (les pages se mettent à jour toutes seules) ;
    - reconstruire l'AAB.
 3. **Unity Gaming Services :**
@@ -30,7 +30,7 @@ Ce qui est **déjà prêt** dans le dépôt :
 
 ## 2. Créer l'application
 *Créer une application* :
-- nom « Mummy Escape », langue par défaut **Français (France) – fr-FR** ;
+- nom « Mummy Rush », langue par défaut **Français (France) – fr-FR** ;
 - type **Jeu**, **Gratuit** (un jeu gratuit ne peut plus devenir payant) ;
 - accepter les déclarations.
 
@@ -64,7 +64,7 @@ Ce qui est **déjà prêt** dans le dépôt :
 - Examen par Google : de quelques heures à environ 7 jours la première fois.
 
 ## 7. Après la publication
-- Le lien `https://play.google.com/store/apps/details?id=com.mummyescape.game` est déjà utilisé par le bouton « Partager » du jeu.
+- Le lien `https://play.google.com/store/apps/details?id=com.mummyrush.game` est déjà utilisé par le bouton « Partager » du jeu.
 - Surveiller *Qualité › Android vitals* (plantages, ANR).
 - Chaque mise à jour se fait en quatre étapes :
   1. monter la version ;

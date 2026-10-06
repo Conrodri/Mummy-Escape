@@ -1,4 +1,4 @@
-// Mummy Escape PvP — côté serveur du 2v2 en relais : le match est créé quand quatre joueurs se sont trouvés (ou contre un
+// Mummy Rush PvP — côté serveur du 2v2 en relais : le match est créé quand quatre joueurs se sont trouvés (ou contre un
 // duo de bots), chaque duo envoie son relais à la fin, le serveur les rejoue et met à jour l'Elo 2v2 des deux duos.
 using System;
 using System.Collections.Generic;

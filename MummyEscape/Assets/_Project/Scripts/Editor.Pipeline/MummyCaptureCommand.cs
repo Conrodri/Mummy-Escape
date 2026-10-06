@@ -16,7 +16,7 @@ namespace MummyEscape.EditorTools
     /// </summary>
     public static class MummyCaptureCommand
     {
-        [CliCommand("mummy_capture", "Mummy Escape (Play mode): optionally open a screen, then render a 1080x1920 PNG of world + UI.", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_capture", "Mummy Rush (Play mode): optionally open a screen, then render a 1080x1920 PNG of world + UI.", Tags = new[] { "mummy" })]
         public static string Capture(
             [CliArg("path", "Output PNG path, relative to the project")] string path = "Logs/shots/capture.png",
             [CliArg("screen", "UIScreen type to open first (e.g. SettingsScreen), empty = current")] string screen = "",

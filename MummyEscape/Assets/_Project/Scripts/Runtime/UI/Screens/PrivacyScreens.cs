@@ -99,7 +99,7 @@ namespace MummyEscape.UI.Screens
         protected override void Build()
         {
             UIKit.Backdrop(Root);
-            var title = UIKit.Label(Root, "MUMMY ESCAPE", 72, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var title = UIKit.Label(Root, "MUMMY RUSH", 72, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.TopBand(title.rectTransform, 130, 40);
             _content = PrivacyUI.ScrollBody(this, Body(190, 40, 40), out _scroll);
         }
@@ -144,10 +144,10 @@ namespace MummyEscape.UI.Screens
         {
             UIKit.Size(UIKit.Title(_content, "Avant de jouer", 46), 90);
             PrivacyUI.Paragraph(_content,
-                "Mummy Escape se joue sans connexion : dans ce mode, rien ne quitte ton téléphone.\n\n" +
+                "Mummy Rush se joue sans connexion : dans ce mode, rien ne quitte ton téléphone.\n\n" +
                 "Le mode en ligne ajoute les classements, les amis et un compte facultatif pour retrouver ta progression sur un autre appareil. " +
                 "Il envoie alors à notre prestataire (Unity) un identifiant aléatoire, ton pseudonyme et tes scores.\n\n" +
-                "Ni publicité, ni pistage, ni adresse e-mail.");
+                "Ni pistage, ni adresse e-mail. Les publicités (Google) ne s'affichent que si tu choisis d'en regarder une pour rejouer.");
             var links = UIKit.Row(_content, 100, 20);
             UIKit.Size(UIKit.Button(links.transform, "Confidentialité", () => PrivacyUI.OpenLegal(Router, true), 32), -1, -1, 1);
             UIKit.Size(UIKit.Button(links.transform, "Conditions", () => PrivacyUI.OpenLegal(Router, false), 32), -1, -1, 1);
@@ -265,6 +265,8 @@ namespace MummyEscape.UI.Screens
             string countryLabel = string.IsNullOrEmpty(country) ? Loc.T("non affiché") : country == SaveService.AutoCountry ? Loc.T("celui de l'appareil") : CountryService.NameOf(country);
             PrivacyUI.Wide(online, Loc.F("Pays dans les classements : {0}", countryLabel), () => Router.Open<CountryPickerScreen>().OnPicked(Rebuild), 30, 88);
             PrivacyUI.Wide(online, "Mon compte", () => Router.Open<AccountScreen>(), 36);
+            if (Monetization.Ads.Provider != null && Monetization.Ads.Provider.HasPrivacyOptions)
+                PrivacyUI.Wide(online, "Choix publicitaires", () => Monetization.Ads.Provider.ShowPrivacyOptions(Rebuild), 36);
 
             var data = UIKit.Card(_content);
             UIKit.SectionTitle(data, "Mes données");
@@ -275,7 +277,7 @@ namespace MummyEscape.UI.Screens
 
             var info = UIKit.Card(_content);
             UIKit.SectionTitle(info, "Informations");
-            PrivacyUI.Paragraph(info, "Ni publicité, ni mesure d'audience, ni traceur, ni adresse e-mail.", 30);
+            PrivacyUI.Paragraph(info, "Ni mesure d'audience, ni traceur, ni adresse e-mail. Publicité (Google AdMob) seulement quand tu choisis d'en regarder une.", 30);
             PrivacyUI.Wide(info, "Politique de confidentialité", () => PrivacyUI.OpenLegal(Router, true), 34);
             PrivacyUI.Wide(info, "Conditions d'utilisation", () => PrivacyUI.OpenLegal(Router, false), 34);
             if (!LegalTexts.Contact.StartsWith("["))
@@ -313,7 +315,7 @@ namespace MummyEscape.UI.Screens
         async void Export()
         {
             string json = await App.ExportPersonalData();
-            try { System.IO.File.WriteAllText(System.IO.Path.Combine(Application.persistentDataPath, "mes-donnees-mummy-escape.json"), json); }
+            try { System.IO.File.WriteAllText(System.IO.Path.Combine(Application.persistentDataPath, "mes-donnees-mummy-rush.json"), json); }
             catch (Exception e) { Debug.LogWarning("[Privacy] export file: " + e.Message); }
             App.Share.ShareText(json);
         }

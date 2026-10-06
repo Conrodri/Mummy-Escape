@@ -1,4 +1,4 @@
-# Mummy Escape
+# Mummy Rush
 
 Un puzzle-labyrinthe égyptien : tu es la momie, et tu dois t'échapper du tombeau plongé dans le noir, coup après coup.
 

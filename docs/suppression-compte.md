@@ -1,16 +1,16 @@
-# Mummy Escape — Supprimer ton compte et tes données
+# Mummy Rush — Supprimer ton compte et tes données
 
-Cette page explique comment supprimer ton compte Mummy Escape et les données associées, édité par [NOM DE L'ÉDITEUR — personne physique ou société].
+Cette page explique comment supprimer ton compte Mummy Rush et les données associées, édité par [NOM DE L'ÉDITEUR — personne physique ou société].
 
 ## Depuis le jeu (immédiat)
 
-1. Ouvre Mummy Escape.  
+1. Ouvre Mummy Rush.  
 2. Va dans Paramètres › Confidentialité.  
 3. Touche « Supprimer mes données en ligne », puis confirme.
 
 ## Sans le jeu
 
-Écris à [ADRESSE E-MAIL DE CONTACT] depuis l'adresse de ton choix, avec pour objet « Suppression de compte Mummy Escape », en indiquant ton identifiant de connexion (ou ton pseudonyme et ton code ami). Nous supprimons le compte sous 30 jours au plus tard et te confirmons la suppression. Pour éviter les suppressions abusives, nous pouvons te demander une preuve que le compte t'appartient (par exemple le code ami affiché dans le jeu).
+Écris à [ADRESSE E-MAIL DE CONTACT] depuis l'adresse de ton choix, avec pour objet « Suppression de compte Mummy Rush », en indiquant ton identifiant de connexion (ou ton pseudonyme et ton code ami). Nous supprimons le compte sous 30 jours au plus tard et te confirmons la suppression. Pour éviter les suppressions abusives, nous pouvons te demander une preuve que le compte t'appartient (par exemple le code ami affiché dans le jeu).
 
 ## Ce qui est supprimé
 

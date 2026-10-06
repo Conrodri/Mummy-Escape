@@ -1,4 +1,4 @@
-// Mummy Escape — les roues du casino de la boutique. C# pur, partagé : la roue des scarabées tourne dans le jeu (les
+// Mummy Rush — les roues du casino de la boutique. C# pur, partagé : la roue des scarabées tourne dans le jeu (les
 // scarabées sont locaux), celle des sceaux sur le serveur (qui détient les sceaux).
 using System;
 using System.Collections.Generic;

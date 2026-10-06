@@ -12,7 +12,7 @@ namespace MummyEscape.EditorTools
     /// </summary>
     public static class MummyAutoplayCommand
     {
-        [CliCommand("mummy_autoplay", "Mummy Escape (Play mode): skip the map preview and play the optimal route (optionally stop at an event).", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_autoplay", "Mummy Rush (Play mode): skip the map preview and play the optimal route (optionally stop at an event).", Tags = new[] { "mummy" })]
         public static string Autoplay(
             [CliArg("steps", "Maximum number of actions to play")] int steps = 9999,
             [CliArg("until", "Stop after: torch_out, torch_relit, button, teleport, or empty to play everything")] string until = "")

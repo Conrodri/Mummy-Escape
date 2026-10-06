@@ -1,4 +1,4 @@
-// Mummy Escape PvP — le relais 2v2 : deux labyrinthes séparés, un par coéquipier, joués en alternance. Le premier
+// Mummy Rush PvP — le relais 2v2 : deux labyrinthes séparés, un par coéquipier, joués en alternance. Le premier
 // coureur va jusqu'à sa dalle de relais, ce qui libère son coéquipier sur le départ de l'autre labyrinthe ; celui-ci
 // court jusqu'à sa propre dalle et rend la main, et ainsi de suite jusqu'à la sortie du second labyrinthe. Les deux duos
 // courent en direct sur la même graine : le premier dont le dernier coureur sort gagne ; une momie morte fait perdre

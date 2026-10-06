@@ -1,4 +1,4 @@
-// Mummy Escape — le serveur des équipes : duos 2v2 (avec un ami, Elo 2v2 et classement), guildes (points, skins,
+// Mummy Rush — le serveur des équipes : duos 2v2 (avec un ami, Elo 2v2 et classement), guildes (points, skins,
 // rôles) et combats d'équipe en différé (2v2 en 3 manches, guerres de guildes en 3, 5 ou 10 manches).
 using System;
 using System.Collections.Generic;

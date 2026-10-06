@@ -238,7 +238,7 @@ namespace MummyEscape.UI.Screens
         void ShareCode()
         {
             string name = App.Online.PlayerName;
-            App.Share.ShareText(Loc.F("Ajoute-moi sur Mummy Escape ! Mon code ami : {0}", name) + "\n" + ShareService.GameUrl);
+            App.Share.ShareText(Loc.F("Ajoute-moi sur Mummy Rush ! Mon code ami : {0}", name) + "\n" + ShareService.GameUrl);
         }
     }
 

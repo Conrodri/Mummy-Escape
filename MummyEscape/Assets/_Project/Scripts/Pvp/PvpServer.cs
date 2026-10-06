@@ -1,4 +1,4 @@
-// Mummy Escape PvP — la logique du serveur, sans dépendance au stockage : le module Cloud Code l'exécute sur Unity
+// Mummy Rush PvP — la logique du serveur, sans dépendance au stockage : le module Cloud Code l'exécute sur Unity
 // Cloud (server/PvpMatchmaking), le jeu l'exécute en local pour jouer hors ligne contre des adversaires simulés.
 using System;
 using System.Collections.Generic;

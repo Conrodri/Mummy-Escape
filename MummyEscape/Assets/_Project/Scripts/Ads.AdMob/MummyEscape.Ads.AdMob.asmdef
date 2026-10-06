@@ -1,0 +1,23 @@
+{
+    "name": "MummyEscape.Ads.AdMob",
+    "rootNamespace": "MummyEscape.Monetization",
+    "references": [
+        "MummyEscape.Runtime"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MUMMY_ADMOB"
+    ],
+    "versionDefines": [
+        { "name": "com.google.ads.mobile", "expression": "9.0.0", "define": "MUMMY_ADMOB" }
+    ],
+    "noEngineReferences": false
+}

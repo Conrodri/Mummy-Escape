@@ -1,4 +1,4 @@
-// Mummy Escape PvP — la course d'un duel : le tombeau tiré de la graine, l'encodage des actions et leur relecture.
+// Mummy Rush PvP — la course d'un duel : le tombeau tiré de la graine, l'encodage des actions et leur relecture.
 // Même graine + mêmes actions = même course, sur le téléphone du joueur, chez son adversaire et sur le serveur.
 using System;
 using System.Collections.Generic;

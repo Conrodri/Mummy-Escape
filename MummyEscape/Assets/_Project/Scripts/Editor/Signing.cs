@@ -52,7 +52,7 @@ namespace MummyEscape.EditorTools
             return new Signing { Keystore = file, StorePass = storePass, Alias = alias ?? "upload", KeyPass = keyPass ?? storePass };
         }
 
-        [MenuItem("Mummy Escape/Build/Créer la clé d'envoi Google Play", priority = 60)]
+        [MenuItem("Mummy Rush/Build/Créer la clé d'envoi Google Play", priority = 60)]
         public static void CreateUploadKey() => Debug.Log("[Signing] " + Create());
 
         /// <summary>Creates the upload keystore once (never overwrites an existing one).</summary>
@@ -70,12 +70,12 @@ namespace MummyEscape.EditorTools
             // PKCS12: the key password equals the store password. Passwords go through the environment, not the command line.
             string error = Run(keytool, password,
                 $"-genkeypair -keystore \"{KeystorePath}\" -storetype PKCS12 -alias upload -keyalg RSA -keysize 4096 -validity 10000 " +
-                "-dname \"CN=Mummy Escape, O=Mummy Escape\" -storepass:env MUMMY_PASS -keypass:env MUMMY_PASS");
+                "-dname \"CN=Mummy Rush, O=Mummy Rush\" -storepass:env MUMMY_PASS -keypass:env MUMMY_PASS");
             if (error != null) return "Échec keytool : " + error;
             Run(keytool, password, $"-exportcert -rfc -keystore \"{KeystorePath}\" -alias upload -storepass:env MUMMY_PASS -file \"{Path.Combine(Folder, "upload_certificate.pem")}\"");
 
             File.WriteAllText(PropertiesPath,
-                "# Clé d'envoi Google Play de Mummy Escape. NE PAS COMMITER, NE PAS PERDRE : sauvegarder ce dossier (gestionnaire de mots de passe, disque externe).\n" +
+                "# Clé d'envoi Google Play de Mummy Rush. NE PAS COMMITER, NE PAS PERDRE : sauvegarder ce dossier (gestionnaire de mots de passe, disque externe).\n" +
                 $"storeFile={KeystorePath}\nstorePassword={password}\nkeyAlias=upload\nkeyPassword={password}\n");
             return "Clé d'envoi créée dans " + Folder + " — sauvegarde ce dossier.";
         }

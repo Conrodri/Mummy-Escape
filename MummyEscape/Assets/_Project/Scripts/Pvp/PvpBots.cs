@@ -1,4 +1,4 @@
-// Mummy Escape PvP — adversaires simulés pour les duels hors ligne (et pour tester sans serveur).
+// Mummy Rush PvP — adversaires simulés pour les duels hors ligne (et pour tester sans serveur).
 using System;
 using System.Collections.Generic;
 using MummyEscape.Core;

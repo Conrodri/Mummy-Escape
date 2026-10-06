@@ -12,7 +12,7 @@ namespace MummyEscape.EditorTools
     /// </summary>
     public static class MummyCliCommands
     {
-        [CliCommand("mummy_levels", "Mummy Escape: generate every level and report par, interactions and floors.", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_levels", "Mummy Rush: generate every level and report par, interactions and floors.", Tags = new[] { "mummy" })]
         public static string Levels()
         {
             var sb = new StringBuilder("level | par [window] | buttons interactions hp | floors size\n");
@@ -26,7 +26,7 @@ namespace MummyEscape.EditorTools
             return sb.ToString();
         }
 
-        [CliCommand("mummy_level", "Mummy Escape: ASCII map and optimal solution of one level (e.g. --id 2-5).", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_level", "Mummy Rush: ASCII map and optimal solution of one level (e.g. --id 2-5).", Tags = new[] { "mummy" })]
         public static string Level([CliArg("id", "Level id act-index, e.g. 1-3")] string id = "1-1",
                                    [CliArg("variant", "Maze number (every run of a level draws the next one)")] int variant = 0)
         {
@@ -37,27 +37,27 @@ namespace MummyEscape.EditorTools
                    $"solution: {string.Join(" ", l.Solution.Actions)}\n\n{l.ToAscii()}";
         }
 
-        [CliCommand("mummy_setup", "Mummy Escape: create/refresh the Main scene, lit sprite material and mobile player settings.", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_setup", "Mummy Rush: create/refresh the Main scene, lit sprite material and mobile player settings.", Tags = new[] { "mummy" })]
         public static string Setup()
         {
             ProjectSetup.Run();
             return "Setup done: " + ProjectSetup.ScenePath;
         }
 
-        [CliCommand("mummy_build_play", "Mummy Escape: build the signed Google Play App Bundle (Builds/Android/MummyEscape.aab).", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_build_play", "Mummy Rush: build the signed Google Play App Bundle (Builds/Android/MummyRush.aab).", Tags = new[] { "mummy" })]
         public static string BuildPlay()
         {
             BuildScript.GooglePlay();
             return "AAB: " + System.IO.Path.GetFullPath(BuildScript.BundlePath);
         }
 
-        [CliCommand("mummy_signing_create", "Mummy Escape: create the Google Play upload key in ~/.mummyescape (never overwrites).", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_signing_create", "Mummy Rush: create the Google Play upload key in ~/.mummyescape (never overwrites).", Tags = new[] { "mummy" })]
         public static string CreateSigning() => Signing.Create();
 
-        [CliCommand("mummy_loc_check", "Mummy Escape: list player-facing texts without translation and interpolations to wrap in Loc.F.", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_loc_check", "Mummy Rush: list player-facing texts without translation and interpolations to wrap in Loc.F.", Tags = new[] { "mummy" })]
         public static string LocCheck() => EditorTools.LocCheck.Report();
 
-        [CliCommand("mummy_build_android", "Mummy Escape: build a development APK to Builds/Android/MummyEscape.apk.", Tags = new[] { "mummy" })]
+        [CliCommand("mummy_build_android", "Mummy Rush: build a development APK to Builds/Android/MummyRush.apk.", Tags = new[] { "mummy" })]
         public static string BuildAndroid()
         {
             BuildScript.AndroidDev();

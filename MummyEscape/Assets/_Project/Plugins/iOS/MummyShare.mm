@@ -2,7 +2,7 @@
 
 extern UIViewController* UnityGetGLViewController();
 
-// Native share sheet for Mummy Escape results (called from ShareService.cs).
+// Native share sheet for Mummy Rush results (called from ShareService.cs).
 extern "C" void _MummyShareText(const char* text)
 {
     NSString* message = [NSString stringWithUTF8String:text];

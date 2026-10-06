@@ -1,4 +1,4 @@
-// Mummy Escape PvP — le duel en direct : deux joueurs de la même ligue, le même tombeau, partis au même moment. Le premier
+// Mummy Rush PvP — le duel en direct : deux joueurs de la même ligue, le même tombeau, partis au même moment. Le premier
 // sorti gagne ; le premier mort perd. Chaque téléphone envoie ses actions horodatées à l'autre (le rival court à côté, comme
 // un fantôme qui avance en même temps) ; à la fin, chacun envoie sa course au serveur, qui la rejoue et juge sur les temps
 // qu'il a vérifiés, pas sur ce que les téléphones ont vu.

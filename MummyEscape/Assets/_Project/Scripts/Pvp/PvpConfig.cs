@@ -1,4 +1,4 @@
-// Mummy Escape PvP — tous les réglages à un seul endroit.
+// Mummy Rush PvP — tous les réglages à un seul endroit.
 namespace MummyEscape.Pvp
 {
     public enum League { Bronze = 0, Argent = 1, Or = 2, Platine = 3, Diamant = 4 }

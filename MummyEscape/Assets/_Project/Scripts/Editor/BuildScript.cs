@@ -13,30 +13,30 @@ namespace MummyEscape.EditorTools
     ///   Unity -batchmode -quit -projectPath . -executeMethod MummyEscape.EditorTools.BuildScript.AndroidDev
     ///   Unity -batchmode -quit -projectPath . -executeMethod MummyEscape.EditorTools.BuildScript.GooglePlay
     ///   Unity -batchmode -quit -projectPath . -executeMethod MummyEscape.EditorTools.BuildScript.IOSXcode
-    /// Android test: installable APK (adb install -r Builds/Android/MummyEscape.apk).
-    /// Google Play: signed App Bundle (Builds/Android/MummyEscape.aab) with the upload key described in
+    /// Android test: installable APK (adb install -r Builds/Android/MummyRush.apk).
+    /// Google Play: signed App Bundle (Builds/Android/MummyRush.aab) with the upload key described in
     /// <see cref="Signing"/>; Google re-signs it with the app signing key (Play App Signing).
     /// iOS: Xcode project only — it has to be compiled and signed on a Mac.
     /// </summary>
     public static class BuildScript
     {
-        public const string AndroidPath = "Builds/Android/MummyEscape.apk";
-        public const string BundlePath = "Builds/Android/MummyEscape.aab";
+        public const string AndroidPath = "Builds/Android/MummyRush.apk";
+        public const string BundlePath = "Builds/Android/MummyRush.aab";
         public const string IOSPath = "Builds/iOS";
 
         /// <summary>Google Play requires a recent target API (35 since Aug. 2025, 36 for new apps and updates from Aug. 2026).</summary>
         const int TargetApi = 36;
 
-        [MenuItem("Mummy Escape/Build/Android APK (test)", priority = 40)]
+        [MenuItem("Mummy Rush/Build/Android APK (test)", priority = 40)]
         public static void AndroidDev() => Android(development: true, bundle: false);
 
-        [MenuItem("Mummy Escape/Build/Android APK (release, non signé)", priority = 41)]
+        [MenuItem("Mummy Rush/Build/Android APK (release, non signé)", priority = 41)]
         public static void AndroidRelease() => Android(development: false, bundle: false);
 
-        [MenuItem("Mummy Escape/Build/Google Play (AAB signé)", priority = 42)]
+        [MenuItem("Mummy Rush/Build/Google Play (AAB signé)", priority = 42)]
         public static void GooglePlay() => Android(development: false, bundle: true);
 
-        [MenuItem("Mummy Escape/Build/iOS (projet Xcode)", priority = 43)]
+        [MenuItem("Mummy Rush/Build/iOS (projet Xcode)", priority = 43)]
         public static void IOSXcode()
         {
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
@@ -60,7 +60,7 @@ namespace MummyEscape.EditorTools
         static void Android(bool development, bool bundle)
         {
             var target = NamedBuildTarget.Android;
-            PlayerSettings.SetApplicationIdentifier(target, "com.mummyescape.game");
+            PlayerSettings.SetApplicationIdentifier(target, "com.mummyrush.game");
             PlayerSettings.SetScriptingBackend(target, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
@@ -72,7 +72,7 @@ namespace MummyEscape.EditorTools
             {
                 var s = Signing.Load();
                 if (s == null)
-                    Fail($"Clé d'envoi introuvable. Lance « Mummy Escape › Build › Créer la clé d'envoi Google Play » ou définis les variables MUMMY_KEYSTORE*. ({Signing.PropertiesPath})");
+                    Fail($"Clé d'envoi introuvable. Lance « Mummy Rush › Build › Créer la clé d'envoi Google Play » ou définis les variables MUMMY_KEYSTORE*. ({Signing.PropertiesPath})");
                 PlayerSettings.Android.useCustomKeystore = true;
                 PlayerSettings.Android.keystoreName = s.Keystore;
                 PlayerSettings.Android.keystorePass = s.StorePass;

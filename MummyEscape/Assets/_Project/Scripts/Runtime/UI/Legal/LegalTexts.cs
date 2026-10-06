@@ -12,7 +12,7 @@ namespace MummyEscape.UI.Legal
         public const string Address = "[ADRESSE POSTALE DE L'ÉDITEUR]";
         public const string Contact = "[ADRESSE E-MAIL DE CONTACT]";
         public const string Mediator = "[NOM ET SITE DU MÉDIATEUR DE LA CONSOMMATION]";
-        public const string Updated = "2 octobre 2026";
+        public const string Updated = "6 octobre 2026";
 
         /// <summary>True while the publisher fields above still hold placeholders (the README and a warning flag it).</summary>
         public static bool HasPlaceholders => Publisher.StartsWith("[") || Contact.StartsWith("[");
@@ -21,8 +21,9 @@ namespace MummyEscape.UI.Legal
         {
             $"Version {Services.PrivacyService.PolicyVersion} — mise à jour le {Updated}.",
             "# En bref",
-            "Mummy Escape se joue entièrement hors ligne : dans ce cas, aucune donnée ne quitte ton téléphone. " +
-            "Le jeu ne contient ni publicité, ni mesure d'audience, ni traceur, et n'utilise aucun identifiant publicitaire. " +
+            "Mummy Rush se joue entièrement hors ligne : dans ce cas, aucune donnée ne quitte ton téléphone. " +
+            "Le jeu ne contient ni mesure d'audience ni traceur. Une publicité ne s'affiche que si tu choisis d'en regarder une pour obtenir des parties en plus : " +
+            "c'est seulement à ce moment que le service publicitaire de Google est contacté (voir « Publicités »). " +
             "Aucune adresse e-mail, aucun nom réel et aucun numéro de téléphone ne te sont demandés.",
             "# Qui est responsable de tes données ?",
             $"{Publisher}, {Address}. Contact pour toute question ou demande : {Contact}.",
@@ -44,13 +45,22 @@ namespace MummyEscape.UI.Legal
             "• Fournir les fonctions en ligne que tu as choisies (classements, amis, compte, sauvegarde) : exécution des conditions d'utilisation (RGPD, art. 6.1.b).\n" +
             "• Sécuriser le service, lutter contre la triche et les abus : intérêt légitime (art. 6.1.f).\n" +
             "• Partage de ta progression avec tes amis : ton choix, que tu peux retirer à tout moment.\n" +
+            "• Publicités personnalisées : ton consentement, recueilli par le formulaire de Google et retirable à tout moment (art. 6.1.a).\n" +
             "Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne demande l'accord d'un parent ou tuteur (RGPD art. 8, loi Informatique et Libertés art. 45).",
             "# Qui peut voir ces données ?",
             "• Les autres joueurs : ton pseudonyme, tes scores et ton pays (s'il est choisi) ; tes amis voient aussi ton statut et ta progression si tu la partages.\n" +
             "• Notre prestataire technique, Unity Technologies (services Unity Gaming Services : Authentication, Leaderboards, Friends, Cloud Save), qui agit pour notre compte et selon nos instructions.\n" +
-            "Tes données ne sont ni vendues, ni louées, ni utilisées pour de la publicité.",
+            "• Google, seulement si tu regardes une publicité (voir « Publicités »).\n" +
+            "Tes données de jeu ne sont ni vendues ni louées, et ne sont jamais transmises pour de la publicité.",
+            "# Publicités (seulement si tu choisis d'en regarder une)",
+            "Quand tu n'as plus de parties gratuites, tu peux regarder une courte publicité pour en obtenir d'autres. Elle est fournie par Google AdMob " +
+            "(Google Ireland Limited), qui en est responsable de façon indépendante. Avant la première, un formulaire de Google te demande, si la loi l'exige, " +
+            "ton accord pour des publicités personnalisées ; tu peux changer d'avis dans Paramètres › Confidentialité › Choix publicitaires.\n" +
+            "Google traite alors l'identifiant publicitaire de ton téléphone, ton adresse IP et des informations techniques sur l'appareil, pour afficher la publicité, " +
+            "la mesurer et lutter contre la fraude. Si tu es mineur, seules des publicités non personnalisées te sont proposées. " +
+            "Tu peux réinitialiser ou supprimer l'identifiant publicitaire dans les réglages Android. Politique de Google : policies.google.com/privacy.",
             "# Transferts hors de l'Union européenne",
-            "Unity Technologies est établie aux États-Unis. Les transferts sont encadrés par le cadre de protection des données UE–États-Unis " +
+            "Unity Technologies et Google LLC sont établies aux États-Unis. Les transferts sont encadrés par le cadre de protection des données UE–États-Unis " +
             "(décision d'adéquation de la Commission européenne du 10 juillet 2023) et, à défaut, par les clauses contractuelles types de la Commission.",
             "# Combien de temps ?",
             "• Sur ton téléphone : jusqu'à ce que tu les effaces ou désinstalles le jeu.\n" +
@@ -77,11 +87,11 @@ namespace MummyEscape.UI.Legal
         /// <summary>Public web page required by Google Play: how to delete the account without reinstalling the game.</summary>
         public static readonly string[] AccountDeletion =
         {
-            "Cette page explique comment supprimer ton compte Mummy Escape et les données associées, édité par " + Publisher + ".",
+            "Cette page explique comment supprimer ton compte Mummy Rush et les données associées, édité par " + Publisher + ".",
             "# Depuis le jeu (immédiat)",
-            "1. Ouvre Mummy Escape.\n2. Va dans Paramètres › Confidentialité.\n3. Touche « Supprimer mes données en ligne », puis confirme.",
+            "1. Ouvre Mummy Rush.\n2. Va dans Paramètres › Confidentialité.\n3. Touche « Supprimer mes données en ligne », puis confirme.",
             "# Sans le jeu",
-            $"Écris à {Contact} depuis l'adresse de ton choix, avec pour objet « Suppression de compte Mummy Escape », en indiquant ton identifiant " +
+            $"Écris à {Contact} depuis l'adresse de ton choix, avec pour objet « Suppression de compte Mummy Rush », en indiquant ton identifiant " +
             "de connexion (ou ton pseudonyme et ton code ami). Nous supprimons le compte sous 30 jours au plus tard et te confirmons la suppression. " +
             "Pour éviter les suppressions abusives, nous pouvons te demander une preuve que le compte t'appartient (par exemple le code ami affiché dans le jeu).",
             "# Ce qui est supprimé",
@@ -106,7 +116,7 @@ namespace MummyEscape.UI.Legal
         {
             $"Version {Services.PrivacyService.PolicyVersion} — mise à jour le {Updated}.",
             "# Objet",
-            $"Ces conditions encadrent l'utilisation du jeu Mummy Escape, édité par {Publisher} ({Address}, {Contact}). " +
+            $"Ces conditions encadrent l'utilisation du jeu Mummy Rush, édité par {Publisher} ({Address}, {Contact}). " +
             "En jouant en ligne, tu les acceptes.",
             "# Le jeu",
             "Le jeu est gratuit. Il se joue hors ligne ; les fonctions en ligne (classements, amis, compte, sauvegarde) sont facultatives. " +

@@ -1,4 +1,4 @@
-# Mummy Escape
+# Mummy Rush
 
 Puzzle-labyrinthe mobile (Unity 6000.3 LTS, URP 2D). Une momie s'échappe d'un tombeau plongé dans le noir : la carte est montrée au début (4 à 10 s par étage selon ce qu’il y a à retenir), puis la momie ne voit plus que les cases voisines grâce à sa torche. Chaque swipe = 1 case, objectif = sortir en un minimum de coups. Chaque partie tire un nouveau labyrinthe.
 
@@ -23,7 +23,7 @@ Escape/
 
 1. Ouvrir `MummyEscape/` avec Unity 6000.3.x (`unity open MummyEscape`).
 2. Ouvrir `Assets/_Project/Scenes/Main.unity` → Play.
-   Si la scène manque : menu **Mummy Escape › Setup Project**.
+   Si la scène manque : menu **Mummy Rush › Setup Project**.
 
 Contrôles éditeur : flèches / ZQSD / WASD ; clic sur un piège adjacent visible = désamorcer. Sur mobile : swipe, tap sur un piège pour le désamorcer, maintenir le bouton carte pour dézoomer.
 
@@ -35,9 +35,9 @@ Modules installés pour 6000.3.23f1 : Android (SDK 34–37, NDK r27c, OpenJDK 17
 
 | Cible | Menu | Sortie |
 |-------|------|--------|
-| Android (test) | Mummy Escape › Build › Android APK (test) | `MummyEscape/Builds/Android/MummyEscape.apk` |
-| **Google Play** | Mummy Escape › Build › Google Play (AAB signé) — ou `unity command mummy_build_play` | `MummyEscape/Builds/Android/MummyEscape.aab` |
-| iOS | Mummy Escape › Build › iOS (projet Xcode) | `MummyEscape/Builds/iOS/` (à compiler et signer sur un Mac) |
+| Android (test) | Mummy Rush › Build › Android APK (test) | `MummyEscape/Builds/Android/MummyRush.apk` |
+| **Google Play** | Mummy Rush › Build › Google Play (AAB signé) — ou `unity command mummy_build_play` | `MummyEscape/Builds/Android/MummyRush.aab` |
+| iOS | Mummy Rush › Build › iOS (projet Xcode) | `MummyEscape/Builds/iOS/` (à compiler et signer sur un Mac) |
 
 En ligne de commande :
 ```bash
@@ -48,9 +48,9 @@ En ligne de commande :
 Installer sur un téléphone Android (options développeur + débogage USB activés) :
 ```bash
 ADB="C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb.exe"
-"$ADB" install -r MummyEscape/Builds/Android/MummyEscape.apk
+"$ADB" install -r MummyEscape/Builds/Android/MummyRush.apk
 ```
-Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnues »). Les builds Android sont IL2CPP / ARM64, Android 7.1+ (API 25), API cible 36. L'icône est générée par **Mummy Escape › Generate app icon**.
+Ou copier l'APK sur le téléphone et l'ouvrir (autoriser les « sources inconnues »). Les builds Android sont IL2CPP / ARM64, Android 7.1+ (API 25), API cible 36. L'icône est générée par **Mummy Rush › Generate app icon**.
 
 **Google Play.** L'AAB est signé avec la **clé d'envoi**, rangée hors du dépôt public dans `~/.mummyescape/` (`upload-keystore.jks`, `signing.properties`, `upload_certificate.pem`). Elle se crée une fois avec *Build › Créer la clé d'envoi Google Play* (`unity command mummy_signing_create`, qui n'écrase jamais une clé existante). En CI, on la fournit par les variables `MUMMY_KEYSTORE`, `MUMMY_KEYSTORE_PASS`, `MUMMY_KEY_ALIAS` et `MUMMY_KEY_PASS`. **Sauvegarde ce dossier.** Le code de version est dérivé de la version (`1.2.3` → `1020301`) : monte la version avant chaque envoi. Fiche, visuels, déclarations et marche à suivre : [`store/google-play/`](store/google-play/PUBLICATION.md).
 
@@ -124,7 +124,7 @@ Français et anglais, au choix dans **Paramètres › Langue** (par défaut : la
 
 - **Le texte français est la clé** : `Loc.T("Jouer")`, `Loc.F("Niveau {0}", id)`, `Loc.P(n, "{0} étage", "{0} étages")`. Les libellés passés à `UIKit` (`Label`, `Button`, `SetLabel`…) sont traduits automatiquement ; seuls les textes dynamiques (`.text =`, interpolations) appellent `Loc` explicitement. `Core` passe par `CoreText` (français par défaut, ce que vérifient les tests).
 - **Traductions** dans `Runtime/Localization/Loc.En.cs` ; textes légaux anglais dans `LegalTexts.En.cs` (exportés dans `docs/en/`).
-- **Vérification** : `unity command mummy_loc_check` (ou *Mummy Escape › Localization › Check missing translations*) liste les textes sans traduction et les interpolations à passer par `Loc.F`. Une ligne marquée `// noloc` est ignorée.
+- **Vérification** : `unity command mummy_loc_check` (ou *Mummy Rush › Localization › Check missing translations*) liste les textes sans traduction et les interpolations à passer par `Loc.F`. Une ligne marquée `// noloc` est ignorée.
 - **Ajouter une langue** : une valeur dans `Loc.Lang`, son entrée dans `Loc.Languages` et une table `Loc.Xx.cs`.
 
 ## Tests
@@ -173,7 +173,7 @@ unity command mummy_autoplay --steps 40 --until torch_out   # (en Play) saute l'
 Sans configuration, le jeu tourne **hors ligne** (sauvegarde locale, classement/amis désactivés proprement). Pour activer :
 1. Lier le projet : Edit › Project Settings › Services (organisation + projet UGS).
 2. Activer Authentication (anonyme + Username & Password), Leaderboards, Friends, Cloud Save dans le dashboard.
-3. Menu **Mummy Escape › Online › Export leaderboard configs** → déployer `Assets/_Project/Online` via Services › Deployment (ou `ugs deploy`).
+3. Menu **Mummy Rush › Online › Export leaderboard configs** → déployer `Assets/_Project/Online` via Services › Deployment (ou `ugs deploy`).
 
 Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = meilleur) : on trie d'abord sur l'écart au chemin optimal (« parfait », « +3 coups »), puis sur le **temps** (chronomètre lancé à la fin de l'aperçu, arrêté en pause). Chaque partie tirant un labyrinthe différent, le nombre brut de coups ne serait pas comparable. Les ids de leaderboard incluent la version du générateur et du format de score (`v2s2_1-1`). La progression des amis est publiée dans Cloud Save (clé publique `progress`).
 
@@ -195,7 +195,7 @@ Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = m
 
 **À faire avant publication :**
 1. Remplir `Runtime/UI/Legal/LegalTexts.cs` : éditeur (nom, adresse), e-mail de contact et médiateur de la consommation. Mettre à jour la date.
-2. Menu **Mummy Escape › Legal › Export privacy policy and terms to docs/**, puis publier `docs/` avec GitHub Pages (Settings › Pages › `main` / `docs`). Ces URLs publiques sont demandées par les stores.
+2. Menu **Mummy Rush › Legal › Export privacy policy and terms to docs/**, puis publier `docs/` avec GitHub Pages (Settings › Pages › `main` / `docs`). Ces URLs publiques sont demandées par les stores.
 3. Dashboard UGS : activer **Username & Password** dans Authentication. Mettre en place la purge des profils inactifs depuis 3 ans (promise dans la politique), par exemple avec un script Cloud Code planifié ou l'Admin API.
 4. **Google Play, section Sécurité des données :**
    - données collectées : identifiants utilisateur (ID), activité dans l'appli (contenu de jeu) et nom (pseudonyme) ;
@@ -208,7 +208,7 @@ Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = m
 ## Avant publication
 
 - Installer les modules de build : `unity install-modules --module android --module ios`.
-- `ShareService.GameUrl` pointe vers la fiche Google Play (`com.mummyescape.game`) ; ajouter le lien App Store pour iOS.
+- `ShareService.GameUrl` pointe vers la fiche Google Play (`com.mummyrush.game`) ; ajouter le lien App Store pour iOS.
 - Le partage Android envoie du texte seulement (pas d'image) ; le bouton Quitter est masqué sur iOS (règle Apple).
 - Graphismes (pixel-art) et sons sont générés par code (`ArtLibrary`, `AudioService`) : placeholders cohérents à remplacer par de vrais assets.
-- Bundle id : `com.mummyescape.game`.
+- Bundle id : `com.mummyrush.game`.

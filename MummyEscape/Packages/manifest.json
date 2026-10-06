@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.google.ads.mobile": "11.5.0",
     "com.google.play.games": "2.3.0",
     "com.unity.2d.animation": "13.0.6",
     "com.unity.2d.aseprite": "3.0.2",

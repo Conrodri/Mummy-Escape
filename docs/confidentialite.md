@@ -1,10 +1,10 @@
-# Mummy Escape — Politique de confidentialité
+# Mummy Rush — Politique de confidentialité
 
-Version 1 — mise à jour le 2 octobre 2026.
+Version 1 — mise à jour le 6 octobre 2026.
 
 ## En bref
 
-Mummy Escape se joue entièrement hors ligne : dans ce cas, aucune donnée ne quitte ton téléphone. Le jeu ne contient ni publicité, ni mesure d'audience, ni traceur, et n'utilise aucun identifiant publicitaire. Aucune adresse e-mail, aucun nom réel et aucun numéro de téléphone ne te sont demandés.
+Mummy Rush se joue entièrement hors ligne : dans ce cas, aucune donnée ne quitte ton téléphone. Le jeu ne contient ni mesure d'audience ni traceur. Une publicité ne s'affiche que si tu choisis d'en regarder une pour obtenir des parties en plus : c'est seulement à ce moment que le service publicitaire de Google est contacté (voir « Publicités »). Aucune adresse e-mail, aucun nom réel et aucun numéro de téléphone ne te sont demandés.
 
 ## Qui est responsable de tes données ?
 
@@ -31,17 +31,24 @@ Ces données restent sur l'appareil ; tu peux les effacer à tout moment (Param�
 • Fournir les fonctions en ligne que tu as choisies (classements, amis, compte, sauvegarde) : exécution des conditions d'utilisation (RGPD, art. 6.1.b).  
 • Sécuriser le service, lutter contre la triche et les abus : intérêt légitime (art. 6.1.f).  
 • Partage de ta progression avec tes amis : ton choix, que tu peux retirer à tout moment.  
+• Publicités personnalisées : ton consentement, recueilli par le formulaire de Google et retirable à tout moment (art. 6.1.a).  
 Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne demande l'accord d'un parent ou tuteur (RGPD art. 8, loi Informatique et Libertés art. 45).
 
 ## Qui peut voir ces données ?
 
 • Les autres joueurs : ton pseudonyme, tes scores et ton pays (s'il est choisi) ; tes amis voient aussi ton statut et ta progression si tu la partages.  
 • Notre prestataire technique, Unity Technologies (services Unity Gaming Services : Authentication, Leaderboards, Friends, Cloud Save), qui agit pour notre compte et selon nos instructions.  
-Tes données ne sont ni vendues, ni louées, ni utilisées pour de la publicité.
+• Google, seulement si tu regardes une publicité (voir « Publicités »).  
+Tes données de jeu ne sont ni vendues ni louées, et ne sont jamais transmises pour de la publicité.
+
+## Publicités (seulement si tu choisis d'en regarder une)
+
+Quand tu n'as plus de parties gratuites, tu peux regarder une courte publicité pour en obtenir d'autres. Elle est fournie par Google AdMob (Google Ireland Limited), qui en est responsable de façon indépendante. Avant la première, un formulaire de Google te demande, si la loi l'exige, ton accord pour des publicités personnalisées ; tu peux changer d'avis dans Paramètres › Confidentialité › Choix publicitaires.  
+Google traite alors l'identifiant publicitaire de ton téléphone, ton adresse IP et des informations techniques sur l'appareil, pour afficher la publicité, la mesurer et lutter contre la fraude. Si tu es mineur, seules des publicités non personnalisées te sont proposées. Tu peux réinitialiser ou supprimer l'identifiant publicitaire dans les réglages Android. Politique de Google : policies.google.com/privacy.
 
 ## Transferts hors de l'Union européenne
 
-Unity Technologies est établie aux États-Unis. Les transferts sont encadrés par le cadre de protection des données UE–États-Unis (décision d'adéquation de la Commission européenne du 10 juillet 2023) et, à défaut, par les clauses contractuelles types de la Commission.
+Unity Technologies et Google LLC sont établies aux États-Unis. Les transferts sont encadrés par le cadre de protection des données UE–États-Unis (décision d'adéquation de la Commission européenne du 10 juillet 2023) et, à défaut, par les clauses contractuelles types de la Commission.
 
 ## Combien de temps ?
 

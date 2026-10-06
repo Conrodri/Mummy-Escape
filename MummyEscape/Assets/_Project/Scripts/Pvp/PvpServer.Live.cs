@@ -1,4 +1,4 @@
-// Mummy Escape PvP — côté serveur du duel en direct : le duel est créé quand deux joueurs de la même ligue se sont trouvés
+// Mummy Rush PvP — côté serveur du duel en direct : le duel est créé quand deux joueurs de la même ligue se sont trouvés
 // (ou contre un bot de la ligue après une minute), chacun envoie sa course à la fin, le serveur les rejoue et juge.
 using System;
 using System.Collections.Generic;

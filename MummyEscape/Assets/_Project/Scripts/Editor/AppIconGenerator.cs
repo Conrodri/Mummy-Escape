@@ -12,7 +12,7 @@ namespace MummyEscape.EditorTools
         const string IconPath = "Assets/_Project/Art/AppIcon.png";
         const int Size = 1024;
 
-        [MenuItem("Mummy Escape/Generate app icon", priority = 21)]
+        [MenuItem("Mummy Rush/Generate app icon", priority = 21)]
         public static void Generate()
         {
             var art = new ArtLibrary();

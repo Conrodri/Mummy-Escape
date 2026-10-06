@@ -1,10 +1,10 @@
-# Mummy Escape — Privacy policy
+# Mummy Rush — Privacy policy
 
-Version 1 — updated October 2, 2026. English translation: the French version prevails.
+Version 1 — updated October 6, 2026. English translation: the French version prevails.
 
 ## In short
 
-Mummy Escape can be played entirely offline: in that case, no data leaves your phone. The game contains no ads, no analytics and no trackers, and uses no advertising ID. You are never asked for an email address, a real name or a phone number.
+Mummy Rush can be played entirely offline: in that case, no data leaves your phone. The game contains no analytics and no trackers. An ad is only shown if you choose to watch one to get more games: only then is Google's ad service contacted (see "Ads"). You are never asked for an email address, a real name or a phone number.
 
 ## Who is responsible for your data?
 
@@ -31,17 +31,24 @@ This data stays on the device; you can erase it at any time (Settings › Privac
 • Providing the online features you chose (leaderboards, friends, account, backup): performance of the terms of use (GDPR, art. 6.1.b).  
 • Securing the service, fighting cheating and abuse: legitimate interest (art. 6.1.f).  
 • Sharing your progress with your friends: your choice, which you can withdraw at any time.  
+• Personalized ads: your consent, collected by Google's form and withdrawable at any time (art. 6.1.a).  
 Below the digital age of consent in your country (15 in France), online mode requires the consent of a parent or guardian (GDPR art. 8, French Data Protection Act art. 45).
 
 ## Who can see this data?
 
 • Other players: your nickname, your scores and your country (if chosen); your friends also see your status, and your progress if you share it.  
 • Our technical provider, Unity Technologies (Unity Gaming Services: Authentication, Leaderboards, Friends, Cloud Save), acting on our behalf and under our instructions.  
-Your data is never sold, rented or used for advertising.
+• Google, only if you watch an ad (see "Ads").  
+Your game data is never sold or rented, and never passed on for advertising.
+
+## Ads (only if you choose to watch one)
+
+When you run out of free games, you can watch a short ad to get more. It is provided by Google AdMob (Google Ireland Limited), which is independently responsible for it. Before the first one, a Google form asks, where the law requires it, for your consent to personalized ads; you can change your mind in Settings › Privacy › Ad choices.  
+Google then processes your phone's advertising ID, your IP address and technical information about the device, to show the ad, measure it and fight fraud. If you are a minor, you are only offered non-personalized ads. You can reset or delete the advertising ID in the Android settings. Google's policy: policies.google.com/privacy.
 
 ## Transfers outside the European Union
 
-Unity Technologies is based in the United States. Transfers are covered by the EU–US Data Privacy Framework (European Commission adequacy decision of July 10, 2023) and, failing that, by the Commission's standard contractual clauses.
+Unity Technologies and Google LLC are based in the United States. Transfers are covered by the EU–US Data Privacy Framework (European Commission adequacy decision of July 10, 2023) and, failing that, by the Commission's standard contractual clauses.
 
 ## How long?
 

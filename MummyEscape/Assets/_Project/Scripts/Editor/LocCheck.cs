@@ -29,7 +29,7 @@ namespace MummyEscape.EditorTools
 
         public struct Found { public string Text, Where; }
 
-        [MenuItem("Mummy Escape/Localization/Check missing translations")]
+        [MenuItem("Mummy Rush/Localization/Check missing translations")]
         public static void Menu() => Debug.Log(Report());
 
         public static string Report()

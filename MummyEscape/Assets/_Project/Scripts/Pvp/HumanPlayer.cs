@@ -1,4 +1,4 @@
-// Mummy Escape PvP — un joueur simulé qui joue comme une personne (fantômes hors ligne, simulateur tools/PvpSim).
+// Mummy Rush PvP — un joueur simulé qui joue comme une personne (fantômes hors ligne, simulateur tools/PvpSim).
 using System;
 using System.Collections.Generic;
 using MummyEscape.Core;

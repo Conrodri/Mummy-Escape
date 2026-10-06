@@ -143,6 +143,8 @@ namespace MummyEscape.UI.Screens
         public bool IsReady => true;
 
         public Task<bool> ShowRewardedAsync() => _router.Open<TestAdScreen>().Play();
+        public bool HasPrivacyOptions => false;
+        public void ShowPrivacyOptions(Action closed) => closed?.Invoke();
     }
 
     /// <summary>Stand-in store for the editor and development builds: asks for a confirmation, charges nothing.</summary>

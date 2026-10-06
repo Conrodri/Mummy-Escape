@@ -1,4 +1,4 @@
-# Mummy Escape
+# Mummy Rush
 
 An Egyptian maze puzzle: you are the mummy, and you must escape the pitch-dark tomb, one move at a time.
 

@@ -12,8 +12,8 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: Mummy Escape
-  productName: Mummy Escape
+  companyName: Mummy Rush
+  productName: Mummy Rush
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.03, g: 0.02, b: 0.01, a: 1}
@@ -170,9 +170,9 @@ PlayerSettings:
   androidMaxAspectRatio: 2.4
   androidMinAspectRatio: 1
   applicationIdentifier:
-    Android: com.mummyescape.game
+    Android: com.mummyrush.game
     Standalone: com.DefaultCompany.2D-URP
-    iPhone: com.mummyescape.game
+    iPhone: com.mummyrush.game
   buildNumber:
     Standalone: 0
     VisionOS: 0

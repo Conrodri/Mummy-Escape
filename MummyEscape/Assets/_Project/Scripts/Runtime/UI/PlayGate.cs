@@ -7,7 +7,7 @@ namespace MummyEscape.UI
 {
     /// <summary>
     /// The daily game limits at the doors of the game modes: lets the game start when one is left, otherwise offers a
-    /// rewarded ad (3 more) or the pass (no limit).
+    /// rewarded ad (3 more solo runs, 1 more match) or the pass (no limit).
     /// </summary>
     public static class PlayGate
     {
@@ -36,9 +36,11 @@ namespace MummyEscape.UI
                         : mode == PlayMode.Duel ? Loc.F("Tu as joué tes {0} duels 1v1 gratuits du jour.", PlayLimits.Max(mode))
                         : Loc.F("Tu as joué tes {0} matchs 2v2 gratuits du jour.", PlayLimits.Max(mode));
             string text = used + " " + Loc.T("Ils reviennent à minuit.") + "\n\n"
-                        + Loc.F("Regarde une courte pub pour {0} parties de plus, ou prends le Pass : plus aucune limite.", PlayLimits.AdRefill);
+                        + (mode == PlayMode.Solo
+                            ? Loc.F("Regarde une courte pub pour {0} parties de plus, ou prends le Pass : plus aucune limite.", PlayLimits.AdRefill(mode))
+                            : Loc.T("Regarde une courte pub pour un match de plus, ou prends le Pass : plus aucune limite."));
             var ad = Ads.Available
-                ? (Loc.F("Regarder une pub (+{0})", PlayLimits.AdRefill), ButtonStyle.Primary, (Action)(() => WatchAd(app, mode, retry)))
+                ? (Loc.F("Regarder une pub (+{0})", PlayLimits.AdRefill(mode)), ButtonStyle.Primary, (Action)(() => WatchAd(app, mode, retry)))
                 : (Loc.T("Pub indisponible pour le moment"), ButtonStyle.Ghost, (Action)null);
             app.UI.Open<OfferDialog>().Configure("Plus de parties", text,
                 ad,
@@ -58,7 +60,7 @@ namespace MummyEscape.UI
                 watched = false;
             }
             if (!watched) return;
-            app.Save.AddPlays(mode, PlayLimits.AdRefill);
+            app.Save.AddPlays(mode, PlayLimits.AdRefill(mode));
             app.Audio.Play(Services.Sfx.Coin);
             retry?.Invoke();
         }

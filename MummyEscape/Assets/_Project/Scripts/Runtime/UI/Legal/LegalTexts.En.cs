@@ -3,7 +3,7 @@ namespace MummyEscape.UI.Legal
     /// <summary>English versions of the legal texts. Keep them in sync with the French ones (LegalTexts.cs), which prevail.</summary>
     public static partial class LegalTexts
     {
-        public const string UpdatedEn = "October 2, 2026";
+        public const string UpdatedEn = "October 6, 2026";
 
         /// <summary>The documents in the current game language.</summary>
         public static string[] CurrentPrivacy => Loc.Current == Loc.Lang.En ? PrivacyEn : Privacy;
@@ -13,8 +13,9 @@ namespace MummyEscape.UI.Legal
         {
             $"Version {Services.PrivacyService.PolicyVersion} — updated {UpdatedEn}. English translation: the French version prevails.",
             "# In short",
-            "Mummy Escape can be played entirely offline: in that case, no data leaves your phone. " +
-            "The game contains no ads, no analytics and no trackers, and uses no advertising ID. " +
+            "Mummy Rush can be played entirely offline: in that case, no data leaves your phone. " +
+            "The game contains no analytics and no trackers. An ad is only shown if you choose to watch one to get more games: " +
+            "only then is Google's ad service contacted (see \"Ads\"). " +
             "You are never asked for an email address, a real name or a phone number.",
             "# Who is responsible for your data?",
             $"{Publisher}, {Address}. Contact for any question or request: {Contact}.",
@@ -36,13 +37,22 @@ namespace MummyEscape.UI.Legal
             "• Providing the online features you chose (leaderboards, friends, account, backup): performance of the terms of use (GDPR, art. 6.1.b).\n" +
             "• Securing the service, fighting cheating and abuse: legitimate interest (art. 6.1.f).\n" +
             "• Sharing your progress with your friends: your choice, which you can withdraw at any time.\n" +
+            "• Personalized ads: your consent, collected by Google's form and withdrawable at any time (art. 6.1.a).\n" +
             "Below the digital age of consent in your country (15 in France), online mode requires the consent of a parent or guardian (GDPR art. 8, French Data Protection Act art. 45).",
             "# Who can see this data?",
             "• Other players: your nickname, your scores and your country (if chosen); your friends also see your status, and your progress if you share it.\n" +
             "• Our technical provider, Unity Technologies (Unity Gaming Services: Authentication, Leaderboards, Friends, Cloud Save), acting on our behalf and under our instructions.\n" +
-            "Your data is never sold, rented or used for advertising.",
+            "• Google, only if you watch an ad (see \"Ads\").\n" +
+            "Your game data is never sold or rented, and never passed on for advertising.",
+            "# Ads (only if you choose to watch one)",
+            "When you run out of free games, you can watch a short ad to get more. It is provided by Google AdMob " +
+            "(Google Ireland Limited), which is independently responsible for it. Before the first one, a Google form asks, where the law requires it, " +
+            "for your consent to personalized ads; you can change your mind in Settings › Privacy › Ad choices.\n" +
+            "Google then processes your phone's advertising ID, your IP address and technical information about the device, to show the ad, " +
+            "measure it and fight fraud. If you are a minor, you are only offered non-personalized ads. " +
+            "You can reset or delete the advertising ID in the Android settings. Google's policy: policies.google.com/privacy.",
             "# Transfers outside the European Union",
-            "Unity Technologies is based in the United States. Transfers are covered by the EU–US Data Privacy Framework " +
+            "Unity Technologies and Google LLC are based in the United States. Transfers are covered by the EU–US Data Privacy Framework " +
             "(European Commission adequacy decision of July 10, 2023) and, failing that, by the Commission's standard contractual clauses.",
             "# How long?",
             "• On your phone: until you erase it or uninstall the game.\n" +
@@ -68,11 +78,11 @@ namespace MummyEscape.UI.Legal
 
         public static readonly string[] AccountDeletionEn =
         {
-            "This page explains how to delete your Mummy Escape account and the associated data. Mummy Escape is published by " + Publisher + ".",
+            "This page explains how to delete your Mummy Rush account and the associated data. Mummy Rush is published by " + Publisher + ".",
             "# From the game (immediate)",
-            "1. Open Mummy Escape.\n2. Go to Settings › Privacy.\n3. Tap \"Delete my online data\", then confirm.",
+            "1. Open Mummy Rush.\n2. Go to Settings › Privacy.\n3. Tap \"Delete my online data\", then confirm.",
             "# Without the game",
-            $"Write to {Contact} from any address, with the subject \"Mummy Escape account deletion\", giving your login " +
+            $"Write to {Contact} from any address, with the subject \"Mummy Rush account deletion\", giving your login " +
             "(or your nickname and friend code). We delete the account within 30 days at most and confirm the deletion. " +
             "To prevent abusive deletions, we may ask for proof that the account is yours (for example the friend code shown in the game).",
             "# What is deleted",
@@ -96,7 +106,7 @@ namespace MummyEscape.UI.Legal
         {
             $"Version {Services.PrivacyService.PolicyVersion} — updated {UpdatedEn}. English translation: the French version prevails.",
             "# Purpose",
-            $"These terms govern the use of the game Mummy Escape, published by {Publisher} ({Address}, {Contact}). " +
+            $"These terms govern the use of the game Mummy Rush, published by {Publisher} ({Address}, {Contact}). " +
             "By playing online, you accept them.",
             "# The game",
             "The game is free. It can be played offline; the online features (leaderboards, friends, account, backup) are optional. " +

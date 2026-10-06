@@ -98,7 +98,7 @@ namespace MummyEscape.Core
             overPar <= 0 ? CoreText.T("parfait") : CoreText.F(overPar > 1 ? "+{0} coups" : "+{0} coup", overPar);
 
         public string ShareText(string gameUrl) =>
-            "🏺 Mummy Escape — " + CoreText.F("Niveau {0}", Level) + "\n" +
+            "🏺 Mummy Rush — " + CoreText.F("Niveau {0}", Level) + "\n" +
             CoreText.F("Évadé en {0} coups, {1} ({2})", Moves, FormatTime(TimeMs), FormatOverPar(OverPar)) +
             $" {new string('★', Stars)}{new string('☆', 3 - Stars)}\n" +
             CoreText.F("{0} interactions · {1}/{2} PV restants", Interactions, HpLeft, MaxHp) + "\n" +
