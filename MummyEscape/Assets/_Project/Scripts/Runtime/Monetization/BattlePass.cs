@@ -119,10 +119,14 @@ namespace MummyEscape.Monetization
         public static PassReward Free(int tier)
         {
             if (tier % 50 == 0) return new PassReward(PassRewardKind.Gold, 5);
-            if (tier % 25 == 0) return new PassReward(PassRewardKind.Scarabs, 300);
-            if (tier % 5 == 0) return new PassReward(PassRewardKind.Scarabs, 150);
-            return new PassReward(PassRewardKind.Scarabs, 40);
+            if (tier % 25 == 0) return new PassReward(PassRewardKind.Scarabs, 150);
+            if (tier % 5 == 0) return new PassReward(PassRewardKind.Scarabs, 40);
+            return new PassReward(PassRewardKind.Scarabs, 8);
         }
+
+        // Scarab budget. A typical player (10 solo runs, 3 duels, 3 2v2 a day) earns ~900 XP a day, ~25 tiers a week:
+        // the free track gives 1580 a season (~400 a week) and solo wins about 100 more (2 each), ~500 a week in all,
+        // plus the stars of new levels while the campaign lasts (10 each, 1500 in all). The paid track adds ~250 a week.
 
         /// <summary>
         /// Paid track: a set piece every 10 tiers, <see cref="PremiumGoldPerStep"/> golden scarabs at every 5 in between
@@ -132,7 +136,7 @@ namespace MummyEscape.Monetization
         {
             if (tier % 10 == 0) return new PassReward(PassRewardKind.Skin, 0, season.Set[tier / 10 - 1]);
             if (tier % 5 == 0) return new PassReward(PassRewardKind.Gold, PremiumGoldPerStep);
-            return new PassReward(PassRewardKind.Scarabs, 60);
+            return new PassReward(PassRewardKind.Scarabs, 15);
         }
 
         /// <summary>XP of a solo run: more for an escape and for each star.</summary>
