@@ -153,27 +153,16 @@ namespace MummyEscape.Pvp
             foreach (var id in duo.Members)
                 if (IsBot?.Invoke(id) != true)
                     await Update(id, d => { d.Duos.Remove(duoId); if (duo.Matches > 0) d.LastDuoElo = duo.Elo; });
-            await Shared<List<DuoSummary>>(IndexCollection, DuoIndexKey, list =>
-            {
-                list ??= new List<DuoSummary>();
-                list.RemoveAll(s => s.Id == duoId);
-                return list;
-            });
+            await PutIndexAsync<DuoSummary>(DuoIndexKey, duoId, null, s => s.Id);
             return new TeamActionResponse { Ok = true };
         }
 
         Task IndexDuoAsync(Duo duo) =>
-            Shared<List<DuoSummary>>(IndexCollection, DuoIndexKey, list =>
+            PutIndexAsync(DuoIndexKey, duo.Id, new DuoSummary
             {
-                list ??= new List<DuoSummary>();
-                list.RemoveAll(s => s.Id == duo.Id);
-                list.Add(new DuoSummary
-                {
-                    Id = duo.Id, Name = duo.Name, Members = duo.Members, Elo = duo.Elo,
-                    Wins = duo.Wins, Losses = duo.Losses, Draws = duo.Draws,
-                });
-                return list;
-            });
+                Id = duo.Id, Name = duo.Name, Members = duo.Members, Elo = duo.Elo,
+                Wins = duo.Wins, Losses = duo.Losses, Draws = duo.Draws,
+            }, s => s.Id);
 
         /// <summary>
         /// Lance un combat 2v2 pour ce duo. <paramref name="meFirst"/> : le joueur court les manches 1 et 3, son partenaire la
@@ -201,7 +190,7 @@ namespace MummyEscape.Pvp
 
         public async Task<DuoBoardResponse> GetDuoBoardAsync(int limit)
         {
-            var list = await Shared<List<DuoSummary>>(IndexCollection, DuoIndexKey) ?? new List<DuoSummary>();
+            var list = await ReadDuoIndexAsync();
             return new DuoBoardResponse
             {
                 Rows = list.Where(s => s.Wins + s.Losses + s.Draws > 0)
@@ -519,7 +508,7 @@ namespace MummyEscape.Pvp
             tag = tag.Trim().ToUpperInvariant();
             var d = await Update(me);
             if (d.GuildId != null) return new GuildResponse { Error = "IN_GUILD" };
-            var index = await Shared<List<GuildSummary>>(IndexCollection, GuildIndexKey) ?? new List<GuildSummary>();
+            var index = await ReadGuildIndexAsync();
             if (index.Any(g => string.Equals(g.Name, name, StringComparison.OrdinalIgnoreCase) || string.Equals(g.Tag, tag, StringComparison.OrdinalIgnoreCase)))
                 return new GuildResponse { Error = "TAKEN" };
 
@@ -533,7 +522,7 @@ namespace MummyEscape.Pvp
 
         public async Task<GuildSearchResponse> SearchGuildsAsync(string query, int limit)
         {
-            var index = await Shared<List<GuildSummary>>(IndexCollection, GuildIndexKey) ?? new List<GuildSummary>();
+            var index = await ReadGuildIndexAsync();
             query = query?.Trim() ?? "";
             return new GuildSearchResponse
             {
@@ -582,12 +571,7 @@ namespace MummyEscape.Pvp
             });
             await Update(me, x => x.GuildId = null);
             if (guild == null || guild.Members.Count == 0)
-                await Shared<List<GuildSummary>>(IndexCollection, GuildIndexKey, list =>
-                {
-                    list ??= new List<GuildSummary>();
-                    list.RemoveAll(s => s.Id == guildId);
-                    return list;
-                });
+                await PutIndexAsync<GuildSummary>(GuildIndexKey, guildId, null, s => s.Id);
             else await IndexGuildAsync(guild);
             return new GuildResponse { Me = me };
         }
@@ -698,18 +682,11 @@ namespace MummyEscape.Pvp
         }
 
         Task IndexGuildAsync(Guild g) =>
-            Shared<List<GuildSummary>>(IndexCollection, GuildIndexKey, list =>
+            PutIndexAsync(GuildIndexKey, g.Id, g.Members.Count == 0 ? null : new GuildSummary
             {
-                list ??= new List<GuildSummary>();
-                list.RemoveAll(s => s.Id == g.Id);
-                if (g.Members.Count > 0)
-                    list.Add(new GuildSummary
-                    {
-                        Id = g.Id, Name = g.Name, Tag = g.Tag, MemberCount = g.Members.Count, Points = g.Points,
-                        WarElo = g.WarElo, WarWins = g.WarWins, WarLosses = g.WarLosses,
-                    });
-                return list;
-            });
+                Id = g.Id, Name = g.Name, Tag = g.Tag, MemberCount = g.Members.Count, Points = g.Points,
+                WarElo = g.WarElo, WarWins = g.WarWins, WarLosses = g.WarLosses,
+            }, s => s.Id);
 
         /// <summary>Points de guilde gagnés par un joueur (sa victoire en duel, en 2v2…), s'il est dans une guilde.</summary>
         async Task AddGuildPointsForAsync(string playerId, int points)

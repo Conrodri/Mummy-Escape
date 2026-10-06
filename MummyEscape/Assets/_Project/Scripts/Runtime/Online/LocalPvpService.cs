@@ -241,6 +241,10 @@ namespace MummyEscape.Online
         T SharedOf<T>(string collection, string key) where T : class =>
             _store.Shared.TryGetValue(collection + "/" + key, out var v) ? v as T : null;
 
+        // The whole index (old single key and shards), saved back under the single key: the server merges it again.
+        List<T> IndexOf<T>(string baseKey, Func<T, string> id) =>
+            PvpServer.MergeIndex(PvpServer.IndexKeys(baseKey).Select(k => SharedOf<List<T>>(PvpServer.IndexCollection, k)), id);
+
         void Persist()
         {
             _store.Players.TryGetValue(Me, out var data);
@@ -252,8 +256,8 @@ namespace MummyEscape.Online
                 Duos = _store.Shared.Values.OfType<Duo>().ToList(),
                 Guilds = _store.Shared.Values.OfType<Guild>().ToList(),
                 Battles = _store.Shared.Values.OfType<TeamBattle>().ToList(),
-                DuoIndex = SharedOf<List<DuoSummary>>(PvpServer.IndexCollection, PvpServer.DuoIndexKey),
-                GuildIndex = SharedOf<List<GuildSummary>>(PvpServer.IndexCollection, PvpServer.GuildIndexKey),
+                DuoIndex = IndexOf<DuoSummary>(PvpServer.DuoIndexKey, s => s.Id),
+                GuildIndex = IndexOf<GuildSummary>(PvpServer.GuildIndexKey, s => s.Id),
             };
             // Only the battles still listed by a duo or a guild are kept.
             var kept = new HashSet<string>(stored.Duos.SelectMany(d => d.RecentBattles.Append(d.ActiveBattle))
