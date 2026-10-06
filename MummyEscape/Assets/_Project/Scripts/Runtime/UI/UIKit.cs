@@ -253,6 +253,9 @@ namespace MummyEscape.UI
                 track.gameObject.AddComponent<OneLineLabels>().Init(_labels, 30, 16);
             }
 
+            /// <summary>The track holding the tabs (to hide them all).</summary>
+            public GameObject Root => _buttons[0].transform.parent.gameObject;
+
             public void SetLabel(int i, string text) => _labels[i].text = Loc.T(text);
 
             public void Select(int index)

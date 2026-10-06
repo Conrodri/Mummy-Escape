@@ -62,6 +62,46 @@ namespace MummyEscape.Services
         [DllImport("__Internal")] static extern string _MummyCountryCode();
 #endif
 
+        /// <summary>
+        /// Countries where a paid random draw counts as gambling (Belgium: loot boxes are banned). Scarabs can be bought
+        /// with golden scarabs, so their wheel stays hidden there; the seal wheel (seals are only won) stays.
+        /// </summary>
+        static readonly string[] NoLootBoxes = { "BE" };
+
+        /// <summary>True when the profile country, the device region or the SIM card says the player is in such a country.</summary>
+        public static bool LootBoxesBanned(string profileCountry) =>
+            Array.IndexOf(NoLootBoxes, (profileCountry ?? "").ToUpperInvariant()) >= 0
+            || Array.IndexOf(NoLootBoxes, Detect()) >= 0
+            || Array.IndexOf(NoLootBoxes, SimCountry()) >= 0;
+
+        static string _sim;
+
+        /// <summary>Country of the SIM card (or of the mobile network), "" without one.</summary>
+        public static string SimCountry()
+        {
+            if (_sim != null) return _sim;
+            string code = "";
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                using (var activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
+                using (var phone = activity.Call<AndroidJavaObject>("getSystemService", "phone"))
+                {
+                    code = phone?.Call<string>("getSimCountryIso");
+                    if (string.IsNullOrEmpty(code)) code = phone?.Call<string>("getNetworkCountryIso");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[Country] SIM country unreadable: " + e.Message);
+            }
+#endif
+            code = (code ?? "").Trim().ToUpperInvariant();
+            _sim = code.Length == 2 ? code : "";
+            return _sim;
+        }
+
         static string _detected;
 
         /// <summary>Device region as ISO 3166 alpha-2 ("FR"), "" when it cannot be read.</summary>

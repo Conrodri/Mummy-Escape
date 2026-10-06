@@ -125,6 +125,10 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             _spinning = false; // a spin cut short by leaving the screen was already paid and cashed in
+            // Where paid random draws are banned (Belgium), only the seal wheel: seals are won, never bought.
+            bool banned = CountryService.LootBoxesBanned(App.Save.Country);
+            _tabs.Root.SetActive(!banned);
+            if (banned) _tab = 1;
             _tabs.Select(_tab);
             Refresh();
             LoadSeals();
