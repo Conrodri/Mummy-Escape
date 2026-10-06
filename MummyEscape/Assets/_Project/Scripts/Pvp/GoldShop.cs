@@ -41,11 +41,11 @@ namespace MummyEscape.Monetization
 
         public static readonly IReadOnlyList<GoldPack> Packs = new[]
         {
-            new GoldPack { ProductId = "mummyrush.gold.10", Gold = 10, FallbackPrice = "0,99 €" }, // noloc
-            new GoldPack { ProductId = "mummyrush.gold.40", Gold = 40, FallbackPrice = "3,99 €" }, // noloc
-            new GoldPack { ProductId = "mummyrush.gold.100", Gold = 100, FallbackPrice = "9,99 €" }, // noloc
-            new GoldPack { ProductId = "mummyrush.gold.250", Gold = 250, Bonus = 50, FallbackPrice = "19,99 €" }, // noloc
-            new GoldPack { ProductId = "mummyrush.gold.700", Gold = 700, Bonus = 200, FallbackPrice = "49,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush-gold-10", Gold = 10, FallbackPrice = "0,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush-gold-40", Gold = 40, FallbackPrice = "3,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush-gold-100", Gold = 100, FallbackPrice = "9,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush-gold-250", Gold = 250, Bonus = 50, FallbackPrice = "19,99 €" }, // noloc
+            new GoldPack { ProductId = "mummyrush-gold-700", Gold = 700, Bonus = 200, FallbackPrice = "49,99 €" }, // noloc
         };
 
         public static GoldPack Pack(string productId)
