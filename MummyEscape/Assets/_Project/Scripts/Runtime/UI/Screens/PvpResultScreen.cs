@@ -88,7 +88,18 @@ namespace MummyEscape.UI.Screens
             _subtitle.text = rival != null ? Loc.F("contre {0} · Elo {1}", rival, match.Ghost.Elo) : Loc.T("Premier sur ce tombeau");
             _me.text = "<b>" + Loc.T("Toi") + "</b>  ·  " + OutcomeText(run.Outcome, run.TimeMs, run.Progress);
             _rival.transform.parent.gameObject.SetActive(match.HasGhost);
-            if (match.HasGhost)
+            if (match.IsLive)
+            {
+                // What the player saw of the rival when his own run stopped (the server has the last word).
+                var (outcome, time, progress) = match.RivalSoFar();
+                _rival.text = "<b>" + rival + "</b>  ·  " + (match.RivalQuit ? Loc.T("a quitté le duel")
+                            : outcome == RunOutcome.TimedOut ? Loc.F("en course, {0} % du chemin", Mathf.RoundToInt(progress * 100f))
+                            : OutcomeText(outcome, time, progress));
+                if (run.Outcome == RunOutcome.TimedOut && Mathf.RoundToInt(run.Progress * 100f) < 100 && run.Inputs.Count > 0
+                    && RunActions.MsOf(run.Inputs[run.Inputs.Count - 1].Tick) < PvpConfig.TimeLimitMs - 1000)
+                    _me.text = "<b>" + Loc.T("Toi") + "</b>  ·  " + Loc.F("arrêté à {0} % du chemin", Mathf.RoundToInt(run.Progress * 100f));
+            }
+            else if (match.HasGhost)
                 _rival.text = "<b>" + rival + "</b>  ·  " + OutcomeText(match.Ghost.Outcome, match.Ghost.TimeMs, match.Ghost.Progress);
             Send();
         }
@@ -118,7 +129,21 @@ namespace MummyEscape.UI.Screens
             SetButtons(false, false);
 
             var pvp = App.Pvp;
-            var r = pvp == null ? null : await pvp.SubmitRunAsync(_run, App.Online.PlayerName);
+            SubmitRunResponse r;
+            if (_match.IsLive && pvp != null)
+            {
+                // Live: both runs are judged together; the rival's may take a moment (a minute at most).
+                r = await pvp.SubmitLiveDuelAsync(_match.MatchId, _run, App.Online.PlayerName);
+                for (int attempt = 0; attempt < 30 && this != null && r != null && r.Error == null && !r.Resolved; attempt++)
+                {
+                    _note.text = Loc.F("En attente de la course de {0}…", _match.Ghost?.PlayerName ?? "?");
+                    await System.Threading.Tasks.Task.Delay(2500);
+                    if (this == null) return;
+                    var next = await pvp.GetLiveDuelResultAsync(_match.MatchId);
+                    if (next != null) r = next;
+                }
+            }
+            else r = pvp == null ? null : await pvp.SubmitRunAsync(_run, App.Online.PlayerName);
             if (this == null) return;
             _sending = false;
             if (r?.Battle != null) _lastBattleKind = r.Battle.Kind;
@@ -150,7 +175,8 @@ namespace MummyEscape.UI.Screens
             {
                 _title.text = Loc.T("COURSE ENREGISTRÉE");
                 UIKit.TintTitle(_title, UIKit.Turquoise);
-                _note.text = Loc.T("Personne n'attendait sur ce tombeau : ta course devient le fantôme du prochain challenger. Ton Elo bougera à ce moment-là.");
+                _note.text = _match.IsLive ? Loc.T("Le verdict attend la course de ton adversaire : ton Elo bougera dans une minute.")
+                           : Loc.T("Personne n'attendait sur ce tombeau : ta course devient le fantôme du prochain challenger. Ton Elo bougera à ce moment-là.");
             }
             else
             {
@@ -270,22 +296,30 @@ namespace MummyEscape.UI.Screens
                 TeamView.OpenBattleHome(Router, _lastBattleKind);
                 return;
             }
-            _again.interactable = _menu.interactable = false;
+            // The menu button stays: it cancels the search.
+            _again.interactable = false;
             _note.text = Loc.T("Recherche d'un adversaire…");
-            var duel = App.Pvp == null ? null : await App.Pvp.FindDuelAsync();
-            if (this == null) return;
-            if (duel == null || duel.Error != null)
+            var search = _search = new System.Threading.CancellationTokenSource();
+            var matchmaker = DuelMatchmakerFactory.For(App.Pvp);
+            var start = matchmaker == null ? null
+                      : await PvpScreen.FindLiveAsync(App, matchmaker, text => { if (this != null && _search == search) _note.text = text; }, search.Token);
+            if (this == null || search.IsCancellationRequested) { start?.Link?.Dispose(); return; }
+            _search = null;
+            if (start == null)
             {
-                _note.text = PvpScreen.ErrorText(duel?.Error);
                 _again.interactable = _menu.interactable = true;
                 return;
             }
             Router.Close(this);
-            PvpScreen.Versus(Router, duel);
+            PvpScreen.VersusLive(Router, start);
         }
+
+        System.Threading.CancellationTokenSource _search;
 
         void Menu()
         {
+            _search?.Cancel();
+            _search = null;
             App.Game.Abandon();
             Router.Reset<MainMenuScreen>();
             Router.Open<PvpScreen>();

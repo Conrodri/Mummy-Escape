@@ -31,6 +31,11 @@ namespace MummyEscape.UI.Screens
         RectTransform _duel;
         Image _myBar, _rivalBar;
         Text _myName, _rivalName, _timeLeft;
+        // 2v2: one dot per leg for each duo, lit at each hand-off, the clock, and whose turn it is.
+        RectTransform _relay;
+        readonly List<Image> _myDots = new List<Image>(), _rivalDots = new List<Image>();
+        RectTransform _myDotRow, _rivalDotRow;
+        Text _myDuo, _rivalDuo, _relayTime, _turn;
 
         protected override void Build()
         {
@@ -77,6 +82,22 @@ namespace MummyEscape.UI.Screens
             _timeLeft = UIKit.Label(_duel, "", 54, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.Place(_timeLeft.rectTransform, 1, 0.5f, 170, 110, -16, 0);
             _duel.gameObject.SetActive(false);
+
+            _relay = UIKit.Rect("Relay", Root); // noloc
+            UIKit.TopBand(_relay, 132, 226);
+            _relay.offsetMin = new Vector2(24, _relay.offsetMin.y);
+            _relay.offsetMax = new Vector2(-24, _relay.offsetMax.y);
+            var rbg = UIKit.Plate(_relay, new Color(0.05f, 0.035f, 0.02f, 0.72f), 32, UIKit.Rim);
+            UIKit.Stretch(rbg.rectTransform);
+            _myDotRow = DotRow(_relay, 0, UIKit.Gold, out _myDuo);
+            _rivalDotRow = DotRow(_relay, 1, UIKit.Turquoise, out _rivalDuo);
+            _relayTime = UIKit.Label(_relay, "", 54, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Place(_relayTime.rectTransform, 1, 0.5f, 170, 110, -16, 0);
+            _relay.gameObject.SetActive(false);
+            _turn = UIKit.Label(Root, "", 36, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(_turn, 22);
+            UIKit.TopBand(_turn.rectTransform, 70, 368);
+            UIKit.DropShadow(_turn, 4, 0.7f);
 
             // Bottom: map peek (hold) + hint.
             var bottom = UIKit.Rect("BottomBar", Root);
@@ -164,6 +185,102 @@ namespace MummyEscape.UI.Screens
             return fill;
         }
 
+        /// <summary>One duo of the 2v2 panel (0 = top): its name, then a row for the leg dots.</summary>
+        static RectTransform DotRow(RectTransform parent, int index, Color color, out Text label)
+        {
+            var row = UIKit.Rect("Row" + index, parent); // noloc
+            row.anchorMin = new Vector2(0, index == 0 ? 0.5f : 0f);
+            row.anchorMax = new Vector2(1, index == 0 ? 1f : 0.5f);
+            row.offsetMin = new Vector2(26, index == 0 ? 2 : 10);
+            row.offsetMax = new Vector2(-196, index == 0 ? -10 : -2);
+            label = UIKit.Label(row, "", 26, color, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(label, 16);
+            var lr = label.rectTransform;
+            lr.anchorMin = new Vector2(0, 0);
+            lr.anchorMax = new Vector2(0.45f, 1);
+            lr.offsetMin = lr.offsetMax = Vector2.zero;
+            var dots = UIKit.Rect("Dots", row); // noloc
+            dots.anchorMin = new Vector2(0.47f, 0);
+            dots.anchorMax = new Vector2(1, 1);
+            dots.offsetMin = dots.offsetMax = Vector2.zero;
+            var h = dots.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.childAlignment = TextAnchor.MiddleLeft;
+            h.spacing = 14;
+            h.childControlWidth = h.childControlHeight = true;
+            h.childForceExpandWidth = h.childForceExpandHeight = false;
+            return dots;
+        }
+
+        static void SetDots(RectTransform row, List<Image> dots, int count, int lit, Color color)
+        {
+            while (dots.Count < count)
+            {
+                var d = UIKit.Image(row, UISprites.Round, Color.white, false, "Dot"); // noloc
+                UIKit.Size(d, 34, 34);
+                dots.Add(d);
+            }
+            for (int i = 0; i < dots.Count; i++)
+            {
+                dots[i].gameObject.SetActive(i < count);
+                // The last dot is the finish line.
+                bool finish = i == count - 1;
+                dots[i].color = i < lit ? color : new Color(1, 1, 1, finish ? 0.28f : 0.14f);
+                dots[i].rectTransform.localScale = Vector3.one * (finish ? 1.2f : 1f);
+            }
+        }
+
+        void UpdateRelay()
+        {
+            var game = App.Game;
+            bool relay = game.InRelay && game.RelayMap != null;
+            if (_relay.gameObject.activeSelf != relay)
+            {
+                _relay.gameObject.SetActive(relay);
+                UIKit.TopBand(_status.rectTransform, 90, relay ? 440 : 240);
+            }
+            if (!relay)
+            {
+                if (_turn.text != "") _turn.text = "";
+                return;
+            }
+            int n = game.RelayMap.Segments;
+            SetDots(_myDotRow, _myDots, n, game.MyRace.Segment, UIKit.Gold);
+            SetDots(_rivalDotRow, _rivalDots, n, game.RivalRace.Segment, UIKit.Turquoise);
+            _myDuo.text = game.MySide.Name;
+            _rivalDuo.text = game.RivalSide.Name;
+            int left = game.RelayTimeLeftMs, sec = (left + 999) / 1000;
+            _relayTime.text = $"{sec / 60}:{sec % 60:00}";
+            _relayTime.color = sec <= 30 ? UIKit.Danger : UIKit.Sand;
+            _turn.text = TurnText(game);
+        }
+
+        static string TurnText(Game.GameController game)
+        {
+            if (game.Phase != Game.RelayPhase.Racing || game.MyRace.IsOver) return "";
+            var race = game.MyRace;
+            if (game.MyTurn)
+            {
+                bool last = race.Segment == game.RelayMap.Segments - 1;
+                return last ? Loc.T("À toi ! Trouve la sortie !") : Loc.T("À toi ! Cours jusqu'à ta dalle");
+            }
+            var runner = game.MySide.RunnerOf(race.ActiveMaze);
+            string where = race.Segment == 0 ? Loc.T("tu attends sur le départ") : Loc.T("tu attends sur ta dalle");
+            return Loc.F("{0} court · {1}", runner?.Name ?? "?", where);
+        }
+
+        void OnRelayChanged()
+        {
+            if (App.Game.Phase == Game.RelayPhase.Vote && !(Router.Current is RelayVoteScreen) && !_voteShown)
+            {
+                _voteShown = true;
+                Router.Open<RelayVoteScreen>();
+            }
+            if (App.Game.Phase != Game.RelayPhase.Vote) _voteShown = false;
+            Refresh();
+        }
+
+        bool _voteShown;
+
         static void SetProgress(Image fill, float p) =>
             fill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(fill.rectTransform.anchorMax.x, Mathf.Clamp(p, 0.04f, 1f), 0.25f), 1);
 
@@ -210,6 +327,7 @@ namespace MummyEscape.UI.Screens
             App.Game.PreviewChanged += Refresh;
             App.Game.LevelLoading += ShowLoading;
             App.Game.LevelStarted += ShowIntro;
+            App.Game.RelayChanged += OnRelayChanged;
             App.Game.SetPaused(false);
             Refresh();
         }
@@ -220,6 +338,7 @@ namespace MummyEscape.UI.Screens
             App.Game.PreviewChanged -= Refresh;
             App.Game.LevelLoading -= ShowLoading;
             App.Game.LevelStarted -= ShowIntro;
+            App.Game.RelayChanged -= OnRelayChanged;
         }
 
         public void OnBack()
@@ -261,6 +380,7 @@ namespace MummyEscape.UI.Screens
             var session = App.Game.Session;
             if (session != null) UpdateCounter(session);
             UpdateDuel();
+            UpdateRelay();
             if (App.Game.Previewing)
                 _previewCount.text = Mathf.Max(1, Mathf.CeilToInt(App.Game.PreviewLeft)).ToString();
             if (_introTimer == float.MaxValue || _introTimer < 0f) return;
@@ -271,6 +391,13 @@ namespace MummyEscape.UI.Screens
         /// <summary>"Coups : 12 · 0:42" — the clock starts once the tomb is hidden.</summary>
         void UpdateCounter(GameSession s)
         {
+            if (App.Game.InRelay)
+            {
+                int rs = App.Game.RelayClockMs / 1000, legs = App.Game.RelayMap?.Segments ?? 0;
+                string relay = Loc.F("Étape {0} / {1}", Mathf.Min(legs, (App.Game.MyRace?.Segment ?? 0) + 1), legs) + $"  ·  {rs / 60}:{rs % 60:00}";
+                if (_moves.text != relay) _moves.text = relay;
+                return;
+            }
             int sec = s.ElapsedMs / 1000;
             string text = Loc.F("Coups : {0}", s.Moves) + $"  ·  {sec / 60}:{sec % 60:00}";
             // Solo: the expert mummy's time on this maze, red once the clock has gone past it.
@@ -289,7 +416,7 @@ namespace MummyEscape.UI.Screens
             var s = App.Game.Session;
             if (s == null) return;
             var level = s.Level;
-            _level.text = App.Game.InDuel ? Loc.T("Duel") : Loc.F("Niveau {0}", level.Id);
+            _level.text = App.Game.InRelay ? "2v2" : App.Game.InDuel ? Loc.T("Duel") : Loc.F("Niveau {0}", level.Id); // noloc
             UpdateCounter(s);
             _floor.text = level.Floors > 1 && !App.Game.Previewing ? Loc.F("Étage {0} / {1}", s.Position.Floor + 1, level.Floors) : "";
 
@@ -299,8 +426,16 @@ namespace MummyEscape.UI.Screens
             {
                 var act = DifficultyTable.GetAct(level.Id.Act);
                 string sub = level.Floors > 1 ? Loc.F("Étage {0} / {1}", App.Game.PreviewFloor + 1, level.Floors) : Loc.F("Acte {0} — {1}", level.Id.Act, Loc.T(act.Name));
+                if (App.Game.InRelay)
+                {
+                    // Both mazes, every floor, nothing to skip: the four phones keep in step.
+                    string maze = App.Game.PreviewMaze == 0 ? Loc.T("Labyrinthe 1 · départ") : Loc.T("Labyrinthe 2 · arrivée");
+                    if (level.Floors > 1) maze += "  ·  " + Loc.F("Étage {0} / {1}", App.Game.PreviewFloor + 1, level.Floors);
+                    sub = maze;
+                }
                 _previewTitle.text = Loc.T("Mémorise le tombeau !") + $"\n<size=30>{sub}</size>";
                 UIKit.SetLabel(_ready, App.Game.PreviewOnLastFloor ? "Prêt" : "Étage suivant");
+                _ready.gameObject.SetActive(!App.Game.InRelay && !App.Game.InLiveDuel); // live: same time for everyone
             }
 
 
@@ -328,6 +463,7 @@ namespace MummyEscape.UI.Screens
                     ? App.Game.ScreenCaptured ? Loc.T("Enregistrement d'écran détecté :\nle tombeau reste dans l'ombre")
                     : App.Game.ScreenshotRedraw ? Loc.T("Capture d'écran : les dieux ont scellé\nun autre tombeau !")
                     : ""
+                : App.Game.DuelWaiting ? Loc.F("En attente de {0}…", App.Game.Match.Ghost?.PlayerName ?? "?")
                 : reversed > 0 ? Loc.F("Commandes inversées ! ({0})", reversed)
                 : justTurned ? Loc.T("Le tombeau a pivoté !\nTes gestes suivent l'écran.")
                 : s.IsBlind ? Loc.F("Aveuglé ! ({0})", s.BlindTurnsLeft)

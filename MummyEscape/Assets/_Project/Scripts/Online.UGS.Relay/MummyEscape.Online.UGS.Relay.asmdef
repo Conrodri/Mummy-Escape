@@ -1,0 +1,27 @@
+{
+    "name": "MummyEscape.Online.UGS.Relay",
+    "rootNamespace": "MummyEscape.Online",
+    "references": [
+        "MummyEscape.Core",
+        "MummyEscape.Pvp",
+        "MummyEscape.Runtime",
+        "Unity.Services.Core",
+        "Unity.Services.Authentication",
+        "Unity.Services.Multiplayer",
+        "Unity.Networking.Transport",
+        "Unity.Collections"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MUMMY_UGS_MULTIPLAYER"
+    ],
+    "versionDefines": [
+        { "name": "com.unity.services.multiplayer", "expression": "2.0.0", "define": "MUMMY_UGS_MULTIPLAYER" }
+    ],
+    "noEngineReferences": false
+}

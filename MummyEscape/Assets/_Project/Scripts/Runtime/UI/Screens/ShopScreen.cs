@@ -28,8 +28,8 @@ namespace MummyEscape.UI.Screens
         const float SpinSeconds = 4f;
         static readonly Color LegendaryColor = new Color32(255, 96, 220, 255);
 
-        static readonly Color WornFill = new Color32(30, 92, 84, 255);
-        static readonly Color WornRim = new Color(0.25f, 0.88f, 0.8f, 0.6f);
+        internal static readonly Color WornFill = new Color32(30, 92, 84, 255);
+        internal static readonly Color WornRim = new Color(0.25f, 0.88f, 0.8f, 0.6f);
 
         Text _coins, _stars, _seals, _note;
         Image _outfit;

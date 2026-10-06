@@ -1,9 +1,9 @@
 // Module Cloud Code « PvpMatchmaking » : points d'entrée appelés par le jeu. Toute la logique est dans PvpServer
 // (Assets/_Project/Scripts/Pvp), partagée avec le jeu ; ce module ne fait que la brancher sur Cloud Save et Leaderboards.
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Unity.Services.CloudCode.Apis;
+using Unity.Services.CloudCode.Apis.Extensions;
 using Unity.Services.CloudCode.Core;
 
 namespace MummyEscape.Pvp.Server
@@ -12,7 +12,7 @@ namespace MummyEscape.Pvp.Server
     {
         public void Setup(ICloudCodeConfig config)
         {
-            config.Dependencies.AddSingleton(GameApiClient.Create());
+            config.AddGameApiClient();
         }
     }
 
@@ -29,10 +29,11 @@ namespace MummyEscape.Pvp.Server
 
         PvpServer Server(IExecutionContext ctx) => new PvpServer(new CloudSavePvpStore(_api, ctx, _logger));
 
-        /// <summary>Trouve un adversaire (fantôme proche en Elo) ou fait courir le joueur en premier.</summary>
+        /// <summary>Trouve un adversaire de la ligue du joueur (fantôme proche en Elo), cherche encore (une minute), donne un
+        /// bot de la ligue si le joueur l'accepte, ou fait courir le joueur en premier.</summary>
         [CloudCodeFunction("FindDuel")]
-        public Task<FindDuelResponse> FindDuel(IExecutionContext ctx, int generatorVersion) =>
-            Server(ctx).FindDuelAsync(ctx.PlayerId, generatorVersion);
+        public Task<FindDuelResponse> FindDuel(IExecutionContext ctx, int generatorVersion, bool allowBots) =>
+            Server(ctx).FindDuelAsync(ctx.PlayerId, generatorVersion, allowBots);
 
         /// <summary>Reçoit la course, la rejoue, résout le duel ou met la course en file comme fantôme.</summary>
         [CloudCodeFunction("SubmitRun")]
@@ -132,5 +133,54 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("StartWar")]
         public Task<GuildResponse> StartWar(IExecutionContext ctx, int size, System.Collections.Generic.List<string> order, int generatorVersion) =>
             Server(ctx).StartWarAsync(ctx.PlayerId, size, order, generatorVersion);
+
+        // ------------------------------------------------------------------ 2v2 relay (live)
+
+        /// <summary>L'hôte du salon crée le match des deux duos qui se sont trouvés (même salon = même match).</summary>
+        [CloudCodeFunction("StartRelayMatch")]
+        public Task<RelayMatchResponse> StartRelayMatch(IExecutionContext ctx, int generatorVersion, string matchKey, RelaySide a, RelaySide b) =>
+            Server(ctx).StartRelayMatchAsync(ctx.PlayerId, generatorVersion, matchKey, a, b);
+
+        /// <summary>Aucun duo en vue : un match contre un duo de bots, couru d'avance par le serveur.</summary>
+        [CloudCodeFunction("StartRelayBots")]
+        public Task<RelayMatchResponse> StartRelayBots(IExecutionContext ctx, int generatorVersion, string matchKey, RelaySide mine) =>
+            Server(ctx).StartRelayBotsAsync(ctx.PlayerId, generatorVersion, matchKey, mine);
+
+        /// <summary>Le relais d'un duo à la fin du match : rejoué, puis le match est jugé (Elo 2v2) quand les deux sont là.</summary>
+        [CloudCodeFunction("SubmitRelay")]
+        public Task<RelayResultResponse> SubmitRelay(IExecutionContext ctx, string matchId, string starter,
+                                                     System.Collections.Generic.List<RelayInput> inputs, System.Collections.Generic.List<string> quitters) =>
+            Server(ctx).SubmitRelayAsync(ctx.PlayerId, matchId, starter, inputs, quitters);
+
+        [CloudCodeFunction("GetRelayResult")]
+        public Task<RelayResultResponse> GetRelayResult(IExecutionContext ctx, string matchId) => Server(ctx).RelayResultAsync(ctx.PlayerId, matchId);
+
+        /// <summary>« Quitter et signaler » : le coéquipier qui a quitté la partie est noté (Cloud Save › pvp_quit_reports).</summary>
+        [CloudCodeFunction("ReportRelayQuit")]
+        public Task<ReportResponse> ReportRelayQuit(IExecutionContext ctx, string matchId, string quitterId) =>
+            Server(ctx).ReportRelayQuitAsync(ctx.PlayerId, matchId, quitterId);
+
+        // --- Duel en direct
+
+        /// <summary>Crée le duel de deux joueurs de la même ligue qui se sont trouvés dans un salon (l'hôte l'appelle).</summary>
+        [CloudCodeFunction("StartLiveDuel")]
+        public Task<LiveDuelResponse> StartLiveDuel(IExecutionContext ctx, int generatorVersion, string matchKey, LiveDuelist a, LiveDuelist b) =>
+            Server(ctx).StartLiveDuelAsync(ctx.PlayerId, generatorVersion, matchKey, a, b);
+
+        [CloudCodeFunction("GetLiveDuel")]
+        public Task<LiveDuelResponse> GetLiveDuel(IExecutionContext ctx, string matchId) => Server(ctx).GetLiveDuelAsync(ctx.PlayerId, matchId);
+
+        /// <summary>Personne de la ligue en une minute : un bot de la ligue, sa course jouée d'avance.</summary>
+        [CloudCodeFunction("StartLiveBotDuel")]
+        public Task<LiveDuelResponse> StartLiveBotDuel(IExecutionContext ctx, int generatorVersion, string matchKey, LiveDuelist mine) =>
+            Server(ctx).StartLiveBotDuelAsync(ctx.PlayerId, generatorVersion, matchKey, mine);
+
+        /// <summary>La course d'un joueur à la fin du duel : rejouée, puis le duel est jugé quand les deux sont là.</summary>
+        [CloudCodeFunction("SubmitLiveDuel")]
+        public Task<SubmitRunResponse> SubmitLiveDuel(IExecutionContext ctx, string matchId, RunSubmission run, string playerName) =>
+            Server(ctx).SubmitLiveDuelAsync(ctx.PlayerId, matchId, run, playerName);
+
+        [CloudCodeFunction("GetLiveDuelResult")]
+        public Task<SubmitRunResponse> GetLiveDuelResult(IExecutionContext ctx, string matchId) => Server(ctx).LiveDuelResultAsync(ctx.PlayerId, matchId);
     }
 }

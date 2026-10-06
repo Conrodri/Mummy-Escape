@@ -18,7 +18,7 @@ namespace MummyEscape.UI.Screens
         Image _portrait;
         Text _name, _code;
         Button _countryButton;
-        UIKit.Segmented _tabs;
+        UIKit.Segmented _tabs, _social;
         RectTransform _list;
         ScrollRect _scroll;
         int _tab;
@@ -30,6 +30,7 @@ namespace MummyEscape.UI.Screens
             Header("Amis");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 22);
+            _social = Social(body, Router, 0);
 
             // Profile.
             var card = UIKit.Card(body, 30, 20);
@@ -50,8 +51,6 @@ namespace MummyEscape.UI.Screens
             _countryButton = UIKit.Button(actions.transform, "Pays", () => Router.Open<CountryPickerScreen>(), 34);
             UIKit.Size(_countryButton, -1, -1, 1);
             UIKit.Size(UIKit.Button(actions.transform, "Partager", ShareCode, 34), -1, -1, 1);
-            var titles = UIKit.Button(actions.transform, "Titres", () => Router.Open<TitlesScreen>(), 34);
-            UIKit.Size(titles, -1, -1, 1);
 
             _tabs = new UIKit.Segmented(body, new[] { "Amis", "Demandes" }, i => { _tab = i; Reload(); });
 
@@ -62,8 +61,19 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(body, "+  Ajouter un ami", AddFriend, 36, ButtonStyle.Primary), 104);
         }
 
+        /// <summary>Friends (this screen) or the guild (<see cref="GuildScreen"/>), one tab away from each other; Back leads home.</summary>
+        internal static UIKit.Segmented Social(Transform body, UIRouter router, int selected) =>
+            new UIKit.Segmented(body, new[] { "Amis", "Guilde" }, i =>
+            {
+                if (i == selected) return;
+                router.Reset<MainMenuScreen>();
+                if (i == 0) router.Open<FriendsScreen>();
+                else router.Open<GuildScreen>();
+            }, 96);
+
         public override void OnShow()
         {
+            _social.Select(0);
             MummyAnimator.Show(_portrait, App.Art, App.Save.Loadout);
             string title = TitleBook.Equipped(App);
             _name.text = App.Online.PlayerName + (title == null ? "" : "  " + TitleBook.Line(title));

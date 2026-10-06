@@ -121,6 +121,26 @@ namespace MummyEscape.Core
             return cropped;
         }
 
+        /// <summary>
+        /// The same tomb with one tile replaced (and its exit moved there when the tile is an exit). Used by the 2v2 relay:
+        /// a leg ends on a plate, so the solver and the bots walk to it as to an exit. The copy has no solution.
+        /// </summary>
+        public Level WithTile(Cell c, Tile tile)
+        {
+            var copy = new Level(Width, Height, Floors)
+            {
+                Id = Id, Spec = Spec, Seed = Seed, Variant = Variant, Attempt = Attempt,
+                Start = Start, Exit = tile.Type == TileType.Exit ? c : Exit, ChannelCount = ChannelCount, TrapCount = TrapCount, MaxHp = MaxHp,
+            };
+            Array.Copy(_tiles, copy._tiles, _tiles.Length);
+            foreach (var kv in _teleportTargets) copy._teleportTargets[kv.Key] = kv.Value;
+            copy[c] = tile;
+            return copy;
+        }
+
+        /// <summary>The same tomb whose way out is <paramref name="goal"/> (see <see cref="WithTile"/>).</summary>
+        public Level WithGoal(Cell goal) => WithTile(goal, new Tile { Type = TileType.Exit });
+
         public IEnumerable<Cell> AllCells()
         {
             for (int i = 0; i < _tiles.Length; i++) yield return CellAt(i);

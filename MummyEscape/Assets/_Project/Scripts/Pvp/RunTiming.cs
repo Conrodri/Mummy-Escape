@@ -72,6 +72,12 @@ namespace MummyEscape.Pvp
         /// <summary>Le plus petit horodatage possible pour la prochaine action.</summary>
         public int MinTick => _earliestMs <= 0 ? 0 : Math.Max(0, (int)Math.Floor((_earliestMs - RunTiming.SlackMs - TickMs) / TickMs) + 1);
 
+        /// <summary>Fin de l'animation de la dernière action : la suivante ne part pas avant (en millisecondes de course).</summary>
+        public double EarliestMs => _earliestMs;
+
+        /// <summary>Aucune action avant cet instant (relais 2v2 : le coéquipier vient de libérer la momie).</summary>
+        public void NotBefore(double ms) => _earliestMs = Math.Max(_earliestMs, ms);
+
         /// <summary>Enregistre une action jouée à <paramref name="tick"/> ; faux si elle est partie trop tôt.</summary>
         public bool Accept(int tick, int gapMs)
         {

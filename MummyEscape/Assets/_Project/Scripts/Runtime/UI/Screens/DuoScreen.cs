@@ -1,15 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using MummyEscape.Online;
 using MummyEscape.Pvp;
+using MummyEscape.Services;
+using MummyEscape.Visual;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// The 2v2: duos formed with friends (invitations sent and received), each with its own 2v2 Elo; a battle is three
-    /// rounds on three tombs, the order chosen before it starts and alternating (the first runner runs rounds 1 and 3),
-    /// the first duo to two wins takes it. Rounds are run whenever each player wants, within 24 hours.
+    /// The 2v2: duos formed with friends (invitations sent and received), each with its own 2v2 Elo. A match is a live
+    /// relay against another duo: both teammates search at the same time, four players meet, and each duo runs its two
+    /// mazes in turn (Game.GameController). Duos of bots stand in when nobody is around, for those who accept.
     /// </summary>
     public sealed class DuoScreen : UIScreen
     {
@@ -22,24 +26,47 @@ namespace MummyEscape.UI.Screens
         IReadOnlyList<Online.FriendInfo> _friends;
         bool _busy;
         int _request;
+        // Live search of a match: the panel over the list, and the duo to search again after a match.
+        RectTransform _searching;
+        Text _searchStatus;
+        CancellationTokenSource _search;
+        Duo _lastDuo;
+        UIKit.Segmented _modes;
 
         protected override void Build()
         {
             UIKit.Backdrop(Root);
-            Header("2v2");
+            Header("Duel");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 16);
+            _modes = PvpScreen.Modes(body, Router, 1);
             _info = UIKit.Label(body, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 64);
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 16;
+
+            _searching = UIKit.Rect("Searching", Root); // noloc
+            UIKit.Stretch(_searching, -600, -600, -600, -600);
+            var shade = UIKit.Image(_searching, UIKit.Art.White, UIKit.Shade, true);
+            UIKit.Stretch(shade.rectTransform);
+            var card = UIKit.Card(_searching, 40, 24);
+            UIKit.FitInParent(UIKit.Place(card, 0.5f, 0.5f, 820, 0));
+            card.GetComponent<Image>().raycastTarget = true;
+            card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            UIKit.Size(UIKit.Title(card, "2v2", 64), 90);
+            _searchStatus = UIKit.Label(card, "", 32, UIKit.Sand);
+            UIKit.FitText(_searchStatus, 20);
+            UIKit.Size(_searchStatus, 120);
+            UIKit.Size(UIKit.Button(card, "Annuler", CancelSearch, UIKit.TextSize, ButtonStyle.Ghost), 80);
+            _searching.gameObject.SetActive(false);
         }
 
         public override void OnShow()
         {
             App.Lighting.SetMood(false);
+            _modes.Select(1);
             _busy = false;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;
@@ -73,7 +100,7 @@ namespace MummyEscape.UI.Screens
         void Fill()
         {
             UIKit.ClearChildren(_list);
-            var rules = UIKit.Label(_list, "3 manches sur 3 tombeaux. L'ordre alterne : le premier coureur fait les manches 1 et 3, son partenaire la 2. Le premier duo à 2 victoires gagne. 24 h pour courir.", 24, UIKit.Dim);
+            var rules = UIKit.Label(_list, "En direct contre un autre duo, sur les mêmes labyrinthes. Chacun a le sien : tu cours jusqu'à ta dalle, elle libère ton coéquipier, qui te libère à son tour… Le premier duo sorti gagne. Une momie morte fait perdre son duo.", 24, UIKit.Dim);
             UIKit.FitText(rules, 16);
             UIKit.Size(rules, 100);
             if (_teams == null) return;
@@ -157,14 +184,13 @@ namespace MummyEscape.UI.Screens
             else
             {
                 string partner = duo.Names[duo.Members[0] == _teams.Me ? 1 : 0];
-                var hint = UIKit.Label(card.transform, "Qui court les manches 1 et 3 ?", 24, UIKit.Dim);
+                var hint = UIKit.Label(card.transform, Loc.F("Lancez la recherche tous les deux, {0} et toi.", partner), 24, UIKit.Dim);
+                UIKit.FitText(hint, 16);
                 UIKit.Size(hint, 36);
-                var row = UIKit.Row(card.transform, 96, 14);
-                var me = UIKit.Button(row.transform, "Moi", () => Find(duo, true), 30, ButtonStyle.Primary);
-                UIKit.Size(me, -1, 0, 1);
-                var other = UIKit.Button(row.transform, partner, () => Find(duo, false), 30, ButtonStyle.Primary);
-                UIKit.FitText(other.GetComponentInChildren<Text>(), 18);
-                UIKit.Size(other, -1, 0, 1);
+                var find = UIKit.Button(card.transform, "Chercher un match", () => Search(duo), 34, ButtonStyle.Primary);
+                UIKit.Size(find, 100);
+                var bots = UIKit.Toggle(card.transform, "Bots de notre division si personne en vue (1 min)", App.Settings.PvpBots, App.Settings.SetPvpBots);
+                UIKit.Size(bots, 70);
             }
             foreach (var b in battles)
                 if (b != active) TeamView.BattleCard(card.transform, b, _teams.Me, Router, null);
@@ -205,16 +231,69 @@ namespace MummyEscape.UI.Screens
                 });
         }
 
-        async void Find(Duo duo, bool meFirst)
+        /// <summary>After a match: the same duo searches again.</summary>
+        public void SearchAgain()
         {
-            if (_busy) return;
-            _busy = true;
-            _info.text = Loc.T("Recherche d'un duo adverse…");
-            var r = await App.Pvp.FindDuoMatchAsync(duo.Id, meFirst);
+            if (_lastDuo != null) Search(_lastDuo);
+        }
+
+        /// <summary>
+        /// Looks for another duo with the teammate (both search), then draws the mazes, plays the VS screen and starts the
+        /// match: preview, vote, relay.
+        /// </summary>
+        async void Search(Duo duo)
+        {
+            if (_search != null || _teams == null) return;
+            var matchmaker = RelayMatchmakerFactory.For(App.Pvp);
+            if (matchmaker == null)
+            {
+                _info.text = Loc.T("Le 2v2 en direct n'est pas disponible sur cette version.");
+                return;
+            }
+            _lastDuo = duo;
+            var search = _search = new CancellationTokenSource();
+            _searching.gameObject.SetActive(true);
+            _searchStatus.text = Loc.T("Recherche d'un duo adverse…");
+            var look = PvpSkins.Look(App.Save.Loadout);
+            look.Title = TitleBook.Equipped(App);
+            var me = new RelayRunner { PlayerId = _teams.Me, Name = App.Online.PlayerName, Look = look };
+            // The division of the duo is its best duel player's: each phone brings its own duel Elo.
+            var profile = await App.Pvp.GetProfileAsync();
+            if (this == null || _search != search) return;
+            int duelElo = profile?.Data?.Elo ?? PvpConfig.StartingElo;
+            var link = await matchmaker.FindAsync(new RelaySearch { Duo = duo, Me = _teams.Me, MeRunner = me, MyDuelElo = duelElo, AllowBots = App.Settings.PvpBots, Pvp = App.Pvp },
+                status => { if (this != null && _search == search) _searchStatus.text = status; }, search.Token);
+            if (this == null) { link?.Dispose(); return; }
+            if (link == null || search.IsCancellationRequested)
+            {
+                link?.Dispose();
+                if (_search == search) _search = null;
+                if (!search.IsCancellationRequested) _info.text = _searchStatus.text;
+                _searching.gameObject.SetActive(false);
+                return;
+            }
+            _searchStatus.text = Loc.T("Les dieux scellent les labyrinthes…");
+            bool ready = await App.Game.StartRelay(link);
             if (this == null) return;
-            _busy = false;
-            _info.text = r?.Ok == true ? (r.Battle?.B == null ? Loc.T("Combat créé : il attend un duo adverse.") : Loc.T("Adversaires trouvés !")) : TeamView.ErrorText(r?.Error);
-            Reload();
+            _search = null;
+            _searching.gameObject.SetActive(false);
+            if (!ready)
+            {
+                App.Game.Abandon();
+                _info.text = Loc.T("Impossible de préparer le match.");
+                return;
+            }
+            Router.Open<HudScreen>();
+            Router.Open<RelayVsScreen>().Show(link.Match, link.Me, App.Game.BeginRelayPreview);
+        }
+
+        public override void OnHide() => CancelSearch();
+
+        void CancelSearch()
+        {
+            _search?.Cancel();
+            _search = null;
+            if (_searching != null) _searching.gameObject.SetActive(false);
         }
 
         void RunRound(TeamBattle b)

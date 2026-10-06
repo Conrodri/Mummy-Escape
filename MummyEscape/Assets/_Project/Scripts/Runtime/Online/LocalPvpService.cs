@@ -306,7 +306,7 @@ namespace MummyEscape.Online
 
         public Task<PvpProfileResponse> GetProfileAsync() => Run(() => _server.GetProfileAsync(Me));
 
-        public Task<FindDuelResponse> FindDuelAsync() => Run(() => _server.FindDuelAsync(Me, Core.DifficultyTable.GeneratorVersion));
+        public Task<FindDuelResponse> FindDuelAsync(bool allowBots) => Run(() => _server.FindDuelAsync(Me, Core.DifficultyTable.GeneratorVersion, allowBots));
 
         public Task<SubmitRunResponse> SubmitRunAsync(RunSubmission run, string playerName) => Run(() => _server.SubmitRunAsync(Me, run, playerName));
 
@@ -355,6 +355,47 @@ namespace MummyEscape.Online
         public Task<FindDuelResponse> StartBattleRunAsync(string battleId) => Run(() => _server.StartBattleRunAsync(Me, battleId, Gen));
 
         public Task<TeamBattle> GetBattleAsync(string battleId) => Run(() => _server.GetBattleAsync(Me, battleId));
+
+        public Task<RelayMatchResponse> StartRelayMatchAsync(string matchKey, RelaySide a, RelaySide b) =>
+            Run(() => _server.StartRelayMatchAsync(Me, Gen, matchKey, a, b));
+
+        public Task<RelayMatchResponse> StartRelayBotsAsync(string matchKey, RelaySide mine) => Run(async () =>
+        {
+            var r = await _server.StartRelayBotsAsync(Me, Gen, matchKey, mine);
+            // Simulated players wear random outfits, as in the duels.
+            if (r.Match != null)
+                lock (_rng)
+                    foreach (var side in new[] { r.Match.A, r.Match.B })
+                        foreach (var runner in side.Runners)
+                            if (runner.PlayerId != Me && runner.Look == null) runner.Look = Visual.PvpSkins.RandomLook(_rng);
+            return r;
+        });
+
+        public Task<RelayResultResponse> SubmitRelayAsync(string matchId, string starter, List<RelayInput> inputs, List<string> quitters) =>
+            Run(() => _server.SubmitRelayAsync(Me, matchId, starter, inputs, quitters));
+
+        public Task<RelayResultResponse> GetRelayResultAsync(string matchId) => Run(() => _server.RelayResultAsync(Me, matchId));
+
+        public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
+            Run(() => _server.StartLiveDuelAsync(Me, Gen, matchKey, a, b));
+
+        public Task<LiveDuelResponse> StartLiveBotDuelAsync(string matchKey, LiveDuelist mine) => Run(async () =>
+        {
+            var r = await _server.StartLiveBotDuelAsync(Me, Gen, matchKey, mine);
+            // Simulated players wear random outfits.
+            if (r.Match != null && r.Match.B.Look == null)
+                lock (_rng) r.Match.B.Look = r.Match.BotRun.Look = Visual.PvpSkins.RandomLook(_rng);
+            return r;
+        });
+
+        public Task<LiveDuelResponse> GetLiveDuelAsync(string matchId) => Run(() => _server.GetLiveDuelAsync(Me, matchId));
+
+        public Task<SubmitRunResponse> SubmitLiveDuelAsync(string matchId, RunSubmission run, string playerName) =>
+            Run(() => _server.SubmitLiveDuelAsync(Me, matchId, run, playerName));
+
+        public Task<SubmitRunResponse> GetLiveDuelResultAsync(string matchId) => Run(() => _server.LiveDuelResultAsync(Me, matchId));
+
+        public Task<ReportResponse> ReportRelayQuitAsync(string matchId, string quitterId) => Run(() => _server.ReportRelayQuitAsync(Me, matchId, quitterId));
 
         public Task<GuildResponse> GetGuildAsync() => Run(() => _server.GetGuildAsync(Me));
 

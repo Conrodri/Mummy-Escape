@@ -6,10 +6,10 @@ using UnityEngine.UI;
 namespace MummyEscape.UI
 {
     /// <summary>Where a menu screen sits in the bottom bar.</summary>
-    public enum NavTab { None, Home, Duel, Solo, Ranking, Friends, Shop }
+    public enum NavTab { None, Home, Duel, Solo, Mummy, Ranking, Friends, Shop }
 
     /// <summary>
-    /// The bar at the bottom of every menu screen: Duel, Solo, Classement, Amis, Boutique and Quitter, reachable from
+    /// The bar at the bottom of every menu screen: Duel, Solo, Momie, Classement, Amis, Boutique and Quitter, reachable from
     /// anywhere outside a run. Each destination opens over the main menu, so Back always leads home.
     /// </summary>
     public sealed class NavBar : MonoBehaviour
@@ -41,6 +41,7 @@ namespace MummyEscape.UI
 
             bar.Add(row, NavTab.Duel, UISprites.Swords, "Duel", () => bar.Go<PvpScreen>());
             bar.Add(row, NavTab.Solo, UISprites.Map, "Solo", () => bar.Go<LevelSelectScreen>());
+            bar.Add(row, NavTab.Mummy, UISprites.User, "Momie", () => bar.Go<MummyScreen>());
             bar.Add(row, NavTab.Ranking, UISprites.Podium, "Classement", () => bar.Go<LeaderboardScreen>());
             bar.Add(row, NavTab.Friends, UISprites.Friends, "Amis", () => bar.Go<FriendsScreen>());
             bar.Add(row, NavTab.Shop, UISprites.Bag, "Boutique", () => bar.Go<ShopScreen>());

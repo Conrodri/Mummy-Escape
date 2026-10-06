@@ -37,10 +37,13 @@ namespace MummyEscape.Core
         /// <summary>Raised after every accepted action, with what happened.</summary>
         public event Action<StepResult> Stepped;
 
-        public GameSession(Level level)
+        public GameSession(Level level) : this(level, Rules.Initial(level)) { }
+
+        /// <summary>A run picked up from <paramref name="start"/> (the 2v2 relay: the next leg of the same mummy).</summary>
+        public GameSession(Level level, RuleState start)
         {
             Level = level;
-            State = Rules.Initial(level);
+            State = start;
             _explored = new bool[level.CellCount];
             _revealedHidden = new bool[level.CellCount];
             for (int i = 0; i < level.CellCount && !_canGetStuck; i++) _canGetStuck = level[level.CellAt(i)].IsIrreversible;

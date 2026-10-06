@@ -51,6 +51,29 @@ namespace MummyEscape.Pvp
             return League.Bronze;
         }
 
+        /// <summary>Elo minimal et maximal de la ligue (Bronze commence à l'Elo plancher, Diamant n'a pas de plafond).</summary>
+        public static (int Min, int Max) Range(League league)
+        {
+            switch (league)
+            {
+                case League.Diamant: return (PvpConfig.DiamantMin, int.MaxValue);
+                case League.Platine: return (PvpConfig.PlatineMin, PvpConfig.DiamantMin - 1);
+                case League.Or: return (PvpConfig.OrMin, PvpConfig.PlatineMin - 1);
+                case League.Argent: return (PvpConfig.ArgentMin, PvpConfig.OrMin - 1);
+                default: return (PvpConfig.MinElo, PvpConfig.ArgentMin - 1);
+            }
+        }
+
+        /// <summary>Ramène un Elo dans la ligue donnée (adversaires simulés : toujours de la division du joueur).</summary>
+        public static int ClampTo(int elo, League league)
+        {
+            var (min, max) = Range(league);
+            return Math.Max(min, Math.Min(max, elo));
+        }
+
+        /// <summary>La division d'un duo : celle de son meilleur joueur en duel.</summary>
+        public static League OfDuo(int eloA, int eloB) => FromElo(Math.Max(eloA, eloB));
+
         /// <summary>Nom affiché : « Top 100 » si le rang mondial le permet, sinon la ligue.</summary>
         public static string DisplayName(int elo, int? worldRank)
         {
@@ -147,7 +170,7 @@ namespace MummyEscape.Pvp
             return nowMs - g.CreatedAtUnixMs > (long)PvpConfig.GhostLifetimeHours * 3600_000L;
         }
 
-        /// <summary>Choisit le fantôme le plus proche en Elo, en excluant soi-même,
+        /// <summary>Choisit le fantôme le plus proche en Elo et de la même ligue, en excluant soi-même,
         /// les adversaires déjà affrontés 3 fois aujourd'hui et les fantômes expirés.</summary>
         public static GhostRun Pick(IEnumerable<GhostRun> candidates, string playerId, int elo,
                                     IDictionary<string, int> opponentsToday, long nowMs)
@@ -158,7 +181,7 @@ namespace MummyEscape.Pvp
             {
                 if (g == null || g.PlayerId == playerId || IsExpired(g, nowMs)) continue;
                 int gap = Math.Abs(g.Elo - elo);
-                if (gap > PvpConfig.MaxEloGap) continue;
+                if (gap > PvpConfig.MaxEloGap || Leagues.FromElo(g.Elo) != Leagues.FromElo(elo)) continue; // toujours sa ligue
                 if (opponentsToday != null && opponentsToday.TryGetValue(g.PlayerId, out int n)
                     && n >= PvpConfig.MaxDuelsVsSameOpponentPerDay) continue;
                 if (gap < bestGap || (gap == bestGap && best != null && g.CreatedAtUnixMs < best.CreatedAtUnixMs))

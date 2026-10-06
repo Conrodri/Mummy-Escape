@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MummyEscape.App;
 using MummyEscape.Core;
 using MummyEscape.Input;
+using MummyEscape.Online;
 using MummyEscape.Pvp;
 using MummyEscape.Services;
 using MummyEscape.UI.Screens;
@@ -18,7 +19,7 @@ namespace MummyEscape.Game
     /// Runs one level: generates it (off the main thread), feeds input to the <see cref="GameSession"/> and turns
     /// each <see cref="StepResult"/> into animation, sound, light and haptics.
     /// </summary>
-    public sealed class GameController : MonoBehaviour
+    public sealed partial class GameController : MonoBehaviour
     {
         public GameSession Session { get; private set; }
         public LevelId CurrentLevel { get; private set; }
@@ -67,6 +68,7 @@ namespace MummyEscape.Game
         {
             int token = ++_loadToken;
             ResetForLoad();
+            DetachDuelLink();
             Match = null;
             Pace = null;
             CurrentLevel = id;
@@ -130,12 +132,13 @@ namespace MummyEscape.Game
         /// Starts a duel on the tomb the server drew. Same rules as solo, with three differences: the preview is always
         /// shown, the clock never stops (not even in the pause menu) and the run ends after 3 minutes.
         /// </summary>
-        public async Task StartDuel(PvpMatch match)
+        public async Task StartDuel(PvpMatch match, IPeerLink link = null)
         {
             int token = ++_loadToken;
             ResetForLoad();
             Session = null; // the last run's clock must not reach the new duel while its tomb is generated
             Match = match;
+            AttachDuelLink(link);
             Pace = null;
             var id = PvpArena.LevelFor(match.Seed);
             CurrentLevel = id;
@@ -168,6 +171,7 @@ namespace MummyEscape.Game
         public void ForfeitDuel()
         {
             if (Match == null || Match.Over) return;
+            _duelLink?.Send(new RelayMessage { Kind = RelayMessageKind.Quit, From = _duelLink.Me });
             EndDuel(RunOutcome.Abandoned);
         }
 
@@ -185,6 +189,7 @@ namespace MummyEscape.Game
 
         void UpdateDuel()
         {
+            _duelLink?.Pump();
             var match = Match;
             if (match == null || Session == null || match.Level == null || match.Over) return;
             int elapsed = Session.ElapsedMs;
@@ -196,6 +201,8 @@ namespace MummyEscape.Game
                 bool seen = !Previewing && !gone && g.Position.Floor == Session.Position.Floor && Session.IsVisible(g.Position);
                 _ghost.Show(g.Position, seen);
             }
+            UpdateLiveDuel(match);
+            if (match.Over) return;
             // Out of time: the run stops where it is (an action being animated has already counted).
             if (!Previewing && Session.Status == SessionStatus.Playing && elapsed >= PvpConfig.TimeLimitMs)
             {
@@ -317,6 +324,8 @@ namespace MummyEscape.Game
             PreviewLeft = 0f;
             _player.gameObject.SetActive(true);
             EndPreviewVisuals();
+            // Live duel: both phones start together.
+            if (InLiveDuel) yield return WaitForRival();
             _app.Audio.Play(Sfx.Darkness);
             _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
             PreviewChanged?.Invoke();
@@ -351,7 +360,10 @@ namespace MummyEscape.Game
         }
 
         /// <summary>"Ready": next floor of the preview, or the start of the run on the last one.</summary>
-        public void SkipPreview() => _skipPreview = true;
+        public void SkipPreview()
+        {
+            if (!InLiveDuel) _skipPreview = true; // a live duel shows the tomb as long to both rivals
+        }
 
         void EndPreviewVisuals()
         {
@@ -372,6 +384,8 @@ namespace MummyEscape.Game
         public void Abandon()
         {
             _loadToken++;
+            ClearRelay();
+            DetachDuelLink();
             EndPreviewVisuals();
             StopAllCoroutines();
             Session = null;
@@ -391,9 +405,10 @@ namespace MummyEscape.Game
             // when the app comes back from the background, so a phone call does not ruin a run.
             // In a duel the clock never stops: the rival's ghost did not pause either.
             bool duel = Match != null;
+            UpdateRelay();
             // A step being animated keeps the clock running even in pause: pausing on every swipe must not hide the
             // animations from the time (nobody beats RunTiming's minimum).
-            if (Session != null && !Previewing && (!_paused || duel || _busy) && !(duel && Match.Over)) Session.Tick(Time.deltaTime);
+            if (Session != null && Relay == null && !Previewing && !DuelWaiting && (!_paused || duel || _busy) && !(duel && Match.Over)) Session.Tick(Time.deltaTime);
             if (duel) UpdateDuel();
             // A floor may have its own music (Resources/Music/act{n}_f{floor}); no-op while the track playing fits.
             if (Session != null && Session.Status == SessionStatus.Playing && !Previewing)
@@ -411,7 +426,7 @@ namespace MummyEscape.Game
         public void SetPaused(bool paused)
         {
             _paused = paused;
-            _input.Enabled = !paused && Session != null && Session.Status == SessionStatus.Playing;
+            _input.Enabled = !paused && Session != null && Session.Status == SessionStatus.Playing && (Relay == null || MyTurn);
         }
 
         public void SetMapView(bool on)
@@ -430,6 +445,7 @@ namespace MummyEscape.Game
             // During the map preview, a swipe skips to the next floor, or on the last one starts the run with that move.
             if (Previewing)
             {
+                if (InLiveDuel) return;
                 if (PreviewFloorsLeft == 0) _pendingMove = d;
                 SkipPreview();
                 return;
@@ -466,6 +482,7 @@ namespace MummyEscape.Game
         {
             if (Session == null || _paused || Previewing || Session.Status != SessionStatus.Playing) return;
             if (Match != null && Match.Over) return;
+            if (Relay != null && !MyTurn) return;
             if (_busy) { _buffered = action; return; }
             StartCoroutine(Play(action));
         }
@@ -474,6 +491,7 @@ namespace MummyEscape.Game
 
         IEnumerator Play(PlayerAction action)
         {
+            if (Relay != null) { yield return PlayRelay(action); yield break; }
             var before = Session.State;
             var from = Session.Position;
             var r = Session.Apply(action);
@@ -492,7 +510,14 @@ namespace MummyEscape.Game
             }
             // Duel: every accepted action is recorded with its time, for the server's replay and the rival's ghost.
             Match?.Record(action, Session.ElapsedMs, before, Session);
+            SendDuelInput();
+            yield return Present(before, from, action, r);
+        }
 
+        /// <summary>Animation, sound, light and haptics of an accepted step (the player's, or a teammate's in the 2v2).</summary>
+        IEnumerator Present(RuleState before, Cell from, PlayerAction action, StepResult r)
+        {
+            var fx = _app.Fx;
             _busy = true;
             Changed?.Invoke();
             var audio = _app.Audio;
@@ -667,6 +692,7 @@ namespace MummyEscape.Game
             _maze.RefreshSprites();
             Changed?.Invoke();
 
+            if (Relay != null) { yield return RelayStepDone(); yield break; }
             if (Session.Status != SessionStatus.Playing)
             {
                 yield return Finish();

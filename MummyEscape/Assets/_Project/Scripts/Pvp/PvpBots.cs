@@ -32,7 +32,8 @@ namespace MummyEscape.Pvp
         /// <summary>La course d'un joueur simulé donné, sur un tombeau donné (manches des combats d'équipe hors ligne).</summary>
         public static GhostRun Make(Random rng, int playerElo, int seed, string botId, long nowMs)
         {
-            int elo = Math.Max(PvpConfig.MinElo, playerElo + rng.Next(-150, 151));
+            // Toujours de la ligue du joueur.
+            int elo = Leagues.ClampTo(Math.Max(PvpConfig.MinElo, playerElo + rng.Next(-150, 151)), Leagues.FromElo(playerElo));
             var level = PvpArena.Generate(seed);
             var (inputs, outcome, _) = new HumanPlayer(HumanPlayer.SkillForElo(elo), rng).Play(level, rng);
             // Un tombeau très court couru par un très bon bot : pas plus vite que ce que le serveur croit possible.
@@ -55,6 +56,7 @@ namespace MummyEscape.Pvp
                 Progress = run.Progress,
                 Inputs = inputs,
                 CreatedAtUnixMs = nowMs,
+                Bot = true,
             };
         }
     }

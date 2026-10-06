@@ -35,10 +35,11 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
-            bool duel = App.Game.InDuel;
-            _duelNote.gameObject.SetActive(duel);
-            _restart.gameObject.SetActive(!duel);
-            UIKit.SetLabel(_quit, duel ? "Abandonner le duel (défaite)" : "Quitter le niveau");
+            bool duel = App.Game.InDuel, relay = App.Game.InRelay;
+            _duelNote.gameObject.SetActive(duel || relay);
+            _duelNote.text = Loc.T(relay ? "2v2 : le chrono continue de tourner !" : "Duel : le chrono continue de tourner !");
+            _restart.gameObject.SetActive(!duel && !relay);
+            UIKit.SetLabel(_quit, relay ? "Quitter le match (défaite du duo)" : duel ? "Abandonner le duel (défaite)" : "Quitter le niveau");
             App.Game.SetPaused(true);
         }
 
@@ -48,6 +49,13 @@ namespace MummyEscape.UI.Screens
 
         void Quit()
         {
+            if (App.Game.InRelay)
+            {
+                // The teammate is told; the result screen opens over the HUD.
+                Router.Close(this);
+                App.Game.ForfeitRelay();
+                return;
+            }
             if (App.Game.InDuel)
             {
                 // The forfeit is sent like any run; the result screen opens over the HUD.

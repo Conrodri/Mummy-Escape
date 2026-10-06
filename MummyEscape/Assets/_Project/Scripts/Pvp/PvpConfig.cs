@@ -40,6 +40,11 @@ namespace MummyEscape.Pvp
         public const int GhostLifetimeHours = 24;       // fantôme non utilisé : supprimé
         public const int PendingDuelLifetimeMinutes = 10; // au-delà, le duel non envoyé = abandon
         public const int MaxDuelsVsSameOpponentPerDay = 3;
+        // Toujours un adversaire de sa ligue. Personne pendant une minute : un bot de la ligue si le joueur l'accepte,
+        // sinon il court le premier et devient le fantôme du prochain joueur de sa ligue.
+        public const int BotFallbackMs = 60_000;
+        public const int SearchRetryMs = 5_000;         // le jeu redemande à ce rythme pendant la recherche
+        public const int SearchResetMs = 180_000;       // une recherche abandonnée plus longtemps repart de zéro
 
         // --- Replays et signalements ---
         public const int HistorySize = 10;              // duels gardés par joueur (les plus anciens remplacés)

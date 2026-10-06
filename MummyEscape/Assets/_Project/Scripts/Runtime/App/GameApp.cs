@@ -89,6 +89,7 @@ namespace MummyEscape.App
             ghost.Init(Art, Fx.Unlit);
             Game.Init(this, maze, player, ghost, input);
             Game.DuelEnded += (match, run) => UI.Open<PvpResultScreen>().Show(match, run);
+            Game.RelayEnded += outcome => UI.Open<RelayResultScreen>().Show(outcome);
 
             // Nothing goes online before the player has been informed and has chosen to (GDPR): offline until then.
             Online = Offline(OfflineReason);

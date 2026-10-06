@@ -62,6 +62,8 @@ namespace MummyEscape.Pvp
         public List<RunInput> Inputs = new List<RunInput>();
         public long CreatedAtUnixMs;
         public PlayerLook Look;
+        /// <summary>Joueur simulé (personne en vue dans la division après une minute) : seul le vrai joueur est mis à jour.</summary>
+        public bool Bot;
     }
 
     /// <summary>Duel en cours pour un joueur : créé par FindDuel, consommé par SubmitRun.</summary>
@@ -97,6 +99,8 @@ namespace MummyEscape.Pvp
     public class PlayerPvpData
     {
         public int Elo = PvpConfig.StartingElo;
+        /// <summary>Début de la recherche de duel en cours (0 : aucune) : une minute sans adversaire de la division avant les bots.</summary>
+        public long DuelSearchSinceUnixMs;
         public int TotalDuels;          // depuis la création du compte (placement)
         public int Wins;
         public int Losses;
@@ -172,6 +176,10 @@ namespace MummyEscape.Pvp
         /// <summary>Combat d'équipe dont c'est une manche, null pour un duel.</summary>
         public string BattleId;
         public int Slot;
+        /// <summary>Personne de la division pour l'instant : le jeu redemande dans quelques secondes (rien n'est créé).</summary>
+        public bool Searching;
+        /// <summary>Depuis combien de temps le serveur cherche (la minute avant les bots).</summary>
+        public int SearchedMs;
         public string Error;   // "LOCKED" si l'acte 3 n'est pas atteint, "OUTDATED" si le jeu n'a pas la version du serveur, "NOT_YOUR_TURN"
     }
 

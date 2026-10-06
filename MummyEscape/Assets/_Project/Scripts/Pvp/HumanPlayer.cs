@@ -45,12 +45,20 @@ namespace MummyEscape.Pvp
         public static double SkillForElo(int elo) => Math.Max(0, Math.Min(1, (elo - 700) / 1000.0));
 
         /// <summary>Joue le tombeau : les actions horodatées que le jeu enverrait, l'issue, et comment ça s'est passé.</summary>
-        public (List<RunInput> inputs, RunOutcome outcome, RunStats stats) Play(Level level, Random rng, double quitChance = 0)
+        public (List<RunInput> inputs, RunOutcome outcome, RunStats stats) Play(Level level, Random rng, double quitChance = 0) =>
+            Play(level, rng, Rules.Initial(level), 0, PvpConfig.TimeLimitMs, quitChance);
+
+        /// <summary>
+        /// Joue à partir de <paramref name="start"/>, libéré à <paramref name="startMs"/> : une étape du relais 2v2, dont
+        /// l'objectif est la sortie de <paramref name="level"/>. Faux une fois <paramref name="timeLimitMs"/> passé.
+        /// </summary>
+        public (List<RunInput> inputs, RunOutcome outcome, RunStats stats) Play(Level level, Random rng, RuleState start, double startMs,
+                                                                                 int timeLimitMs, double quitChance = 0)
         {
             var stats = new RunStats();
-            var session = new GameSession(level);
+            var session = new GameSession(level, start);
             var inputs = new List<RunInput>();
-            double t = 150 + rng.NextDouble() * 600 * (1.2 - Skill); // le premier couloir est encore en tête : on part vite
+            double t = startMs + 150 + rng.NextDouble() * 600 * (1.2 - Skill); // le premier couloir est encore en tête : on part vite
             List<PlayerAction> plan = null;
             int planAt = 0;
             var wrongTried = new HashSet<Cell>();
@@ -68,7 +76,7 @@ namespace MummyEscape.Pvp
             bool Apply(PlayerAction action, double thinkMs)
             {
                 t = Math.Max(t + thinkMs, earliest);
-                if (t > PvpConfig.TimeLimitMs) return false;
+                if (t > timeLimitMs) return false;
                 var before = session.State;
                 var r = session.Apply(action);
                 if (action.Kind == ActionKind.Move) lastSwipe = action.Dir;

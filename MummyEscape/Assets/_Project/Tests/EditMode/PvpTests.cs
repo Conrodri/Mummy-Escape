@@ -380,6 +380,8 @@ namespace MummyEscape.Tests
         // ------------------------------------------------------------------ the server
 
         static readonly DateTime Today = new DateTime(2026, 10, 4, 12, 0, 0, DateTimeKind.Utc);
+        /// <summary>The server clock of the current test (a search waits on it).</summary>
+        static DateTime _now;
 
         static (PvpServer server, MemoryPvpStore store) NewServer()
         {
@@ -387,7 +389,17 @@ namespace MummyEscape.Tests
             store.SoloStars["alice"] = 40;
             store.SoloStars["bob"] = 60;
             int seed = 3003;
-            return (new PvpServer(store, () => Today, () => seed++), store);
+            _now = Today;
+            return (new PvpServer(store, () => _now, () => seed++), store);
+        }
+
+        /// <summary>FindDuel as the game calls it: asked again while the server searches the league (the minute passes).</summary>
+        static FindDuelResponse Find(PvpServer server, string player, bool allowBots = false)
+        {
+            var r = server.FindDuelAsync(player, DifficultyTable.GeneratorVersion, allowBots).Result;
+            if (!r.Searching) return r;
+            _now = _now.AddMilliseconds(PvpConfig.BotFallbackMs + 1000);
+            return server.FindDuelAsync(player, DifficultyTable.GeneratorVersion, allowBots).Result;
         }
 
         [Test]
@@ -395,8 +407,58 @@ namespace MummyEscape.Tests
         {
             var (server, store) = NewServer();
             store.SoloStars["carol"] = PvpConfig.RequiredSoloStars - 1;
-            Assert.AreEqual("LOCKED", server.FindDuelAsync("carol", DifficultyTable.GeneratorVersion).Result.Error);
+            Assert.AreEqual("LOCKED", Find(server, "carol").Error);
             Assert.AreEqual("OUTDATED", server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion - 1).Result.Error);
+        }
+
+        [Test]
+        public void Server_SearchesTheLeagueForAMinute_ThenThePlayerRunsFirst()
+        {
+            var (server, store) = NewServer();
+            var r = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion, false).Result;
+            Assert.IsTrue(r.Searching, "nobody of the league yet: the server keeps looking");
+            Assert.IsNull(r.MatchId);
+            Assert.IsNull(store.GetPendingAsync("alice").Result, "nothing is created while searching");
+            _now = _now.AddSeconds(30);
+            r = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion, false).Result;
+            Assert.IsTrue(r.Searching);
+            Assert.AreEqual(30_000, r.SearchedMs, "the minute is counted by the server, not the game");
+            _now = _now.AddSeconds(31);
+            r = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion, false).Result;
+            Assert.IsFalse(r.Searching);
+            Assert.IsNull(r.Ghost, "no bots wanted: alice runs first and becomes the ghost of the next player of her league");
+            Assert.AreEqual(0, store.Players["alice"].DuelSearchSinceUnixMs, "the next search starts from zero");
+        }
+
+        [Test]
+        public void Server_AfterAMinute_ABotOfTheLeague_OnlyThePlayerIsUpdated()
+        {
+            var (server, store) = NewServer();
+            var duel = Find(server, "alice", allowBots: true);
+            Assert.IsNotNull(duel.Ghost);
+            Assert.IsTrue(duel.Ghost.Bot);
+            Assert.AreEqual(Leagues.FromElo(PvpConfig.StartingElo), Leagues.FromElo(duel.Ghost.Elo), "a bot of her league");
+            var level = PvpServer.Arena(duel.Seed);
+            var result = server.SubmitRunAsync("alice", Finish(duel.MatchId, Stamp(level, level.Solution.Actions, 300)), "Alice").Result;
+            Assert.IsTrue(result.Resolved);
+            Assert.AreNotEqual(result.EloBefore, result.EloAfter);
+            Assert.IsFalse(store.Players.ContainsKey(duel.Ghost.PlayerId), "a bot has no record");
+            Assert.IsFalse(store.Board.ContainsKey(duel.Ghost.PlayerId), "nor a place in the ranking");
+        }
+
+        [Test]
+        public void Ghosts_AreAlwaysOfThePlayersLeague()
+        {
+            var platinum = new GhostRun { PlayerId = "p", Elo = PvpConfig.DiamantMin - 50 };
+            var diamond = new GhostRun { PlayerId = "d", Elo = PvpConfig.DiamantMin + 200 };
+            Assert.IsNull(GhostPicker.Pick(new[] { platinum }, "me", PvpConfig.DiamantMin + 20, null, 0), "closer in Elo, but not a diamond");
+            Assert.AreSame(diamond, GhostPicker.Pick(new[] { platinum, diamond }, "me", PvpConfig.DiamantMin + 20, null, 0));
+            var rng = new Random(5);
+            for (int i = 0; i < 20; i++)
+            {
+                Assert.AreEqual(League.Diamant, Leagues.FromElo(PvpBots.Make(rng, PvpConfig.DiamantMin + 10, 0).Elo));
+                Assert.AreEqual(League.Bronze, Leagues.FromElo(PvpBots.Make(rng, PvpConfig.ArgentMin - 10, 0).Elo));
+            }
         }
 
         [Test]
@@ -404,7 +466,7 @@ namespace MummyEscape.Tests
         {
             var (server, store) = NewServer();
 
-            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var first = Find(server, "alice");
             Assert.IsNull(first.Error);
             Assert.IsNull(first.Ghost, "nobody waiting: alice runs first");
             var level = PvpServer.Arena(first.Seed);
@@ -415,7 +477,7 @@ namespace MummyEscape.Tests
             Assert.AreEqual(1, store.Queue.Count);
             Assert.That(queued.SealsGained, Is.GreaterThan(0), "daily chest");
 
-            var second = server.FindDuelAsync("bob", DifficultyTable.GeneratorVersion).Result;
+            var second = Find(server, "bob");
             Assert.IsNotNull(second.Ghost);
             Assert.AreEqual("Alice", second.Ghost.PlayerName);
             Assert.AreEqual(first.Seed, second.Seed, "same seed, same tomb");
@@ -537,7 +599,7 @@ namespace MummyEscape.Tests
         public void Server_AcceptsAForfeitMidRun()
         {
             var (server, store) = NewServer();
-            var duel = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var duel = Find(server, "alice");
             var level = PvpServer.Arena(duel.Seed);
             // What the pause menu sends (PvpMatch.BuildRun): the steps already taken, no time.
             var forfeit = new RunSubmission
@@ -555,11 +617,11 @@ namespace MummyEscape.Tests
         public void Server_ReplaysTheRun_ACheaterLoses()
         {
             var (server, store) = NewServer();
-            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var first = Find(server, "alice");
             var level = PvpServer.Arena(first.Seed);
             server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900)), "Alice").Wait();
 
-            var second = server.FindDuelAsync("bob", DifficultyTable.GeneratorVersion).Result;
+            var second = Find(server, "bob");
             // Bob claims a lightning exit after only three moves.
             var lie = new RunSubmission { MatchId = second.MatchId, Outcome = RunOutcome.Finished, TimeMs = 5000, Progress = 1,
                                           Inputs = Stamp(level, level.Solution.Actions.Take(3), 400) };
@@ -573,13 +635,13 @@ namespace MummyEscape.Tests
         static (DuelRecord alice, DuelRecord rival) PlayDuel(PvpServer server, MemoryPvpStore store, string rival)
         {
             store.SoloStars[rival] = 50;
-            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var first = Find(server, "alice");
             var level = PvpServer.Arena(first.Seed);
             var run = Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900));
             run.Look = new PlayerLook { Mummy = "mummy_classic", Hat = "BAD hat!" };
             server.SubmitRunAsync("alice", run, "Alice").Wait();
 
-            var second = server.FindDuelAsync(rival, DifficultyTable.GeneratorVersion).Result;
+            var second = Find(server, rival);
             Assert.AreEqual("mummy_classic", second.Ghost.Look.Mummy, "the ghost carries its look for the VS screen");
             Assert.IsNull(second.Ghost.Look.Hat, "unsafe ids are dropped");
             server.SubmitRunAsync(rival, Finish(second.MatchId, Stamp(level, level.Solution.Actions, 700)), rival).Wait();
@@ -591,7 +653,7 @@ namespace MummyEscape.Tests
         public void History_KeepsBothRuns_AndCompletesTheFirstRunnersDuel()
         {
             var (server, store) = NewServer();
-            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var first = Find(server, "alice");
             var level = PvpServer.Arena(first.Seed);
             server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900)), "Alice").Wait();
             var open = server.GetHistoryAsync("alice").Result.Duels.Single();
@@ -599,7 +661,7 @@ namespace MummyEscape.Tests
             Assert.IsNull(open.Rival);
             Assert.AreEqual(level.Solution.Actions.Count, open.Me.Inputs.Count);
 
-            var second = server.FindDuelAsync("bob", DifficultyTable.GeneratorVersion).Result;
+            var second = Find(server, "bob");
             server.SubmitRunAsync("bob", Finish(second.MatchId, Stamp(level, level.Solution.Actions, 700)), "Bob").Wait();
 
             var alice = server.GetHistoryAsync("alice").Result.Duels.Single();
@@ -675,7 +737,7 @@ namespace MummyEscape.Tests
             store.Players["bob"] = new PlayerPvpData { Day = "2026-10-04", ReportsToday = PvpConfig.MaxReportsPerDay };
             var (_, bob) = PlayDuel(server, store, "bob");
             Assert.AreEqual("LIMIT", server.ReportCheatAsync("bob", bob.MatchId).Result.Error);
-            var first = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var first = Find(server, "alice");
             var level = PvpServer.Arena(first.Seed);
             server.SubmitRunAsync("alice", Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900)), "Alice").Wait();
             Assert.AreEqual("NO_RIVAL", server.ReportCheatAsync("alice", first.MatchId).Result.Error);
@@ -685,8 +747,8 @@ namespace MummyEscape.Tests
         public void Server_SearchingAgainKeepsTheSameDuel()
         {
             var (server, _) = NewServer();
-            var a = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
-            var b = server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion).Result;
+            var a = Find(server, "alice");
+            var b = Find(server, "alice");
             Assert.AreEqual(a.MatchId, b.MatchId);
             Assert.AreEqual(a.Seed, b.Seed);
         }

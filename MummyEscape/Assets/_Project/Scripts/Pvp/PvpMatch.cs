@@ -14,6 +14,52 @@ namespace MummyEscape.Pvp
 
         public PvpMatch(FindDuelResponse duel) => Duel = duel;
 
+        /// <summary>
+        /// A live duel: the rival runs at the same time. His actions arrive as he plays them (<see cref="AddRivalInput"/>)
+        /// and are replayed on the player's clock like a ghost; against a bot, its run is known in advance.
+        /// </summary>
+        public PvpMatch(LiveDuel live, string me)
+        {
+            Live = live;
+            var mine = live.SideOf(me);
+            var other = live.OtherSide(me);
+            var rival = live.VsBot ? live.BotRun : new GhostRun { PlayerId = other.PlayerId, Inputs = new List<RunInput>(), TimeMs = int.MaxValue };
+            rival.PlayerName = other.Name;
+            rival.Elo = other.Elo;
+            rival.Look = other.Look;
+            Duel = new FindDuelResponse { MatchId = live.Id, Seed = live.Seed, MyElo = mine.Elo, Ghost = rival };
+        }
+
+        /// <summary>The live duel, null for a duel against a recorded ghost or a team battle round.</summary>
+        public LiveDuel Live { get; }
+        public bool IsLive => Live != null;
+        /// <summary>The rival left the live duel (forfeit or lost connection): the player wins.</summary>
+        public bool RivalQuit { get; set; }
+
+        /// <summary>An action of the live rival, as he played it (in order, on his clock).</summary>
+        public void AddRivalInput(int tick, int direction)
+        {
+            if (!IsLive || Live.VsBot) return;
+            var inputs = Ghost.Inputs;
+            if (inputs.Count > 0 && tick < inputs[inputs.Count - 1].Tick) return;
+            inputs.Add(new RunInput { Tick = tick, Direction = direction });
+        }
+
+        /// <summary>The rival is out of the tomb or dead, on the player's clock: in a live duel, it is over.</summary>
+        public bool RivalOver => GhostReplay != null && GhostReplay.IsOver;
+
+        /// <summary>The rival's run as far as the player saw it (outcome, time, progress).</summary>
+        public (RunOutcome Outcome, int TimeMs, float Progress) RivalSoFar()
+        {
+            if (RivalQuit) return (RunOutcome.Abandoned, 0, GhostProgress);
+            if (GhostReplay == null) return (RunOutcome.TimedOut, PvpConfig.TimeLimitMs, 0f);
+            var status = GhostReplay.Session.Status;
+            int time = RunActions.MsOf(GhostReplay.LastTick);
+            if (status == SessionStatus.Won) return (RunOutcome.Finished, time, 1f);
+            if (status == SessionStatus.Dead) return (RunOutcome.Died, time, GhostReplay.Progress);
+            return (RunOutcome.TimedOut, time, GhostReplay.Progress);
+        }
+
         public string MatchId => Duel.MatchId;
         public int Seed => Duel.Seed;
         public GhostRun Ghost => Duel.Ghost;

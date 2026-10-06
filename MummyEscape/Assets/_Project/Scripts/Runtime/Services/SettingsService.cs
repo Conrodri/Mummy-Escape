@@ -18,6 +18,9 @@ namespace MummyEscape.Services
         public bool ShowPreview { get; private set; }
         /// <summary>Language code ("fr", "en"), or "" to follow the device language.</summary>
         public string Language { get; private set; }
+        /// <summary>2v2: when no real duo is found within a minute, play against a duo of bots rather than keep waiting.</summary>
+        /// <summary>Duels and 2v2: a bot of the league when nobody of it shows up within a minute.</summary>
+        public bool PvpBots { get; private set; }
 
         public event Action Changed;
 
@@ -31,6 +34,7 @@ namespace MummyEscape.Services
             Haptics = PlayerPrefs.GetInt("haptics", 1) == 1;
             ShowPreview = PlayerPrefs.GetInt("preview", 1) == 1;
             Language = PlayerPrefs.GetString("lang", "");
+            PvpBots = PlayerPrefs.GetInt("pvp_bots", 1) == 1;
         }
 
         public void SetMusicVolume(float v) { MusicVolume = Mathf.Clamp01(v); PlayerPrefs.SetFloat("music", MusicVolume); Commit(); }
@@ -39,6 +43,7 @@ namespace MummyEscape.Services
         public void SetBrightness(float v) { Brightness = Mathf.Clamp(v, -1f, 1f); PlayerPrefs.SetFloat("brightness", Brightness); Commit(); }
         public void SetAdvancedLighting(bool on) { AdvancedLighting = on; PlayerPrefs.SetInt("fx", on ? 1 : 0); Commit(); }
         public void SetHaptics(bool on) { Haptics = on; PlayerPrefs.SetInt("haptics", on ? 1 : 0); Commit(); }
+        public void SetPvpBots(bool on) { PvpBots = on; PlayerPrefs.SetInt("pvp_bots", on ? 1 : 0); Commit(); }
         public void SetShowPreview(bool on) { ShowPreview = on; PlayerPrefs.SetInt("preview", on ? 1 : 0); Commit(); }
         public void SetLanguage(string code) { Language = code ?? ""; PlayerPrefs.SetString("lang", Language); Commit(); Loc.Apply(Language); }
 

@@ -95,8 +95,12 @@ namespace MummyEscape.Pvp
 
         // ------------------------------------------------------------------ endpoints
 
-        /// <summary>Trouve un adversaire. La course commence tout de suite, avec ou sans fantôme : jamais d'attente.</summary>
-        public async Task<FindDuelResponse> FindDuelAsync(string me, int generatorVersion)
+        /// <summary>
+        /// Trouve un adversaire de la ligue du joueur. Sans fantôme de sa ligue, le serveur cherche une minute (le jeu redemande,
+        /// <see cref="FindDuelResponse.Searching"/>), puis donne un bot de la ligue si le joueur l'accepte ; sinon le joueur court
+        /// le premier et sa course attend le prochain joueur de sa ligue.
+        /// </summary>
+        public async Task<FindDuelResponse> FindDuelAsync(string me, int generatorVersion, bool allowBots = false)
         {
             if (generatorVersion != DifficultyTable.GeneratorVersion) return new FindDuelResponse { Error = "OUTDATED" };
             if (await _store.GetSoloStarsAsync(me) < PvpConfig.RequiredSoloStars) return new FindDuelResponse { Error = "LOCKED" };
@@ -115,6 +119,22 @@ namespace MummyEscape.Pvp
 
             var data = await Update(me);
             var ghost = await _store.ClaimGhostAsync(me, data.Elo, generatorVersion, data.OpponentsToday, NowMs);
+            if (ghost == null)
+            {
+                // Personne de la ligue : on cherche encore une minute (le jeu redemande), puis un bot de la ligue si le joueur
+                // l'accepte, sinon il court le premier et devient le fantôme du prochain joueur de sa ligue.
+                long since = data.DuelSearchSinceUnixMs;
+                if (since <= 0 || NowMs - since > PvpConfig.SearchResetMs || since > NowMs)
+                {
+                    since = NowMs;
+                    data = await Update(me, d => d.DuelSearchSinceUnixMs = since);
+                }
+                long searched = NowMs - since;
+                if (searched < PvpConfig.BotFallbackMs)
+                    return new FindDuelResponse { Searching = true, SearchedMs = (int)searched, MyElo = data.Elo };
+                if (allowBots) ghost = PvpBots.Make(new Random(_newSeed()), data.Elo, NowMs);
+            }
+            if (data.DuelSearchSinceUnixMs != 0) data = await Update(me, d => d.DuelSearchSinceUnixMs = 0);
             var duel = new PendingDuel
             {
                 MatchId = Guid.NewGuid().ToString("N"),
@@ -209,7 +229,9 @@ namespace MummyEscape.Pvp
             var ghost = pending.Ghost;
             var resultForMe = DuelResolver.Resolve(run.Outcome, run.TimeMs, run.Progress, ghost.Outcome, ghost.TimeMs, ghost.Progress);
             int myEloBefore = (await Update(me)).Elo;
-            int oppEloBefore = (await Update(ghost.PlayerId)).Elo;
+            // Un bot n'a ni fiche, ni classement, ni historique : seul le vrai joueur est mis à jour.
+            bool bot = ghost.Bot;
+            int oppEloBefore = bot ? ghost.Elo : (await Update(ghost.PlayerId)).Elo;
 
             int gained = 0;
             var mine = await Update(me, d =>
@@ -218,17 +240,17 @@ namespace MummyEscape.Pvp
                 gained += DuelBookkeeping.ApplyResult(d, ghost.PlayerId, oppEloBefore, resultForMe);
                 d.Ranked = true;
             });
-            var theirs = await Update(ghost.PlayerId, d =>
+            var theirs = bot ? null : await Update(ghost.PlayerId, d =>
             {
                 DuelBookkeeping.ApplyResult(d, me, myEloBefore, DuelResolver.Invert(resultForMe));
                 d.Ranked = true;
             });
             await _store.SubmitEloAsync(me, mine.Elo);
-            await _store.SubmitEloAsync(ghost.PlayerId, theirs.Elo);
+            if (!bot) await _store.SubmitEloAsync(ghost.PlayerId, theirs.Elo);
             // Every duel win also counts for the winner's guild.
             if (resultForMe == DuelResult.Win) await AddGuildPointsAsync(mine.GuildId, me, TeamConfig.PointsPerDuelWin);
-            else if (resultForMe == DuelResult.Loss) await AddGuildPointsAsync(theirs.GuildId, ghost.PlayerId, TeamConfig.PointsPerDuelWin);
-            await ForgetBoardIfChangedAsync(Math.Max(mine.Elo, theirs.Elo), me, ghost.PlayerId);
+            else if (resultForMe == DuelResult.Loss && !bot) await AddGuildPointsAsync(theirs.GuildId, ghost.PlayerId, TeamConfig.PointsPerDuelWin);
+            await ForgetBoardIfChangedAsync(Math.Max(mine.Elo, theirs?.Elo ?? 0), me, ghost.PlayerId);
 
             // Le duel dans l'historique des deux joueurs, de quoi le revoir des deux points de vue.
             var myRun = RunOf(me, playerName, myEloBefore, run);
@@ -238,7 +260,7 @@ namespace MummyEscape.Pvp
                 MatchId = pending.MatchId, Seed = pending.Seed, GeneratorVersion = ghost.GeneratorVersion, PlayedAtUnixMs = NowMs,
                 Resolved = true, Result = resultForMe, EloBefore = myEloBefore, EloAfter = mine.Elo, Me = myRun, Rival = ghostRun,
             }));
-            await RecordAsync(ghost.PlayerId, h =>
+            if (!bot) await RecordAsync(ghost.PlayerId, h =>
             {
                 var open = h.Find(r => r.MatchId == ghost.GhostId);
                 Remember(h, new DuelRecord

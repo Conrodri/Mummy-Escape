@@ -336,7 +336,7 @@ namespace MummyEscape.Online
                 if (isPublic)
                     await CloudSaveService.Instance.Data.Player.DeleteAsync(key, new CloudPlayer.DeleteOptions(new CloudPlayer.PublicWriteAccessClassOptions()));
                 else
-                    await CloudSaveService.Instance.Data.Player.DeleteAsync(key);
+                    await CloudSaveService.Instance.Data.Player.DeleteAsync(key, new CloudPlayer.DeleteOptions());
             }
             catch (Exception e) { Debug.Log($"[Online] delete {key}: {e.Message}"); }
         }

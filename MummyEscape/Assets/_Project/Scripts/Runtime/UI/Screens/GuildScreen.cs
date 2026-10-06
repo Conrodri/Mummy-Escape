@@ -14,7 +14,7 @@ namespace MummyEscape.UI.Screens
     /// </summary>
     public sealed class GuildScreen : UIScreen
     {
-        public override NavTab Tab => NavTab.Duel;
+        public override NavTab Tab => NavTab.Friends;
 
         RectTransform _list;
         ScrollRect _scroll;
@@ -25,6 +25,7 @@ namespace MummyEscape.UI.Screens
         readonly List<string> _order = new List<string>();
         int _size = TeamConfig.WarSizes[0];
         bool _busy;
+        UIKit.Segmented _social;
         int _request;
 
         protected override void Build()
@@ -33,6 +34,7 @@ namespace MummyEscape.UI.Screens
             Header("Guilde");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 16);
+            _social = FriendsScreen.Social(body, Router, 1);
             _info = UIKit.Label(body, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 64);
@@ -44,6 +46,7 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             App.Lighting.SetMood(false);
+            _social.Select(1);
             _busy = false;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;

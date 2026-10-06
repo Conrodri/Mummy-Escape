@@ -1,5 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using MummyEscape.Game;
+using MummyEscape.Online;
 using MummyEscape.Pvp;
 using MummyEscape.Services;
 using MummyEscape.Visual;
@@ -27,14 +31,19 @@ namespace MummyEscape.UI.Screens
         ScrollRect _scroll;
         bool _busy;
         int _request;
+        UIKit.Segmented _modes;
+        /// <summary>The duel search running (the button cancels it).</summary>
+        CancellationTokenSource _duelSearch;
 
         protected override void Build()
         {
             UIKit.Backdrop(Root);
             Header("Duel");
             var body = Body(190, 40, 40);
+            UIKit.Column(body, 16);
+            _modes = Modes(body, Router, 0);
             var list = UIKit.Scroll(body, out _scroll);
-            UIKit.Stretch((RectTransform)_scroll.transform);
+            UIKit.Size(_scroll, -1, -1, -1, 1);
             list.GetComponent<VerticalLayoutGroup>().spacing = 20;
 
             // Profile: league badge, Elo and rank, record, seals.
@@ -76,29 +85,19 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(_find.GetComponentInChildren<Text>(), 24);
             UIKit.Size(_find, 116);
 
+            var bots = UIKit.Toggle(list, "Un bot de ma ligue si personne en vue (1 min)", App.Settings.PvpBots, App.Settings.SetPvpBots);
+            UIKit.Size(bots, 64);
+
             _info = UIKit.Label(list, "", 28, UIKit.Sand);
             UIKit.Size(_info, 84);
 
-            var rules = UIKit.Label(list, "Même tombeau pour les deux : le fantôme d'un joueur de ton niveau court à tes côtés. 3 minutes, le premier sorti gagne ; sinon, celui qui est allé le plus loin.", 26, UIKit.Dim);
+            var rules = UIKit.Label(list, "En direct contre un joueur de ta ligue : même tombeau, même départ, il court à tes côtés. Le premier sorti gagne, le premier mort perd ; au bout de 3 minutes, le plus avancé.", 26, UIKit.Dim);
             UIKit.FitText(rules, 18);
             UIKit.Size(rules, 110);
 
-            // Team modes: 2v2 with a friend, guilds and their wars.
-            var teams = UIKit.Row(list, 104, 16);
-            var duo = UIKit.Button(teams.transform, "2v2", () => Router.Open<DuoScreen>(), 34, ButtonStyle.Primary);
-            UIKit.Size(duo, -1, -1, 1);
-            var guild = UIKit.Button(teams.transform, "Guilde", () => Router.Open<GuildScreen>(), 34, ButtonStyle.Primary);
-            UIKit.Size(guild, -1, -1, 1);
-
-            var actions = UIKit.Row(list, 96, 16);
-            var board = UIKit.Button(actions.transform, "Classement", () => Router.Open<PvpLeaderboardScreen>(), 30);
-            UIKit.FitText(board.GetComponentInChildren<Text>(), 18);
-            UIKit.Size(board, -1, -1, 1);
-            var titles = UIKit.Button(actions.transform, "Titres", () => Router.Open<TitlesScreen>(), 30);
-            UIKit.Size(titles, -1, -1, 1);
-            _claim = UIKit.Button(actions.transform, "Récompenses", Claim, 30, ButtonStyle.Primary);
+            _claim = UIKit.Button(list, "Récompenses", Claim, 30, ButtonStyle.Primary);
             UIKit.FitText(_claim.GetComponentInChildren<Text>(), 18);
-            UIKit.Size(_claim, -1, -1, 1);
+            UIKit.Size(_claim, 96);
 
             _savedTitle = UIKit.SectionTitle(list, "");
             _savedHint = UIKit.Label(list, "", 24, UIKit.Dim, TextAnchor.MiddleLeft);
@@ -120,6 +119,7 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             App.Lighting.SetMood(false);
+            _modes.Select(0);
             _busy = false;
             _replacing = null;
             _info.text = "";
@@ -190,8 +190,8 @@ namespace MummyEscape.UI.Screens
             else _season.text = "";
 
             _find.gameObject.SetActive(App.Pvp != null);
-            UIKit.SetLabel(_find, _busy ? "Recherche d'un adversaire…" : locked ? Loc.F("{0} étoiles en solo pour débloquer ({1}/{0})", PvpConfig.RequiredSoloStars, App.Save.TotalStars) : "Chercher un adversaire");
-            _find.interactable = available && !locked && !_busy;
+            UIKit.SetLabel(_find, _duelSearch != null ? "Annuler la recherche" : _busy ? "Recherche d'un adversaire…" : locked ? Loc.F("{0} étoiles en solo pour débloquer ({1}/{0})", PvpConfig.RequiredSoloStars, App.Save.TotalStars) : "Chercher un adversaire");
+            _find.interactable = available && !locked && (!_busy || _duelSearch != null);
 
             bool claimable = d?.LastSeason != null && !d.LastSeason.RewardsClaimed;
             _claim.gameObject.SetActive(claimable);
@@ -327,23 +327,90 @@ namespace MummyEscape.UI.Screens
             if (this != null) Show(App.PvpProfile);
         }
 
+        /// <summary>
+        /// The live duel search: a rival of the league, connected (or a bot of the league after a minute if the player
+        /// accepts them). The button cancels a search in progress.
+        /// </summary>
         async void FindDuel()
         {
+            if (_duelSearch != null) { CancelDuelSearch(); return; }
             if (_busy || App.Pvp == null) return;
-            _busy = true;
-            _info.text = "";
-            Show(App.PvpProfile);
-            await App.SyncSoloStars();
-            var duel = await App.Pvp.FindDuelAsync();
-            if (this == null) return;
-            _busy = false;
-            if (duel == null || duel.Error != null)
+            var matchmaker = DuelMatchmakerFactory.For(App.Pvp);
+            if (matchmaker == null)
             {
-                _info.text = ErrorText(duel?.Error);
-                Show(App.PvpProfile);
+                _info.text = Loc.T("Les duels en direct ne sont pas disponibles sur cette version.");
                 return;
             }
-            Versus(Router, duel);
+            _busy = true;
+            var search = _duelSearch = new CancellationTokenSource();
+            _info.text = Loc.T("Recherche d'un adversaire…");
+            Show(App.PvpProfile);
+            await App.SyncSoloStars();
+            var start = await FindLiveAsync(App, matchmaker, text => { if (this != null && _duelSearch == search) _info.text = text; }, search.Token);
+            if (this == null || search.IsCancellationRequested)
+            {
+                start?.Link?.Dispose();
+                return;
+            }
+            _busy = false;
+            _duelSearch = null;
+            if (start == null)
+            {
+                Show(App.PvpProfile); // the status says why
+                return;
+            }
+            VersusLive(Router, start);
+        }
+
+        void CancelDuelSearch()
+        {
+            if (_duelSearch == null) return;
+            _duelSearch.Cancel();
+            _duelSearch = null;
+            _busy = false;
+            if (_info != null) _info.text = "";
+            if (App.PvpProfile != null) Show(App.PvpProfile);
+        }
+
+        public override void OnHide() => CancelDuelSearch();
+
+        /// <summary>1v1 (this screen) or 2v2 (<see cref="DuoScreen"/>), one tab away from each other; Back leads home.</summary>
+        internal static UIKit.Segmented Modes(Transform body, UIRouter router, int selected) =>
+            new UIKit.Segmented(body, new[] { "1v1", "2v2" }, i => // noloc
+            {
+                if (i == selected) return;
+                router.Reset<MainMenuScreen>();
+                if (i == 0) router.Open<PvpScreen>();
+                else router.Open<DuoScreen>();
+            }, 96);
+
+        /// <summary>Looks for a live rival of the player's league (the matchmaker tells how it goes through <paramref name="status"/>).</summary>
+        public static Task<DuelStart> FindLiveAsync(MummyEscape.App.GameApp app, IDuelMatchmaker matchmaker, Action<string> status, CancellationToken cancel)
+        {
+            var look = PvpSkins.Look(app.Save.Loadout);
+            look.Title = TitleBook.Equipped(app);
+            return matchmaker.FindAsync(new DuelSearch
+            {
+                Me = app.Online.PlayerId,
+                Name = app.Online.PlayerName,
+                Look = look,
+                Elo = app.PvpProfile?.Data?.Elo ?? PvpConfig.StartingElo,
+                AllowBots = app.Settings.PvpBots,
+                Pvp = app.Pvp,
+            }, status, cancel);
+        }
+
+        /// <summary>The VS screen while the tomb is drawn, then the live duel (HUD, preview, the start together).</summary>
+        public static void VersusLive(UIRouter router, DuelStart start)
+        {
+            var app = MummyEscape.App.GameApp.I;
+            var match = new PvpMatch(start.Match, start.Me);
+            _ = Task.Run(() => PvpServer.Arena(match.Seed));
+            router.Open<VsScreen>().Show(app.Save.Loadout, app.Online.PlayerName, match.Duel.MyElo, match.Ghost, () =>
+            {
+                router.Open<HudScreen>();
+                _ = app.Game.StartDuel(match, start.Link);
+            });
         }
 
         /// <summary>The VS screen while the tomb is drawn, then the run (HUD, preview).</summary>

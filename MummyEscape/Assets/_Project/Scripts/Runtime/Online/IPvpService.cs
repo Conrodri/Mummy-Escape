@@ -15,7 +15,8 @@ namespace MummyEscape.Online
         /// <summary>Offline duels against simulated rivals (editor and development builds only).</summary>
         bool IsDemo { get; }
         Task<PvpProfileResponse> GetProfileAsync();
-        Task<FindDuelResponse> FindDuelAsync();
+        /// <summary>A rival of the player's league; <see cref="FindDuelResponse.Searching"/> while the server looks (ask again).</summary>
+        Task<FindDuelResponse> FindDuelAsync(bool allowBots);
         Task<SubmitRunResponse> SubmitRunAsync(RunSubmission run, string playerName);
         Task<SeasonRewardsResponse> ClaimSeasonRewardsAsync();
         Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId);
@@ -42,6 +43,26 @@ namespace MummyEscape.Online
         Task<FindDuelResponse> StartBattleRunAsync(string battleId);
         /// <summary>A battle as this player may see it (undecided rival runs hidden), null on failure.</summary>
         Task<TeamBattle> GetBattleAsync(string battleId);
+
+        // --- live duel (the matchmaking itself goes through IDuelMatchmaker) ---
+        Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b);
+        Task<LiveDuelResponse> StartLiveBotDuelAsync(string matchKey, LiveDuelist mine);
+        /// <summary>The duel the lobby's host created (for the guest).</summary>
+        Task<LiveDuelResponse> GetLiveDuelAsync(string matchId);
+        /// <summary>The player's run at the end; <see cref="SubmitRunResponse.Resolved"/> false while the rival's is awaited.</summary>
+        Task<SubmitRunResponse> SubmitLiveDuelAsync(string matchId, RunSubmission run, string playerName);
+        Task<SubmitRunResponse> GetLiveDuelResultAsync(string matchId);
+
+        // --- 2v2 relay, live (the matchmaking itself goes through IRelayMatchmaker) ---
+        /// <summary>The lobby host creates the match of the two duos that met (same key = same match).</summary>
+        Task<RelayMatchResponse> StartRelayMatchAsync(string matchKey, RelaySide a, RelaySide b);
+        /// <summary>No duo found and the players accept bots: a match against a simulated duo, played in advance.</summary>
+        Task<RelayMatchResponse> StartRelayBotsAsync(string matchKey, RelaySide mine);
+        /// <summary>The duo's relay at the end of the match; the result once both duos have sent theirs (Pending meanwhile).</summary>
+        Task<RelayResultResponse> SubmitRelayAsync(string matchId, string starter, List<RelayInput> inputs, List<string> quitters);
+        Task<RelayResultResponse> GetRelayResultAsync(string matchId);
+        /// <summary>"Quit and report": the teammate who left the match.</summary>
+        Task<ReportResponse> ReportRelayQuitAsync(string matchId, string quitterId);
 
         // --- Guilds ---
         Task<GuildResponse> GetGuildAsync();
