@@ -45,6 +45,7 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
+            ProfileSetupScreen.AskIfNeeded(Router, App);
             App.Lighting.SetMood(false);
             _social.Select(1);
             _busy = false;

@@ -16,9 +16,15 @@ namespace MummyEscape.UI.Screens
 
         public const int NameMin = 3, NameMax = 16;
 
-        /// <summary>Asked once, after the player accepted the online mode and a session is up.</summary>
+        /// <summary>Asked once, the first time the player opens a social or PvP screen (the solo game never needs it), once online mode is accepted and a session is up.</summary>
         public static bool Needed(App.GameApp app) =>
             !app.Save.Data.ProfileDone && app.Privacy.OnlineAllowed && (app.Online.IsAvailable || app.Online.IsDemo);
+
+        /// <summary>Opens over <paramref name="router"/>'s screen when the profile is still to be chosen.</summary>
+        public static void AskIfNeeded(UIRouter router, App.GameApp app)
+        {
+            if (Needed(app)) router.Open<ProfileSetupScreen>();
+        }
 
         InputField _name;
         Text _country, _error;
@@ -64,7 +70,6 @@ namespace MummyEscape.UI.Screens
             _error = UIKit.Label(body, "", 30, UIKit.Danger);
             UIKit.Size(_error, 50);
             _go = UIKit.Button(body, "C'est parti !", Confirm, 42, ButtonStyle.Primary);
-            UIKit.Rounded(_go.image, 56);
             UIKit.Size(_go, 116);
         }
 
@@ -101,7 +106,7 @@ namespace MummyEscape.UI.Screens
             _ = App.PublishProgress();
             _go.interactable = true;
             Router.Close(this);
-            if (Router.Current is MainMenuScreen menu) menu.OnShow();
+            Router.Current?.OnShow();
         }
 
         internal static string StripTag(string name)

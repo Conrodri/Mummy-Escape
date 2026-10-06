@@ -81,7 +81,6 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_season, 40);
 
             _find = UIKit.Button(list, "Chercher un adversaire", FindDuel, 44, ButtonStyle.Primary);
-            UIKit.Rounded(_find.image, 56);
             UIKit.FitText(_find.GetComponentInChildren<Text>(), 24);
             UIKit.Size(_find, 116);
             _plays = UIKit.Label(list, "", 24, UIKit.Dim);
@@ -120,6 +119,7 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
+            ProfileSetupScreen.AskIfNeeded(Router, App);
             App.Lighting.SetMood(false);
             _modes.Select(0);
             _busy = false;

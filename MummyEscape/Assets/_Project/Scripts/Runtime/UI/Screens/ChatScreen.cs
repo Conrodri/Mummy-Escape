@@ -109,6 +109,7 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
+            ProfileSetupScreen.AskIfNeeded(Router, App);
             App.Lighting.SetMood(false);
             _enabled.SetIsOnWithoutNotify(ChatState.Enabled);
             CloseMenu();

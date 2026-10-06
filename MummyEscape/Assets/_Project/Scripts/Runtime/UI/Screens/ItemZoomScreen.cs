@@ -74,7 +74,6 @@ namespace MummyEscape.UI.Screens
                 Router.Close(this);
                 act?.Invoke();
             }, 38, ButtonStyle.Primary);
-            UIKit.Rounded(_action.image, 52);
             UIKit.Size(_action, 110);
             UIKit.Size(UIKit.Button(panel.transform, "Fermer", () => Router.Close(this), 30, ButtonStyle.Ghost), 80);
         }

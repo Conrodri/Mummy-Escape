@@ -1,3 +1,4 @@
+using MummyEscape.Core;
 using MummyEscape.Visual;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,7 +13,8 @@ namespace MummyEscape.UI.Screens
         PassBanner _pass;
         Image _mummy, _glow, _chatDot;
         RectTransform _stage;
-        Text _online;
+        Text _online, _goal;
+        System.Action _goalAction;
 
         // Vertical column that adapts to any portrait height (tall 20:9 phones down to 4:3 tablets):
         // the title shrinks between its minimum and preferred size, the mummy takes whatever space is left.
@@ -71,11 +73,25 @@ namespace MummyEscape.UI.Screens
             foreach (var rt in new[] { _glow.rectTransform, _mummy.rectTransform })
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
 
+            // What to aim for next, one tap away.
+            var goal = UIKit.ListItem(column, 116, () => _goalAction?.Invoke(), out var gh);
+            var flag = UIKit.Image(gh.transform, UISprites.Flag, UIKit.Gold, false, "Icon"); // noloc
+            flag.preserveAspect = true;
+            UIKit.Size(flag, 56, 56);
+            var gcol = UIKit.Rect("Text", gh.transform); // noloc
+            UIKit.Column(gcol, 2, 0, TextAnchor.MiddleLeft).childForceExpandHeight = false;
+            UIKit.Size(gcol, -1, -1, 1);
+            UIKit.Size(UIKit.SectionTitle(gcol, "Prochain objectif"), 34);
+            _goal = UIKit.Label(gcol, "", 32, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(_goal, 20);
+            UIKit.Size(_goal, 44);
+            var arrow = UIKit.Image(gh.transform, UISprites.Next, UIKit.Dim, false, "Arrow"); // noloc
+            UIKit.Size(arrow, 40, 40);
+
             var play = UIKit.Rect("PlayRow", column);
             UIKit.Size(play, 124);
             var playBtn = UIKit.Button(play, Loc.T("JOUER"), () => Router.Open<LevelSelectScreen>(), 50, ButtonStyle.Primary);
             UIKit.Place((RectTransform)playBtn.transform, 0.5f, 0.5f, 620, 124);
-            UIKit.Rounded(playBtn.image, 62);
 
             // The season pass, with what is waiting to be collected.
             _pass = new PassBanner(column, 150, () => Router.Open<PassScreen>());
@@ -95,6 +111,7 @@ namespace MummyEscape.UI.Screens
             _coins.text = App.Save.Data.Coins.ToString();
             _gold.text = App.Save.Gold.ToString();
             _pass.Refresh(App);
+            RefreshGoal();
             MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)
@@ -102,8 +119,38 @@ namespace MummyEscape.UI.Screens
             _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId);
             _ = Online.ChatState.RefreshAsync(App.Pvp);
             _ = Online.ChatState.SyncProfileAsync(App);
-            if (ProfileSetupScreen.Needed(App)) Router.Open<ProfileSetupScreen>();
         }
+
+        /// <summary>The next tomb to escape; once they are all escaped, the first one short of three stars; then the duels.</summary>
+        void RefreshGoal()
+        {
+            var save = App.Save;
+            var next = save.FurthestUnlocked();
+            var rec = save.GetRecord(next);
+            if (rec == null || rec.Completions == 0)
+            {
+                _goal.text = Loc.F("Évade-toi du tombeau {0}", next.ToString());
+                _goalAction = () => PlayLevel(next);
+                return;
+            }
+            foreach (var id in DifficultyTable.AllLevels())
+            {
+                var r = save.GetRecord(id);
+                if (r == null || r.BestStars >= 3) continue;
+                _goal.text = Loc.F("Trois étoiles au tombeau {0} ({1}/3)", id.ToString(), r.BestStars);
+                _goalAction = () => PlayLevel(id);
+                return;
+            }
+            _goal.text = Loc.T("Grimpe au classement des duels");
+            _goalAction = () => Router.Open<PvpScreen>();
+        }
+
+        void PlayLevel(LevelId id) =>
+            PlayGate.Solo(App, id, () =>
+            {
+                Router.Open<HudScreen>();
+                _ = App.Game.StartLevel(id);
+            });
 
         void Update()
         {

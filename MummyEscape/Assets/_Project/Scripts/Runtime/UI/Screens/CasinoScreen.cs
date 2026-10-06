@@ -117,7 +117,6 @@ namespace MummyEscape.UI.Screens
             UIFx.Pulse(pulse, 0.025f, 1.4f);
             _spin = UIKit.Button(pulse, "Lancer", OnSpin, 40, ButtonStyle.Primary);
             UIKit.Stretch((RectTransform)_spin.transform);
-            UIKit.Rounded(_spin.image, 60);
             _spinLabel = _spin.GetComponentInChildren<Text>();
             UIKit.FitText(_spinLabel, 22);
         }

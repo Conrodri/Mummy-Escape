@@ -22,6 +22,19 @@ namespace MummyEscape.UI
         public static Sprite Ring { get; private set; }
         public static Sprite RadialGlow { get; private set; }
 
+        /// <summary>Reference units per texel of the pixel-art sprites (see <see cref="UIKit.Pixelated"/>).</summary>
+        public const float PixelScale = 6f;
+        /// <summary>Pixel-art button, white so it takes any tint: stepped corners, dark outline, light top-left bevel, thick bottom lip.</summary>
+        public static Sprite PixelButton { get; private set; }
+        /// <summary>Flat pixel-art plate (tintable): outline and a one-texel bevel, for rows, tracks and chips.</summary>
+        public static Sprite PixelPlate { get; private set; }
+        /// <summary>Pixel-art panel in its own colours: ink outline, bevelled gold frame, dark fill and gold rivets in the corners.</summary>
+        public static Sprite PixelFrame { get; private set; }
+        /// <summary>Just the outline of <see cref="PixelPlate"/> (tintable): the coloured rim of a pixel plate.</summary>
+        public static Sprite PixelOutline { get; private set; }
+        /// <summary>Four-pointed pixel sparkle.</summary>
+        public static Sprite PixelSparkle { get; private set; }
+
         public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal, Arrow, Flag, Wheel, Palette, Torch, Crown, Boot, Mummy, Chat, Send;
 
         public static void Init()
@@ -47,6 +60,22 @@ namespace MummyEscape.UI
             {
                 float t = Mathf.Clamp01(1f - Len(x - 64, y - 64) / 64f);
                 return new Color(1, 1, 1, t * t * (3f - 2f * t));
+            });
+
+            PixelButton = Pixels(16, 16, PixelButtonTexel, new Vector4(6, 6, 6, 6));
+            PixelPlate = Pixels(12, 12, PixelPlateTexel, new Vector4(4, 4, 4, 4));
+            PixelFrame = Pixels(24, 24, PixelFrameTexel, new Vector4(9, 9, 9, 9));
+            PixelOutline = Pixels(12, 12, (x, y) =>
+            {
+                Edges(x, y, 12, 12, out int dx, out int dy);
+                return dx + dy >= 2 && (dx == 0 || dy == 0 || (dx == 1 && dy == 1)) ? Color.white : Color.clear;
+            }, new Vector4(4, 4, 4, 4));
+            PixelSparkle = Pixels(7, 7, (x, y) =>
+            {
+                int dx = Math.Abs(x - 3), dy = Math.Abs(y - 3);
+                if (dx == 0 && dy == 0) return Color.white;
+                if (dx == 0 || dy == 0) return dx + dy <= 3 ? new Color(1f, 0.95f, 0.7f, dx + dy == 3 ? 0.6f : 1f) : Color.clear;
+                return dx == 1 && dy == 1 ? new Color(1f, 0.9f, 0.55f, 0.7f) : Color.clear;
             });
 
             // Icons, drawn on a 128 grid with y going up.
@@ -220,6 +249,76 @@ namespace MummyEscape.UI
 
         static Sprite Icon(Func<Vector2, float> sdf) =>
             Make(IconSize, IconSize, (x, y) => Fill(sdf(new Vector2(x + 0.5f, y + 0.5f))));
+
+        /// <summary>Whether the sprite is one of the pixel-art ones (drawn at <see cref="PixelScale"/>).</summary>
+        public static bool IsPixel(Sprite s) =>
+            s != null && (s == PixelButton || s == PixelPlate || s == PixelFrame || s == PixelOutline);
+
+        // Distance of a texel to the nearest vertical / horizontal edge.
+        static void Edges(int x, int y, int w, int h, out int dx, out int dy)
+        {
+            dx = Math.Min(x, w - 1 - x);
+            dy = Math.Min(y, h - 1 - y);
+        }
+
+        static Color Grey(float v) => new Color(v, v, v, 1f);
+
+        static Color PixelButtonTexel(int x, int y)
+        {
+            Edges(x, y, 16, 16, out int dx, out int dy);
+            if (dx + dy < 2) return Color.clear; // stepped corner
+            if (dx == 0 || dy == 0 || (dx == 1 && dy == 1)) return Grey(0.22f);
+            if (y <= 2) return Grey(0.6f); // the lip the button stands on
+            if (y == 14 || x == 1) return Color.white;
+            if (x == 14) return Grey(0.8f);
+            if (x == 2 && y == 13) return Color.white;
+            return Grey(0.92f);
+        }
+
+        static Color PixelPlateTexel(int x, int y)
+        {
+            Edges(x, y, 12, 12, out int dx, out int dy);
+            if (dx + dy < 2) return Color.clear;
+            if (dx == 0 || dy == 0 || (dx == 1 && dy == 1)) return Grey(0.3f);
+            if (y == 10) return Color.white;
+            if (y == 1) return Grey(0.75f);
+            return Grey(0.9f);
+        }
+
+        static Color PixelFrameTexel(int x, int y)
+        {
+            Edges(x, y, 24, 24, out int dx, out int dy);
+            if (dx + dy < 2) return Color.clear;
+            if (dx == 0 || dy == 0 || (dx == 1 && dy == 1)) return new Color32(14, 9, 5, 255);
+            if (dx == 1 || dy == 1)
+            {
+                bool lit = (dy == 1 && y > 12) || (dx == 1 && x < 12 && dy > 1);
+                bool dark = (dy == 1 && y < 12) || (dx == 1 && x > 12 && dy > 1);
+                return lit ? new Color32(252, 226, 140, 255) : dark ? new Color32(168, 124, 48, 255) : new Color32(232, 195, 90, 255);
+            }
+            if (dx == 2 || dy == 2) return new Color32(92, 64, 30, 255);
+            // Rivets: a 2x2 gold stud near each corner, lit on its outer-top texel.
+            if (dx >= 4 && dx <= 5 && dy >= 4 && dy <= 5)
+            {
+                bool hi = dx == 4 && dy == (y > 12 ? 4 : 5);
+                return hi ? new Color32(255, 236, 170, 255) : new Color32(214, 170, 70, 255);
+            }
+            if (dx == 3 || dy == 3) return new Color32(22, 16, 11, 252);
+            return new Color32(31, 24, 18, 250);
+        }
+
+        /// <summary>A small pixel-art texture, sampled without smoothing so every texel stays a crisp square.</summary>
+        static Sprite Pixels(int w, int h, Func<int, int, Color> texel, Vector4 border = default)
+        {
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Point };
+            var px = new Color[w * h];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    px[y * w + x] = texel(x, y);
+            tex.SetPixels(px);
+            tex.Apply(false, true);
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+        }
 
         static Sprite Make(int w, int h, Func<int, int, Color> pixel, Vector4 border = default)
         {

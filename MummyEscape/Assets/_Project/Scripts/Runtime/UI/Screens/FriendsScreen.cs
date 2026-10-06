@@ -89,6 +89,7 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
+            ProfileSetupScreen.AskIfNeeded(Router, App);
             _social.Select(0);
             MummyAnimator.Show(_portrait, App.Art, App.Save.Loadout);
             _name.text = App.Online.PlayerName;

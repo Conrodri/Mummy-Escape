@@ -103,8 +103,6 @@ namespace MummyEscape.UI.Screens
             var bottom = UIKit.Rect("BottomBar", Root);
             UIKit.BottomBand(bottom, 150, 24);
             var map = UIKit.Button(bottom, "", null);
-            UIKit.Rounded(map.image, 48);
-            UIKit.Rounded(map.transform.Find("Rim").GetComponent<Image>(), 48);
             UIKit.Place((RectTransform)map.transform, 1, 0.5f, 230, 96, -30, 0);
             var mapRow = map.gameObject.AddComponent<HorizontalLayoutGroup>();
             mapRow.childAlignment = TextAnchor.MiddleCenter;

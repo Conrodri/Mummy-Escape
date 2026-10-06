@@ -8,13 +8,13 @@ namespace MummyEscape.UI
 {
     public enum ButtonStyle
     {
-        /// <summary>Glossy gold, dark text: the one action the screen is about.</summary>
+        /// <summary>Gold pixel-art button floating on the spot, dark text: the one action the screen is about.</summary>
         Primary,
-        /// <summary>Dark plate with a thin gold rim.</summary>
+        /// <summary>Brown stone pixel-art button.</summary>
         Secondary,
         /// <summary>Text only (links, discreet actions).</summary>
         Ghost,
-        /// <summary>Glossy red: destructive actions.</summary>
+        /// <summary>Red pixel-art button: destructive actions.</summary>
         Danger,
     }
 
@@ -123,15 +123,39 @@ namespace MummyEscape.UI
         /// <summary>Gives a 9-sliced rounded sprite the wanted corner radius (reference pixels).</summary>
         public static Image Rounded(Image img, float radius)
         {
+            // Pixel-art sprites keep their texel size: their stepped corners do not scale.
+            if (UISprites.IsPixel(img.sprite)) return Pixelated(img, img.sprite);
             img.type = UnityEngine.UI.Image.Type.Sliced;
             img.preserveAspect = false;
             img.pixelsPerUnitMultiplier = UISprites.Radius / Mathf.Max(1f, radius);
             return img;
         }
 
-        /// <summary>Rounded plate (any colour), optionally with a thin rim.</summary>
+        /// <summary>Shows a 9-sliced pixel-art sprite with crisp texels of <see cref="UISprites.PixelScale"/> reference units.</summary>
+        public static Image Pixelated(Image img, Sprite sprite)
+        {
+            img.sprite = sprite;
+            img.type = UnityEngine.UI.Image.Type.Sliced;
+            img.preserveAspect = false;
+            img.pixelsPerUnitMultiplier = 1f / UISprites.PixelScale;
+            return img;
+        }
+
+        /// <summary>Brown stone tint of the secondary pixel buttons.</summary>
+        public static readonly Color Stone = new Color32(98, 76, 55, 255);
+
+        /// <summary>Plates with a corner radius in this range are drawn in pixel art; tighter (bars) and rounder (pills, discs) ones stay smooth.</summary>
+        static bool PixelRadius(float radius) => radius >= 14f && radius <= 44f;
+
+        /// <summary>Plate (any colour), optionally with a thin rim: pixel art for card-like radii, smooth and rounded otherwise.</summary>
         public static Image Plate(Transform parent, Color color, float radius, Color? rim = null, bool gloss = false, string name = "Plate")
         {
+            if (PixelRadius(radius))
+            {
+                var px = Pixelated(Image(parent, gloss ? UISprites.PixelButton : UISprites.PixelPlate, color, false, name), gloss ? UISprites.PixelButton : UISprites.PixelPlate);
+                if (rim.HasValue) AddRim(px, rim.Value, radius);
+                return px;
+            }
             var img = Rounded(Image(parent, gloss ? UISprites.RoundGloss : UISprites.Round, color, false, name), radius);
             if (rim.HasValue) AddRim(img, rim.Value, radius);
             return img;
@@ -140,7 +164,9 @@ namespace MummyEscape.UI
         /// <summary>Thin outline drawn over a rounded plate (ignored by layouts).</summary>
         public static Image AddRim(Image plate, Color color, float radius)
         {
-            var rim = Rounded(Image(plate.transform, UISprites.RoundOutline, color, false, "Rim"), radius);
+            var rim = UISprites.IsPixel(plate.sprite)
+                ? Pixelated(Image(plate.transform, UISprites.PixelOutline, color, false, "Rim"), UISprites.PixelOutline)
+                : Rounded(Image(plate.transform, UISprites.RoundOutline, color, false, "Rim"), radius);
             Stretch(rim.rectTransform);
             rim.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             return rim;
@@ -190,7 +216,7 @@ namespace MummyEscape.UI
         /// <summary>Full-width tappable list row (rounded plate) with a horizontal layout for its content.</summary>
         public static Image ListItem(Transform parent, float height, Action onClick, out HorizontalLayoutGroup content, bool highlight = false)
         {
-            var img = Plate(parent, highlight ? new Color32(30, 92, 84, 255) : SurfaceHi, 22, highlight ? new Color(0.25f, 0.88f, 0.8f, 0.5f) : (Color?)null, false, "Item"); // noloc
+            var img = Pixelated(Image(parent, UISprites.PixelPlate, highlight ? new Color32(36, 112, 102, 255) : new Color32(62, 49, 37, 255), false, "Item"), UISprites.PixelPlate); // noloc
             Size(img, height);
             img.raycastTarget = onClick != null;
             if (onClick != null)
@@ -228,7 +254,7 @@ namespace MummyEscape.UI
 
             public Segmented(Transform parent, string[] labels, Action<int> onSelect, float height = 84)
             {
-                var track = Plate(parent, new Color(0, 0, 0, 0.4f), height / 2f, null, false, "Tabs"); // noloc
+                var track = Pixelated(Image(parent, UISprites.PixelPlate, new Color(0.16f, 0.12f, 0.09f, 0.85f), false, "Tabs"), UISprites.PixelPlate); // noloc
                 Size(track, height);
                 var row = track.gameObject.AddComponent<HorizontalLayoutGroup>();
                 row.padding = new RectOffset(6, 6, 6, 6);
@@ -241,7 +267,7 @@ namespace MummyEscape.UI
                 {
                     int index = i;
                     _buttons[i] = Button(track.transform, labels[i], () => { Select(index); onSelect?.Invoke(index); }, 30, ButtonStyle.Ghost);
-                    Rounded(_buttons[i].image, (height - 12) / 2f);
+                    Pixelated(_buttons[i].image, UISprites.PixelButton);
                     _labels[i] = _buttons[i].GetComponentInChildren<Text>();
                     // Narrow tabs: keep only a small side margin so the text can stay big.
                     _labels[i].rectTransform.offsetMin = new Vector2(6, _labels[i].rectTransform.offsetMin.y);
@@ -264,7 +290,6 @@ namespace MummyEscape.UI
                 for (int i = 0; i < _buttons.Length; i++)
                 {
                     bool on = i == index;
-                    _buttons[i].image.sprite = on ? UISprites.RoundGloss : UISprites.Round;
                     _buttons[i].image.color = on ? Gold : new Color(1, 1, 1, 0);
                     _labels[i].color = on ? Ink : Dim;
                     var shadow = _labels[i].GetComponent<Shadow>();
@@ -273,11 +298,10 @@ namespace MummyEscape.UI
             }
         }
 
-        /// <summary>Rounded dark panel with a gold rim and a drop shadow.</summary>
+        /// <summary>Dark pixel-art panel in a riveted gold frame, with a drop shadow.</summary>
         public static Image Panel(Transform parent, string name = "Panel")
         {
-            var img = Plate(parent, Surface, 36, Rim, false, name);
-            img.raycastTarget = true;
+            var img = Pixelated(Image(parent, UISprites.PixelFrame, Color.white, true, name), UISprites.PixelFrame);
             DropShadow(img, 10, 0.45f);
             return img;
         }
@@ -331,13 +355,13 @@ namespace MummyEscape.UI
             Color text;
             switch (style)
             {
-                case ButtonStyle.Primary: img = Plate(parent, Gold, 26, null, true, "Button"); text = Ink; break; // noloc
-                case ButtonStyle.Danger: img = Plate(parent, Danger, 26, null, true, "Button"); text = Color.white; break; // noloc
-                case ButtonStyle.Ghost: img = Plate(parent, new Color(1, 1, 1, 0), 26, null, false, "Button"); text = Gold; break; // noloc
-                default: img = Plate(parent, SurfaceHi, 26, Rim, false, "Button"); text = Sand; break; // noloc
+                case ButtonStyle.Primary: img = Image(parent, UISprites.PixelButton, Gold, true, "Button"); text = Ink; break; // noloc
+                case ButtonStyle.Danger: img = Image(parent, UISprites.PixelButton, Danger, true, "Button"); text = Color.white; break; // noloc
+                case ButtonStyle.Ghost: img = Image(parent, UISprites.PixelButton, new Color(1, 1, 1, 0), true, "Button"); text = Gold; break; // noloc
+                default: img = Image(parent, UISprites.PixelButton, Stone, true, "Button"); text = Sand; break; // noloc
             }
-            img.raycastTarget = true;
-            if (style == ButtonStyle.Primary || style == ButtonStyle.Danger) DropShadow(img, 6, 0.45f);
+            Pixelated(img, UISprites.PixelButton);
+            if (style != ButtonStyle.Ghost) DropShadow(img, UISprites.PixelScale * 2, 0.5f);
             var btn = img.gameObject.AddComponent<Button>();
             btn.targetGraphic = img; // set by Awake only when built active
             var colors = btn.colors;
@@ -355,8 +379,14 @@ namespace MummyEscape.UI
             if (!string.IsNullOrEmpty(label))
             {
                 var t = Label(img.transform, label, fontSize, text, TextAnchor.MiddleCenter, FontStyle.Bold);
-                Stretch(t.rectTransform, 18, 6, 18, 6);
+                // Centred on the face, above the lip the button stands on.
+                Stretch(t.rectTransform, 18, 4, 18, 4 + UISprites.PixelScale * 2);
                 if (style == ButtonStyle.Primary) t.GetComponent<Shadow>().effectColor = new Color(1, 1, 1, 0.25f);
+            }
+            if (style == ButtonStyle.Primary)
+            {
+                img.gameObject.AddComponent<PixelFloat>();
+                Twinkle.Add(img.rectTransform);
             }
             return btn;
         }
@@ -374,12 +404,8 @@ namespace MummyEscape.UI
             }
             var btn = Button(parent, null, onClick, TextSize, style);
             var img = btn.image;
-            img.sprite = style == ButtonStyle.Primary || style == ButtonStyle.Danger ? UISprites.RoundGloss : UISprites.Round;
-            Rounded(img, size / 2f);
-            var rim = img.transform.Find("Rim")?.GetComponent<Image>();
-            if (rim != null) Rounded(rim, size / 2f);
             var glyph = Image(img.transform, icon, style == ButtonStyle.Primary ? Ink : Sand, false, "Icon");
-            Place(glyph.rectTransform, 0.5f, 0.5f, size * 0.5f, size * 0.5f);
+            Place(glyph.rectTransform, 0.5f, 0.5f, size * 0.5f, size * 0.5f, 0, UISprites.PixelScale);
             if (laidOut) Place((RectTransform)btn.transform, 0.5f, 0.5f, size, size);
             else ((RectTransform)btn.transform).sizeDelta = new Vector2(size, size);
             return btn;
@@ -401,7 +427,7 @@ namespace MummyEscape.UI
         /// <summary>Pill with an icon and a short value (wallet, rewards). Returns the value text.</summary>
         public static Text Chip(Transform parent, Sprite icon, string value, Color? tint = null, float height = 72)
         {
-            var plate = Plate(parent, new Color(0, 0, 0, 0.42f), height / 2f, tint.HasValue ? new Color(tint.Value.r, tint.Value.g, tint.Value.b, 0.45f) : Rim, false, "Chip"); // noloc
+            var plate = Pixelated(Image(parent, UISprites.PixelPlate, tint.HasValue ? Color.Lerp(new Color(0.1f, 0.07f, 0.05f), tint.Value, 0.25f) : new Color(0.1f, 0.07f, 0.05f, 0.85f), false, "Chip"), UISprites.PixelPlate); // noloc
             var h = plate.gameObject.AddComponent<HorizontalLayoutGroup>();
             h.padding = new RectOffset(icon != null ? 14 : 28, 28, 8, 8);
             h.spacing = 12;
@@ -560,7 +586,7 @@ namespace MummyEscape.UI
 
         public static InputField Input(Transform parent, string placeholder, int fontSize = 38)
         {
-            var bg = Plate(parent, new Color(0, 0, 0, 0.4f), 22, Rim, false, "Input"); // noloc
+            var bg = Pixelated(Image(parent, UISprites.PixelPlate, new Color(0.08f, 0.06f, 0.04f, 0.9f), false, "Input"), UISprites.PixelPlate); // noloc
             bg.raycastTarget = true;
             Size(bg, 96);
             var text = Label(bg.transform, "", fontSize, Sand, TextAnchor.MiddleLeft);
@@ -579,9 +605,8 @@ namespace MummyEscape.UI
         public static RectTransform Scroll(Transform parent, out ScrollRect scroll)
         {
             var root = Rect("Scroll", parent);
-            var bg = Rounded(root.gameObject.AddComponent<Image>(), 28);
-            bg.sprite = UISprites.Round;
-            bg.color = new Color(0, 0, 0, 0.22f);
+            var bg = Pixelated(root.gameObject.AddComponent<Image>(), UISprites.PixelPlate);
+            bg.color = new Color(0.06f, 0.04f, 0.02f, 0.4f);
             scroll = root.gameObject.AddComponent<ScrollRect>();
             scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Elastic;
@@ -722,6 +747,132 @@ namespace MummyEscape.UI
             if (Mathf.Abs(s - _target) < 0.001f) return;
             s = Mathf.MoveTowards(s, _target, Time.unscaledDeltaTime * 1.6f);
             transform.localScale = new Vector3(s, s, 1f);
+        }
+    }
+
+    /// <summary>
+    /// Makes a button bob up and down in whole texels, like a sprite in an old console game, and sinks it while it is held.
+    /// Only the drawn meshes move (see <see cref="MeshOffset"/>): layouts and the touch area stay put.
+    /// </summary>
+    public sealed class PixelFloat : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
+    {
+        public float Period = 2.2f;
+        readonly System.Collections.Generic.List<MeshOffset> _parts = new System.Collections.Generic.List<MeshOffset>();
+        Selectable _selectable;
+        float _phase, _offset;
+        bool _down, _stale = true;
+
+        // Children added after the button was built (icon, sparkle) join in.
+        void OnTransformChildrenChanged() => _stale = true;
+
+        void Awake()
+        {
+            _selectable = GetComponent<Selectable>();
+            _phase = UnityEngine.Random.value;
+        }
+
+        void OnDisable() { _down = false; Apply(0f); }
+
+        public void OnPointerDown(PointerEventData e)
+        {
+            if (_selectable == null || _selectable.IsInteractable()) _down = true;
+        }
+
+        public void OnPointerUp(PointerEventData e) => _down = false;
+        public void OnPointerExit(PointerEventData e) => _down = false;
+
+        void Update()
+        {
+            float step = UISprites.PixelScale;
+            float y;
+            if (_down) y = -step * 2f;
+            else if (_selectable != null && !_selectable.IsInteractable()) y = 0f;
+            // Rounding the sine gives four poses per period (up, middle, down, middle): a stepped, pixel-art bob.
+            else y = Mathf.Round(Mathf.Sin((Time.unscaledTime / Period + _phase) * Mathf.PI * 2f)) * step;
+            Apply(y);
+        }
+
+        void Apply(float y)
+        {
+            if (_stale)
+            {
+                _stale = false;
+                _parts.Clear();
+                foreach (var g in GetComponentsInChildren<Graphic>(true))
+                    _parts.Add(g.GetComponent<MeshOffset>() ?? g.gameObject.AddComponent<MeshOffset>());
+                _offset = float.NaN;
+            }
+            if (y == _offset) return;
+            _offset = y;
+            foreach (var p in _parts)
+                if (p != null) p.Set(y);
+        }
+    }
+
+    /// <summary>Moves a graphic's mesh vertically without touching its RectTransform.</summary>
+    public sealed class MeshOffset : BaseMeshEffect
+    {
+        float _y;
+
+        public void Set(float y)
+        {
+            if (_y == y) return;
+            _y = y;
+            graphic.SetVerticesDirty();
+        }
+
+        public override void ModifyMesh(VertexHelper vh)
+        {
+            if (!IsActive() || _y == 0f) return;
+            var v = new UIVertex();
+            for (int i = 0; i < vh.currentVertCount; i++)
+            {
+                vh.PopulateUIVertex(ref v, i);
+                v.position.y += _y;
+                vh.SetUIVertex(v, i);
+            }
+        }
+    }
+
+    /// <summary>A pixel sparkle that blinks now and then somewhere along the top of a button.</summary>
+    public sealed class Twinkle : MonoBehaviour
+    {
+        Image _image;
+        float _next;
+
+        public static void Add(RectTransform button)
+        {
+            var img = UIKit.Image(button, UISprites.PixelSparkle, Color.white, false, "Sparkle"); // noloc
+            img.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            var rt = img.rectTransform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.sizeDelta = Vector2.one * 7 * UISprites.PixelScale;
+            img.enabled = false;
+            img.gameObject.AddComponent<Twinkle>()._image = img;
+        }
+
+        void OnEnable() => _next = Time.unscaledTime + UnityEngine.Random.Range(0.5f, 3f);
+
+        void Update()
+        {
+            const float Life = 0.6f;
+            float t = Time.unscaledTime - _next;
+            if (t < 0f || t > Life)
+            {
+                if (t > Life) _next = Time.unscaledTime + UnityEngine.Random.Range(2f, 5f);
+                _image.enabled = false;
+                return;
+            }
+            if (!_image.enabled)
+            {
+                float w = ((RectTransform)transform.parent).rect.width;
+                ((RectTransform)transform).anchoredPosition = new Vector2(UnityEngine.Random.Range(0.12f, 0.88f) * w, -UISprites.PixelScale * 3);
+            }
+            // Three frames: small, full, small.
+            float k = t / Life;
+            float s = k < 0.3f || k > 0.7f ? 3f / 7f : 1f;
+            transform.localScale = new Vector3(s, s, 1f);
+            _image.enabled = true;
         }
     }
 

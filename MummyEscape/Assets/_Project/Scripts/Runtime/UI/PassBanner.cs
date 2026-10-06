@@ -22,7 +22,7 @@ namespace MummyEscape.UI
 
         public PassBanner(Transform parent, float height, System.Action onClick)
         {
-            var plate = UIKit.Plate(parent, Color.white, 30, new Color(1f, 0.45f, 0.86f, 0.55f), false, "PassBanner"); // noloc
+            var plate = UIKit.Pixelated(UIKit.Image(parent, UISprites.PixelPlate, Color.white, false, "PassBanner"), UISprites.PixelPlate); // noloc
             UIFx.Gradient(plate, new Color32(112, 44, 120, 255), new Color32(40, 20, 52, 255));
             UIKit.Size(plate, height);
             plate.raycastTarget = true;

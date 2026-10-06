@@ -58,7 +58,6 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(row, 120);
             _continue = UIKit.Button(row, "JOUER", ContinueRun, 42, ButtonStyle.Primary); // a label now: an empty one has no Text
             UIKit.Place((RectTransform)_continue.transform, 0.5f, 0.5f, 700, 120);
-            UIKit.Rounded(_continue.image, 60);
             UIKit.FitText(_continue.GetComponentInChildren<Text>(), 24);
             _plays = UIKit.Label(body, "", 26, UIKit.Dim);
             UIKit.Size(_plays, 36);
