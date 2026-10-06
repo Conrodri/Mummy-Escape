@@ -140,6 +140,8 @@ namespace MummyEscape.Pvp
 
         /// <summary>Énergie de combat : un duel 1v1 ou un match 2v2 lancé en coûte un point (<see cref="EnergyConfig.PvpMax"/>).</summary>
         public EnergyMeter Energy = new EnergyMeter();
+        /// <summary>Elo du dernier duo dissous du joueur (0 : aucun), d'où part son prochain duo.</summary>
+        public int LastDuoElo;
 
         /// <summary>Invitations à former un duo, reçues d'amis.</summary>
         public List<DuoInvite> DuoInvites = new List<DuoInvite>();

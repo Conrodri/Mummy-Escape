@@ -112,17 +112,32 @@ namespace MummyEscape.Pvp
 
         async Task CreateDuoAsync(DuoInvite invite, string partnerId, string partnerName)
         {
+            // Un nouveau duo part du niveau 2v2 que ses joueurs ont déjà montré (pas de remise à 1000 en changeant de partenaire).
+            var known = new List<int>();
+            foreach (var id in new[] { invite.FromId, partnerId })
+                if (IsHuman(id) && await KnownDuoEloAsync(id) is int elo) known.Add(elo);
             var duo = new Duo
             {
                 Id = NewId(), CreatedAtUnixMs = NowMs,
                 Members = new List<string> { invite.FromId, partnerId },
                 Names = new List<string> { invite.FromName ?? "", partnerName ?? "" },
+                Elo = known.Count > 0 ? (int)Math.Round(known.Average()) : PvpConfig.StartingElo,
             };
             await Shared<Duo>(DuosCollection, duo.Id, _ => duo);
             foreach (var id in duo.Members)
                 if (IsBot?.Invoke(id) != true)
                     await Update(id, d => { if (!d.Duos.Contains(duo.Id)) d.Duos.Add(duo.Id); });
             await IndexDuoAsync(duo);
+        }
+
+        /// <summary>Le meilleur Elo 2v2 d'un joueur : ses duos qui ont joué, sinon le dernier duo qu'il a quitté ; null s'il n'a jamais joué en 2v2.</summary>
+        async Task<int?> KnownDuoEloAsync(string playerId)
+        {
+            var data = await Update(playerId);
+            int? best = null;
+            foreach (var id in data.Duos)
+                if (await Shared<Duo>(DuosCollection, id) is Duo d && d.Matches > 0) best = Math.Max(best ?? 0, d.Elo);
+            return best ?? (data.LastDuoElo > 0 ? data.LastDuoElo : (int?)null);
         }
 
         /// <summary>Quitte un duo (impossible pendant un combat) : il disparaît pour les deux.</summary>
@@ -137,7 +152,7 @@ namespace MummyEscape.Pvp
             }
             foreach (var id in duo.Members)
                 if (IsBot?.Invoke(id) != true)
-                    await Update(id, d => d.Duos.Remove(duoId));
+                    await Update(id, d => { d.Duos.Remove(duoId); if (duo.Matches > 0) d.LastDuoElo = duo.Elo; });
             await Shared<List<DuoSummary>>(IndexCollection, DuoIndexKey, list =>
             {
                 list ??= new List<DuoSummary>();

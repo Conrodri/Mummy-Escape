@@ -74,7 +74,7 @@ namespace MummyEscape.Pvp
         }
 
         // --- Saison mensuelle ---
-        public const float SeasonSoftResetFactor = 0.5f; // R' = 1000 + 0,5 × (R − 1000)
+        public const float SeasonSoftResetFactor = 0.75f; // R' = 1000 + 0,75 × (R − 1000)
         public const int LastWeekDays = 7;
     }
 }

@@ -208,8 +208,8 @@ namespace MummyEscape.Pvp
                 if (m == null || m.Settled) return m;
                 // Un duo qui n'a rien envoyé à temps a quitté la partie.
                 m.Result = RelayJudge.Resolve(m.A.Verified ?? new RelaySummary { Lost = true }, m.B.Verified ?? new RelaySummary { Lost = true });
-                m.EloDeltaA = Elo.NewRating(eloA, eloB, m.Result, duoA?.Matches ?? 50) - eloA;
-                m.EloDeltaB = Elo.NewRating(eloB, eloA, DuelResolver.Invert(m.Result), duoB?.Matches ?? 50) - eloB;
+                m.EloDeltaA = Elo.NewRating(eloA, eloB, m.Result, duoA?.Matches ?? 50, m.B.Bot) - eloA;
+                m.EloDeltaB = Elo.NewRating(eloB, eloA, DuelResolver.Invert(m.Result), duoB?.Matches ?? 50, m.A.Bot) - eloB;
                 m.Settled = true;
                 settledNow = true;
                 return m;

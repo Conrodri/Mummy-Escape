@@ -30,10 +30,14 @@ namespace MummyEscape.Pvp
             }
         }
 
-        /// <summary>Nouveau classement de A après un duel contre B.</summary>
-        public static int NewRating(int ratingA, int ratingB, DuelResult resultForA, int totalDuelsA)
+        /// <summary>
+        /// Nouveau classement de A après un duel contre B. Contre un bot (<paramref name="vsBot"/>), le K est divisé par deux :
+        /// un bot tient l'Elo de la division sans en être un vrai membre.
+        /// </summary>
+        public static int NewRating(int ratingA, int ratingB, DuelResult resultForA, int totalDuelsA, bool vsBot = false)
         {
             int k = KFactor(ratingA, totalDuelsA);
+            if (vsBot) k = (k + 1) / 2;
             double delta = k * (Score(resultForA) - Expected(ratingA, ratingB));
             int updated = ratingA + (int)Math.Round(delta, MidpointRounding.AwayFromZero);
             return Math.Max(PvpConfig.MinElo, updated);
@@ -356,10 +360,10 @@ namespace MummyEscape.Pvp
         }
 
         /// <summary>Applique le résultat d'un duel résolu. Retourne les sceaux gagnés (bonus 1re victoire).</summary>
-        public static int ApplyResult(PlayerPvpData d, string opponentId, int opponentElo, DuelResult result)
+        public static int ApplyResult(PlayerPvpData d, string opponentId, int opponentElo, DuelResult result, bool vsBot = false)
         {
             int seals = 0;
-            d.Elo = Elo.NewRating(d.Elo, opponentElo, result, d.TotalDuels);
+            d.Elo = Elo.NewRating(d.Elo, opponentElo, result, d.TotalDuels, vsBot);
             d.TotalDuels++;
             if (result == DuelResult.Win) { d.Wins++; d.SeasonWins++; }
             else if (result == DuelResult.Loss) { d.Losses++; d.SeasonLosses++; }
