@@ -113,7 +113,7 @@ namespace MummyEscape.App
             }
             UI.Open<MainMenuScreen>();
             if (Privacy.NeedsAnswer) UI.Open<WelcomeScreen>();
-            StudioIntro.Play(); // the studio's logo, over the first screen
+            StudioIntro.Play(Audio); // the studio's logo, over the first screen, in silence
 
             if (Privacy.OnlineAllowed) _ = StartOnline();
             Save.Changed += () => _cloudDirty = true;

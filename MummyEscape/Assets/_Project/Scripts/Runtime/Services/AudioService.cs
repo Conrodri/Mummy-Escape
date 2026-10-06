@@ -27,6 +27,9 @@ namespace MummyEscape.Services
         public event Action TrackChanged;
         float _mix = 1f;
         const float CrossfadeSeconds = 1.8f;
+        // The music's own volume, under the settings: held at 0 while the studio intro plays, then faded back in.
+        float _gate = 1f, _gateTarget = 1f;
+        const float GateFadeSeconds = 1.5f;
         AudioClip _menuOverride;
         readonly Dictionary<string, AudioClip> _loaded = new Dictionary<string, AudioClip>();
         readonly Dictionary<int, Task<float[]>> _rendering = new Dictionary<int, Task<float[]>>();
@@ -57,14 +60,27 @@ namespace MummyEscape.Services
 
         void ApplyVolumes()
         {
-            float music = _settings.MusicVolume * 0.5f;
+            float music = _settings.MusicVolume * 0.5f * _gate;
             _music.volume = music * _mix;
             _musicOut.volume = music * (1f - _mix);
             _sfx.volume = _settings.SfxVolume;
         }
 
+        /// <summary>Silences the music at once (true), or fades it back in (false).</summary>
+        public void HoldMusic(bool hold)
+        {
+            _gateTarget = hold ? 0f : 1f;
+            if (hold) _gate = 0f;
+            ApplyVolumes();
+        }
+
         void Update()
         {
+            if (_gate != _gateTarget)
+            {
+                _gate = Mathf.MoveTowards(_gate, _gateTarget, Time.unscaledDeltaTime / GateFadeSeconds);
+                ApplyVolumes();
+            }
             if (_mix >= 1f) return;
             _mix = Mathf.Min(1f, _mix + Time.unscaledDeltaTime / CrossfadeSeconds);
             ApplyVolumes();

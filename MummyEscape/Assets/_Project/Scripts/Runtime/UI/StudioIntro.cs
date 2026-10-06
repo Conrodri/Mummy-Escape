@@ -24,12 +24,14 @@ namespace MummyEscape.UI
         LineArt.Stroke[] _figure;
         RectTransform _peakText;
         CanvasGroup _group, _name;
+        Services.AudioService _audio;
         float _time;
         bool _skipped;
 
-        /// <summary>Plays the intro once, on its own canvas above the game's.</summary>
-        public static void Play()
+        /// <summary>Plays the intro once, on its own canvas above the game's; the music waits for its end.</summary>
+        public static void Play(Services.AudioService audio)
         {
+            audio?.HoldMusic(true);
             var go = new GameObject("StudioIntro", typeof(RectTransform)); // noloc
             go.layer = 5;
             var canvas = go.AddComponent<Canvas>();
@@ -49,12 +51,19 @@ namespace MummyEscape.UI
             Stretch(image.rectTransform);
             var intro = back.AddComponent<StudioIntro>();
             intro._group = group;
+            intro._audio = audio;
             intro.Build(go.transform);
+        }
+
+        // Skipped, finished or torn down: the game's music fades in.
+        void OnDestroy()
+        {
+            if (_audio != null) _audio.HoldMusic(false);
         }
 
         void Build(Transform root)
         {
-            var artGo = new GameObject("Art", typeof(RectTransform)); // noloc
+            var artGo = new GameObject("Art", typeof(RectTransform), typeof(CanvasRenderer)); // noloc
             artGo.transform.SetParent(root, false);
             _art = artGo.AddComponent<LineArt>();
             _art.raycastTarget = false;
@@ -138,6 +147,8 @@ namespace MummyEscape.UI
             float scale = width > 0f ? Mathf.Min(1f, (width - 60f) / 940f) : 1f;
             _art.rectTransform.localScale = _name.transform.localScale = new Vector3(scale, scale, 1f);
             Apply(_time);
+            // The music rises with the fade to the game.
+            if (_time >= End && _audio != null) { _audio.HoldMusic(false); _audio = null; }
             if (_time >= End + FadeOut) Destroy(_group.gameObject);
         }
 
