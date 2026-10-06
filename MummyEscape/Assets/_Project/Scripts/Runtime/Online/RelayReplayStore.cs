@@ -71,6 +71,7 @@ namespace MummyEscape.Online
         {
             // A copy: the live match object stays as the game left it.
             var copy = JsonUtility.FromJson<RelayMatch>(JsonUtility.ToJson(match));
+            Normalize(copy);
             var mySide = copy.SideOf(me);
             var rivalSide = copy.OtherSide(me);
             if (mySide != null)
@@ -177,7 +178,25 @@ namespace MummyEscape.Online
             if (from == null) return;
             foreach (var r in from)
                 if (r?.Match?.A != null && r.Match.B != null && !string.IsNullOrEmpty(r.Id) && !into.Exists(x => x.Id == r.Id))
+                {
+                    Normalize(r.Match);
                     into.Add(r);
+                }
+        }
+
+        /// <summary>JsonUtility reads a missing object as an empty one and a missing list as null: puts things back.</summary>
+        static void Normalize(RelayMatch m)
+        {
+            foreach (var side in new[] { m.A, m.B })
+            {
+                side.Runners ??= new List<RelayRunner>();
+                side.Runners.RemoveAll(r => r == null || string.IsNullOrEmpty(r.PlayerId));
+                foreach (var r in side.Runners)
+                    if (r.Look != null && string.IsNullOrEmpty(r.Look.Mummy)) r.Look = null;
+                side.Inputs ??= new List<RelayInput>();
+                side.Quitters ??= new List<string>();
+                if (string.IsNullOrEmpty(side.Starter)) side.Starter = null;
+            }
         }
 
         static void Save()

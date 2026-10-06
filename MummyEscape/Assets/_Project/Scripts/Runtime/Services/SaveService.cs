@@ -74,6 +74,7 @@ namespace MummyEscape.Services
                 Debug.LogWarning($"[Save] Corrupted save, starting fresh: {e.Message}");
                 Data = new SaveData();
             }
+            Sanitize(Data);
             // Saves from before the torches, hats and shoes: own every slot's free item, wear the defaults.
             foreach (var id in SkinCatalog.Defaults) if (!Data.OwnedSkins.Contains(id)) Data.OwnedSkins.Add(id);
             Data.SelectedMummy = SkinCatalog.Get(Data.SelectedMummy, CosmeticSlot.Mummy).Id;
@@ -109,9 +110,27 @@ namespace MummyEscape.Services
         /// Folds in the save of another device (account cloud copy): best record per level, owned skins united,
         /// the larger wallet (never the sum: syncing twice must not mint scarabs). Returns true when something changed.
         /// </summary>
+        /// <summary>
+        /// A hand-edited, truncated or very old file can hold missing lists or holes: JsonUtility then gives null lists, and
+        /// writes a null entry back as an empty object (a record without a level). Those are dropped.
+        /// </summary>
+        static void Sanitize(SaveData d)
+        {
+            d.Records ??= new List<LevelRecord>();
+            d.Records.RemoveAll(r => r == null || string.IsNullOrEmpty(r.Key));
+            d.OwnedSkins ??= new List<string>();
+            d.OwnedSkins.RemoveAll(string.IsNullOrEmpty);
+            d.PassesOwned ??= new List<string>();
+            d.PassesOwned.RemoveAll(string.IsNullOrEmpty);
+            d.PassFreeClaimed ??= new List<int>();
+            d.PassPremiumClaimed ??= new List<int>();
+            d.SoloEnergy ??= new MummyEscape.Pvp.EnergyMeter();
+        }
+
         public bool MergeFrom(SaveData other)
         {
             if (other == null) return false;
+            Sanitize(other);
             string before = JsonUtility.ToJson(Data);
             foreach (var theirs in other.Records)
             {
