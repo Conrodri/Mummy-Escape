@@ -1158,6 +1158,43 @@ namespace MummyEscape.Visual
                     return wave > 0.9f ? new Color32(236, 255, 250, 255) : wave > 0.4f ? new Color32(70, 214, 200, 255)
                          : wave > -0.3f ? new Color32(30, 140, 150, 255) : new Color32(16, 70, 96, 255);
                 }
+                case LegendaryFx.Embalm:
+                {
+                    // Anubis: obsidian body, gold dust drifting up and a slow gold sheen sweeping down.
+                    if (Px.Hash(x, y - frame * 2, 23) > 0.94f) return new Color32(255, 222, 120, 255);
+                    float sheen = (y - x * 0.5f) / 30f + t;
+                    sheen -= Mathf.Floor(sheen);
+                    if (sheen < 0.06f) return new Color32(236, 186, 70, 255);
+                    if (sheen < 0.12f) return new Color32(120, 92, 40, 255);
+                    return Px.Hash(x / 2, y / 2, 9) > 0.8f ? new Color32(46, 42, 56, 255) : new Color32(24, 22, 30, 255);
+                }
+                case LegendaryFx.Hathor:
+                {
+                    // Hathor's song: copper-rose bandages, turquoise notes rippling up from the feet.
+                    float ring = Mathf.Sin(Tau * (Mathf.Sqrt((x - 16) * (x - 16) + (y + 6) * (y + 6) * 0.5f) / 9f - t));
+                    if (ring > 0.92f) return new Color32(150, 255, 236, 255);
+                    if (ring > 0.7f) return new Color32(60, 200, 190, 255);
+                    return Color32.Lerp(new Color32(150, 76, 60, 255), new Color32(236, 150, 128, 255), 0.5f + 0.5f * Mathf.Sin(Tau * t + y / 7f));
+                }
+                case LegendaryFx.Sobek:
+                {
+                    // Sobek: crocodile scales in rows, a glint of gold running along them.
+                    int row = y / 3, col = (x + (row % 2) * 2) / 4;
+                    bool edge = y % 3 == 0 || (x + (row % 2) * 2) % 4 == 0;
+                    float glint = (col + row * 0.5f) / 6f - t;
+                    glint -= Mathf.Floor(glint);
+                    if (!edge && glint < 0.08f) return new Color32(240, 220, 110, 255);
+                    if (edge) return new Color32(24, 60, 32, 255);
+                    return Px.Hash(col, row, 5) > 0.5f ? new Color32(70, 140, 60, 255) : new Color32(52, 112, 50, 255);
+                }
+                case LegendaryFx.Bastet:
+                {
+                    // Bastet: amber tabby fur, stripes rippling like a cat stretching, a few green eye glints.
+                    if (Px.Hash(x, y, frame + 80) > 0.975f) return new Color32(150, 255, 140, 255);
+                    float stripe = Mathf.Sin(x * 0.9f + 2.2f * Mathf.Sin(y / 6f + Tau * t));
+                    if (stripe > 0.75f) return new Color32(90, 44, 16, 255);
+                    return Color32.Lerp(new Color32(214, 128, 40, 255), new Color32(255, 196, 96, 255), 0.5f + 0.5f * Mathf.Sin(Tau * t - y / 9f));
+                }
                 default: // Magma
                 {
                     float flow = Mathf.Sin(x * 0.8f + Tau * t) + Mathf.Sin(y * 0.55f - Tau * t);

@@ -52,7 +52,47 @@ namespace MummyEscape.Monetization
                     "pass_s1_crescent", "pass_s1_wings", "pass_s1_khepresh", "pass_s1_hermopolis", "pass_s1_disc", // noloc
                 },
             },
+            Season("s2", "Le Pass d'Anubis", 2026, 11, "pass_s2", // noloc
+                "obsidian", "sandals", "was", "nemes", "natron", "lamp", "greaves", "vulture", "duat", "circlet"), // noloc
+            Season("s3", "Le Pass d'Hathor", 2026, 12, "pass_s3", // noloc
+                "turquoise", "mules", "sistrum", "horns", "copper", "mirror", "malachite", "lotus", "rose", "disc"), // noloc
+            Season("s4", "Le Pass de Sobek", 2027, 1, "pass_s4", // noloc
+                "fayum", "claws", "crook", "atef", "reeds", "cobra", "clogs", "plumes", "deep", "helm"), // noloc
+            Season("s5", "Le Pass de Bastet", 2027, 2, "pass_s5", // noloc
+                "amber", "slippers", "lantern", "crown", "night", "scepter", "babouches", "turban", "sand", "pschent"), // noloc
         };
+
+        /// <summary>A monthly season starting on the 1st: its legendary is "{prefix}_leg", its set pieces "{prefix}_{piece}".</summary>
+        static PassSeason Season(string id, string name, int year, int month, string prefix, params string[] pieces)
+        {
+            var set = new string[pieces.Length];
+            for (int i = 0; i < pieces.Length; i++) set[i] = prefix + "_" + pieces[i];
+            return new PassSeason
+            {
+                Id = id, Name = name, StartUtc = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc),
+                Legendary = prefix + "_leg", Set = set, // noloc
+            };
+        }
+
+        /// <summary>
+        /// Golden scarabs of the paid track: exactly the price of the next pass, so a player who completes every
+        /// season buys the pass once and keeps it for life (the free track's 10 come on top).
+        /// </summary>
+        public const int PremiumGoldPerStep = 4;
+
+        public static int PremiumGoldTotal
+        {
+            get
+            {
+                int total = 0;
+                for (int t = 1; t <= Tiers; t++)
+                {
+                    var r = Premium(Seasons[0], t);
+                    if (r.Kind == PassRewardKind.Gold) total += r.Amount;
+                }
+                return total;
+            }
+        }
 
         /// <summary>The latest season already started (the first one before its date).</summary>
         public static PassSeason Current
@@ -84,11 +124,14 @@ namespace MummyEscape.Monetization
             return new PassReward(PassRewardKind.Scarabs, 40);
         }
 
-        /// <summary>Paid track: a set piece every 10 tiers, 3 golden scarabs at every 5 in between, scarabs otherwise.</summary>
+        /// <summary>
+        /// Paid track: a set piece every 10 tiers, <see cref="PremiumGoldPerStep"/> golden scarabs at every 5 in between
+        /// (40 in all: the next pass), scarabs otherwise.
+        /// </summary>
         public static PassReward Premium(PassSeason season, int tier)
         {
             if (tier % 10 == 0) return new PassReward(PassRewardKind.Skin, 0, season.Set[tier / 10 - 1]);
-            if (tier % 5 == 0) return new PassReward(PassRewardKind.Gold, 3);
+            if (tier % 5 == 0) return new PassReward(PassRewardKind.Gold, PremiumGoldPerStep);
             return new PassReward(PassRewardKind.Scarabs, 60);
         }
 

@@ -124,8 +124,8 @@ namespace MummyEscape.UI.Screens
             ItemPreview.Show(_legendary, SkinCatalog.Get(season.Legendary));
             _perks.text = save.HasPass
                 ? Loc.T("Pass premium actif : parties illimitées, et toutes les récompenses premium à récupérer.")
-                : Loc.F("Premium : le skin légendaire « {0} » tout de suite, un set de 10 pièces (une tous les 10 paliers), 30 scarabées dorés et des parties illimitées.",
-                        Loc.T(SkinCatalog.Get(season.Legendary).Name))
+                : Loc.F("Premium : le skin légendaire « {0} » tout de suite, un set de 10 pièces (une tous les 10 paliers), {1} scarabées dorés (de quoi prendre le pass suivant) et des parties illimitées.",
+                        Loc.T(SkinCatalog.Get(season.Legendary).Name), BattlePass.PremiumGoldTotal)
                   + "\n" + Loc.F("XP : partie solo {0} à {1}, duel ou 2v2 {2} ({3} en cas de victoire).",
                                  BattlePass.SoloXp(false, 0), BattlePass.SoloXp(true, 3), BattlePass.MatchXp, BattlePass.MatchXp + BattlePass.WinBonusXp);
 
