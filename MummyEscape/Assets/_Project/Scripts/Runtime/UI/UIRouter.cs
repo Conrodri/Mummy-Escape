@@ -77,6 +77,7 @@ namespace MummyEscape.UI
             scaler.referenceResolution = new Vector2(1080, 1920);
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
+            canvasGo.AddComponent<TitleShimmer>(); // legendary titles shimmer wherever they are written
 
             _safeArea = UIKit.Rect("SafeArea", canvasGo.transform);
             ApplySafeArea();

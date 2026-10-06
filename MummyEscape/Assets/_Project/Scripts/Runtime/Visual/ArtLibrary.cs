@@ -1195,6 +1195,20 @@ namespace MummyEscape.Visual
                     if (stripe > 0.75f) return new Color32(90, 44, 16, 255);
                     return Color32.Lerp(new Color32(214, 128, 40, 255), new Color32(255, 196, 96, 255), 0.5f + 0.5f * Mathf.Sin(Tau * t - y / 9f));
                 }
+                case LegendaryFx.Developer:
+                {
+                    // The team's skin: columns of glowing glyph-code falling down a night-blue body, their heads white,
+                    // the whole hue drifting through the rainbow.
+                    int column = x / 2;
+                    int speed = Px.Hash(column, 0, 41) > 0.5f ? 2 : 1; // 46 or 92 rows over the 8 frames: a seamless loop
+                    float head = Mathf.Repeat(Px.Hash(column, 1, 43) * 46f - frame * 5.75f * speed, 46f) - 3f;
+                    float d = y - head; // trail above the head (the body is painted bottom-up)
+                    Color hue = Hsv(0.42f + column / 30f + t, 0.7f, 1f);
+                    if (d >= 0f && d < 1f) return new Color32(240, 255, 250, 255);
+                    if (d >= 1f && d < 9f && x % 2 == 0 && Px.Hash(x, y, 47) > 0.25f)
+                        return Color32.Lerp((Color32)hue, new Color32(10, 16, 34, 255), d / 9f);
+                    return Px.Hash(x / 3, y / 3, 49) > 0.85f ? new Color32(22, 34, 64, 255) : new Color32(10, 16, 34, 255);
+                }
                 default: // Magma
                 {
                     float flow = Mathf.Sin(x * 0.8f + Tau * t) + Mathf.Sin(y * 0.55f - Tau * t);

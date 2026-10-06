@@ -42,6 +42,9 @@ namespace MummyEscape.Monetization
             new SkinDef { Id = "gold_shoes_horus", Name = "Ailes d'or d'Horus", Slot = CosmeticSlot.Shoes, Shoes = ShoeStyle.WingedSandals, Tint = Gold, Badge = Treasure },
             new SkinDef { Id = "gold_hat_sun", Name = "Disque de rubis", Slot = CosmeticSlot.Hat, Hat = HatStyle.SunDisk, Tint = Ruby, Badge = Treasure },
 
+            // ---- The game's team (Pvp.Developers): never sold, given to its accounts.
+            Legendary(Pvp.Developers.SkinId, "Code source d'Imhotep", LegendaryFx.Developer, new Color32(240, 255, 250, 255), new Color(0.4f, 1f, 0.8f), "Développeur"),
+
             // ---- Season 1 pass: Thoth, the moon and the scribes.
             Legendary("pass_s1_leg", "Clair de lune de Thot", LegendaryFx.Moon, new Color32(255, 250, 220, 255), new Color(0.7f, 0.8f, 1f), Pass),
             Colour("pass_s1_ink", "Encre de Thot", new Color32(62, 66, 142, 255), new Color32(30, 30, 82, 255), new Color32(220, 230, 255, 255), new Color(0.7f, 0.8f, 1f), Pass),

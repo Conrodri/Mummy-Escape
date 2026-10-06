@@ -181,6 +181,7 @@ namespace MummyEscape.UI.Screens
         {
             var none = TitleRow(Loc.T("Aucun titre"), Loc.T("Ton nom seul, sans titre"), UIKit.Dim, true, equipped == null, "");
             none.name = "None"; // noloc
+            if (TitleBook.IsDeveloper(App)) Section("Légendaire", TitleKind.Developer, equipped);
             Section("Solo", TitleKind.Solo, equipped);
             Section("Duel", TitleKind.Wins, equipped, TitleKind.League);
             Section("Vitesse", TitleKind.Speed, equipped);
@@ -195,8 +196,9 @@ namespace MummyEscape.UI.Screens
                 if (t.Kind != kind && t.Kind != also) continue;
                 var (value, goal) = TitleBook.Progress(App, t);
                 bool earned = value >= goal;
-                string how = Condition(t) + (earned || t.Kind == TitleKind.League ? "" : $"  ·  {value}/{goal}"); // noloc
-                TitleRow(Loc.T(t.Name), how, TitleBook.ColorOf(t), earned, equipped == t.Id, t.Id);
+                string how = Condition(t) + (earned || t.Kind == TitleKind.League || t.Legendary ? "" : $"  ·  {value}/{goal}"); // noloc
+                string name = t.Legendary && earned ? TitleBook.Shimmer(Loc.T(t.Name), Time.unscaledTime) : Loc.T(t.Name);
+                TitleRow(name, how, TitleBook.ColorOf(t), earned, equipped == t.Id, t.Id);
             }
         }
 
@@ -207,6 +209,7 @@ namespace MummyEscape.UI.Screens
                 case TitleKind.Solo: return Loc.F("{0} étoiles dans l'acte {1}", t.Goal, t.Act);
                 case TitleKind.Wins: return Loc.F("{0} victoires en duel", t.Goal);
                 case TitleKind.League: return Loc.F("Atteindre la ligue {0}", Loc.T(PvpSkins.LeagueName(t.League)));
+                case TitleKind.Developer: return Loc.T("Réservé à l'équipe de Mummy Rush");
                 default: return Loc.F("{0} tombeaux différents en moins de 5 s", t.Goal);
             }
         }

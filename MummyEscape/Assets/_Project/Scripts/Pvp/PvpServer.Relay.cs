@@ -43,7 +43,7 @@ namespace MummyEscape.Pvp
             {
                 var sent = claimed.Runners?.Find(r => r != null && r.PlayerId == id);
                 if (sent == null) return null;
-                side.Runners.Add(new RelayRunner { PlayerId = id, Name = duo.Names[duo.Members.IndexOf(id)], Look = PlayerLook.Sanitize(sent.Look) });
+                side.Runners.Add(new RelayRunner { PlayerId = id, Name = duo.Names[duo.Members.IndexOf(id)], Look = Developers.Restrict(PlayerLook.Sanitize(sent.Look), id) });
             }
             return side;
         }

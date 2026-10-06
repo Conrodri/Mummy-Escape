@@ -15,6 +15,8 @@ namespace MummyEscape.Pvp
         League = 2,
         /// <summary>Tombeaux différents terminés en moins de <see cref="Titles.SpeedLimitMs"/> en solo.</summary>
         Speed = 3,
+        /// <summary>L'équipe du jeu (<see cref="Developers"/>) : légendaire, animé.</summary>
+        Developer = 4,
     }
 
     public sealed class TitleDef
@@ -31,6 +33,8 @@ namespace MummyEscape.Pvp
         public League League;
 
         public bool IsDuel => Kind == TitleKind.Wins || Kind == TitleKind.League;
+        /// <summary>Légendaire : affiché animé, jamais gagné en jouant.</summary>
+        public bool Legendary => Kind == TitleKind.Developer;
     }
 
     public static class Titles
@@ -54,6 +58,7 @@ namespace MummyEscape.Pvp
             new TitleDef { Id = "title_speed5", Name = "Pieds légers", Kind = TitleKind.Speed, Goal = 5 },
             new TitleDef { Id = "title_speed15", Name = "Éclair du désert", Kind = TitleKind.Speed, Goal = 15 },
             new TitleDef { Id = "title_speed30", Name = "Souffle de Shou", Kind = TitleKind.Speed, Goal = 30 },
+            new TitleDef { Id = Developers.TitleId, Name = "Développeur de Mummy Rush", Kind = TitleKind.Developer, Goal = 1 },
         };
 
         static TitleDef Solo(string id, string name, int act) =>
@@ -74,6 +79,7 @@ namespace MummyEscape.Pvp
                 case TitleKind.Solo: return (Math.Min(starsInAct(t.Act), t.Goal), t.Goal);
                 case TitleKind.Wins: return (Math.Min(wins, t.Goal), t.Goal);
                 case TitleKind.League: return ((int)highest >= (int)t.League ? 1 : 0, 1);
+                case TitleKind.Developer: return (0, 1); // given by the player id, see Developers
                 default: return (Math.Min(fastTombs, t.Goal), t.Goal);
             }
         }

@@ -25,7 +25,7 @@ namespace MummyEscape.Pvp
             PlayerId = claimed.PlayerId,
             Name = CleanName(claimed.Name),
             Elo = elo,
-            Look = PlayerLook.Sanitize(claimed.Look),
+            Look = Developers.Restrict(PlayerLook.Sanitize(claimed.Look), claimed.PlayerId),
         };
 
         async Task<string> LiveRefusalAsync(string me, int generatorVersion, string matchKey)
@@ -139,7 +139,7 @@ namespace MummyEscape.Pvp
                     verified = new RunSubmission { MatchId = matchId, Outcome = RunOutcome.Abandoned };
                 }
             }
-            verified.Look = PlayerLook.Sanitize(run.Look);
+            verified.Look = Developers.Restrict(PlayerLook.Sanitize(run.Look), me);
             if (Titles.Get(verified.Look?.Title)?.IsDuel == true)
             {
                 var mine = await _store.ReadPlayersAsync(new[] { me });

@@ -223,6 +223,8 @@ namespace MummyEscape.App
         /// <summary>After a sign-in, an account creation or a startup: syncs the save and the shared progression.</summary>
         public async Task AfterAccountChange()
         {
+            // The game's team gets its legendary skin on every account it signs in with (the title follows from it).
+            if (Developers.Is(Online.PlayerId)) Save.GrantSkins(new[] { Developers.SkinId });
             if (Online.Account == AccountState.Account)
             {
                 // The cloud copy (another device) is folded into this one, then the union goes back up.

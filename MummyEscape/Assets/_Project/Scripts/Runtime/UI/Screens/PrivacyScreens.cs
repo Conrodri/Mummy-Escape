@@ -401,6 +401,7 @@ namespace MummyEscape.UI.Screens
                 GoogleError(card);
                 PrivacyUI.Wide(card, "Se déconnecter", async () => { await App.SignOut(); Rebuild(); });
                 PrivacyUI.Wide(card, "Supprimer mon compte", () => { Router.Close(this); Router.Open<PrivacyScreen>(); }, 34);
+                PlayerIdLine(card);
                 return;
             }
 
@@ -424,6 +425,19 @@ namespace MummyEscape.UI.Screens
             PrivacyUI.Wide(card, "J'ai déjà un compte", SignIn);
             GoogleError(card);
             PrivacyUI.Paragraph(card, "Sans e-mail, un mot de passe oublié ne peut pas être récupéré : note-le bien.", 28, UIKit.Dim);
+            PlayerIdLine(card);
+        }
+
+        /// <summary>The player id, for the support (refunds, unblocking) and the team list (Pvp.Developers). Selectable to copy.</summary>
+        void PlayerIdLine(Transform card)
+        {
+            string id = App.Online.PlayerId;
+            if (string.IsNullOrEmpty(id) || !App.Online.IsAvailable) return;
+            var field = UIKit.Input(card, "", 24);
+            field.text = id;
+            field.readOnly = true;
+            UIKit.Size(field, 70);
+            PrivacyUI.Paragraph(card, "Ton identifiant de joueur, à donner au support si besoin.", 24, UIKit.Dim);
         }
 
         void GoogleError(Transform card)

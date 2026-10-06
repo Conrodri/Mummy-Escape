@@ -165,7 +165,7 @@ namespace MummyEscape.Pvp
                 error = "INVALID_RUN";
                 verified = new RunSubmission { MatchId = pending.MatchId, Outcome = RunOutcome.Abandoned };
             }
-            verified.Look = PlayerLook.Sanitize(run.Look);
+            verified.Look = Developers.Restrict(PlayerLook.Sanitize(run.Look), me);
             if (Titles.Get(verified.Look?.Title)?.IsDuel == true)
             {
                 // Duel titles are checked against the protected data: nobody shows "Légende de diamant" without the league.

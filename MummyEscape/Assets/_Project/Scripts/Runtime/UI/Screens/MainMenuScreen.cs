@@ -38,7 +38,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Rect("Spacer", top.transform), -1, -1, 1);
             UIKit.IconButton(top.transform, UISprites.Gear, () => Router.Open<SettingsScreen>(), 92);
 
-            var title = UIKit.Title(column, "MUMMY\nESCAPE", 150);
+            var title = UIKit.Title(column, "MUMMY\nRUSH", 150);
             var black = Resources.Load<Font>("Fonts/Cinzel-Black");
             if (black != null) title.font = black;
             title.lineSpacing = 0.8f;

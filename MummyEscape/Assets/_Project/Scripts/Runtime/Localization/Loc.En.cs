@@ -8,7 +8,7 @@ namespace MummyEscape
         static readonly Dictionary<string, string> En = new Dictionary<string, string>
         {
             // ---------------------------------------------------------------- menu, shop, settings
-            ["MUMMY\nESCAPE"] = "MUMMY\nESCAPE",
+            ["MUMMY\nRUSH"] = "MUMMY\nRUSH",
             ["MUMMY RUSH"] = "MUMMY RUSH",
             ["Échappe-toi du tombeau… à l'aveugle."] = "Escape the tomb… in the dark.",
             ["JOUER"] = "PLAY",
@@ -1036,6 +1036,11 @@ namespace MummyEscape
             ["Possédé"] = "Owned",
             ["Acheter · {0} scarabées"] = "Buy · {0} scarabs",
             ["À gagner ou à acheter"] = "Win it or buy it",
+            ["Ton identifiant de joueur, à donner au support si besoin."] = "Your player ID, to give to the support if needed.",
+            ["Réservé à l'équipe de Mummy Rush"] = "Reserved for the Mummy Rush team",
+            ["Développeur"] = "Developer",
+            ["Développeur de Mummy Rush"] = "Mummy Rush Developer",
+            ["Code source d'Imhotep"] = "Imhotep's source code",
             ["Récupérer"] = "Claim",
             ["Palier {0}"] = "Tier {0}",
             ["Récompense du palier {0} du {1}."] = "Reward of tier {0} of {1}.",
