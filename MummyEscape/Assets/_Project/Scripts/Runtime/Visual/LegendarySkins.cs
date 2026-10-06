@@ -74,6 +74,7 @@ namespace MummyEscape.Visual
                 case LegendaryFx.Hathor: return new Color(0.35f, 0.95f, 0.85f);
                 case LegendaryFx.Sobek: return new Color(0.55f, 0.95f, 0.35f);
                 case LegendaryFx.Bastet: return new Color(1f, 0.65f, 0.2f);
+                case LegendaryFx.Osiris: return new Color(0.45f, 1f, 0.5f);
                 case LegendaryFx.Developer: return new Color(0.35f, 1f, 0.75f);
                 default: return new Color(1f, 0.35f, 0.1f);
             }

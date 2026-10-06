@@ -60,6 +60,8 @@ namespace MummyEscape.Monetization
                 "fayum", "claws", "crook", "atef", "reeds", "cobra", "clogs", "plumes", "deep", "helm"), // noloc
             Season("s5", "Le Pass de Bastet", 2027, 2, "pass_s5", // noloc
                 "amber", "slippers", "lantern", "crown", "night", "scepter", "babouches", "turban", "sand", "pschent"), // noloc
+            Season("s6", "Le Pass d'Osiris", 2027, 3, "pass_s6", // noloc
+                "field", "sandals", "ankh", "atef", "wheat", "flail", "greaves", "feather", "duat", "nemes"), // noloc
         };
 
         /// <summary>A monthly season starting on the 1st: its legendary is "{prefix}_leg", its set pieces "{prefix}_{piece}".</summary>
@@ -97,19 +99,36 @@ namespace MummyEscape.Monetization
         /// <summary>The latest season already started (the first one before its date).</summary>
         public static PassSeason Current => At(DateTime.UtcNow);
 
-        /// <summary>The season running at <paramref name="utc"/> (the server judges with its own clock).</summary>
+        /// <summary>
+        /// The season running at <paramref name="utc"/> (the server judges with its own clock). Past the last planned season,
+        /// the seasons come back in turn, one a month, under a new id ("r202704"): a new pass to buy, the same rewards.
+        /// </summary>
         public static PassSeason At(DateTime utc)
         {
+            var last = Seasons[Seasons.Count - 1];
+            if (utc >= last.StartUtc.AddMonths(1)) return Rerun(utc, last);
             var current = Seasons[0];
             foreach (var s in Seasons) if (s.StartUtc <= utc) current = s;
             return current;
         }
 
-        /// <summary>When the season ends (the next one's start), null while no next season is planned.</summary>
+        static PassSeason Rerun(DateTime utc, PassSeason last)
+        {
+            var start = new DateTime(utc.Year, utc.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            int months = (start.Year - last.StartUtc.Year) * 12 + start.Month - last.StartUtc.Month;
+            var again = Seasons[(months - 1) % Seasons.Count];
+            return new PassSeason
+            {
+                Id = "r" + start.ToString("yyyyMM", System.Globalization.CultureInfo.InvariantCulture), // noloc
+                Name = again.Name, StartUtc = start, Legendary = again.Legendary, Set = again.Set,
+            };
+        }
+
+        /// <summary>When the season ends: the next one's start (every season lasts until the 1st of the next month).</summary>
         public static DateTime? EndOf(PassSeason season)
         {
-            for (int i = 0; i < Seasons.Count - 1; i++) if (Seasons[i] == season) return Seasons[i + 1].StartUtc;
-            return null;
+            for (int i = 0; i < Seasons.Count - 1; i++) if (Seasons[i].Id == season.Id) return Seasons[i + 1].StartUtc;
+            return season.StartUtc.AddMonths(1);
         }
 
         public static int TierOf(int xp) => Math.Min(Tiers, xp / XpPerTier);

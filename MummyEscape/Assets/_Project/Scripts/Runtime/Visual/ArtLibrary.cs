@@ -1195,6 +1195,14 @@ namespace MummyEscape.Visual
                     if (stripe > 0.75f) return new Color32(90, 44, 16, 255);
                     return Color32.Lerp(new Color32(214, 128, 40, 255), new Color32(255, 196, 96, 255), 0.5f + 0.5f * Mathf.Sin(Tau * t - y / 9f));
                 }
+                case LegendaryFx.Osiris:
+                {
+                    // Osiris reborn: the green flesh of the risen god, golden wheat growing up the body, a pale life pulse.
+                    float grow = Mathf.Repeat(y / 9f - t + Px.Hash(x / 3, 0, 61), 1f);
+                    if (x % 3 == 1 && grow < 0.34f) return grow < 0.08f ? new Color32(255, 244, 160, 255) : new Color32(226, 180, 66, 255);
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(Tau * t + y / 8f);
+                    return Color32.Lerp(new Color32(26, 92, 52, 255), new Color32(76, 176, 96, 255), pulse * (Px.Hash(x / 2, y / 2, 63) > 0.8f ? 0.6f : 1f));
+                }
                 case LegendaryFx.Developer:
                 {
                     // The team's skin: columns of glowing glyph-code falling down a night-blue body, their heads white,

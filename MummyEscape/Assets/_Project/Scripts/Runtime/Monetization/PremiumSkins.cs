@@ -29,6 +29,8 @@ namespace MummyEscape.Monetization
         static readonly Color32 Reed = new Color32(110, 190, 80, 255);
         /// <summary>Season 5, Bastet: amber.</summary>
         static readonly Color32 Amber = new Color32(240, 160, 60, 255);
+        /// <summary>Season 6, Osiris: the green of the risen god.</summary>
+        static readonly Color32 Osiris = new Color32(70, 170, 90, 255);
 
         public static readonly IReadOnlyList<SkinDef> All = new[]
         {
@@ -109,6 +111,19 @@ namespace MummyEscape.Monetization
             new SkinDef { Id = "pass_s5_turban", Name = "Turban parfumé", Slot = CosmeticSlot.Hat, Hat = HatStyle.Turban, Tint = Amber, Badge = Pass },
             Colour("pass_s5_sand", "Tigré des sables", new Color32(236, 190, 112, 255), new Color32(170, 112, 52, 255), new Color32(40, 200, 255, 255), new Color(1f, 0.85f, 0.5f), Pass),
             new SkinDef { Id = "pass_s5_pschent", Name = "Double couronne de Bastet", Slot = CosmeticSlot.Hat, Hat = HatStyle.Pschent, Tint = Amber, Badge = Pass },
+
+            // ---- Season 6 pass: Osiris, lord of the dead and of the wheat that grows again, green and gold.
+            Legendary("pass_s6_leg", "Renaissance d'Osiris", LegendaryFx.Osiris, new Color32(255, 230, 120, 255), new Color(0.5f, 1f, 0.55f), Pass),
+            Colour("pass_s6_field", "Champs d'Ialou", new Color32(96, 160, 72, 255), new Color32(50, 96, 40, 255), new Color32(255, 236, 140, 255), new Color(0.6f, 1f, 0.5f), Pass),
+            new SkinDef { Id = "pass_s6_sandals", Name = "Sandales du roi des morts", Slot = CosmeticSlot.Shoes, Shoes = ShoeStyle.PapyrusSandals, Tint = Osiris, Badge = Pass },
+            new SkinDef { Id = "pass_s6_ankh", Name = "Ânkh d'Osiris", Slot = CosmeticSlot.Torch, TorchStyle = TorchStyle.Ankh, Tint = Osiris, Torch = new Color(0.55f, 1f, 0.55f), Badge = Pass },
+            new SkinDef { Id = "pass_s6_atef", Name = "Couronne atef d'Osiris", Slot = CosmeticSlot.Hat, Hat = HatStyle.Atef, Tint = Osiris, Badge = Pass },
+            Colour("pass_s6_wheat", "Blé d'Abydos", new Color32(222, 196, 110, 255), new Color32(150, 120, 50, 255), new Color32(60, 170, 90, 255), new Color(1f, 0.9f, 0.5f), Pass),
+            new SkinDef { Id = "pass_s6_flail", Name = "Crosse et fléau", Slot = CosmeticSlot.Torch, TorchStyle = TorchStyle.Crook, Tint = Osiris, Torch = new Color(0.6f, 1f, 0.5f), Badge = Pass },
+            new SkinDef { Id = "pass_s6_greaves", Name = "Jambières d'Abydos", Slot = CosmeticSlot.Shoes, Shoes = ShoeStyle.SilverGreaves, Tint = Osiris, Badge = Pass },
+            new SkinDef { Id = "pass_s6_feather", Name = "Plumes de la pesée", Slot = CosmeticSlot.Hat, Hat = HatStyle.MaatFeather, Tint = Osiris, Badge = Pass },
+            Colour("pass_s6_duat", "Nuit verte de la Douat", new Color32(20, 46, 34, 255), new Color32(8, 22, 16, 255), new Color32(140, 255, 160, 255), new Color(0.5f, 1f, 0.6f), Pass),
+            new SkinDef { Id = "pass_s6_nemes", Name = "Némès du souverain", Slot = CosmeticSlot.Hat, Hat = HatStyle.Nemes, Tint = Osiris, Badge = Pass },
         };
 
         public static SkinDef Resolve(string id)

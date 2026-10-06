@@ -8,7 +8,7 @@ namespace MummyEscape.Visual
 
     /// <summary>Silhouette of the mummy.</summary>
     /// <summary>Animated effect of a legendary colour (casino): the bandages change every frame.</summary>
-    public enum LegendaryFx { None, Rainbow, Fire, Galaxy, Aurora, Gold, Storm, Spectre, Neon, Prism, Magma, Moon, Lapis, Nile, Embalm, Hathor, Sobek, Bastet, Developer }
+    public enum LegendaryFx { None, Rainbow, Fire, Galaxy, Aurora, Gold, Storm, Spectre, Neon, Prism, Magma, Moon, Lapis, Nile, Embalm, Hathor, Sobek, Bastet, Developer, Osiris }
 
     public enum MummyShape { Classic, Cat, Jackal }
 
