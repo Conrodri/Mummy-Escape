@@ -28,7 +28,10 @@ namespace MummyEscape.Online
         {
             try
             {
-                return await CloudCodeService.Instance.CallModuleEndpointAsync<T>(Module, function, args ?? new Dictionary<string, object>());
+                var result = await CloudCodeService.Instance.CallModuleEndpointAsync<T>(Module, function, args ?? new Dictionary<string, object>());
+                // Every response carries its error code in an "Error" field.
+                if (result != null) PvpServiceFactory.Inspect(typeof(T).GetField("Error")?.GetValue(result) as string);
+                return result;
             }
             catch (Exception e)
             {

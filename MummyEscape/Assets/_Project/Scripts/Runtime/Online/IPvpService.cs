@@ -119,6 +119,14 @@ namespace MummyEscape.Online
         /// <summary>Set by the UGS module when its packages are installed (Cloud Code).</summary>
         public static Func<IOnlineService, IPvpService> CreateOnline;
 
+        /// <summary>Called when the server refuses this version of the game ("OUTDATED"): the game asks for the update.</summary>
+        public static Action UpdateRequired;
+
+        public static void Inspect(string error)
+        {
+            if (error == "OUTDATED") UpdateRequired?.Invoke(); // noloc
+        }
+
         /// <summary>The duel service for this online state: the server when connected, local rivals in demo builds, else none.</summary>
         public static IPvpService For(IOnlineService online, Func<int> soloStars)
         {

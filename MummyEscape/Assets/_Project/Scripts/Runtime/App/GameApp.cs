@@ -111,6 +111,7 @@ namespace MummyEscape.App
                 if (Monetization.Ads.Provider == null || Monetization.Ads.Provider is SimulatedAds) Monetization.Ads.Provider = new SimulatedAds(UI);
                 if (Monetization.Store.Provider == null || Monetization.Store.Provider is SimulatedStore) Monetization.Store.Provider = new SimulatedStore(UI);
             }
+            PvpServiceFactory.UpdateRequired = AskForUpdate;
             UI.Open<MainMenuScreen>();
             if (Privacy.NeedsAnswer) UI.Open<WelcomeScreen>();
             StudioIntro.Play(Audio); // the studio's logo, over the first screen, in silence
@@ -319,6 +320,19 @@ namespace MummyEscape.App
             Online = service;
             await AfterAccountChange();
             return null;
+        }
+
+        bool _updateAsked;
+
+        /// <summary>The server refuses this version (its levels differ from the server's): once a session, the way to the update.</summary>
+        void AskForUpdate()
+        {
+            if (_updateAsked || UI == null) return;
+            _updateAsked = true;
+            UI.Open<OfferDialog>().Configure("Mise à jour",
+                Loc.T("Une nouvelle version de Mummy Rush est sortie. Mets le jeu à jour pour continuer à jouer en ligne ; le solo reste ouvert."),
+                ("Mettre à jour", ButtonStyle.Primary, () => Application.OpenURL("market://details?id=" + Application.identifier)), // noloc
+                ("Plus tard", ButtonStyle.Ghost, null));
         }
 
         public async Task SignOut()

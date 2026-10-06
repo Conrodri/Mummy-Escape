@@ -207,7 +207,7 @@ namespace MummyEscape.UI.Screens
             if (!GoldWallet.CanPurchase(App))
             {
                 _note.text = GoldWallet.Available(App) ? Loc.T("Connecte ton compte Google Play Jeux avant un achat : tes scarabées dorés y restent attachés.")
-                                                     : GoldWallet.ErrorText("OFFLINE");
+                                                     : GoldWallet.ErrorText("OFFLINE"); // noloc
                 return;
             }
             _busy = true;
