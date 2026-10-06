@@ -44,6 +44,9 @@ namespace MummyEscape.UI.Screens
             _legendary = UIKit.Image(top.transform, null, Color.white);
             _legendary.preserveAspect = true;
             UIKit.Size(_legendary, 210, 180);
+            _legendary.raycastTarget = true;
+            _legendary.gameObject.AddComponent<Button>().onClick.AddListener(ZoomLegendary);
+            _legendary.gameObject.AddComponent<PressScale>();
             var info = UIKit.Rect("Info", top.transform); // noloc
             UIKit.Size(info, -1, -1, 1);
             UIKit.Column(info, 6, 0, TextAnchor.MiddleLeft);
@@ -174,6 +177,13 @@ namespace MummyEscape.UI.Screens
                 var def = SkinCatalog.Get(reward.SkinId);
                 ItemPreview.Show(icon, def);
                 label = Loc.T(def.Name);
+                // The skin cell opens it up close (the OK button still claims it straight away).
+                int tier = t;
+                cell.raycastTarget = true;
+                var zoom = cell.gameObject.AddComponent<Button>();
+                zoom.targetGraphic = cell;
+                zoom.onClick.AddListener(() => ZoomTier(def, tier, premium));
+                cell.gameObject.AddComponent<PressScale>().Amount = 0.98f;
             }
             else
             {
@@ -204,6 +214,35 @@ namespace MummyEscape.UI.Screens
                 var btn = UIKit.Button(cell.transform, "OK", () => Claim(tier, premium), 26, ButtonStyle.Primary); // noloc
                 UIKit.Size(btn, 80, 96, 0);
             }
+        }
+
+        /// <summary>A skin of the pass up close: worn if owned, claimed if its tier is reached, otherwise what it takes.</summary>
+        void ZoomTier(SkinDef def, int tier, bool premium)
+        {
+            var save = App.Save;
+            bool owned = save.Data.OwnedSkins.Contains(def.Id);
+            bool worn = save.IsWorn(def.Id);
+            string action; System.Action onAction = null;
+            if (worn) action = Loc.T("Équipé");
+            else if (owned) { action = Loc.T("Équiper"); onAction = () => { save.SelectSkin(def.Id); Refresh(); }; }
+            else if (save.CanClaim(tier, premium)) { action = Loc.T("Récupérer"); onAction = () => Claim(tier, premium); }
+            else if (premium && !save.HasPass) { action = Loc.F("Pass premium · {0} dorés", GoldShop.PassPrice); onAction = BuyPass; }
+            else action = Loc.F("Palier {0}", tier);
+            Router.Open<ItemZoomScreen>().Show(def, premium ? Loc.T("Pass premium") : Loc.T("Pass de saison"), PremiumColor,
+                Loc.F("Récompense du palier {0} du {1}.", tier, Loc.T(BattlePass.Current.Name)), action, onAction);
+        }
+
+        /// <summary>The season legendary up close: given with the premium pass.</summary>
+        void ZoomLegendary()
+        {
+            var save = App.Save;
+            var def = SkinCatalog.Get(BattlePass.Current.Legendary);
+            bool owned = save.Data.OwnedSkins.Contains(def.Id);
+            bool worn = save.IsWorn(def.Id);
+            string action = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("Pass premium · {0} dorés", GoldShop.PassPrice);
+            System.Action onAction = worn ? null : owned ? () => { save.SelectSkin(def.Id); Refresh(); } : (System.Action)BuyPass;
+            Router.Open<ItemZoomScreen>().Show(def, Loc.T("Légendaire"), CasinoScreen.LegendaryColor,
+                Loc.F("Le légendaire du {0} : offert dès l'achat du Pass premium.", Loc.T(BattlePass.Current.Name)), action, onAction);
         }
 
         void Claim(int tier, bool premium)
