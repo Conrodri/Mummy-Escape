@@ -24,6 +24,11 @@ namespace MummyEscape.Pvp
         public WheelSegment[] Segments;
         /// <summary>Les skins exclusifs de cette roue : une case légendaire en donne un qu'on n'a pas encore.</summary>
         public string[] Legendaries;
+        /// <summary>
+        /// Prix d'achat direct d'un de ces légendaires, sans hasard (0 : seulement sur la roue). Calé sur ce que coûte un
+        /// légendaire en moyenne à la roue : 200 tours à environ 23,5 net (la roue rend ~26,5 sur 50).
+        /// </summary>
+        public int DirectPrice;
     }
 
     [Serializable]
@@ -73,6 +78,7 @@ namespace MummyEscape.Pvp
             Id = "scarabs", Price = 50,
             Segments = Segments(500, 250, 100, 50, 25, 10),
             Legendaries = new[] { "leg_ra", "leg_sekhmet", "leg_nut", "leg_aurora", "leg_gold" },
+            DirectPrice = 5000,
         };
 
         /// <summary>Roue des sceaux de Maât : mêmes chances, d'autres légendaires (gardés par le serveur, d'où le préfixe pvp_).</summary>

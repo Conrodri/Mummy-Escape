@@ -21,7 +21,7 @@ namespace MummyEscape.UI.Screens
         const float SpinSeconds = 4f;
         const int Bulbs = 20;
 
-        Text _coins, _seals, _title, _legend, _odds, _result;
+        Text _coins, _seals, _title, _caption, _legend, _odds, _result;
         UIKit.Segmented _tabs;
         RectTransform _disc, _legendaries, _resultPop;
         Image _glow;
@@ -93,9 +93,9 @@ namespace MummyEscape.UI.Screens
             UIKit.DropShadow(pointer, 4, 0.5f);
 
             // The legendaries of the wheel (a check on those already won); a tap shows one up close.
-            var caption = UIKit.Label(body, "À gagner", 24, LegendaryColor, TextAnchor.MiddleCenter, FontStyle.Bold);
-            caption.text = caption.text.ToUpperInvariant();
-            UIKit.Size(caption, 32);
+            _caption = UIKit.Label(body, "À gagner", 24, LegendaryColor, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(_caption, 16);
+            UIKit.Size(_caption, 32);
             _legendaries = UIKit.Row(body, 140, 10).GetComponent<RectTransform>();
             _legend = UIKit.Label(body, "", 22, LegendaryColor, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(_legend, 14);
@@ -183,6 +183,7 @@ namespace MummyEscape.UI.Screens
                     UIKit.Place(check.rectTransform, 1f, 0f, 36, 36, -18, 18);
                 }
             }
+            _caption.text = Loc.T(wheel.DirectPrice > 0 ? "À gagner ou à acheter" : "À gagner").ToUpperInvariant();
             _legend.text = string.Join(" · ", names);
             _odds.text = OddsText(wheel);
 
@@ -198,10 +199,31 @@ namespace MummyEscape.UI.Screens
         void Zoom(SkinDef def, bool owned)
         {
             bool worn = App.Save.IsWorn(def.Id);
+            int price = Seals ? 0 : Wheel.DirectPrice;
+            if (owned || price <= 0)
+            {
+                Router.Open<ItemZoomScreen>().Show(def, Loc.T("Légendaire"), LegendaryColor,
+                    Loc.T("Exclusivité du casino : 0,5 % de chance à chaque tour de roue. Bandages animés."),
+                    worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.T("À gagner sur la roue"),
+                    owned && !worn ? () => { App.Save.SelectSkin(def.Id); Refresh(); } : (System.Action)null);
+                return;
+            }
+            // Players who would rather not gamble buy it outright, at what it costs on average at the wheel.
+            bool afford = App.Save.Data.Coins >= price;
             Router.Open<ItemZoomScreen>().Show(def, Loc.T("Légendaire"), LegendaryColor,
-                Loc.T("Exclusivité du casino : 0,5 % de chance à chaque tour de roue. Bandages animés."),
-                worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.T("À gagner sur la roue"),
-                owned && !worn ? () => { App.Save.SelectSkin(def.Id); Refresh(); } : (System.Action)null);
+                Loc.F("Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} scarabées. Bandages animés.", price),
+                afford ? Loc.F("Acheter · {0} scarabées", price) : Loc.F("Il te faut {0} scarabées", price),
+                afford ? () => BuyLegendary(def) : (System.Action)null);
+        }
+
+        void BuyLegendary(SkinDef def)
+        {
+            if (!App.Save.BuyWheelLegendary(def.Id)) return;
+            App.Save.SelectSkin(def.Id);
+            App.Audio.Play(Services.Sfx.Coin);
+            Refresh();
+            Router.Open<ItemZoomScreen>().Show(def, Loc.T("Légendaire"), LegendaryColor,
+                Loc.F("{0} est à toi !", Loc.T(def.Name)), Loc.T("Équipé"), null);
         }
 
         /// <summary>Equal wedges clockwise from the top, the legendary one in pink; a hub with the wheel's currency.</summary>

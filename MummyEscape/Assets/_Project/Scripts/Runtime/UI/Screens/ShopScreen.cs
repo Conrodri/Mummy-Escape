@@ -10,8 +10,9 @@ using UnityEngine.UI;
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// Cosmetics bought with scarabs (earned by collecting new stars). The season pass banner and the Treasure (real
-    /// money) sit on top; then three sections: Skins (one category per slot: mummy, colour, torch, hat, shoes), the act
+    /// Cosmetics bought with scarabs (earned by collecting new stars). The season pass banner and the wallet (golden scarabs:
+    /// money, a tap opens the Treasure) sit on top; then four sections: the Treasure (its exclusives, first so it is seen),
+    /// Skins (one category per slot: mummy, colour, torch, hat, shoes), the act
     /// Collections, sold whole for less, and the Seals, where Maât's seals (won in duels) buy the league skins.
     /// Every card shows the item alone; a tap opens it up close (<see cref="ItemZoomScreen"/>), where it is bought or put on.
     /// The casino has its own tab in the bottom bar (<see cref="CasinoScreen"/>).
@@ -23,8 +24,8 @@ namespace MummyEscape.UI.Screens
         const int Columns = 3;
         const float CardHeight = 380;
 
-        static readonly string[] Sections = { "Skins", "Collections", "Sceaux" };
-        const int SkinsSection = 0, SetsSection = 1, SealsSection = 2;
+        static readonly string[] Sections = { "Trésor", "Skins", "Collections", "Sceaux" };
+        const int TreasureSection = 0, SkinsSection = 1, SetsSection = 2, SealsSection = 3;
         static readonly (string name, CosmeticSlot slot)[] Categories =
         {
             ("Momies", CosmeticSlot.Mummy), ("Couleurs", CosmeticSlot.Color), ("Torches", CosmeticSlot.Torch),
@@ -69,7 +70,6 @@ namespace MummyEscape.UI.Screens
             goldPlate.gameObject.AddComponent<PressScale>();
 
             _pass = new PassBanner(body, 170, () => Router.Open<PassScreen>());
-            TreasureStrip(body);
 
             _sections = new UIKit.Segmented(body, Sections, i =>
             {
@@ -87,7 +87,32 @@ namespace MummyEscape.UI.Screens
             _list.GetComponent<VerticalLayoutGroup>().spacing = 16;
         }
 
-        /// <summary>The way to the Treasure: golden scarabs and the exclusive skins.</summary>
+        /// <summary>The Treasure tab: the way to the golden scarab packs, then the exclusives as cards that open up close.</summary>
+        void FillTreasure()
+        {
+            TreasureStrip(_list);
+            Intro("Les exclusivités du Trésor, introuvables ailleurs. Elles s'achètent en scarabées dorés.");
+            var items = Monetization.GoldShop.Exclusives;
+            Grid(items.Count, (parent, i) => GoldCard(parent, items[i]));
+        }
+
+        void GoldCard(Transform parent, Monetization.GoldItem gold)
+        {
+            var save = App.Save;
+            var item = SkinCatalog.Get(gold.SkinId);
+            bool owned = save.Data.OwnedSkins.Contains(item.Id);
+            bool worn = save.IsWorn(item.Id);
+            var (tag, color) = item.Legendary ? (Loc.T("Légendaire"), LegendaryColor) : (Loc.T("Trésor"), TreasureScreen.GoldColor);
+            Sprite icon; string price; Color priceColor;
+            if (worn) { icon = UISprites.Check; price = Loc.T("Équipé"); priceColor = UIKit.Turquoise; }
+            else if (owned) { icon = null; price = Loc.T("Possédé"); priceColor = UIKit.Sand; }
+            else { icon = UIKit.Art.GoldScarab; price = gold.Gold.ToString(); priceColor = save.Gold >= gold.Gold ? TreasureScreen.GoldColor : UIKit.Danger; }
+            var card = Card(parent, item, tag, color, worn, false, icon, price, priceColor,
+                () => TreasureScreen.Zoom(App, Router, gold, () => Router.Open<TreasureScreen>(), _ => Refresh()));
+            UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
+        }
+
+        /// <summary>The way to the Treasure screen: golden scarab packs, the pass, scarab exchanges.</summary>
         void TreasureStrip(Transform parent)
         {
             var strip = UIKit.Plate(parent, Color.white, 26, new Color(1f, 0.85f, 0.4f, 0.6f), false, "Treasure"); // noloc
@@ -110,7 +135,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(icon, 64, 64);
             UIFx.Pulse(icon, 0.06f, 1.8f);
             var text = UIKit.Label(inner, "", 28, new Color32(255, 236, 180, 255), TextAnchor.MiddleLeft, FontStyle.Bold);
-            text.text = Loc.T("Trésor") + "  <size=22><color=#E8D6A8>" + Loc.T("skins exclusifs et scarabées dorés") + "</color></size>"; // noloc
+            text.text = Loc.T("Scarabées dorés") + "  <size=22><color=#E8D6A8>" + Loc.T("packs, Pass de saison, échanges") + "</color></size>"; // noloc
             UIKit.FitText(text, 16);
             UIKit.Size(text, -1, -1, 1);
             UIKit.Size(UIKit.Image(inner, UISprites.Next, new Color(1f, 0.9f, 0.6f, 0.8f)), 36, 36);
@@ -196,6 +221,7 @@ namespace MummyEscape.UI.Screens
             UIKit.ClearChildren(_list);
             _note = null;
             _cardIndex = 0;
+            if (_section == TreasureSection) { FillTreasure(); return; }
             if (_section == SetsSection) { FillSets(); return; }
             if (_section == SealsSection) { FillSeals(pvp); return; }
 

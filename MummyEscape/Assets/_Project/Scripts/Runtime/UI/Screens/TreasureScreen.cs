@@ -152,6 +152,16 @@ namespace MummyEscape.UI.Screens
             bool worn = save.IsWorn(item.SkinId);
             var card = UIKit.Plate(parent, worn ? ShopScreen.WornFill : UIKit.SurfaceHi, 28, worn ? ShopScreen.WornRim : UIKit.Rim, false, item.SkinId);
             UIKit.Size(card, -1, 0, 1);
+            // The whole card opens it up close; the button buys or wears it straight away.
+            card.raycastTarget = true;
+            var zoom = card.gameObject.AddComponent<Button>();
+            zoom.targetGraphic = card;
+            zoom.onClick.AddListener(() => Zoom(App, Router, item, () => _scroll.verticalNormalizedPosition = 1f, bought =>
+            {
+                if (bought) _note.text = Loc.F("{0} : à toi !", Loc.T(def.Name));
+                Refresh();
+            }));
+            card.gameObject.AddComponent<PressScale>();
             UIKit.Column(card.transform, 2, 12, TextAnchor.MiddleCenter);
             var tag = UIKit.Label(card.transform, def.Legendary ? Loc.T("Légendaire").ToUpperInvariant() : Loc.T("Trésor").ToUpperInvariant(), 20,
                                   def.Legendary ? new Color32(255, 96, 220, 255) : GoldColor, TextAnchor.MiddleCenter, FontStyle.Bold);
@@ -202,25 +212,46 @@ namespace MummyEscape.UI.Screens
             Refresh();
         }
 
-        void OnItem(GoldItem item)
+        void OnItem(GoldItem item) =>
+            BuyOrWear(App, Router, item, () => _scroll.verticalNormalizedPosition = 1f, bought =>
+            {
+                if (bought) _note.text = Loc.F("{0} : à toi !", Loc.T(SkinCatalog.Get(item.SkinId).Name));
+                Refresh();
+            });
+
+        /// <summary>A treasure exclusive up close (here and in the shop's Treasure tab): bought with golden scarabs, or worn.</summary>
+        internal static void Zoom(App.GameApp app, UIRouter router, GoldItem item, System.Action showPacks, System.Action<bool> done)
         {
-            var save = App.Save;
+            var save = app.Save;
+            var def = SkinCatalog.Get(item.SkinId);
+            bool owned = save.Data.OwnedSkins.Contains(item.SkinId);
+            bool worn = save.IsWorn(item.SkinId);
+            string tag = def.Legendary ? Loc.T("Légendaire") : Loc.T("Trésor");
+            Color color = def.Legendary ? CasinoScreen.LegendaryColor : GoldColor;
+            string action = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("Acheter · {0} dorés", item.Gold);
+            router.Open<ItemZoomScreen>().Show(def, tag, color, Loc.T("Exclusivité du Trésor : introuvable ailleurs, ni en boutique, ni au casino."),
+                action, worn ? (System.Action)null : () => BuyOrWear(app, router, item, showPacks, done));
+        }
+
+        /// <summary>Wears an owned exclusive, or asks to confirm its purchase. <paramref name="done"/> gets true after a purchase.</summary>
+        internal static void BuyOrWear(App.GameApp app, UIRouter router, GoldItem item, System.Action showPacks, System.Action<bool> done)
+        {
+            var save = app.Save;
             var def = SkinCatalog.Get(item.SkinId);
             if (save.Data.OwnedSkins.Contains(item.SkinId))
             {
                 save.SelectSkin(item.SkinId);
-                Refresh();
+                done?.Invoke(false);
                 return;
             }
-            if (!EnoughGold(item.Gold)) return;
-            Router.Open<OfferDialog>().Configure(Loc.T(def.Name), Loc.F("L'acheter pour {0} scarabées dorés ?", item.Gold),
+            if (!EnoughGold(app, router, item.Gold, showPacks)) return;
+            router.Open<OfferDialog>().Configure(Loc.T(def.Name), Loc.F("L'acheter pour {0} scarabées dorés ?", item.Gold),
                 (Loc.F("Acheter · {0} dorés", item.Gold), ButtonStyle.Primary, () =>
                 {
                     if (!save.BuyWithGold(item)) return;
                     save.SelectSkin(item.SkinId);
-                    App.Audio.Play(Sfx.Win);
-                    _note.text = Loc.F("{0} : à toi !", Loc.T(def.Name));
-                    Refresh();
+                    app.Audio.Play(Sfx.Win);
+                    done?.Invoke(true);
                 }),
                 ("Annuler", ButtonStyle.Ghost, null));
         }

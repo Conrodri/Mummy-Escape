@@ -281,6 +281,18 @@ namespace MummyEscape.Services
             return result;
         }
 
+        /// <summary>Buys a legendary of the scarab wheel outright, without the draw. False when it is not for sale, owned or too dear.</summary>
+        public bool BuyWheelLegendary(string id)
+        {
+            var wheel = Pvp.Casino.Scarabs;
+            if (wheel.DirectPrice <= 0 || System.Array.IndexOf(wheel.Legendaries, id) < 0) return false;
+            if (Data.OwnedSkins.Contains(id) || Data.Coins < wheel.DirectPrice) return false;
+            Data.Coins -= wheel.DirectPrice;
+            Data.OwnedSkins.Add(id);
+            Save();
+            return true;
+        }
+
         public bool IsWorn(string id) =>
             id == Data.SelectedMummy || id == Data.SelectedSkin || id == Data.SelectedTorch || id == Data.SelectedHat || id == Data.SelectedShoes;
 
