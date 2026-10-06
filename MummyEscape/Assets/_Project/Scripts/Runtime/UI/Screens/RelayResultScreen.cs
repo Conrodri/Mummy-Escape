@@ -126,6 +126,7 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             ShowVerdict(r.Result);
+            if (r.Result == DuelResult.Win) App.Save.AddPassXp(Monetization.BattlePass.WinBonusXp);
             string sign = r.EloDelta > 0 ? "+" : "";
             string color = r.EloDelta > 0 ? "#40E0D0" : r.EloDelta < 0 ? "#D65440" : "#9C8B70"; // noloc
             _elo.text = Loc.F("Elo 2v2 {0}", r.NewElo) + $"  <color={color}>({sign}{r.EloDelta})</color>";

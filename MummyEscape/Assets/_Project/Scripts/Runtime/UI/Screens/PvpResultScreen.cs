@@ -189,6 +189,7 @@ namespace MummyEscape.UI.Screens
                 _elo.text = $"Elo {r.EloBefore} → {r.EloAfter}  <color={color}>({sign}{delta})</color>";
                 _note.text = Loc.F("Ligue {0}", Loc.T(PvpSkins.LeagueName(r.League)));
                 App.Audio.Play(win ? Sfx.Win : draw ? Sfx.Coin : Sfx.Death);
+                if (win) App.Save.AddPassXp(Monetization.BattlePass.WinBonusXp);
             }
             if (r.SealsGained > 0)
             {
@@ -296,6 +297,7 @@ namespace MummyEscape.UI.Screens
                 TeamView.OpenBattleHome(Router, _lastBattleKind);
                 return;
             }
+            if (!PlayGate.Ensure(App, Monetization.PlayMode.Duel, Again)) return;
             // The menu button stays: it cancels the search.
             _again.interactable = false;
             _note.text = Loc.T("Recherche d'un adversaire…");

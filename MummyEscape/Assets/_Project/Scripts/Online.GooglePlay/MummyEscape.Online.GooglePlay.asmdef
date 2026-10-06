@@ -1,0 +1,22 @@
+{
+    "name": "MummyEscape.Online.GooglePlay",
+    "rootNamespace": "MummyEscape.Online",
+    "references": [
+        "MummyEscape.Runtime",
+        "Google.Play.Games"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MUMMY_GPGS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

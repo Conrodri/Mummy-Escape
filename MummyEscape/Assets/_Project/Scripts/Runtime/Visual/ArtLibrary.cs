@@ -62,6 +62,8 @@ namespace MummyEscape.Visual
         public Sprite Star { get; }
         public Sprite StarEmpty { get; }
         public Sprite Scarab { get; }
+        /// <summary>Golden scarab: the real-money currency.</summary>
+        public Sprite GoldScarab { get; }
         public Sprite Lock { get; }
 
         // Particle shapes.
@@ -85,6 +87,7 @@ namespace MummyEscape.Visual
             Star = Icon("star", () => PaintStar(Gold));
             StarEmpty = Icon("star_empty", () => PaintStar(new Color32(70, 64, 58, 255)));
             Scarab = Icon("scarab", PaintScarabIcon);
+            GoldScarab = Icon("scarab_gold", PaintGoldScarabIcon);
             Lock = Icon("lock", PaintLock);
 
             Spark = ToSprite(PaintGlow(64), 64);
@@ -967,14 +970,36 @@ namespace MummyEscape.Visual
             }
 
             // Shoes and hats are cut out on their own layer, so their holes never punch through the body.
-            p.Blit(Layer(l => PaintShoes(l, look.Shoes.Shoes)), 0, 0);
-            p.Blit(Layer(l => PaintHat(l, look.Hat.Hat)), 0, 0);
-            PaintTorch(p, look.Torch.TorchStyle);
+            p.Blit(Tinted(Layer(l => PaintShoes(l, look.Shoes.Shoes)), look.Shoes.Tint), 0, 0);
+            p.Blit(Tinted(Layer(l => PaintHat(l, look.Hat.Hat)), look.Hat.Tint), 0, 0);
+            if (look.Torch.Tint.a > 0) p.Blit(Tinted(Layer(l => PaintTorch(l, look.Torch.TorchStyle)), look.Torch.Tint), 0, 0);
+            else PaintTorch(p, look.Torch.TorchStyle);
             // Bandaged fist over the grip.
             p.Rect(23, 13, 26, 16, c.Bandage);
             p.Rect(23, 14, 26, 14, c.Shadow);
             if (c.Legendary) PaintLegendary(p, c.Fx, frame);
             return p;
+        }
+
+        /// <summary>
+        /// Recolours a whole layer in one hue (the pass sets: a hat, shoes or a torch in the colours of the season),
+        /// keeping its shading. A transparent tint leaves the layer as painted.
+        /// </summary>
+        static Px Tinted(Px l, Color32 tint)
+        {
+            if (tint.a == 0) return l;
+            Color.RGBToHSV(tint, out float th, out float ts, out _);
+            for (int y = 0; y < l.H; y++)
+                for (int x = 0; x < l.W; x++)
+                {
+                    var c = l.Get(x, y);
+                    if (c.a == 0) continue;
+                    Color.RGBToHSV(c, out _, out float s, out float v);
+                    Color32 o = Color.HSVToRGB(th, Mathf.Clamp01(s * 0.4f + ts * 0.6f), v);
+                    o.a = c.a;
+                    l.Set(x, y, o);
+                }
+            return l;
         }
 
         static bool Same(Color32 a, Color32 b) => a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
@@ -1069,6 +1094,28 @@ namespace MummyEscape.Visual
                 case LegendaryFx.Prism:
                     if (Px.Hash(x, y, frame + 40) > 0.95f) return new Color32(255, 255, 255, 255);
                     return Hsv((x - y) / 20f + t, 0.35f, 1f);
+                case LegendaryFx.Moon:
+                {
+                    // Thoth's moonlight: a silver-blue tide rising over indigo, a few glyphs of light.
+                    if (Px.Hash(x / 2, y / 3, 17) > 0.9f && Px.Hash(x, y, frame + 60) > 0.6f) return new Color32(255, 250, 220, 255);
+                    float k = 0.5f + 0.5f * Mathf.Sin(Tau * (y / 18f - t) + x / 9f);
+                    return Color32.Lerp(new Color32(30, 34, 96, 255), new Color32(186, 206, 255, 255), k * k);
+                }
+                case LegendaryFx.Lapis:
+                {
+                    // Lapis lazuli with veins of gold crawling across the stone.
+                    float vein = Mathf.Abs(Mathf.Sin(x * 0.7f + y * 0.35f + Tau * t) + Mathf.Sin(y * 0.9f - x * 0.2f));
+                    if (vein < 0.12f) return new Color32(255, 214, 90, 255);
+                    if (vein < 0.22f) return new Color32(196, 150, 50, 255);
+                    return Px.Hash(x, y, 3) > 0.9f ? new Color32(70, 110, 220, 255) : new Color32(30, 56, 160, 255);
+                }
+                case LegendaryFx.Nile:
+                {
+                    // The Nile in flood: green-blue waves running down the body, foam on the crests.
+                    float wave = Mathf.Sin(Tau * (y / 10f + t) + Mathf.Sin(x / 4f) * 1.5f);
+                    return wave > 0.9f ? new Color32(236, 255, 250, 255) : wave > 0.4f ? new Color32(70, 214, 200, 255)
+                         : wave > -0.3f ? new Color32(30, 140, 150, 255) : new Color32(16, 70, 96, 255);
+                }
                 default: // Magma
                 {
                     float flow = Mathf.Sin(x * 0.8f + Tau * t) + Mathf.Sin(y * 0.55f - Tau * t);
@@ -1844,6 +1891,22 @@ namespace MummyEscape.Visual
             p.Line(8, 2, 8, 11, LapisDark);
             p.Line(2, 9, 4, 8, Gold); p.Line(14, 9, 12, 8, Gold);
             p.Line(2, 4, 4, 5, Gold); p.Line(14, 4, 12, 5, Gold);
+            return p;
+        }
+
+        static Px PaintGoldScarabIcon()
+        {
+            var p = new Px(16, 16);
+            p.Fill(Clear);
+            var bright = new Color32(255, 226, 96, 255);
+            p.Ellipse(8, 7, 4, 5, new Color32(232, 176, 40, 255));
+            p.Circle(8, 13, 2, bright, true);
+            p.Line(8, 2, 8, 11, new Color32(150, 96, 20, 255));
+            p.Line(6, 9, 6, 6, bright); // shine on the wing case
+            p.Set(5, 8, new Color32(255, 250, 220, 255));
+            p.Line(2, 9, 4, 8, bright); p.Line(14, 9, 12, 8, bright);
+            p.Line(2, 4, 4, 5, bright); p.Line(14, 4, 12, 5, bright);
+            p.Set(13, 13, new Color32(255, 255, 255, 255)); // sparkle
             return p;
         }
 

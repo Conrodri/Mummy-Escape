@@ -8,7 +8,7 @@ namespace MummyEscape.Visual
 
     /// <summary>Silhouette of the mummy.</summary>
     /// <summary>Animated effect of a legendary colour (casino): the bandages change every frame.</summary>
-    public enum LegendaryFx { None, Rainbow, Fire, Galaxy, Aurora, Gold, Storm, Spectre, Neon, Prism, Magma }
+    public enum LegendaryFx { None, Rainbow, Fire, Galaxy, Aurora, Gold, Storm, Spectre, Neon, Prism, Magma, Moon, Lapis, Nile }
 
     public enum MummyShape { Classic, Cat, Jackal }
 
@@ -54,6 +54,10 @@ namespace MummyEscape.Visual
         public TorchStyle TorchStyle;
         public HatStyle Hat;
         public ShoeStyle Shoes;
+        /// <summary>Recolours the hat, shoes or torch in one hue (pass sets); transparent = as painted.</summary>
+        public Color32 Tint;
+        /// <summary>Where an item never sold for scarabs comes from ("Pass", "Trésor"), shown on its card; null otherwise.</summary>
+        public string Badge;
     }
 
     /// <summary>Everything the mummy wears at once.</summary>
@@ -222,14 +226,14 @@ namespace MummyEscape.Visual
         public static SkinDef Get(string id)
         {
             foreach (var s in All) if (s.Id == id) return s;
-            return PvpSkins.Resolve(id) ?? LegendarySkins.Resolve(id) ?? All[0];
+            return PvpSkins.Resolve(id) ?? LegendarySkins.Resolve(id) ?? Monetization.PremiumSkins.Resolve(id) ?? All[0];
         }
 
         /// <summary>Item of that slot, or the slot's default when the id is unknown or belongs to another slot.</summary>
         public static SkinDef Get(string id, CosmeticSlot slot)
         {
             foreach (var s in All) if (s.Id == id && s.Slot == slot) return s;
-            var pvp = PvpSkins.Resolve(id) ?? LegendarySkins.Resolve(id);
+            var pvp = PvpSkins.Resolve(id) ?? LegendarySkins.Resolve(id) ?? Monetization.PremiumSkins.Resolve(id);
             if (pvp != null && pvp.Slot == slot) return pvp;
             foreach (var s in All) if (s.Slot == slot && s.Price == 0) return s;
             return All[0];

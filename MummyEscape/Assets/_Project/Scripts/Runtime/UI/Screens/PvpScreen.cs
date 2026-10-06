@@ -22,7 +22,7 @@ namespace MummyEscape.UI.Screens
 
         Image _badge;
         Text _league, _elo, _record, _season, _info;
-        Text _seals;
+        Text _seals, _plays;
         Button _find, _claim;
         RectTransform _history, _saved;
         Text _historyHint, _savedTitle, _savedHint;
@@ -84,6 +84,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Rounded(_find.image, 56);
             UIKit.FitText(_find.GetComponentInChildren<Text>(), 24);
             UIKit.Size(_find, 116);
+            _plays = UIKit.Label(list, "", 24, UIKit.Dim);
+            UIKit.Size(_plays, 34);
 
             var bots = UIKit.Toggle(list, "Un bot de ma ligue si personne en vue (1 min)", App.Settings.PvpBots, App.Settings.SetPvpBots);
             UIKit.Size(bots, 64);
@@ -190,6 +192,7 @@ namespace MummyEscape.UI.Screens
             else _season.text = "";
 
             _find.gameObject.SetActive(App.Pvp != null);
+            _plays.text = PlayGate.Status(App, Monetization.PlayMode.Duel);
             UIKit.SetLabel(_find, _duelSearch != null ? "Annuler la recherche" : _busy ? "Recherche d'un adversaire…" : locked ? Loc.F("{0} étoiles en solo pour débloquer ({1}/{0})", PvpConfig.RequiredSoloStars, App.Save.TotalStars) : "Chercher un adversaire");
             _find.interactable = available && !locked && (!_busy || _duelSearch != null);
 
@@ -335,6 +338,7 @@ namespace MummyEscape.UI.Screens
         {
             if (_duelSearch != null) { CancelDuelSearch(); return; }
             if (_busy || App.Pvp == null) return;
+            if (!PlayGate.Ensure(App, Monetization.PlayMode.Duel, FindDuel)) return;
             var matchmaker = DuelMatchmakerFactory.For(App.Pvp);
             if (matchmaker == null)
             {
@@ -405,6 +409,7 @@ namespace MummyEscape.UI.Screens
         {
             var app = MummyEscape.App.GameApp.I;
             var match = new PvpMatch(start.Match, start.Me);
+            app.Save.UsePlay(Monetization.PlayMode.Duel);
             _ = Task.Run(() => PvpServer.Arena(match.Seed));
             router.Open<VsScreen>().Show(app.Save.Loadout, app.Online.PlayerName, match.Duel.MyElo, match.Ghost, () =>
             {
@@ -418,6 +423,7 @@ namespace MummyEscape.UI.Screens
         {
             var app = MummyEscape.App.GameApp.I;
             _ = System.Threading.Tasks.Task.Run(() => PvpServer.Arena(duel.Seed));
+            app.Save.UsePlay(Monetization.PlayMode.Duel);
             router.Open<VsScreen>().Show(app.Save.Loadout, app.Online.PlayerName, duel.MyElo, duel.Ghost, () =>
             {
                 router.Open<HudScreen>();

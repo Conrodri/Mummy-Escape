@@ -344,12 +344,18 @@ namespace MummyEscape.UI.Screens
 
     // ====================================================================== account
 
-    /// <summary>Optional account (username + password, no e-mail): create, sign in, change password, sign out, delete.</summary>
+    /// <summary>
+    /// Optional account: Google Play Games (Android) or a username + password (no e-mail). Create, sign in, change
+    /// password, sign out, delete.
+    /// </summary>
     public sealed class AccountScreen : UIScreen
     {
         public override bool IsModal => true;
         RectTransform _content;
         ScrollRect _scroll;
+        /// <summary>The last Google attempt that failed, shown under the buttons.</summary>
+        string _googleError;
+        bool _busy;
 
         protected override void Build()
         {
@@ -358,7 +364,11 @@ namespace MummyEscape.UI.Screens
             _content = PrivacyUI.ScrollBody(this, Body(190, 40, 40), out _scroll);
         }
 
-        public override void OnShow() => Rebuild();
+        public override void OnShow()
+        {
+            _googleError = null;
+            Rebuild();
+        }
 
         void Rebuild()
         {
@@ -366,6 +376,7 @@ namespace MummyEscape.UI.Screens
             UIKit.ClearChildren(_content);
             var online = App.Online;
             var card = UIKit.Card(_content);
+            bool google = GoogleSignIn.Supported;
 
             if (!App.Privacy.OnlineAllowed && !online.IsDemo)
             {
@@ -378,9 +389,14 @@ namespace MummyEscape.UI.Screens
             if (online.Account == AccountState.Account)
             {
                 UIKit.SectionTitle(card, "Connecté");
-                PrivacyUI.Paragraph(card, Loc.F("Identifiant : {0}\nPseudonyme public : {1}", online.Username, online.PlayerName) + "\n\n" +
-                    Loc.T("Ta progression est sauvegardée en ligne : connecte-toi avec ce compte sur un autre appareil pour la retrouver."));
-                PrivacyUI.Wide(card, "Changer le mot de passe", ChangePassword);
+                string who = online.HasPassword ? Loc.F("Identifiant : {0}", online.Username) : Loc.T("Compte Google Play Jeux");
+                if (online.HasPassword && online.GoogleLinked) who += "\n" + Loc.T("Lié à Google Play Jeux");
+                PrivacyUI.Paragraph(card, who + "\n" + Loc.F("Pseudonyme public : {0}", online.PlayerName) + "\n\n" +
+                    Loc.T(online.GoogleLinked ? "Ta progression est sauvegardée en ligne : sur un autre téléphone Android, connecte-toi avec Google Play Jeux pour la retrouver."
+                                              : "Ta progression est sauvegardée en ligne : connecte-toi avec ce compte sur un autre appareil pour la retrouver."));
+                if (google && !online.GoogleLinked) PrivacyUI.Wide(card, "Lier Google Play Jeux", LinkGoogle);
+                if (online.HasPassword) PrivacyUI.Wide(card, "Changer le mot de passe", ChangePassword);
+                GoogleError(card);
                 PrivacyUI.Wide(card, "Se déconnecter", async () => { await App.SignOut(); Rebuild(); });
                 PrivacyUI.Wide(card, "Supprimer mon compte", () => { Router.Close(this); Router.Open<PrivacyScreen>(); }, 34);
                 return;
@@ -389,18 +405,65 @@ namespace MummyEscape.UI.Screens
             if (online.Account == AccountState.Guest || online.IsDemo)
             {
                 UIKit.SectionTitle(card, "Tu joues en invité");
-                PrivacyUI.Paragraph(card, "Ta progression n'existe que sur ce téléphone. Crée un compte pour la sauvegarder et la retrouver ailleurs : " +
-                    "il suffit d'un identifiant et d'un mot de passe, sans adresse e-mail.");
-                PrivacyUI.Wide(card, "Créer un compte", CreateAccount, 36, 100, ButtonStyle.Primary);
+                PrivacyUI.Paragraph(card, google
+                    ? "Ta progression n'existe que sur ce téléphone. Crée un compte pour la sauvegarder et la retrouver ailleurs : en un geste avec Google Play Jeux, ou avec un identifiant et un mot de passe, sans adresse e-mail."
+                    : "Ta progression n'existe que sur ce téléphone. Crée un compte pour la sauvegarder et la retrouver ailleurs : " +
+                      "il suffit d'un identifiant et d'un mot de passe, sans adresse e-mail.");
+                if (google) PrivacyUI.Wide(card, "Continuer avec Google Play Jeux", LinkGoogle, 36, 100, ButtonStyle.Primary);
+                PrivacyUI.Wide(card, "Créer un compte", CreateAccount, 36, 100, google ? ButtonStyle.Secondary : ButtonStyle.Primary);
             }
             else
             {
                 UIKit.SectionTitle(card, "Non connecté");
                 PrivacyUI.Paragraph(card, Loc.T(online.Status), 30, UIKit.Dim);
+                if (google) PrivacyUI.Wide(card, "Se connecter avec Google Play Jeux", SignInWithGoogle, 36, 100, ButtonStyle.Primary);
                 PrivacyUI.Wide(card, "Continuer en invité", async () => { await App.StartOnline(); Rebuild(); });
             }
             PrivacyUI.Wide(card, "J'ai déjà un compte", SignIn);
+            GoogleError(card);
             PrivacyUI.Paragraph(card, "Sans e-mail, un mot de passe oublié ne peut pas être récupéré : note-le bien.", 28, UIKit.Dim);
+        }
+
+        void GoogleError(Transform card)
+        {
+            if (!string.IsNullOrEmpty(_googleError)) PrivacyUI.Paragraph(card, "<color=#E0903A>" + Loc.T(_googleError) + "</color>", 28);
+        }
+
+        /// <summary>The guest becomes a Google account; if that Google account already has its progress, offers to sign in to it.</summary>
+        async void LinkGoogle()
+        {
+            if (_busy) return;
+            _busy = true;
+            string error = await App.LinkGoogle();
+            _busy = false;
+            if (this == null) return;
+            _googleError = null;
+            if (error == IOnlineService.GoogleTaken)
+            {
+                Router.Open<ConfirmDialog>().Configure("Compte Google déjà utilisé",
+                    "Ce compte Google Play Jeux a déjà sa propre progression. T'y connecter ? Celle de ce téléphone y sera ajoutée.",
+                    "Me connecter", async () =>
+                    {
+                        string e = await App.SignInWithGoogle();
+                        if (e == null) Rebuild();
+                        return e;
+                    });
+                return;
+            }
+            _googleError = error;
+            Rebuild();
+        }
+
+        async void SignInWithGoogle()
+        {
+            if (_busy) return;
+            _busy = true;
+            string error = await App.SignInWithGoogle();
+            _busy = false;
+            if (this == null) return;
+            if (error == null && !App.Privacy.OnlineAllowed) App.Privacy.SetOnline(true);
+            _googleError = error;
+            Rebuild();
         }
 
         void CreateAccount() =>

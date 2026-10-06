@@ -8,7 +8,8 @@ namespace MummyEscape.UI.Screens
     {
         public override NavTab Tab => NavTab.Home;
 
-        Text _stars, _coins;
+        Text _stars, _coins, _gold;
+        Button _pass;
         Image _mummy, _glow;
         RectTransform _stage;
         Text _online;
@@ -29,6 +30,11 @@ namespace MummyEscape.UI.Screens
             top.childAlignment = TextAnchor.MiddleLeft;
             _stars = UIKit.Chip(top.transform, UIKit.Art.Star, "0");
             _coins = UIKit.Chip(top.transform, UIKit.Art.Scarab, "0");
+            // Golden scarabs: a tap opens the Treasure.
+            _gold = UIKit.Chip(top.transform, UIKit.Art.GoldScarab, "0", TreasureScreen.GoldColor);
+            var goldPlate = _gold.transform.parent.gameObject;
+            goldPlate.GetComponent<Image>().raycastTarget = true;
+            goldPlate.AddComponent<Button>().onClick.AddListener(() => Router.Open<TreasureScreen>());
             UIKit.Size(UIKit.Rect("Spacer", top.transform), -1, -1, 1);
             UIKit.IconButton(top.transform, UISprites.Gear, () => Router.Open<SettingsScreen>(), 92);
 
@@ -65,6 +71,14 @@ namespace MummyEscape.UI.Screens
             UIKit.Place((RectTransform)playBtn.transform, 0.5f, 0.5f, 620, 124);
             UIKit.Rounded(playBtn.image, 62);
 
+            // The season pass, with what is waiting to be collected.
+            var passRow = UIKit.Rect("PassRow", column);
+            UIKit.Size(passRow, 84);
+            _pass = UIKit.Button(passRow, "Pass", () => Router.Open<PassScreen>(), 30);
+            UIKit.Place((RectTransform)_pass.transform, 0.5f, 0.5f, 620, 84);
+            UIKit.Rounded(_pass.image, 42);
+            UIKit.FitText(_pass.GetComponentInChildren<Text>(), 18);
+
             // Duel, solo, rankings, friends and the shop are in the bottom bar (NavBar).
 
             _online = UIKit.Label(Root, "", 24, UIKit.Dim, TextAnchor.MiddleCenter);
@@ -78,6 +92,10 @@ namespace MummyEscape.UI.Screens
             FitMummy();
             _stars.text = App.Save.TotalStars.ToString();
             _coins.text = App.Save.Data.Coins.ToString();
+            _gold.text = App.Save.Gold.ToString();
+            int claimable = App.Save.ClaimableCount;
+            UIKit.SetLabel(_pass, Loc.F("Pass · palier {0}/{1}", App.Save.PassTier, Monetization.BattlePass.Tiers)
+                                  + (claimable > 0 ? "  ·  " + Loc.P(claimable, "{0} récompense", "{0} récompenses") : ""));
             MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)

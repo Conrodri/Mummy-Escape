@@ -66,6 +66,9 @@ namespace MummyEscape.Visual
                 case LegendaryFx.Spectre: return new Color(0.4f, 1f, 0.9f);
                 case LegendaryFx.Neon: return new Color(1f, 0.35f, 0.85f);
                 case LegendaryFx.Prism: return new Color(0.8f, 0.92f, 1f);
+                case LegendaryFx.Moon: return new Color(0.7f, 0.78f, 1f);
+                case LegendaryFx.Lapis: return new Color(1f, 0.82f, 0.35f);
+                case LegendaryFx.Nile: return new Color(0.3f, 0.9f, 0.85f);
                 default: return new Color(1f, 0.35f, 0.1f);
             }
         }

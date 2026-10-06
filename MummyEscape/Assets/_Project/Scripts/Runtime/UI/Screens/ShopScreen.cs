@@ -31,7 +31,7 @@ namespace MummyEscape.UI.Screens
         internal static readonly Color WornFill = new Color32(30, 92, 84, 255);
         internal static readonly Color WornRim = new Color(0.25f, 0.88f, 0.8f, 0.6f);
 
-        Text _coins, _stars, _seals, _note;
+        Text _coins, _stars, _seals, _gold, _note;
         Image _outfit;
         UIKit.Segmented _tabs;
         RectTransform _list;
@@ -73,12 +73,17 @@ namespace MummyEscape.UI.Screens
             // Stars unlock the act collections, scarabs pay for them.
             var wallet = UIKit.Row(side, 72, 14);
             wallet.childAlignment = TextAnchor.MiddleLeft;
-            _stars = UIKit.Chip(wallet.transform, UIKit.Art.Star, "", null, 72);
-            _coins = UIKit.Chip(wallet.transform, UIKit.Art.Scarab, "", UIKit.Gold, 72);
-            _seals = UIKit.Chip(wallet.transform, UISprites.Seal, "", UIKit.Turquoise, 72);
-            var hint = UIKit.Label(side, "Les étoiles débloquent les collections des actes, les scarabées les paient.", 26, UIKit.Dim, TextAnchor.MiddleLeft);
-            UIKit.FitText(hint, 18);
-            UIKit.Size(hint, 80);
+            _stars = UIKit.Chip(wallet.transform, UIKit.Art.Star, "", null, 62);
+            _coins = UIKit.Chip(wallet.transform, UIKit.Art.Scarab, "", UIKit.Gold, 62);
+            _seals = UIKit.Chip(wallet.transform, UISprites.Seal, "", UIKit.Turquoise, 62);
+            _gold = UIKit.Chip(wallet.transform, UIKit.Art.GoldScarab, "", TreasureScreen.GoldColor, 62);
+            // The real-money side: golden scarabs, exclusives and the season pass.
+            var premium = UIKit.Row(side, 76, 14);
+            var treasure = UIKit.Button(premium.transform, "Trésor", () => Router.Open<TreasureScreen>(), 28, ButtonStyle.Primary);
+            UIKit.Size(treasure, -1, -1, 1);
+            var pass = UIKit.Button(premium.transform, "Pass de saison", () => Router.Open<PassScreen>(), 28);
+            UIKit.FitText(pass.GetComponentInChildren<Text>(), 16);
+            UIKit.Size(pass, -1, -1, 1);
 
             _tabs = new UIKit.Segmented(body, Tabs, i => { _tab = i; Refresh(); _scroll.verticalNormalizedPosition = 1f; }, 80);
             _list = UIKit.Scroll(body, out _scroll);
@@ -109,6 +114,7 @@ namespace MummyEscape.UI.Screens
         {
             var save = App.Save;
             _coins.text = save.Data.Coins.ToString();
+            _gold.text = save.Gold.ToString();
             _stars.text = save.TotalStars.ToString();
             var pvp = App.PvpProfile?.Data;
             _seals.transform.parent.gameObject.SetActive(App.Pvp != null);
@@ -128,6 +134,9 @@ namespace MummyEscape.UI.Screens
             items.AddRange(PvpSkins.Owned(save.Data.OwnedSkins, TabSlots[_tab]));
             // So do the casino's legendaries.
             if (TabSlots[_tab] == CosmeticSlot.Color) items.AddRange(LegendarySkins.OwnedScarabLegendaries(save.Data.OwnedSkins));
+            // And the treasure exclusives and pass rewards.
+            foreach (var s in Monetization.PremiumSkins.All)
+                if (s.Slot == TabSlots[_tab] && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
             for (int i = 0; i < items.Count; i += Columns)
             {
                 var cards = UIKit.Row(_list, CardHeight, 14);
@@ -156,8 +165,10 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(card, -1, 0, 1);
             UIKit.Column(card.transform, 2, 12, TextAnchor.MiddleCenter);
             var tag = UIKit.Label(card.transform, item.Legendary ? Loc.T("Légendaire").ToUpperInvariant()
+                                  : item.Badge != null ? Loc.T(item.Badge).ToUpperInvariant()
                                   : item.Pvp ? Loc.T("Duel").ToUpperInvariant() : item.Theme == 0 ? Loc.T("Classique") : Loc.F("Acte {0}", item.Theme).ToUpperInvariant(), 20,
-                                  item.Legendary ? LegendaryColor : item.Pvp ? UIKit.Turquoise : item.Theme == 0 ? UIKit.Dim : ThemeColor(item.Theme), TextAnchor.MiddleCenter, FontStyle.Bold);
+                                  item.Legendary ? LegendaryColor : item.Badge != null ? TreasureScreen.GoldColor
+                                  : item.Pvp ? UIKit.Turquoise : item.Theme == 0 ? UIKit.Dim : ThemeColor(item.Theme), TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(tag, 14);
             UIKit.Size(tag, 28, 0);
             var preview = Portrait(card.transform, save.Loadout.With(item));

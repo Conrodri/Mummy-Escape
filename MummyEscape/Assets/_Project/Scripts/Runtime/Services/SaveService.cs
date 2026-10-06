@@ -28,6 +28,22 @@ namespace MummyEscape.Services
         public int WheelSpins;
         /// <summary>Country shown in the rankings (ISO alpha-2). Empty = detect from the device.</summary>
         public string Country = "";
+
+        // ---- Real-money economy (see Monetization): golden scarabs, daily game limits, season pass.
+        /// <summary>Golden scarabs, bought in the store (10 € = 100) or earned on the pass.</summary>
+        public int GoldScarabs;
+        /// <summary>Local day ("yyyy-MM-dd") the games left below belong to; another day refills them.</summary>
+        public string PlaysDay = "";
+        public int SoloLeft, DuelLeft, DuoLeft;
+        /// <summary>Season of the pass progress below; another season starts it over.</summary>
+        public string PassSeason = "";
+        public int PassXp;
+        /// <summary>Seasons whose paid pass the player bought.</summary>
+        public List<string> PassesOwned = new List<string>();
+        public List<int> PassFreeClaimed = new List<int>();
+        public List<int> PassPremiumClaimed = new List<int>();
+        /// <summary>Store transactions already credited (a purchase reported twice is paid once).</summary>
+        public List<string> Purchases = new List<string>();
     }
 
     public struct RecordOutcome
@@ -41,7 +57,7 @@ namespace MummyEscape.Services
     }
 
     /// <summary>Local progression (JSON in persistentDataPath). The online layer mirrors it but is never required.</summary>
-    public sealed class SaveService
+    public sealed partial class SaveService
     {
         public SaveData Data { get; private set; } = new SaveData();
         public event Action Changed;
@@ -108,6 +124,7 @@ namespace MummyEscape.Services
             Data.Coins = Math.Max(Data.Coins, other.Coins);
             foreach (var s in other.OwnedSkins) if (!Data.OwnedSkins.Contains(s)) Data.OwnedSkins.Add(s);
             if (string.IsNullOrEmpty(Data.Country)) Data.Country = other.Country ?? "";
+            MergeEconomy(other);
             bool changed = JsonUtility.ToJson(Data) != before;
             if (changed) Save();
             return changed;
@@ -167,6 +184,7 @@ namespace MummyEscape.Services
             bool improved = rec.Merge(result);
             int coins = Progression.CoinsFor(result, previousStars);
             Data.Coins += coins;
+            AddPassXp(Monetization.BattlePass.SoloXp(result.Won, result.Stars), false);
             Save();
             return new RecordOutcome { NewBest = improved && result.Won, CoinsEarned = coins, PreviousBestOverPar = previousBest, PreviousBestTimeMs = previousTime };
         }

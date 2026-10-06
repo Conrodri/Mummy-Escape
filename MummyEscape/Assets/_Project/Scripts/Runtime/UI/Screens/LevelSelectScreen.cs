@@ -12,6 +12,7 @@ namespace MummyEscape.UI.Screens
         Text _actNumber, _actTitle, _actInfo, _actStars;
         Button _prev, _next;
         RectTransform _grid;
+        Text _plays;
 
         protected override void Build()
         {
@@ -44,6 +45,8 @@ namespace MummyEscape.UI.Screens
 
             _grid = (RectTransform)UIKit.FittedGrid(body, 3, new Vector2(290, 236), new Vector2(30, 30), out var slot).transform;
             UIKit.Size(slot, -1, -1, -1, 1);
+            _plays = UIKit.Label(body, "", 26, UIKit.Dim);
+            UIKit.Size(_plays, 36);
         }
 
         public override void OnShow()
@@ -52,6 +55,7 @@ namespace MummyEscape.UI.Screens
             App.Audio.PlayMusic(0);
             var furthest = App.Save.FurthestUnlocked();
             SetAct(furthest.Act);
+            _plays.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
             App.Audio.PrefetchMusic(furthest.Act); // its theme is ready when the level starts
         }
 
@@ -116,8 +120,11 @@ namespace MummyEscape.UI.Screens
 
         void Play(LevelId id)
         {
-            Router.Open<HudScreen>();
-            _ = App.Game.StartLevel(id);
+            PlayGate.Play(App, Monetization.PlayMode.Solo, () =>
+            {
+                Router.Open<HudScreen>();
+                _ = App.Game.StartLevel(id);
+            });
         }
     }
 }

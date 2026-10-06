@@ -98,6 +98,9 @@ namespace MummyEscape.Online
     /// </summary>
     public interface IOnlineService
     {
+        /// <summary>Error of <see cref="LinkGoogleAsync"/>: the Google account belongs to another player.</summary>
+        public const string GoogleTaken = "GOOGLE_TAKEN";
+
         // ---- account (all error-returning calls give a French message, or null on success)
         AccountState Account { get; }
         /// <summary>Login of the account (empty for a guest).</summary>
@@ -106,6 +109,17 @@ namespace MummyEscape.Online
         Task<string> CreateAccountAsync(string username, string password);
         /// <summary>Signs in to an existing account (another device, after a sign-out...).</summary>
         Task<string> SignInAsync(string username, string password);
+        /// <summary>The account signs in with a password (false for an account made with Google only).</summary>
+        bool HasPassword { get; }
+        /// <summary>Google Play Games is attached to this player: signing in with it on any Android phone finds it again.</summary>
+        bool GoogleLinked { get; }
+        /// <summary>
+        /// Attaches the phone's Google Play Games account to the current guest, who becomes an account (progress,
+        /// scores and friends kept). <see cref="GoogleTaken"/> when that Google account already has its own progress.
+        /// </summary>
+        Task<string> LinkGoogleAsync();
+        /// <summary>Signs in to the player of the phone's Google Play Games account (a new one if it has none yet).</summary>
+        Task<string> SignInWithGoogleAsync();
         /// <summary>Ends the session on this device; online features stop until the next sign-in.</summary>
         Task SignOutAsync();
         Task<string> ChangePasswordAsync(string current, string next);

@@ -21,7 +21,7 @@ namespace MummyEscape.UI.Screens
 
         RectTransform _list;
         ScrollRect _scroll;
-        Text _info;
+        Text _info, _plays;
         TeamsResponse _teams;
         IReadOnlyList<Online.FriendInfo> _friends;
         bool _busy;
@@ -43,6 +43,8 @@ namespace MummyEscape.UI.Screens
             _info = UIKit.Label(body, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 64);
+            _plays = UIKit.Label(body, "", 24, UIKit.Dim);
+            UIKit.Size(_plays, 34);
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 16;
@@ -67,6 +69,7 @@ namespace MummyEscape.UI.Screens
         {
             App.Lighting.SetMood(false);
             _modes.Select(1);
+            _plays.text = PlayGate.Status(App, Monetization.PlayMode.Duo);
             _busy = false;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;
@@ -244,6 +247,7 @@ namespace MummyEscape.UI.Screens
         async void Search(Duo duo)
         {
             if (_search != null || _teams == null) return;
+            if (!PlayGate.Ensure(App, Monetization.PlayMode.Duo, () => Search(duo))) return;
             var matchmaker = RelayMatchmakerFactory.For(App.Pvp);
             if (matchmaker == null)
             {
@@ -283,6 +287,7 @@ namespace MummyEscape.UI.Screens
                 _info.text = Loc.T("Impossible de préparer le match.");
                 return;
             }
+            App.Save.UsePlay(Monetization.PlayMode.Duo);
             Router.Open<HudScreen>();
             Router.Open<RelayVsScreen>().Show(link.Match, link.Me, App.Game.BeginRelayPreview);
         }

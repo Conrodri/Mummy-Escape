@@ -136,6 +136,11 @@ namespace MummyEscape.Online
             return Task.FromResult<string>(null);
         }
 
+        public bool HasPassword => Username != "";
+        public bool GoogleLinked => false;
+        public Task<string> LinkGoogleAsync() => Task.FromResult("Google Play Jeux n'est disponible que sur Android, en ligne.");
+        public Task<string> SignInWithGoogleAsync() => LinkGoogleAsync();
+
         public Task SignOutAsync()
         {
             Account = AccountState.Offline;

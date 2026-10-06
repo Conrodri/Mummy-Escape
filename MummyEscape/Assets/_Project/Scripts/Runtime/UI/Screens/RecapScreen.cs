@@ -256,14 +256,20 @@ namespace MummyEscape.UI.Screens
         {
             var next = Progression.Next(_result.Level);
             if (!next.HasValue) return;
-            Router.Close(this);
-            _ = App.Game.StartLevel(next.Value);
+            PlayGate.Play(App, Monetization.PlayMode.Solo, () =>
+            {
+                Router.Close(this);
+                _ = App.Game.StartLevel(next.Value);
+            });
         }
 
         void Retry()
         {
-            Router.Close(this);
-            App.Game.Restart();
+            PlayGate.Play(App, Monetization.PlayMode.Solo, () =>
+            {
+                Router.Close(this);
+                App.Game.Restart();
+            });
         }
 
         void Leaderboard()

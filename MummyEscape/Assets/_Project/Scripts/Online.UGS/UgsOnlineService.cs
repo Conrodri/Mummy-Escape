@@ -45,7 +45,18 @@ namespace MummyEscape.Online
             {
                 await UnityServices.InitializeAsync();
                 // Resumes the cached session (guest or account) or creates a guest player.
-                if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                var auth = AuthenticationService.Instance;
+                if (!auth.IsSignedIn)
+                {
+                    // A fresh install (no session on the phone): the Play Games account finds its player again, or makes one.
+                    string code = !auth.SessionTokenExists && GoogleSignIn.Supported ? await GoogleSignIn.Provider.GetAuthCodeAsync(false) : null;
+                    if (code != null)
+                    {
+                        try { await auth.SignInWithGooglePlayGamesAsync(code); }
+                        catch (Exception e) { Debug.LogWarning("[Online] Google Play Games sign-in failed, playing as a guest: " + e.Message); }
+                    }
+                    if (!auth.IsSignedIn) await auth.SignInAnonymouslyAsync();
+                }
                 await AuthenticationService.Instance.GetPlayerInfoAsync();
                 PlayerName = await AuthenticationService.Instance.GetPlayerNameAsync();
                 await FriendsService.Instance.InitializeAsync();
@@ -234,7 +245,61 @@ namespace MummyEscape.Online
             }
         }
 
-        public string Username => IsAvailable ? AuthenticationService.Instance.PlayerInfo?.Username ?? "" : "";
+        /// <summary>The login, or "Google Play Jeux" for an account made with Google only.</summary>
+        public string Username => HasPassword ? AuthenticationService.Instance.PlayerInfo.Username : GoogleLinked ? Loc.T("Google Play Jeux") : "";
+
+        public bool HasPassword => IsAvailable && !string.IsNullOrEmpty(AuthenticationService.Instance.PlayerInfo?.Username);
+
+        public bool GoogleLinked => IsAvailable && !string.IsNullOrEmpty(AuthenticationService.Instance.PlayerInfo?.GetGooglePlayGamesId());
+
+        const string NoGoogle = "Connexion à Google Play Jeux annulée ou impossible.";
+
+        public async Task<string> LinkGoogleAsync()
+        {
+            if (!IsAvailable) return Status;
+            if (!GoogleSignIn.Supported) return NoGoogle;
+            string code = await GoogleSignIn.Provider.GetAuthCodeAsync(true);
+            if (code == null) return NoGoogle;
+            try
+            {
+                // Same player id: progress, scores and friends stay, Google becomes a way back in.
+                await AuthenticationService.Instance.LinkWithGooglePlayGamesAsync(code);
+                await AuthenticationService.Instance.GetPlayerInfoAsync();
+                return null;
+            }
+            catch (AuthenticationException e) when (e.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
+            {
+                return IOnlineService.GoogleTaken;
+            }
+            catch (RequestFailedException e) { return Explain(e, "Google Play Jeux n'a pas pu être lié à ce joueur."); }
+        }
+
+        public async Task<string> SignInWithGoogleAsync()
+        {
+            if (string.IsNullOrEmpty(Application.cloudProjectId)) return Status;
+            if (!GoogleSignIn.Supported) return NoGoogle;
+            try
+            {
+                if (!IsAvailable) await UnityServices.InitializeAsync();
+                string code = await GoogleSignIn.Provider.GetAuthCodeAsync(true);
+                if (code == null) return NoGoogle;
+                var auth = AuthenticationService.Instance;
+                // Keep the current session token: if the sign-in fails, the previous player resumes.
+                if (auth.IsSignedIn) auth.SignOut(false);
+                try
+                {
+                    await auth.SignInWithGooglePlayGamesAsync(code);
+                }
+                catch (Exception)
+                {
+                    if (!auth.IsSignedIn && auth.SessionTokenExists) await auth.SignInAnonymouslyAsync();
+                    throw;
+                }
+                await AfterSignIn();
+                return null;
+            }
+            catch (RequestFailedException e) { return Explain(e, "Connexion à Google Play Jeux impossible."); }
+        }
 
         public async Task<string> CreateAccountAsync(string username, string password)
         {

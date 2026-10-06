@@ -88,13 +88,28 @@ namespace MummyEscape.App
             var ghost = Child<GhostView>("Ghost");
             ghost.Init(Art, Fx.Unlit);
             Game.Init(this, maze, player, ghost, input);
-            Game.DuelEnded += (match, run) => UI.Open<PvpResultScreen>().Show(match, run);
-            Game.RelayEnded += outcome => UI.Open<RelayResultScreen>().Show(outcome);
+            Game.DuelEnded += (match, run) =>
+            {
+                Save.AddPassXp(Monetization.BattlePass.MatchXp);
+                UI.Open<PvpResultScreen>().Show(match, run);
+            };
+            Game.RelayEnded += outcome =>
+            {
+                Save.AddPassXp(Monetization.BattlePass.MatchXp);
+                UI.Open<RelayResultScreen>().Show(outcome);
+            };
 
             // Nothing goes online before the player has been informed and has chosen to (GDPR): offline until then.
             Online = Offline(OfflineReason);
             UI = Child<UIRouter>("UI");
             UI.Init();
+            // The ad and store SDKs register themselves (their own assemblies); until then, test stand-ins outside release builds.
+            if (Application.isEditor || Debug.isDebugBuild)
+            {
+                // (Replaced on every start: without a domain reload the old ones would still point at the last router.)
+                if (Monetization.Ads.Provider == null || Monetization.Ads.Provider is SimulatedAds) Monetization.Ads.Provider = new SimulatedAds(UI);
+                if (Monetization.Store.Provider == null || Monetization.Store.Provider is SimulatedStore) Monetization.Store.Provider = new SimulatedStore(UI);
+            }
             UI.Open<MainMenuScreen>();
             if (Privacy.NeedsAnswer) UI.Open<WelcomeScreen>();
 
@@ -273,6 +288,28 @@ namespace MummyEscape.App
             if (service is OfflineOnlineService && !service.IsDemo) service = OnlineServiceFactory.Create();
             service.Country = Save.Country;
             string error = await service.SignInAsync(username, password);
+            if (error != null) return error;
+            if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
+            Online = service;
+            await AfterAccountChange();
+            return null;
+        }
+
+        /// <summary>Attaches Google Play Games to the current guest (it becomes an account), then backs the progression up.</summary>
+        public async Task<string> LinkGoogle()
+        {
+            string error = await Online.LinkGoogleAsync();
+            if (error == null) await AfterAccountChange();
+            return error;
+        }
+
+        /// <summary>Signs in with the phone's Google Play Games account (connects the backend first when needed).</summary>
+        public async Task<string> SignInWithGoogle()
+        {
+            var service = Online;
+            if (service is OfflineOnlineService && !service.IsDemo) service = OnlineServiceFactory.Create();
+            service.Country = Save.Country;
+            string error = await service.SignInWithGoogleAsync();
             if (error != null) return error;
             if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
             Online = service;
