@@ -297,7 +297,7 @@ namespace MummyEscape.UI.Screens
                 TeamView.OpenBattleHome(Router, _lastBattleKind);
                 return;
             }
-            if (!PlayGate.Ensure(App, Monetization.PlayMode.Duel, Again)) return;
+            if (!PlayGate.Ensure(App, Again)) return;
             // The menu button stays: it cancels the search.
             _again.interactable = false;
             _note.text = Loc.T("Recherche d'un adversaire…");

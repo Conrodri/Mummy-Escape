@@ -2,20 +2,8 @@ using System.Collections.Generic;
 
 namespace MummyEscape.Monetization
 {
-    /// <summary>The three kinds of games counted by the daily limits.</summary>
+    /// <summary>The three kinds of games: solo spends the solo energy, duels and 2v2 matches share the combat energy.</summary>
     public enum PlayMode { Solo, Duel, Duo }
-
-    /// <summary>
-    /// Free games per day, won or lost: 10 solo runs, 3 live duels and 3 2v2 matches, back to full at local midnight.
-    /// A rewarded ad gives 3 more solo runs or 1 more match of the kind that ran out; the pass of the season lifts
-    /// every limit.
-    /// </summary>
-    public static class PlayLimits
-    {
-        public static int AdRefill(PlayMode mode) => mode == PlayMode.Solo ? 3 : 1;
-
-        public static int Max(PlayMode mode) => mode == PlayMode.Solo ? 10 : 3;
-    }
 
     /// <summary>A pack of golden scarabs sold for real money through the store.</summary>
     public sealed class GoldPack

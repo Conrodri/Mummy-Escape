@@ -329,7 +329,7 @@ namespace MummyEscape.UI.Screens
         async void Search(Duo duo)
         {
             if (_search != null || _teams == null) return;
-            if (!PlayGate.Ensure(App, Monetization.PlayMode.Duo, () => Search(duo))) return;
+            if (!PlayGate.Ensure(App, () => Search(duo))) return;
             var matchmaker = RelayMatchmakerFactory.For(App.Pvp);
             if (matchmaker == null)
             {
@@ -369,7 +369,7 @@ namespace MummyEscape.UI.Screens
                 _info.text = Loc.T("Impossible de préparer le match.");
                 return;
             }
-            App.Save.UsePlay(Monetization.PlayMode.Duo);
+            PlayGate.SpendPvp(App);
             Router.Open<HudScreen>();
             Router.Open<RelayVsScreen>().Show(link.Match, link.Me, App.Game.BeginRelayPreview);
         }

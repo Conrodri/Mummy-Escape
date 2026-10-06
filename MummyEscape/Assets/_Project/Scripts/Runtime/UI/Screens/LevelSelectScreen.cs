@@ -215,7 +215,7 @@ namespace MummyEscape.UI.Screens
 
         void Play(LevelId id)
         {
-            PlayGate.Play(App, Monetization.PlayMode.Solo, () =>
+            PlayGate.Solo(App, id, () =>
             {
                 Router.Open<HudScreen>();
                 _ = App.Game.StartLevel(id);

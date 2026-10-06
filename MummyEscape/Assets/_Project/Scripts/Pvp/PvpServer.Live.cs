@@ -54,6 +54,8 @@ namespace MummyEscape.Pvp
             var dataA = await Update(a.PlayerId);
             var dataB = await Update(b.PlayerId);
             if (Leagues.FromElo(dataA.Elo) != Leagues.FromElo(dataB.Elo)) return new LiveDuelResponse { Error = "DIVISION" };
+            string spent = await SpendEnergyAsync(new[] { a.PlayerId, b.PlayerId });
+            if (spent != null) return new LiveDuelResponse { Error = spent };
             var duel = await Shared<LiveDuel>(LiveCollection, id, d => d ?? new LiveDuel
             {
                 Id = id,
@@ -83,6 +85,8 @@ namespace MummyEscape.Pvp
             var existing = await Shared<LiveDuel>(LiveCollection, id);
             if (existing != null) return existing.SideOf(me) != null ? new LiveDuelResponse { Match = existing } : new LiveDuelResponse { Error = "UNKNOWN" };
 
+            string spent = await SpendEnergyAsync(new[] { me });
+            if (spent != null) return new LiveDuelResponse { Error = spent };
             var data = await Update(me);
             int seed = _newSeed();
             var bot = PvpBots.Make(new Random(seed), data.Elo, seed, "bot_" + seed, NowMs);

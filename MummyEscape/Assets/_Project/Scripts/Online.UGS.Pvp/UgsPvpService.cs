@@ -143,6 +143,9 @@ namespace MummyEscape.Online
         public Task<ReportResponse> DeleteDataAsync() =>
             Call("DeletePvpData", null, e => new ReportResponse { Error = e });
 
+        public Task<EnergyResponse> RefillEnergyAsync() =>
+            Call("RefillPvpEnergy", null, e => new EnergyResponse { Error = e });
+
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b), e => new LiveDuelResponse { Error = e });
 

@@ -85,6 +85,9 @@ namespace MummyEscape.Online
         /// <summary>Erases the player's PvP data on the server (guild, duos, messages, history, leaderboard).</summary>
         Task<ReportResponse> DeleteDataAsync();
 
+        /// <summary>After a rewarded ad: one more point of combat energy (a few times a day).</summary>
+        Task<EnergyResponse> RefillEnergyAsync();
+
         // --- Guilds ---
         Task<GuildResponse> GetGuildAsync();
         Task<GuildResponse> CreateGuildAsync(string name, string tag, string playerName);

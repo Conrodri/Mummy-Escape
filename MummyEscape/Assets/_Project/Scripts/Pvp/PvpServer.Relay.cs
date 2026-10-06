@@ -78,6 +78,9 @@ namespace MummyEscape.Pvp
             var existing = await Shared<RelayMatch>(RelaysCollection, RelayId(matchKey));
             if (existing == null && (await BestDuelEloAsync(sideA)).League != (await BestDuelEloAsync(sideB)).League)
                 return new RelayMatchResponse { Error = "DIVISION" };
+            if (existing != null) return new RelayMatchResponse { Match = existing };
+            string spent = await SpendEnergyAsync(sideA.Runners.Concat(sideB.Runners).Select(r => r.PlayerId));
+            if (spent != null) return new RelayMatchResponse { Error = spent };
             return await CreateRelayAsync(RelayId(matchKey), sideA, sideB);
         }
 
@@ -94,6 +97,8 @@ namespace MummyEscape.Pvp
             string id = RelayId(matchKey);
             var existing = await Shared<RelayMatch>(RelaysCollection, id);
             if (existing != null) return new RelayMatchResponse { Match = existing };
+            string spent = await SpendEnergyAsync(side.Runners.Select(r => r.PlayerId));
+            if (spent != null) return new RelayMatchResponse { Error = spent };
 
             int seed = _newSeed();
             var rng = new Random(seed);

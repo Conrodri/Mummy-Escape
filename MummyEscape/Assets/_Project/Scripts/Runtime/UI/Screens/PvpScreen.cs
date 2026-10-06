@@ -338,7 +338,7 @@ namespace MummyEscape.UI.Screens
         {
             if (_duelSearch != null) { CancelDuelSearch(); return; }
             if (_busy || App.Pvp == null) return;
-            if (!PlayGate.Ensure(App, Monetization.PlayMode.Duel, FindDuel)) return;
+            if (!PlayGate.Ensure(App, FindDuel)) return;
             var matchmaker = DuelMatchmakerFactory.For(App.Pvp);
             if (matchmaker == null)
             {
@@ -409,7 +409,7 @@ namespace MummyEscape.UI.Screens
         {
             var app = MummyEscape.App.GameApp.I;
             var match = new PvpMatch(start.Match, start.Me);
-            app.Save.UsePlay(Monetization.PlayMode.Duel);
+            PlayGate.SpendPvp(app);
             _ = Task.Run(() => PvpServer.Arena(match.Seed));
             router.Open<VsScreen>().Show(app.Save.Loadout, app.Online.PlayerName, match.Duel.MyElo, match.Ghost, () =>
             {
@@ -423,7 +423,7 @@ namespace MummyEscape.UI.Screens
         {
             var app = MummyEscape.App.GameApp.I;
             _ = System.Threading.Tasks.Task.Run(() => PvpServer.Arena(duel.Seed));
-            app.Save.UsePlay(Monetization.PlayMode.Duel);
+            PlayGate.SpendPvp(app);
             router.Open<VsScreen>().Show(app.Save.Loadout, app.Online.PlayerName, duel.MyElo, duel.Ghost, () =>
             {
                 router.Open<HudScreen>();
@@ -442,6 +442,8 @@ namespace MummyEscape.UI.Screens
                 case "LEAGUE": return Loc.T("Atteins d'abord la ligue demandée."); // noloc
                 case "OWNED": return Loc.T("Tu l'as déjà."); // noloc
                 case "NOTHING_TO_CLAIM": return Loc.T("Rien à récupérer pour le moment.");
+                case "ENERGY": return Loc.T("Plus d'énergie de combat : un point revient toutes les 6 minutes."); // noloc
+                case "ADS_LIMIT": return Loc.T("Plus de pubs aujourd'hui"); // noloc
                 case "INVALID_RUN": return Loc.T("Course refusée par le serveur : comptée comme un abandon.");
                 case "NO_PENDING_DUEL": return Loc.T("Ce duel a expiré (plus de 10 minutes) : il compte comme un abandon.");
                 default: return Loc.T("Connexion au serveur des duels impossible.");

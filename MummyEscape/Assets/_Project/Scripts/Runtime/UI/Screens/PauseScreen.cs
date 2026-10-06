@@ -26,7 +26,7 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(_duelNote, 20);
             UIKit.Size(_duelNote, 50);
             UIKit.Size(UIKit.Button(panel, "Reprendre", Resume, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
-            _restart = UIKit.Button(panel, "Recommencer", () => PlayGate.Play(App, Monetization.PlayMode.Solo, () => { Router.Close(this); App.Game.Restart(); }));
+            _restart = UIKit.Button(panel, "Recommencer", () => PlayGate.Solo(App, App.Game.CurrentLevel, () => { Router.Close(this); App.Game.Restart(); }));
             UIKit.Size(_restart, UIKit.ButtonHeight);
             UIKit.Size(UIKit.Button(panel, "Paramètres", () => Router.Open<SettingsScreen>()), UIKit.ButtonHeight);
             _quit = UIKit.Button(panel, "Quitter le niveau", Quit, UIKit.TextSize, ButtonStyle.Ghost);

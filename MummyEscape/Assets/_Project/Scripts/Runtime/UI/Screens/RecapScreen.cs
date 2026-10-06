@@ -256,7 +256,7 @@ namespace MummyEscape.UI.Screens
         {
             var next = Progression.Next(_result.Level);
             if (!next.HasValue) return;
-            PlayGate.Play(App, Monetization.PlayMode.Solo, () =>
+            PlayGate.Solo(App, next.Value, () =>
             {
                 Router.Close(this);
                 _ = App.Game.StartLevel(next.Value);
@@ -265,7 +265,7 @@ namespace MummyEscape.UI.Screens
 
         void Retry()
         {
-            PlayGate.Play(App, Monetization.PlayMode.Solo, () =>
+            PlayGate.Solo(App, _result.Level, () =>
             {
                 Router.Close(this);
                 App.Game.Restart();

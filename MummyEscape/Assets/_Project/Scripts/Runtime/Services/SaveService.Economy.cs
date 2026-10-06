@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using MummyEscape.Core;
 using MummyEscape.Monetization;
+using MummyEscape.Pvp;
 
 namespace MummyEscape.Services
 {
     /// <summary>
-    /// The real-money side of the save: golden scarabs, the daily game limits and the season pass. Kept on the device
+    /// The real-money side of the save: golden scarabs, the solo energy and the season pass. Kept on the device
     /// and in the cloud copy like the scarabs; receipts are not checked by a server yet.
     /// </summary>
     public sealed partial class SaveService
@@ -48,54 +50,42 @@ namespace MummyEscape.Services
             return true;
         }
 
-        // ------------------------------------------------------------------ daily limits
+        // ------------------------------------------------------------------ solo energy
 
-        static string Today => DateTime.Now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        static long NowMs => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-        /// <summary>A new day gives every kind of game back its full count.</summary>
-        void RollPlays()
-        {
-            if (Data.PlaysDay == Today) return;
-            Data.PlaysDay = Today;
-            Data.SoloLeft = PlayLimits.Max(PlayMode.Solo);
-            Data.DuelLeft = PlayLimits.Max(PlayMode.Duel);
-            Data.DuoLeft = PlayLimits.Max(PlayMode.Duo);
-        }
+        EnergyMeter SoloMeter => Data.SoloEnergy ??= new EnergyMeter();
 
         /// <summary>The pass of the season lifts every limit.</summary>
         public bool Unlimited => HasPass;
 
-        public int PlaysLeft(PlayMode mode)
-        {
-            RollPlays();
-            return mode == PlayMode.Solo ? Data.SoloLeft : mode == PlayMode.Duel ? Data.DuelLeft : Data.DuoLeft;
-        }
+        /// <summary>Act 1 is free: the energy counts from act 2.</summary>
+        public static bool CostsEnergy(LevelId level) => level.Act >= 2;
 
-        public bool CanPlay(PlayMode mode) => Unlimited || PlaysLeft(mode) > 0;
+        public int SoloEnergyLeft => Energy.Left(SoloMeter, EnergyConfig.SoloMax, NowMs);
 
-        /// <summary>Uses one game of that kind (nothing with the pass); false when none is left.</summary>
-        public bool UsePlay(PlayMode mode)
+        /// <summary>Time before the next point comes back (0: full).</summary>
+        public long SoloEnergyNextInMs => Energy.NextInMs(SoloMeter, NowMs);
+
+        public int SoloAdsLeft => Energy.AdsLeft(SoloMeter, NowMs);
+
+        public bool CanPlaySolo(LevelId level) => Unlimited || !CostsEnergy(level) || SoloEnergyLeft > 0;
+
+        /// <summary>Spends a point for that level (nothing in act 1 or with the pass); false when none is left.</summary>
+        public bool UseSolo(LevelId level)
         {
-            if (Unlimited) return true;
-            int left = PlaysLeft(mode);
-            if (left <= 0) return false;
-            SetPlays(mode, left - 1);
+            if (Unlimited || !CostsEnergy(level)) return true;
+            if (!Energy.Spend(SoloMeter, EnergyConfig.SoloMax, NowMs)) return false;
             Save();
             return true;
         }
 
-        /// <summary>The reward of an ad: more games of that kind (<see cref="PlayLimits.AdRefill"/>).</summary>
-        public void AddPlays(PlayMode mode, int count)
+        /// <summary>The reward of an ad: <see cref="EnergyConfig.SoloAdRefill"/> points; false once the ads of the day are used.</summary>
+        public bool RefillSolo()
         {
-            SetPlays(mode, PlaysLeft(mode) + count);
+            if (!Energy.Refill(SoloMeter, EnergyConfig.SoloAdRefill, NowMs)) return false;
             Save();
-        }
-
-        void SetPlays(PlayMode mode, int value)
-        {
-            if (mode == PlayMode.Solo) Data.SoloLeft = value;
-            else if (mode == PlayMode.Duel) Data.DuelLeft = value;
-            else Data.DuoLeft = value;
+            return true;
         }
 
         // ------------------------------------------------------------------ season pass
@@ -211,7 +201,7 @@ namespace MummyEscape.Services
 
         /// <summary>
         /// Cloud copy of another device: the larger golden wallet (never the sum), passes and credited purchases united,
-        /// the furthest pass progress of the same season. The daily limits stay per device.
+        /// the furthest pass progress of the same season. The solo energy stays per device.
         /// </summary>
         void MergeEconomy(SaveData other)
         {

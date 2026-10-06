@@ -31,12 +31,11 @@ namespace MummyEscape.Services
         /// <summary>The name and country were chosen at the first online connection (<see cref="UI.Screens.ProfileSetupScreen"/>).</summary>
         public bool ProfileDone;
 
-        // ---- Real-money economy (see Monetization): golden scarabs, daily game limits, season pass.
+        // ---- Real-money economy (see Monetization): golden scarabs, solo energy, season pass.
         /// <summary>Golden scarabs, bought in the store (10 € = 100) or earned on the pass.</summary>
         public int GoldScarabs;
-        /// <summary>Local day ("yyyy-MM-dd") the games left below belong to; another day refills them.</summary>
-        public string PlaysDay = "";
-        public int SoloLeft, DuelLeft, DuoLeft;
+        /// <summary>Solo energy (from act 2), kept by the device; the online energy is kept by the PvP server.</summary>
+        public MummyEscape.Pvp.EnergyMeter SoloEnergy = new MummyEscape.Pvp.EnergyMeter();
         /// <summary>Season of the pass progress below; another season starts it over.</summary>
         public string PassSeason = "";
         public int PassXp;

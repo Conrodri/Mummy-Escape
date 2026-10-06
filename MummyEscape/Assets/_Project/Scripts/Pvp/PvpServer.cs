@@ -79,6 +79,7 @@ namespace MummyEscape.Pvp
             _store.UpdatePlayerAsync(playerId, d =>
             {
                 Seasons.Roll(d, _utcNow());
+                d.Energy ??= new EnergyMeter();
                 mutate?.Invoke(d);
             });
 
@@ -124,6 +125,7 @@ namespace MummyEscape.Pvp
                 await DropPendingAsync(me, pending);
             }
 
+            if (!await HasEnergyAsync(me)) return new FindDuelResponse { Error = "ENERGY" };
             var data = await Update(me);
             var ghost = await _store.ClaimGhostAsync(me, data.Elo, generatorVersion, data.OpponentsToday, NowMs);
             if (ghost == null)
@@ -142,6 +144,8 @@ namespace MummyEscape.Pvp
                 if (allowBots) ghost = PvpBots.Make(new Random(_newSeed()), data.Elo, NowMs);
             }
             if (data.DuelSearchSinceUnixMs != 0) data = await Update(me, d => d.DuelSearchSinceUnixMs = 0);
+            string spent = await SpendEnergyAsync(new[] { me });
+            if (spent != null) return new FindDuelResponse { Error = spent };
             var duel = new PendingDuel
             {
                 MatchId = Guid.NewGuid().ToString("N"),

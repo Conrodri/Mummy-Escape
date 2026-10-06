@@ -174,6 +174,8 @@ namespace MummyEscape.Pvp
                 var current = await RefreshBattleAsync(duo.ActiveBattle);
                 if (current != null && !current.Finished) return new TeamActionResponse { Ok = true, Battle = TeamLogic.ViewFor(current, duo.Id) };
             }
+            string spent = await SpendEnergyAsync(new[] { me });
+            if (spent != null) return new TeamActionResponse { Error = spent };
             bool creatorFirst = (duo.Members[0] == me) == meFirst;
             var order = TeamLogic.DuoOrder(duo, creatorFirst);
             var side = TeamLogic.NewSide(duo.Id, duo.Name, duo.Elo, order, id => duo.Names[duo.Members.IndexOf(id)]);

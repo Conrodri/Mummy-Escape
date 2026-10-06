@@ -137,6 +137,10 @@ namespace MummyEscape.Pvp
 
         /// <summary>Duos 2v2 du joueur (<see cref="TeamConfig.MaxDuosPerPlayer"/> au plus).</summary>
         public List<string> Duos = new List<string>();
+
+        /// <summary>Énergie de combat : un duel 1v1 ou un match 2v2 lancé en coûte un point (<see cref="EnergyConfig.PvpMax"/>).</summary>
+        public EnergyMeter Energy = new EnergyMeter();
+
         /// <summary>Invitations à former un duo, reçues d'amis.</summary>
         public List<DuoInvite> DuoInvites = new List<DuoInvite>();
         /// <summary>Guilde du joueur, null s'il n'en a pas.</summary>

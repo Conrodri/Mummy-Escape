@@ -198,6 +198,9 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("DeletePvpData")]
         public Task<ReportResponse> DeletePvpData(IExecutionContext ctx) => Server(ctx).DeletePlayerDataAsync(ctx.PlayerId);
 
+        [CloudCodeFunction("RefillPvpEnergy")]
+        public Task<EnergyResponse> RefillPvpEnergy(IExecutionContext ctx) => Server(ctx).RefillEnergyAsync(ctx.PlayerId);
+
         // --- Duel en direct
 
         /// <summary>Crée le duel de deux joueurs de la même ligue qui se sont trouvés dans un salon (l'hôte l'appelle).</summary>
