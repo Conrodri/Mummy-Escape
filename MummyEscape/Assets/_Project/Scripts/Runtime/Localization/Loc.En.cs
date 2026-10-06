@@ -1112,6 +1112,7 @@ namespace MummyEscape
             ["Doucement : attends un instant avant le message suivant."] = "Easy: wait a moment before the next message.",
             ["Ton tchat est suspendu."] = "Your chat is suspended.",
             ["Ce joueur ne reçoit pas tes messages."] = "This player doesn't receive your messages.",
+            ["Les messages privés sont réservés aux amis : ce joueur ne t'a pas (encore) dans les siens."] = "Private messages are for friends only: this player hasn't added you (yet).",
             ["Ce replay n'est pas encore sur le serveur (match non jugé)."] = "This replay isn't on the server yet (match not judged).",
         };
     }

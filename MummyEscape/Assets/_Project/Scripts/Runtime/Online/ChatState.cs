@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MummyEscape.Pvp;
 using UnityEngine;
@@ -83,6 +85,26 @@ namespace MummyEscape.Online
             Inbox.Blocked.Remove(playerId);
             if (blocked) Inbox.Blocked.Add(playerId);
             Changed?.Invoke();
+        }
+
+        static string _syncedProfile;
+
+        /// <summary>
+        /// The server lets only friends write privately and keeps minors out of the global channel: it is told the friends
+        /// and the age choice once per session, and again whenever they change.
+        /// </summary>
+        public static async Task SyncProfileAsync(App.GameApp app, IReadOnlyList<FriendInfo> friends = null)
+        {
+            var pvp = app.Pvp;
+            if (pvp == null || !Enabled) return;
+            friends ??= await app.Online.GetFriendsAsync();
+            if (friends == null) return;
+            var ids = friends.Select(f => f.PlayerId).Where(id => !string.IsNullOrEmpty(id)).OrderBy(id => id, StringComparer.Ordinal).ToList();
+            bool minor = app.Privacy.Data.IsMinor;
+            string signature = app.Online.PlayerId + "|" + minor + "|" + string.Join(",", ids);
+            if (signature == _syncedProfile) return;
+            var synced = await pvp.SyncChatProfileAsync(ids, minor);
+            if (synced != null && synced.Ok) _syncedProfile = signature;
         }
     }
 }

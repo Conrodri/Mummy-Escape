@@ -101,6 +101,7 @@ namespace MummyEscape.UI.Screens
                 : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName) : Loc.F("Invité : {0}", online.PlayerName);
             _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId);
             _ = Online.ChatState.RefreshAsync(App.Pvp);
+            _ = Online.ChatState.SyncProfileAsync(App);
             if (ProfileSetupScreen.Needed(App)) Router.Open<ProfileSetupScreen>();
         }
 

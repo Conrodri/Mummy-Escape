@@ -1,5 +1,6 @@
 // Module Cloud Code « PvpMatchmaking » : points d'entrée appelés par le jeu. Toute la logique est dans PvpServer
 // (Assets/_Project/Scripts/Pvp), partagée avec le jeu ; ce module ne fait que la brancher sur Cloud Save et Leaderboards.
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Unity.Services.CloudCode.Apis;
@@ -179,6 +180,9 @@ namespace MummyEscape.Pvp.Server
 
         [CloudCodeFunction("BlockChat")]
         public Task<ReportResponse> BlockChat(IExecutionContext ctx, string playerId, bool block) => Server(ctx).BlockChatAsync(ctx.PlayerId, playerId, block);
+
+        [CloudCodeFunction("SyncChatProfile")]
+        public Task<ReportResponse> SyncChatProfile(IExecutionContext ctx, List<string> contacts, bool minor) => Server(ctx).SyncChatProfileAsync(ctx.PlayerId, contacts, minor);
 
         /// <summary>Signale un message : copié dans le dossier de son auteur (Cloud Save › pvp_chat_reports), masqué à 3 signalements.</summary>
         [CloudCodeFunction("ReportChat")]

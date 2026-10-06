@@ -132,6 +132,7 @@ namespace MummyEscape.UI.Screens
             var requests = await online.GetFriendRequestsAsync();
             var friends = await online.GetFriendsAsync();
             if (id != _reloadId || this == null) return;
+            _ = Online.ChatState.SyncProfileAsync(App, friends);
             _tabs.SetLabel(0, friends.Count > 0 ? Loc.F("Amis ({0})", friends.Count) : Loc.T("Amis"));
             _tabs.SetLabel(1, requests.Count > 0 ? Loc.F("Demandes ({0})", requests.Count) : Loc.T("Demandes"));
 

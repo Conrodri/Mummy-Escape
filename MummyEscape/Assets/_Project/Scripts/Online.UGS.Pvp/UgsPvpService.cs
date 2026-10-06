@@ -127,6 +127,9 @@ namespace MummyEscape.Online
         public Task<ReportResponse> BlockChatAsync(string playerId, bool block) =>
             Call("BlockChat", Args("playerId", playerId, "block", block), e => new ReportResponse { Error = e });
 
+        public Task<ReportResponse> SyncChatProfileAsync(List<string> friendIds, bool minor) =>
+            Call("SyncChatProfile", Args("contacts", friendIds ?? new List<string>(), "minor", minor), e => new ReportResponse { Error = e });
+
         public Task<ReportResponse> ReportChatAsync(string channel, long seq) =>
             Call("ReportChat", Args("channel", channel, "seq", seq), e => new ReportResponse { Error = e });
 

@@ -28,6 +28,12 @@ namespace MummyEscape.Pvp.Server
 
         const int MaxWriteRetries = 4;
 
+        /// <summary>
+        /// Attente avant de réessayer une écriture en conflit : croissante et tirée au hasard, pour que deux appels qui se
+        /// sont heurtés ne se heurtent pas encore au même instant.
+        /// </summary>
+        static Task Backoff(int attempt) => Task.Delay(Random.Shared.Next(20, 60 << Math.Min(attempt, 4)));
+
         readonly IGameApiClient _api;
         readonly IExecutionContext _ctx;
         readonly ILogger _logger;
@@ -81,7 +87,7 @@ namespace MummyEscape.Pvp.Server
                 {
                     last = e;
                     _logger.LogWarning("Conflit d'écriture sur {player} (essai {n}) : {msg}", playerId, attempt + 1, e.Message);
-                    await Task.Delay(50 * (attempt + 1));
+                    await Backoff(attempt);
                 }
             }
             throw new Exception("Impossible d'enregistrer les données PvP de " + playerId, last);
@@ -120,7 +126,7 @@ namespace MummyEscape.Pvp.Server
                 catch (Exception e)
                 {
                     last = e;
-                    await Task.Delay(50 * (attempt + 1));
+                    await Backoff(attempt);
                 }
             }
             _logger.LogWarning("Historique de {player} non enregistré : {msg}", playerId, last?.Message);
@@ -171,7 +177,7 @@ namespace MummyEscape.Pvp.Server
                     catch (Exception e)
                     {
                         _logger.LogInformation("Fantôme disputé ({key}), nouvel essai : {msg}", key, e.Message);
-                        await Task.Delay(30 * (attempt + 1));
+                        await Backoff(attempt);
                     }
                 }
             }
@@ -196,7 +202,7 @@ namespace MummyEscape.Pvp.Server
                 catch (Exception e)
                 {
                     _logger.LogInformation("File occupée ({key}), nouvel essai : {msg}", key, e.Message);
-                    await Task.Delay(30 * (attempt + 1));
+                    await Backoff(attempt);
                 }
             }
             _logger.LogWarning("Fantôme {id} non ajouté à la file après plusieurs essais", ghost.GhostId);
@@ -316,7 +322,7 @@ namespace MummyEscape.Pvp.Server
                 catch (Exception e)
                 {
                     last = e;
-                    await Task.Delay(50 * (attempt + 1));
+                    await Backoff(attempt);
                 }
             }
             throw new Exception("Signalement non enregistré pour " + playerId, last);
@@ -349,7 +355,7 @@ namespace MummyEscape.Pvp.Server
                 catch (Exception e)
                 {
                     last = e;
-                    await Task.Delay(50 * (attempt + 1));
+                    await Backoff(attempt);
                 }
             }
             throw new Exception($"Écriture refusée : {collection}/{key}", last);

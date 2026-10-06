@@ -26,7 +26,8 @@ namespace MummyEscape.Pvp
         /// </summary>
         async Task<(string Key, string GuildId)> ChannelKeyAsync(string me, string channel)
         {
-            if (channel == ChatConfig.Global) return ("global", null);
+            if (channel == ChatConfig.Global)
+                return (await Inbox(me))?.Minor == true ? (null, null) : (ChatConfig.GlobalRoom(me), null);
             if (channel == ChatConfig.Guild)
             {
                 var d = await Update(me);
@@ -84,7 +85,13 @@ namespace MummyEscape.Pvp
             var (key, _) = await ChannelKeyAsync(me, channel);
             if (key == null) return new ChatSendResponse { Error = "NO_ACCESS" };
             string other = channel.StartsWith(ChatConfig.DirectPrefix, StringComparison.Ordinal) ? channel.Substring(ChatConfig.DirectPrefix.Length) : null;
-            if (other != null && ((await Inbox(other))?.Blocked?.Contains(me) ?? false)) return new ChatSendResponse { Error = "BLOCKED" };
+            if (other != null && IsHuman(other))
+            {
+                var theirs = await Inbox(other);
+                if (theirs?.Blocked?.Contains(me) ?? false) return new ChatSendResponse { Error = "BLOCKED" };
+                // En privé, seulement à un ami : quelqu'un qui a le joueur dans les amis qu'il a envoyés au serveur.
+                if (IsHuman(me) && !(theirs?.Contacts?.Contains(me) ?? false)) return new ChatSendResponse { Error = "NOT_FRIEND" };
+            }
 
             // Le débit : un message toutes les 1,5 s, une douzaine par minute.
             long now = NowMs;
@@ -148,7 +155,7 @@ namespace MummyEscape.Pvp
                 Blocked = box.Blocked,
                 BannedUntilUnixMs = box.BannedUntilUnixMs > NowMs ? box.BannedUntilUnixMs : 0,
             };
-            var global = await Shared<ChatChannel>(ChatCollection, "global");
+            var global = await Shared<ChatChannel>(ChatCollection, ChatConfig.GlobalRoom(me));
             response.GlobalLastSeq = global == null ? 0 : global.NextSeq - 1;
             var (key, guildId) = await ChannelKeyAsync(me, ChatConfig.Guild);
             if (key != null)
@@ -159,6 +166,24 @@ namespace MummyEscape.Pvp
                 response.GuildLastSeq = room == null ? 0 : room.NextSeq - 1;
             }
             return response;
+        }
+
+        /// <summary>
+        /// Ce que le jeu sait du joueur et que le tchat doit respecter : ses amis (eux seuls lui écrivent en privé) et s'il est
+        /// mineur (pas de canal global).
+        /// </summary>
+        public async Task<ReportResponse> SyncChatProfileAsync(string me, List<string> contacts, bool minor)
+        {
+            var list = (contacts ?? new List<string>())
+                .Where(id => !string.IsNullOrEmpty(id) && id.Length <= 64 && id != me)
+                .Distinct().Take(ChatConfig.MaxContacts).ToList();
+            await Inbox(me, box =>
+            {
+                box.Contacts = list;
+                box.Minor = minor;
+                return box;
+            });
+            return new ReportResponse { Ok = true };
         }
 
         /// <summary>Bloque (ou débloque) un joueur : ses messages disparaissent pour ce joueur et il ne peut plus lui écrire.</summary>

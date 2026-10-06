@@ -25,6 +25,23 @@ namespace MummyEscape.Pvp
         public const int MaxConversations = 50;
         public const int MaxBlocked = 200;
         public const int RelayHistorySize = 10;
+        /// <summary>Amis que le jeu envoie au serveur : eux seuls peuvent écrire au joueur en privé.</summary>
+        public const int MaxContacts = 200;
+        /// <summary>
+        /// Salons du canal global : 1 tant que la communauté tient dans un seul ; au-delà, chaque joueur a son salon (par
+        /// hachage de son identifiant), ce qui répartit les écritures.
+        /// </summary>
+        public const int GlobalRooms = 1;
+
+        public static string GlobalRoom(string playerId) =>
+            GlobalRooms <= 1 ? "global" : "global_" + (StableHash(playerId) % (uint)GlobalRooms);
+
+        static uint StableHash(string s)
+        {
+            uint h = 2166136261;
+            foreach (char c in s ?? "") h = (h ^ c) * 16777619;
+            return h;
+        }
 
         public const string DuelReplay = "duel";
         public const string RelayReplay = "relay";

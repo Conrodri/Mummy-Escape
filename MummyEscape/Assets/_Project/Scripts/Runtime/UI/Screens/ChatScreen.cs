@@ -17,7 +17,9 @@ namespace MummyEscape.UI.Screens
     public sealed class ChatScreen : UIScreen
     {
         public override NavTab Tab => NavTab.Friends;
-        const float PollSeconds = 4f;
+        /// <summary>A lively channel is read every 4 s; a quiet one less and less often, down to every 15 s.</summary>
+        const float PollSeconds = 4f, QuietPollSeconds = 15f;
+        float _pollGap = PollSeconds;
 
         UIKit.Segmented _tabs;
         RectTransform _list, _composer, _conversation, _menu;
@@ -128,6 +130,7 @@ namespace MummyEscape.UI.Screens
             var friends = await App.Online.GetFriendsAsync();
             if (this == null || friends == null) return;
             _friends = friends;
+            _ = ChatState.SyncProfileAsync(App, friends);
             if (_tabs.Selected == 2 && _channel == null) ShowFriends();
         }
 
@@ -178,7 +181,7 @@ namespace MummyEscape.UI.Screens
             bool open = blocker == null && _channel != null;
             _composer.gameObject.SetActive(open);
             if (!open && _channel != null) UIKit.ClearChildren(_list);
-            if (open) _nextPoll = 0f;
+            if (open) { _nextPoll = 0f; _pollGap = PollSeconds; }
         }
 
         /// <summary>Why the channel cannot be used, or null.</summary>
@@ -197,7 +200,7 @@ namespace MummyEscape.UI.Screens
         {
             if (_channel == null || !_composer.gameObject.activeSelf || _polling) return;
             if (Time.unscaledTime < _nextPoll) return;
-            _nextPoll = Time.unscaledTime + PollSeconds;
+            _nextPoll = Time.unscaledTime + _pollGap;
             Poll();
         }
 
@@ -217,6 +220,7 @@ namespace MummyEscape.UI.Screens
                 if (page?.Error == "NO_ACCESS") _composer.gameObject.SetActive(false); // noloc
                 return;
             }
+            _pollGap = page.Messages.Count > 0 ? PollSeconds : Mathf.Min(QuietPollSeconds, _pollGap * 1.5f);
             _info.text = _lastSeq == 0 && page.Messages.Count == 0 ? Loc.T("Aucun message pour l'instant. Lance la conversation !") : "";
             bool atBottom = _scroll.verticalNormalizedPosition < 0.05f || _lastSeq == 0;
             long after = _lastSeq;
@@ -325,7 +329,7 @@ namespace MummyEscape.UI.Screens
             }
             _input.text = "";
             App.Audio.Play(Sfx.Click);
-            if (channel == _channel) { _nextPoll = 0f; _scroll.verticalNormalizedPosition = 0f; }
+            if (channel == _channel) { _nextPoll = 0f; _pollGap = PollSeconds; _scroll.verticalNormalizedPosition = 0f; }
         }
 
         public static string SendError(string code)
@@ -335,6 +339,7 @@ namespace MummyEscape.UI.Screens
                 case "TOO_FAST": return Loc.T("Doucement : attends un instant avant le message suivant."); // noloc
                 case "BANNED": return Loc.T("Ton tchat est suspendu."); // noloc
                 case "BLOCKED": return Loc.T("Ce joueur ne reçoit pas tes messages."); // noloc
+                case "NOT_FRIEND": return Loc.T("Les messages privés sont réservés aux amis : ce joueur ne t'a pas (encore) dans les siens."); // noloc
                 case "NO_ACCESS": return Loc.T("Conversation indisponible."); // noloc
                 case "UNKNOWN_REPLAY": return Loc.T("Ce replay n'est pas encore sur le serveur (match non jugé)."); // noloc
                 case "EMPTY": return ""; // noloc
