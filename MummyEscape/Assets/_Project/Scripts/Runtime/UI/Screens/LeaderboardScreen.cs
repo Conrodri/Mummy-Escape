@@ -137,6 +137,9 @@ namespace MummyEscape.UI.Screens
         {
             _category.Select(0);
             _tabs.Select(_scope);
+            // The country tab says which country: "France" rather than "Pays".
+            string country = App.Online.Country;
+            _tabs.SetLabel(1, string.IsNullOrEmpty(country) ? "Pays" : CountryService.NameOf(country));
             Reload();
         }
 
