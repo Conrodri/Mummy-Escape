@@ -15,7 +15,7 @@ if (!token || !guildId) {
 }
 
 const API = "https://discord.com/api/v10";
-const VIEW = 1n << 10n, SEND = 1n << 11n, CONNECT = 1n << 20n;
+const VIEW = 1n << 10n, SEND = 1n << 11n, CONNECT = 1n << 20n, MANAGE_CHANNELS = 1n << 4n;
 const TEXT = 0, VOICE = 2, CATEGORY = 4;
 
 async function call(method, path, body) {
@@ -99,6 +99,10 @@ for (const r of ROLES) {
   console.log(`role "${r.name}": created`);
 }
 
+// The bot itself must see the private categories to create channels in them.
+const botId = (await call("GET", "/users/@me")).id;
+const botAccess = { id: botId, type: 1, allow: String(VIEW | SEND | CONNECT | MANAGE_CHANNELS), deny: "0" };
+
 const team = ["Développeur", "Modérateur"];
 function overwrites(section) {
   const everyone = guildId; // the @everyone role has the server's id
@@ -106,6 +110,7 @@ function overwrites(section) {
   if (section.only) {
     list.push({ id: everyone, type: 0, allow: "0", deny: String(VIEW) });
     for (const name of section.only) list.push({ id: roleId[name], type: 0, allow: String(VIEW | SEND | CONNECT), deny: "0" });
+    list.push(botAccess);
   } else if (section.readOnly) {
     list.push({ id: everyone, type: 0, allow: String(VIEW), deny: String(SEND) });
     for (const name of team) list.push({ id: roleId[name], type: 0, allow: String(SEND), deny: "0" });
@@ -117,6 +122,10 @@ const channels = await call("GET", `/guilds/${guildId}/channels`);
 const find = (name, type, parent) => channels.find(c => c.name === name && c.type === type && (parent === undefined || c.parent_id === parent));
 for (const section of LAYOUT) {
   let cat = find(section.category, CATEGORY);
+  if (cat && section.only) {
+    // A private category made before the bot gave itself access (first runs of this script).
+    await call("PUT", `/channels/${cat.id}/permissions/${botId}`, { type: 1, allow: botAccess.allow, deny: "0" });
+  }
   if (cat) console.log(`category "${section.category}": already there`);
   else {
     cat = await call("POST", `/guilds/${guildId}/channels`, { name: section.category, type: CATEGORY, permission_overwrites: overwrites(section) });
