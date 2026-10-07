@@ -102,7 +102,7 @@ namespace MummyEscape.Core
             for (int x = 56; x <= 58; x++) Set(1, x, Row, new Tile { Type = TileType.Current, Param = (byte)Dir.Right });
             Set(1, 62, Row, new Tile { Type = TileType.Crumbling, Param = 0 });
             Set(1, 65, Row + 1, new Tile { Type = TileType.Switch, Channel = 2 });
-            Set(1, 67, Row, new Tile { Type = TileType.Barrier, Channel = 2, Param = 0 });
+            Set(1, 66, Row, new Tile { Type = TileType.Barrier, Channel = 2, Param = 0 });
             Set(1, 71, Row, new Tile { Type = TileType.FireJet, Param = 0 });
             Set(1, 75, Row, new Tile { Type = TileType.BreakableFloor });
 
