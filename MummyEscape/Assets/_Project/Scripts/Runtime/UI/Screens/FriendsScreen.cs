@@ -234,15 +234,23 @@ namespace MummyEscape.UI.Screens
                 "Code ami", "", "Inviter", async code =>
                 {
                     var candidates = FriendCode.Candidates(code);
-                    if (candidates.Count == 0) return "Le code ami, c'est le nom, un # et des chiffres (exemple : Nefertari#2041).";
+                    string typed = (code ?? "").Trim();
+                    if (candidates.Count == 0 && (App.Pvp == null || typed.Length == 0)) return "Le code ami, c'est le nom, un # et des chiffres (exemple : Nefertari#2041).";
                     if (!App.Online.IsAvailable && !App.Online.IsDemo) return App.Online.Status;
                     // Typed without its #: each place it could go, until one is a player.
-                    string error = null;
+                    string error = "Joueur introuvable.";
                     foreach (var c in candidates)
                     {
                         error = await App.Online.SendFriendRequestAsync(c);
                         if (error != "Joueur introuvable.") break;
                     }
+                    if (error != "Joueur introuvable." || App.Pvp == null) return error;
+                    // Not found as typed: the game's own directory, which ignores capitals and finds the name alone
+                    // (a rename gives a new #number) when only one player has it.
+                    var found = await App.Pvp.FindPlayerAsync(candidates.Count > 0 ? candidates[0] : typed);
+                    if (found?.PlayerId != null) return await App.Online.SendFriendRequestToIdAsync(found.PlayerId);
+                    if (found?.Error == "SELF") return "C'est ton propre code ami.";
+                    if (found?.Error == "AMBIGUOUS") return "Plusieurs joueurs portent ce nom : il faut le code complet, avec son # et ses chiffres.";
                     return error;
                 });
 

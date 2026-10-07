@@ -61,6 +61,7 @@ namespace MummyEscape.Pvp
         public async Task<ReportResponse> DeletePlayerDataAsync(string me)
         {
             var data = await Update(me);
+            await ForgetNameAsync(me, data.DirectoryName);
             if (data.GuildId is string guildId)
             {
                 await LeaveGuildAsync(me);

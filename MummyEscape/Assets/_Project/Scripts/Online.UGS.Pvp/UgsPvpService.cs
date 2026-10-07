@@ -133,6 +133,12 @@ namespace MummyEscape.Online
         public Task<ReportResponse> SyncChatProfileAsync(List<string> friendIds, bool minor) =>
             Call("SyncChatProfile", Args("contacts", friendIds ?? new List<string>(), "minor", minor), e => new ReportResponse { Error = e });
 
+        public Task<ReportResponse> RegisterNameAsync(string name) =>
+            Call("RegisterName", Args("name", name ?? ""), e => new ReportResponse { Error = e });
+
+        public async Task<FindPlayerResponse> FindPlayerAsync(string code) =>
+            await Call<FindPlayerResponse>("FindPlayer", Args("code", code ?? ""), e => new FindPlayerResponse { Error = e }) ?? new FindPlayerResponse { Error = "NOT_FOUND" };
+
         public Task<ReportResponse> ReportChatAsync(string channel, long seq) =>
             Call("ReportChat", Args("channel", channel, "seq", seq), e => new ReportResponse { Error = e });
 

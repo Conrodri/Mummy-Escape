@@ -88,6 +88,19 @@ namespace MummyEscape.Online
         }
 
         static string _syncedProfile;
+        static string _registeredName;
+
+        /// <summary>The friend-code directory learns the player's public name: once per session, and again after a rename.</summary>
+        public static async Task RegisterNameAsync(App.GameApp app)
+        {
+            var pvp = app.Pvp;
+            string name = app.Online.PlayerName;
+            if (pvp == null || !app.Online.IsAvailable || string.IsNullOrEmpty(name)) return;
+            string signature = app.Online.PlayerId + "|" + name;
+            if (signature == _registeredName) return;
+            var r = await pvp.RegisterNameAsync(name);
+            if (r != null && r.Ok) _registeredName = signature;
+        }
 
         /// <summary>
         /// The server lets only friends write privately and keeps minors out of the global channel: it is told the friends
@@ -95,6 +108,7 @@ namespace MummyEscape.Online
         /// </summary>
         public static async Task SyncProfileAsync(App.GameApp app, IReadOnlyList<FriendInfo> friends = null)
         {
+            _ = RegisterNameAsync(app);
             var pvp = app.Pvp;
             if (pvp == null || !Enabled) return;
             friends ??= await app.Online.GetFriendsAsync();

@@ -247,6 +247,7 @@ namespace MummyEscape.App
             _syncedStars = -1;
             await SyncSoloStars();
             await PublishProgress();
+            _ = MummyEscape.Online.ChatState.RegisterNameAsync(this);
             RefreshMenus();
         }
 

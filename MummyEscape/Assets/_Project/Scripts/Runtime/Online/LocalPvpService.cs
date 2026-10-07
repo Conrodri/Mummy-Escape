@@ -420,6 +420,10 @@ namespace MummyEscape.Online
         public Task<ReportResponse> BlockChatAsync(string playerId, bool block) => Run(() => _server.BlockChatAsync(Me, playerId, block));
         public Task<ReportResponse> SyncChatProfileAsync(List<string> friendIds, bool minor) => Run(() => _server.SyncChatProfileAsync(Me, friendIds, minor));
 
+        public Task<ReportResponse> RegisterNameAsync(string name) => Run(() => _server.RegisterNameAsync(Me, name));
+
+        public Task<FindPlayerResponse> FindPlayerAsync(string code) => Run(() => _server.FindPlayerAsync(Me, code));
+
         public Task<ReportResponse> ReportChatAsync(string channel, long seq) => Run(() => _server.ReportChatAsync(Me, channel, seq));
 
         public Task<ChatSendResponse> ShareReplayAsync(string kind, string matchId, string channel, string text, string playerName) =>

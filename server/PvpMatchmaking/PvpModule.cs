@@ -202,6 +202,12 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("SyncChatProfile")]
         public Task<ReportResponse> SyncChatProfile(IExecutionContext ctx, List<string> contacts, bool minor) => Server(ctx).SyncChatProfileAsync(ctx.PlayerId, contacts, minor);
 
+        [CloudCodeFunction("RegisterName")]
+        public Task<ReportResponse> RegisterName(IExecutionContext ctx, string name) => Server(ctx).RegisterNameAsync(ctx.PlayerId, name);
+
+        [CloudCodeFunction("FindPlayer")]
+        public Task<FindPlayerResponse> FindPlayer(IExecutionContext ctx, string code) => Server(ctx).FindPlayerAsync(ctx.PlayerId, code);
+
         /// <summary>Signale un message : copié dans le dossier de son auteur (Cloud Save › pvp_chat_reports), masqué à 3 signalements.</summary>
         [CloudCodeFunction("ReportChat")]
         public Task<ReportResponse> ReportChat(IExecutionContext ctx, string channel, long seq) => Server(ctx).ReportChatAsync(ctx.PlayerId, channel, seq);

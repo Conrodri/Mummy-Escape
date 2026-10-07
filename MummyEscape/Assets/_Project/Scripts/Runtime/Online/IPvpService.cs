@@ -76,6 +76,10 @@ namespace MummyEscape.Online
         Task<ReportResponse> BlockChatAsync(string playerId, bool block);
         /// <summary>Tells the chat server who may write to the player privately (their friends) and whether they are a minor.</summary>
         Task<ReportResponse> SyncChatProfileAsync(List<string> friendIds, bool minor);
+        /// <summary>Puts the player's public name (Name#1234) in the friend-code directory.</summary>
+        Task<ReportResponse> RegisterNameAsync(string name);
+        /// <summary>The player behind a friend code, case aside (or behind the name alone when only one player has it).</summary>
+        Task<FindPlayerResponse> FindPlayerAsync(string code);
         Task<ReportResponse> ReportChatAsync(string channel, long seq);
         /// <summary>Shares one of the player's replays (<see cref="ChatConfig.DuelReplay"/> or relay) in a channel.</summary>
         Task<ChatSendResponse> ShareReplayAsync(string kind, string matchId, string channel, string text, string playerName);
