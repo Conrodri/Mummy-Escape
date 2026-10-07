@@ -380,7 +380,10 @@ namespace MummyEscape.World
             var rival = PvpSkins.Loadout(duel.Rival?.Look);
             _top.Load(level, duel.Me?.Inputs, me, rival, theme, spectator);
             _bottom.Load(level, duel.Rival?.Inputs, rival, me, theme, spectator);
-            EndMs = Mathf.Max(EndOf(duel.Me), EndOf(duel.Rival)) + TailMs;
+            // A live duel stops at its first exit, death or forfeit: the rest of the other run (a bot's is computed whole)
+            // never happened. A ghost duel shows both runs to their end.
+            int mine = EndOf(duel.Me, duel.Live), theirs = EndOf(duel.Rival, duel.Live);
+            EndMs = (duel.Live && mine > 0 && theirs > 0 ? Mathf.Min(mine, theirs) : Mathf.Max(mine, theirs)) + TailMs;
             _timeMs = 0;
             Playing = false;
         }
@@ -417,12 +420,12 @@ namespace MummyEscape.World
             return Mathf.Max(last, side.Verified?.TimeMs ?? 0);
         }
 
-        /// <summary>When a run stops: its time (exit, death, time limit), or its last action for a forfeit.</summary>
-        static int EndOf(DuelRun run)
+        /// <summary>When a run stops: its time (exit, death, time limit), or its last action for a ghost duel forfeit.</summary>
+        static int EndOf(DuelRun run, bool live)
         {
             if (run == null) return 0;
             int last = run.Inputs != null && run.Inputs.Count > 0 ? RunActions.MsOf(run.Inputs[run.Inputs.Count - 1].Tick) : 0;
-            return run.Outcome == RunOutcome.Abandoned ? last : Mathf.Max(last, run.TimeMs);
+            return run.Outcome == RunOutcome.Abandoned && !(live && run.TimeMs > 0) ? last : Mathf.Max(last, run.TimeMs);
         }
 
         public void Seek(int ms)

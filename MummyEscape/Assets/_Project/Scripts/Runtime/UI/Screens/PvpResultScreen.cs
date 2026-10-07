@@ -252,7 +252,7 @@ namespace MummyEscape.UI.Screens
             {
                 MatchId = _run.MatchId, Seed = _match.Seed, GeneratorVersion = DifficultyTable.GeneratorVersion,
                 PlayedAtUnixMs = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                Resolved = r.Resolved, Result = r.Result, EloBefore = r.EloBefore, EloAfter = r.EloAfter,
+                Resolved = r.Resolved, Result = r.Result, EloBefore = r.EloBefore, EloAfter = r.EloAfter, Live = _match.IsLive,
                 Me = new DuelRun
                 {
                     PlayerName = App.Online.PlayerName, Look = _run.Look, Elo = r.EloBefore, Outcome = _run.Outcome,

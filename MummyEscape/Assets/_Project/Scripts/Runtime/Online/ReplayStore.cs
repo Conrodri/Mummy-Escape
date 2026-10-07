@@ -120,8 +120,12 @@ namespace MummyEscape.Online
         }
 
         /// <summary>JsonUtility reads a missing object as an empty one: puts the nulls back.</summary>
+        /// <summary>Duels have been live since this day: the records saved before the flag existed get it back.</summary>
+        const long LiveSinceUnixMs = 1791244800000L; // 2026-10-06 00:00 UTC
+
         public static void Normalize(DuelRecord d)
         {
+            if (!d.Live && d.PlayedAtUnixMs >= LiveSinceUnixMs) d.Live = true;
             if (d.Rival != null && string.IsNullOrEmpty(d.Rival.PlayerId) && (d.Rival.Inputs == null || d.Rival.Inputs.Count == 0)) d.Rival = null;
             Fix(d.Me);
             Fix(d.Rival);

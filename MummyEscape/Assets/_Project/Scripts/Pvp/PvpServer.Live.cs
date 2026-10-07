@@ -243,7 +243,7 @@ namespace MummyEscape.Pvp
             await RecordAsync(side.PlayerId, h => Remember(h, new DuelRecord
             {
                 MatchId = duel.Id, Seed = duel.Seed, GeneratorVersion = duel.GeneratorVersion, PlayedAtUnixMs = duel.CreatedAtUnixMs,
-                Resolved = true, Result = result, EloBefore = side.Elo, EloAfter = data.Elo,
+                Resolved = true, Result = result, EloBefore = side.Elo, EloAfter = data.Elo, Live = true,
                 Me = RunOf(side.PlayerId, side.Name, side.Elo, run),
                 Rival = RunOf(other.PlayerId, other.Name, other.Elo, otherRun),
             }));

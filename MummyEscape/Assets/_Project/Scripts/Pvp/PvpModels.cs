@@ -340,6 +340,8 @@ namespace MummyEscape.Pvp
         public DuelRun Rival;
         /// <summary>Ce joueur a signalé son adversaire pour ce duel.</summary>
         public bool Reported;
+        /// <summary>Duel en direct : il s'arrête à la première sortie, mort ou abandon (la suite de l'autre course n'a pas eu lieu).</summary>
+        public bool Live;
     }
 
     /// <summary>Réponse de GetDuelHistory : les derniers duels du joueur, du plus récent au plus ancien.</summary>
