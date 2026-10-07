@@ -21,15 +21,21 @@ namespace MummyEscape.Input
 
         const float SwipeInches = 0.22f;
         const float TapMaxSeconds = 0.3f;
+        // A tap barely moves: a swipe too short to count is not a tap (it would step toward the tile under the finger,
+        // often the opposite way when spamming swipes from below or beside the mummy).
+        const float TapMaxInches = 0.06f;
 
         Vector2 _start;
         int _touchId = -1;
         float _startTime;
+        float _travel;
         bool _tracking;
         bool _consumed;
+        bool _fresh;
         readonly List<RaycastResult> _hits = new List<RaycastResult>();
 
-        float SwipePixels => SwipeInches * (Screen.dpi > 0 ? Screen.dpi : 200f);
+        static float Dpi => Screen.dpi > 0 ? Screen.dpi : 200f;
+        float SwipePixels => SwipeInches * Dpi;
 
         void Update()
         {
@@ -70,9 +76,16 @@ namespace MummyEscape.Input
                 _consumed = false;
                 _start = start;
                 _startTime = Time.unscaledTime;
+                _travel = 0f;
+                // On the press frame of a quick next swipe, the start or the position can still be the previous finger's:
+                // the gesture is only read from the next frame on.
+                _fresh = true;
             }
             if (!_tracking) return;
+            if (_fresh) { _fresh = false; if (!up) return; }
+            if (touch != null && _touchId >= 0) _start = start; // the touch's own start, settled by now
 
+            _travel = Mathf.Max(_travel, (pos - _start).magnitude);
             if (pressed && !_consumed)
             {
                 Vector2 delta = pos - _start;
@@ -87,7 +100,7 @@ namespace MummyEscape.Input
 
             if (up)
             {
-                if (!_consumed && Time.unscaledTime - _startTime <= TapMaxSeconds) Tapped?.Invoke(pos);
+                if (!_consumed && Time.unscaledTime - _startTime <= TapMaxSeconds && _travel <= TapMaxInches * Dpi) Tapped?.Invoke(pos);
                 _tracking = false;
                 _touchId = -1;
             }
