@@ -112,12 +112,21 @@ namespace MummyEscape.World
         Coroutine _anim;
         float _angle;
         bool _ended;
+        bool _map;
 
         public IReplayTrack Track { get; private set; }
         public GameSession Session => Track?.Session;
         public Camera Cam => _cam;
         /// <summary>Actions played so far (the input strip lights them up).</summary>
         public int Played { get; private set; }
+        /// <summary>The whole floor shown, fog lifted and the camera pulled back (the replay's map).</summary>
+        public bool MapOpen => _map;
+
+        public void ShowMap(bool on)
+        {
+            _map = on;
+            if (Session != null) _maze.SetPreview(on, Session.Position.Floor);
+        }
 
         public static ReplayView Create(Transform parent, string name, Vector3 offset, GameApp app)
         {
@@ -186,6 +195,7 @@ namespace MummyEscape.World
         void ShowMaze()
         {
             _maze.Build(Session);
+            if (_map) _maze.SetPreview(true, Session.Position.Floor);
             _player.gameObject.SetActive(_hasRunner);
             _player.ResetVisual();
             _player.SetSkin(Track.Look);
@@ -222,6 +232,7 @@ namespace MummyEscape.World
             _player.SetBlind(Session.IsBlind);
             _player.SetTorchLit(Session.TorchLit);
             var now = Session.Position;
+            if (_map && _maze.PreviewFloor != now.Floor) _maze.SetPreview(true, now.Floor); // the map follows the runner up or down
             if (_anim != null) StopCoroutine(_anim);
             _anim = null;
             bool step = now.Floor == before.Floor && Mathf.Abs(now.X - before.X) + Mathf.Abs(now.Y - before.Y) == 1;
@@ -280,10 +291,20 @@ namespace MummyEscape.World
             if (Session == null) return;
             float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 10f);
             var target = _player.transform.localPosition;
+            float aspect = Mathf.Max(0.1f, _cam.aspect);
+            float size = Mathf.Max(TilesAcross / aspect, MinTilesHigh) * 0.5f;
+            if (_map)
+            {
+                // The whole floor in the view (its sides swapped while the turning slab has the view on its side).
+                var b = _maze.PreviewBounds();
+                bool side = (Session.State.Rotation & 1) == 1;
+                float w = side ? b.size.y : b.size.x, h = side ? b.size.x : b.size.y;
+                target = b.center;
+                size = Mathf.Max(h * 0.5f, w * 0.5f / aspect) + 0.4f;
+            }
             var pos = Vector3.Lerp(_cam.transform.localPosition, new Vector3(target.x, target.y, -10f), k);
             _cam.transform.localPosition = new Vector3(pos.x, pos.y, -10f);
-            float aspect = Mathf.Max(0.1f, _cam.aspect);
-            _cam.orthographicSize = Mathf.Max(TilesAcross / aspect, MinTilesHigh) * 0.5f;
+            _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, size, k);
 
             // The turning slab turns this player's view only.
             float goal = _angle + Mathf.DeltaAngle(_angle, 90f * Session.State.Rotation);
@@ -297,6 +318,7 @@ namespace MummyEscape.World
         public void Clear()
         {
             StopAllCoroutines();
+            _map = false;
             _maze.Clear();
             Track = null;
             _ghost.Hide();
@@ -330,6 +352,12 @@ namespace MummyEscape.World
         public bool Playing { get; set; }
         public float Speed { get; set; } = 1f;
         public bool HasRival => _duel?.Rival != null;
+        /// <summary>Both views show their whole floor (the map), or their own fog.</summary>
+        public bool Map
+        {
+            get => _top.MapOpen;
+            set { _top.ShowMap(value); _bottom.ShowMap(value); }
+        }
 
         public static ReplayRig Create(Transform parent, GameApp app)
         {

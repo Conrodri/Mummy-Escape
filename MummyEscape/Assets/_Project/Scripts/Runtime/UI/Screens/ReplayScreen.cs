@@ -27,6 +27,10 @@ namespace MummyEscape.UI.Screens
         Side _me, _rival;
         Text _status, _waiting, _title;
         Button _play, _speed, _report, _share;
+        Button _map;
+        // The replay opened on the map: the first "play" closes it.
+        bool _introMap;
+        string _statusText;
         bool _sharedRelay;
         Image _playIcon;
         Slider _timeline;
@@ -87,6 +91,10 @@ namespace MummyEscape.UI.Screens
             UIKit.Place(vs.rectTransform, 0.5f, 0.5f, 120, 68);
             var vsText = UIKit.Title(vs.transform, "VS", 40); // noloc
             UIKit.Stretch(vsText.rectTransform);
+
+            // The map tab, on the side: the whole floor of both views, fog lifted.
+            _map = UIKit.IconButton(views, UISprites.Map, ToggleMap, 96);
+            UIKit.Place((RectTransform)_map.transform, 1, 0.5f, 96, 96, -24, 0);
 
             _waiting = UIKit.Label(_bottomArea, "", 30, UIKit.Sand);
             UIKit.FitText(_waiting, 20);
@@ -182,6 +190,8 @@ namespace MummyEscape.UI.Screens
             _waiting.text = rivalRun ? "" : Loc.T("Le relais du duo adverse n'est pas encore arrivé.");
             _report.gameObject.SetActive(false);
             _share.gameObject.SetActive(!shared && record.Resolved);
+            _statusText = null;
+            _introMap = false;
             _status.text = Loc.T("Chargement…");
             SetPlaying(false);
             LoadRelay(record);
@@ -229,8 +239,7 @@ namespace MummyEscape.UI.Screens
             _rig.OpenRelay(map, record.Mine, record.Rival, theme);
             _rig.Speed = 1f;
             _speed.GetComponentInChildren<Text>().text = "x1"; // noloc
-            _status.text = RelayVerdict(record, _sharedRelay);
-            SetPlaying(true);
+            OpenOnMap(RelayVerdict(record, _sharedRelay));
         }
 
         static string RelayVerdict(RelayRecord r, bool shared)
@@ -265,6 +274,8 @@ namespace MummyEscape.UI.Screens
             _report.gameObject.SetActive(duel.Rival != null && !spectator);
             _report.interactable = !duel.Reported;
             _share.gameObject.SetActive(!spectator && duel.Resolved && duel.Rival != null);
+            _statusText = null;
+            _introMap = false;
             _status.text = Loc.T("Chargement…");
             SetPlaying(false);
             Load(duel);
@@ -307,8 +318,7 @@ namespace MummyEscape.UI.Screens
             _rig.Open(duel, level, theme, _spectator);
             _rig.Speed = 1f;
             _speed.GetComponentInChildren<Text>().text = "x1"; // noloc
-            _status.text = _verdict ?? Verdict(duel);
-            SetPlaying(true);
+            OpenOnMap(_verdict ?? Verdict(duel));
         }
 
         static string Verdict(DuelRecord d)
@@ -335,9 +345,41 @@ namespace MummyEscape.UI.Screens
             App.Lighting.SetMood(false);
         }
 
+        /// <summary>The replay waits on the whole maze: a look at the tomb first, then "play".</summary>
+        void OpenOnMap(string status)
+        {
+            _statusText = status;
+            _introMap = true;
+            _rig.Map = true;
+            _status.text = status + "  ·  " + Loc.T("Lecture pour lancer");
+            ShowMapState();
+            SetPlaying(false);
+        }
+
+        void ToggleMap()
+        {
+            if (_rig == null || !_rig.gameObject.activeSelf) return;
+            _introMap = false;
+            _rig.Map = !_rig.Map;
+            ShowMapState();
+        }
+
+        void ShowMapState()
+        {
+            bool on = _rig != null && _rig.Map;
+            _map.image.color = on ? UIKit.Gold : Color.white;
+            if (!_introMap && _statusText != null) _status.text = _statusText;
+        }
+
         void TogglePlay()
         {
             if (_rig == null || !_rig.gameObject.activeSelf) return;
+            if (_introMap && !_rig.Playing)
+            {
+                _introMap = false;
+                _rig.Map = false;
+                ShowMapState();
+            }
             if (!_rig.Playing && _rig.TimeMs >= _rig.EndMs) _rig.Seek(0); // from the start again
             SetPlaying(!_rig.Playing);
         }
