@@ -4,6 +4,7 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using MummyEscape.Core;
 using UnityEngine;
 
 namespace MummyEscape.EditorTools
@@ -99,6 +100,11 @@ namespace MummyEscape.EditorTools
         {
             if (!BuildPipeline.IsBuildTargetSupported(BuildPipeline.GetBuildTargetGroup(target), target))
                 Fail($"{target} build support is not installed (unity install-modules -m android ios).");
+
+            // Each generator version has its own boards: a build without them sends every score into the void.
+            var missing = LeaderboardExporter.Missing();
+            if (missing.Count > 0)
+                Fail($"{missing.Count} leaderboard configs missing for generator v{DifficultyTable.GeneratorVersion} (first: {missing[0]}). Run Mummy Rush > Online > Export leaderboard configs, deploy them, then build again.");
 
             if (string.IsNullOrEmpty(PlayerSettings.bundleVersion) || PlayerSettings.bundleVersion == "1.0")
                 PlayerSettings.bundleVersion = "0.1.0";

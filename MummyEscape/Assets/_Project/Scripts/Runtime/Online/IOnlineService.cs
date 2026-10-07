@@ -174,7 +174,8 @@ namespace MummyEscape.Online
         public static Func<IOnlineService> Create = () => new OfflineOnlineService();
 
         /// <summary>Leaderboard id for a level. Includes the generator version so different layouts never mix.</summary>
-        public static string LeaderboardId(LevelId id) => $"v{DifficultyTable.GeneratorVersion}s{LevelResult.ScoreFormat}_{id.Key}";
+        public static string LeaderboardId(LevelId id) => LeaderboardId(id, DifficultyTable.GeneratorVersion);
+        public static string LeaderboardId(LevelId id, int generatorVersion) => $"v{generatorVersion}s{LevelResult.ScoreFormat}_{id.Key}";
     }
 
     /// <summary>
