@@ -74,7 +74,7 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 10;
+        public const int GeneratorVersion = 11;
 
         /// <summary>
         /// One theme and one signature mechanic per act: the intact antechamber (doors, portals), the flooded galleries
@@ -136,6 +136,8 @@ namespace MummyEscape.Core
         public const int ExtraMovesPerFloor = 4;
         public const int ExtraMovesPerGate = 6;
         public const int LockedPortalExtraMoves = 3;
+        /// <summary>Longest ideal walk the dust's room may stretch a tomb to (still about 2 minutes of play).</summary>
+        public const int MaxMovesCap = 56;
 
         /// <summary>Step of a level inside its act: 1 for levels 1-3, 2 for 4-7, 3 for 8-10 (mechanisms and traps).</summary>
         public static int Tier(int index) => index <= 3 ? 1 : index <= 7 ? 2 : 3;
@@ -185,6 +187,7 @@ namespace MummyEscape.Core
                 MinMechanics = 1,
             };
 
+            int dustRoom = 0;
             // One trap per tier, the act's kinds in turn (shifted level after level so neighbours differ).
             for (int k = 0; k < tier; k++)
             {
@@ -194,7 +197,10 @@ namespace MummyEscape.Core
                     case Peril.Darkness: spec.DarknessTraps++; break;
                     case Peril.Reverse: spec.ReverseTraps++; break;
                     case Peril.Rotate: spec.RotateTraps++; break;
-                    default: spec.DustPatches++; break;
+                    default:
+                        spec.DustPatches++;
+                        dustRoom += LevelValidator.MaxTorchDetour + LevelValidator.TollSpikes;
+                        break;
                 }
             }
 
@@ -207,6 +213,9 @@ namespace MummyEscape.Core
                 // A locked portal is two mechanics (its lever, then the portal): room for the lever's detour.
                 if (spec.Gates[k].Kind == GateKind.Portal && spec.Gates[k].Portal == TeleporterKind.Locked) spec.MaxMoves += LockedPortalExtraMoves;
             }
+            // Relighting is part of the ideal walk (the spikes past the dust are disarmed by torchlight): room for it, within
+            // about 2 minutes of play.
+            spec.MaxMoves = Math.Max(spec.MaxMoves, Math.Min(spec.MaxMoves + dustRoom, MaxMovesCap));
             return spec;
         }
 

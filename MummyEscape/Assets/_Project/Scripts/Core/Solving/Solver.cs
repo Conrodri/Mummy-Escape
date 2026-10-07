@@ -26,6 +26,8 @@ namespace MummyEscape.Core
         public bool AllowTeleporters;
         /// <summary>When true, armed spikes are never walked onto: used to prove the long way round them exists.</summary>
         public bool AvoidSpikes;
+        /// <summary>With <see cref="AvoidSpikes"/>: spikes may still be disarmed (those barring the way, seen by torchlight).</summary>
+        public bool DisarmSpikes;
         /// <summary>Safety cap on explored states.</summary>
         public int MaxStates;
 
@@ -69,7 +71,7 @@ namespace MummyEscape.Core
                 {
                     candidates.Add(PlayerAction.Move(dir));
                     var adj = level.Get(s.Position.Step(dir));
-                    if (!options.AvoidSpikes && Rules.IsDisarmable(adj, s.Disarmed))
+                    if ((!options.AvoidSpikes || options.DisarmSpikes) && Rules.IsDisarmable(adj, s.Disarmed))
                         candidates.Add(PlayerAction.Disarm(dir));
                 }
 

@@ -51,32 +51,56 @@ namespace MummyEscape.Core
             if (spacing != null) return spacing;
             var spikes = CheckSpikeShortcuts(level);
             if (spikes != null) return spikes;
-            return CheckNoDeadLock(level, hazards: true);
+            return CheckNoDeadLock(level, hazards: true, darkTolls: HasTollSpikes(level));
         }
 
         /// <summary>The way round a spike trap costs at least this many moves more than walking across it.</summary>
         public const int MinSpikeDetour = 4;
 
+        /// <summary>Spikes with no way round that a tomb with dust puts past it: they are why its wall torch is worth lighting.</summary>
+        public const int TollSpikes = 2;
+
         /// <summary>
-        /// Spikes only ever guard a shortcut: next to each one runs a longer way without spikes, and the whole tomb can
-        /// be cleared without stepping on a single spike. Losing a life is a choice to go faster, never a toll.
+        /// Spikes guard a shortcut: next to each one runs a longer way without spikes. Only in a tomb with a wall torch,
+        /// spikes may bar the way (<see cref="TollSpikes"/>): a lit torch shows them to disarm. Either way the whole tomb
+        /// can be cleared without a hit: losing a life is a choice, never a toll.
         /// </summary>
         public static string CheckSpikeShortcuts(Level level)
         {
-            bool any = false;
+            bool any = false, toll = false, torch = HasWallTorch(level);
             foreach (var c in level.AllCells())
             {
                 var t = level[c];
                 if (t.Type != TileType.Trap || t.Trap != TrapKind.Spikes) continue;
                 any = true;
                 int extra = SpikeDetour(level, c);
+                if (extra < 0 && torch) { toll = true; continue; }
                 if (extra < 0) return $"spikes: no way around {c}";
                 if (extra < MinSpikeDetour) return $"spikes: {c} saves only {extra} moves";
             }
             if (!any) return null;
             var safe = SolverOptions.Default;
             safe.AvoidSpikes = true;
+            safe.DisarmSpikes = toll;
             return Solver.Solve(level, safe) == null ? "spikes: the exit cannot be reached without a spike" : null;
+        }
+
+        static bool HasWallTorch(Level level)
+        {
+            foreach (var c in level.AllCells())
+                if (level[c].Type == TileType.WallTorch) return true;
+            return false;
+        }
+
+        /// <summary>Spikes barring the way (no way round): only a tomb with a wall torch has them.</summary>
+        public static bool HasTollSpikes(Level level)
+        {
+            foreach (var c in level.AllCells())
+            {
+                var t = level[c];
+                if (t.Type == TileType.Trap && t.Trap == TrapKind.Spikes && SpikeDetour(level, c) < 0) return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -92,6 +116,17 @@ namespace MummyEscape.Core
             int there = SpikeFreeDistance(level, sides[0], sides[1]);
             int back = SpikeFreeDistance(level, sides[1], sides[0]);
             return there < 0 || back < 0 ? -1 : Math.Min(there, back) - 2;
+        }
+
+        /// <summary>A tile next to this wall (a sconce) can be reached from <paramref name="from"/> without crossing spikes (every channel on).</summary>
+        public static bool ReachableWithoutSpikes(Level level, Cell from, Cell wall)
+        {
+            foreach (var d in DirExt.All)
+            {
+                var n = wall.Step(d);
+                if (level.InBounds(n) && !level[n].IsSolid && SpikeFreeDistance(level, from, n) >= 0) return true;
+            }
+            return false;
         }
 
         static int SpikeFreeDistance(Level level, Cell from, Cell to)
@@ -183,6 +218,8 @@ namespace MummyEscape.Core
         /// </summary>
         public static string CheckTorches(Level level, Solution solution)
         {
+            // Spikes barring the way past the dust: relighting is part of the ideal walk (the solution proves it reachable).
+            if (HasTollSpikes(level)) return null;
             foreach (var c in level.AllCells())
             {
                 if (level[c].Type != TileType.WallTorch) continue;
@@ -306,8 +343,10 @@ namespace MummyEscape.Core
         /// With <paramref name="hazards"/>, life, torch, blindness, disarmed traps and the flame beat count too: no
         /// situation may leave death as the only way on (say 1 life left, the torch smothered by dust, and spikes that
         /// can't be seen to disarm across the only way back).
+        /// With <paramref name="darkTolls"/> (spikes barring the way past the dust, <see cref="TollSpikes"/>), the dark is the
+        /// exception: whoever crosses them without relighting the torch is doomed, by design.
         /// </summary>
-        public static string CheckNoDeadLock(Level level, bool hazards = false, int maxStates = 400_000)
+        public static string CheckNoDeadLock(Level level, bool hazards = false, int maxStates = 400_000, bool darkTolls = false)
         {
             bool tick = false;
             if (hazards)
@@ -367,7 +406,7 @@ namespace MummyEscape.Core
                 foreach (int p in preds[queue.Dequeue()])
                     if (!canWin[p]) { canWin[p] = true; queue.Enqueue(p); }
             for (int i = 0; i < states.Count; i++)
-                if (!canWin[i])
+                if (!canWin[i] && !(darkTolls && states[i].TorchOut))
                     return hazards && CheckNoDeadLock(level) == null
                         ? $"dead-end-hazard: only death left at {states[i].Position} ({states[i].Hp} hp{(states[i].TorchOut ? ", torch out" : "")})"
                         : $"dead-lock: walled in at {states[i].Position}";

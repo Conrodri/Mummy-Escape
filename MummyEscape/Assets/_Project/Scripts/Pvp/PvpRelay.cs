@@ -102,6 +102,10 @@ namespace MummyEscape.Pvp
             var spec = DifficultyTable.Spec(id);
             int relays = RelaysFor(id);
             for (int g = 0; g < relays && g < spec.Gates.Count; g++) spec.Gates[g] = Gate.Door;
+            // Pas de poussière : ses pics sans détour se passent à la torche, et un relais coupé entre eux laisserait le
+            // coéquipier sans issue. Une ombre à la place.
+            spec.DarknessTraps += spec.DustPatches;
+            spec.DustPatches = 0;
             return spec;
         }
 

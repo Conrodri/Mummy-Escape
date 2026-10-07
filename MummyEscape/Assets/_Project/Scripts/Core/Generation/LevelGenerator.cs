@@ -148,7 +148,10 @@ namespace MummyEscape.Core
                     if (!PlaceFireJet(route)) { failure = "fire: no spot"; return null; }
 
                 for (int k = 0; k < _spec.DustPatches; k++)
-                    if (!PlaceDust(route)) { failure = "dust: no spot"; return null; }
+                {
+                    if (!PlaceDust(route, out int dustAt, out var sconce)) { failure = "dust: no spot"; return null; }
+                    if (!PlaceTollSpikes(route, dustAt, sconce)) { failure = "dust: no spikes past it to need the torch for"; return null; }
+                }
 
                 // Traps sit on the route only: something to remember and get past, never a pointless side hazard.
                 // Spikes guard a shortcut, with a longer way round: a life for a few moves, the player's call.
@@ -1038,14 +1041,18 @@ namespace MummyEscape.Core
 
             /// <summary>
             /// Dust on the route smothers the torch. The wall torch that relights it is never by the route but in another
-            /// corridor: on a way round, or at the end of a short alcove dug for it. Finish in the dark, or pay a few moves
-            /// (<see cref="LevelValidator.MinTorchDetour"/> to <see cref="LevelValidator.MaxTorchDetour"/>) to see again.
+            /// corridor: on a way round, or at the end of a short alcove dug for it, a few moves away
+            /// (<see cref="LevelValidator.MinTorchDetour"/> to <see cref="LevelValidator.MaxTorchDetour"/>). Spikes past it
+            /// (<see cref="PlaceTollSpikes"/>) make seeing again worth it.
             /// </summary>
-            bool PlaceDust(List<Cell> route)
+            bool PlaceDust(List<Cell> route, out int dustAt, out Cell sconce)
             {
+                dustAt = -1;
+                sconce = default;
                 var onRoute = new HashSet<Cell>(route);
                 var order = new List<int>();
-                for (int i = 3; i < route.Count - 6; i++) order.Add(i);
+                // Early on the walk: most of the tomb is left to cross, in the dark or with the torch lit again.
+                for (int i = 3; i <= Math.Max(4, route.Count / 3) && i < route.Count - 6; i++) order.Add(i);
                 _rng.Shuffle(order);
                 foreach (int i in order)
                 {
@@ -1097,12 +1104,71 @@ namespace MummyEscape.Core
                             _reserved[_level.IndexOf(dust)] = true;
                             _level[wall] = new Tile { Type = TileType.WallTorch };
                             if (dig != null) foreach (var p in dig) _reserved[_level.IndexOf(p)] = true;
+                            dustAt = i;
+                            sconce = wall;
                             return true;
                         }
                         if (dig != null) foreach (var p in dig) _level[p] = Tile.Wall;
                     }
                 }
                 return false;
+            }
+
+            /// <summary>
+            /// Spikes with no way round further on the walk than the dust (<see cref="LevelValidator.TollSpikes"/>): disarming
+            /// them takes seeing them, and two hits kill. The wall torch is then worth its detour, even in a tomb learnt by heart.
+            /// </summary>
+            bool PlaceTollSpikes(List<Cell> route, int dustAt, Cell sconce)
+            {
+                // Bridges of the walk past the dust: spikes there leave no way round.
+                var spots = new List<Cell>();
+                for (int i = dustAt + 4; i < route.Count - 1; i++)
+                {
+                    var c = route[i];
+                    if (!IsFree(c) || Degree(c) != 2 || spots.Contains(c) || !FarFromTraps(c)) continue;
+                    _level[c] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes };
+                    if (LevelValidator.SpikeDetour(_level, c) < 0) spots.Add(c);
+                    _level[c] = Tile.Floor;
+                }
+                _rng.Shuffle(spots);
+                // A pair, not side by side; each try proves itself with the solver, so only so many.
+                int tries = 0;
+                for (int a = 0; a < spots.Count; a++)
+                    for (int b = a + 1; b < spots.Count && tries < MaxTollPairs; b++)
+                    {
+                        if (spots[a].Floor == spots[b].Floor && spots[a].Manhattan(spots[b]) < 2) continue;
+                        tries++;
+                        _level[spots[a]] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)_traps.Count };
+                        _level[spots[b]] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)(_traps.Count + 1) };
+                        // Cheap first: the sconce within reach without crossing them (every channel on), then the solver.
+                        if (LevelValidator.ReachableWithoutSpikes(_level, _level.Start, sconce) && TollSpikesHold())
+                        {
+                            foreach (var c in new[] { spots[a], spots[b] })
+                            {
+                                _traps.Add(c);
+                                _reserved[_level.IndexOf(c)] = true;
+                            }
+                            return true;
+                        }
+                        _level[spots[a]] = Tile.Floor;
+                        _level[spots[b]] = Tile.Floor;
+                    }
+                return false;
+            }
+
+            const int MaxTollPairs = 4;
+
+            /// <summary>
+            /// The spikes really bar the way (no way out without a hit, nor without disarming), and the torch can be lit again
+            /// before them. The rest (no dead end, par in the window) is the validator's.
+            /// </summary>
+            bool TollSpikesHold()
+            {
+                var safe = SolverOptions.Default;
+                safe.AvoidSpikes = true;
+                if (Solver.Solve(_level, safe) != null) return false;
+                safe.DisarmSpikes = true;
+                return Solver.Solve(_level, safe) != null;
             }
 
             /// <summary>Solid rock inside the tomb, with no ground around it but <paramref name="from"/> (and <paramref name="next"/>).</summary>

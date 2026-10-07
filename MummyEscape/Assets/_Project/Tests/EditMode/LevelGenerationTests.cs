@@ -147,8 +147,8 @@ namespace MummyEscape.Tests
         }
 
         /// <summary>
-        /// Spikes guard shortcuts: each one has a longer spike-free way round, and the exit can be reached without
-        /// stepping on any spike (a life is traded for moves, never owed).
+        /// Spikes guard shortcuts: each one has a longer spike-free way round (but those barring the way past dust, to
+        /// disarm by torchlight), and the exit can be reached without a hit (a life is traded for moves, never owed).
         /// </summary>
         [TestCaseSource(nameof(AllMazes))]
         public void Maze_SpikesOnlyGuardShortcuts(int act, int index, int variant)
@@ -167,19 +167,21 @@ namespace MummyEscape.Tests
         }
 
         /// <summary>
-        /// Dust and wall torch are a choice: the sconce is never by the ideal walk, and relighting costs a few moves
-        /// (a way round, or an alcove there and back).
+        /// Dust early on, then spikes with no way round past it: the exit can't be reached unhurt without relighting the
+        /// torch at the wall sconce to see them and disarm them.
         /// </summary>
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_WallTorchIsADetour(int act, int index, int variant)
+        public void Maze_WallTorchIsNeededForTheSpikes(int act, int index, int variant)
         {
             var level = Get(new LevelId(act, index), variant);
-            foreach (var c in level.AllCells())
-            {
-                if (level[c].Type != TileType.WallTorch) continue;
-                int detour = LevelValidator.TorchDetour(level, level.Solution, c);
-                Assert.That(detour, Is.InRange(LevelValidator.MinTorchDetour, LevelValidator.MaxTorchDetour), $"{c}\n{level.ToAscii()}");
-            }
+            if (!level.AllCells().Any(c => level[c].Type == TileType.WallTorch)) return;
+            int toll = level.AllCells().Count(c => level[c].Type == TileType.Trap && level[c].Trap == TrapKind.Spikes && LevelValidator.SpikeDetour(level, c) < 0);
+            Assert.That(toll, Is.GreaterThanOrEqualTo(LevelValidator.TollSpikes), level.ToAscii());
+            var unhurt = SolverOptions.Default;
+            unhurt.AvoidSpikes = true;
+            Assert.IsNull(Solver.Solve(level, unhurt), "no way out unhurt without disarming\n" + level.ToAscii());
+            unhurt.DisarmSpikes = true;
+            Assert.IsNotNull(Solver.Solve(level, unhurt), "disarming by torchlight gets out unhurt\n" + level.ToAscii());
         }
 
         /// <summary>
@@ -261,8 +263,12 @@ namespace MummyEscape.Tests
         [Test]
         public void Acts_IdealRouteStaysShort()
         {
+            // A tomb with dust gets room for the torch and the spikes it shows, up to DifficultyTable.MaxMovesCap.
             foreach (var id in DifficultyTable.AllLevels())
-                Assert.That(DifficultyTable.Spec(id).MaxMoves, Is.LessThanOrEqualTo(48), $"{id}: a level must fit in about 2 minutes");
+            {
+                var spec = DifficultyTable.Spec(id);
+                Assert.That(spec.MaxMoves, Is.LessThanOrEqualTo(spec.DustPatches > 0 ? DifficultyTable.MaxMovesCap : 48), $"{id}: a level must fit in about 2 minutes");
+            }
         }
 
         [TestCaseSource(nameof(AllLevels))]
