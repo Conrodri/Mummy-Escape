@@ -17,6 +17,7 @@ namespace MummyEscape.Pvp
         /// </summary>
         static readonly HashSet<string> PlayerIds = new HashSet<string>
         {
+            "af5s3oREeHqvpfcMh2Pc5Ymuml2D", // noloc: Garpzz
         };
 
         public static bool Is(string playerId) => !string.IsNullOrEmpty(playerId) && PlayerIds.Contains(playerId);
