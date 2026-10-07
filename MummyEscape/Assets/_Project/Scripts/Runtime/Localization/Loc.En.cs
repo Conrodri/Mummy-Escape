@@ -1182,6 +1182,8 @@ namespace MummyEscape
             ["Ce joueur est déjà dans ta guilde."] = "This player is already in your guild.",
             ["Ce joueur est déjà dans une autre guilde."] = "This player is already in another guild.",
             ["Inviter dans la guilde"] = "Invite to the guild",
+            ["glisse pour changer d'étage"] = "swipe to change floor",
+            ["glisse pour changer"] = "swipe to switch",
         };
     }
 }

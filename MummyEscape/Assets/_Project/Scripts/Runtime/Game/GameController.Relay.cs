@@ -136,39 +136,44 @@ namespace MummyEscape.Game
         {
             Phase = RelayPhase.Preview;
             Previewing = true;
-            _input.Enabled = false;
             _app.Guard.Arm(true); // the map must not leave the phone (screenshot / recording)
             _app.Lighting.SetPreview(true);
-            int total = RelayMap.PreviewFloors, shown = 0;
+            // Every floor of both mazes, 7 s each pooled: a swipe turns the pages, the clock is the same on the four phones.
+            var pages = new List<(int maze, int floor)>();
             for (int m = 0; m < RelayConfig.Mazes; m++)
+                for (int f = 0; f < RelayMap.Mazes[m].Floors; f++) pages.Add((m, f));
+            PreviewPages = pages.Count;
+            _showPreviewPage = page =>
             {
+                var (m, f) = pages[page];
+                PreviewPage = page;
+                if (m != ShownMaze) ShowMaze(m);
                 PreviewMaze = m;
-                ShowMaze(m);
-                var level = RelayMap.Mazes[m];
-                for (int f = 0; f < level.Floors; f++, shown++)
+                PreviewFloor = f;
+                _input.Enabled = !_paused; // a swipe turns the page
+                _maze.SetPreview(true, f);
+                _player.gameObject.SetActive(f == RelayMap.Mazes[m].Start.Floor);
+                _app.Camera.ShowArea(_maze.PreviewBounds());
+                PreviewChanged?.Invoke();
+            };
+            PreviewLeft = RelayMap.PreviewSeconds;
+            ShowMaze(0);
+            _showPreviewPage(0);
+            while (PreviewLeft > 0f)
+            {
+                // Recorded or mirrored: the tomb stays dark, but the clock runs on (the four phones keep in step).
+                bool captured = _app.Guard.IsCaptured;
+                if (captured != _maze.Concealed)
                 {
-                    PreviewFloor = f;
-                    PreviewFloorsLeft = total - 1 - shown;
-                    PreviewLeft = RelayConfig.PreviewSecondsPerFloor;
-                    _maze.SetPreview(true, f);
-                    _player.gameObject.SetActive(f == level.Start.Floor);
-                    _app.Camera.ShowArea(_maze.PreviewBounds());
+                    _maze.Concealed = captured;
                     PreviewChanged?.Invoke();
-                    while (PreviewLeft > 0f)
-                    {
-                        // Recorded or mirrored: the tomb stays dark, but the clock runs on (the four phones keep in step).
-                        bool captured = _app.Guard.IsCaptured;
-                        if (captured != _maze.Concealed)
-                        {
-                            _maze.Concealed = captured;
-                            PreviewChanged?.Invoke();
-                        }
-                        PreviewLeft -= Time.deltaTime;
-                        yield return null;
-                    }
                 }
+                PreviewLeft -= Time.deltaTime;
+                yield return null;
             }
             PreviewLeft = 0f;
+            _showPreviewPage = null;
+            _input.Enabled = false;
             _player.gameObject.SetActive(true);
             EndPreviewVisuals();
             _app.Audio.Play(Sfx.Darkness);

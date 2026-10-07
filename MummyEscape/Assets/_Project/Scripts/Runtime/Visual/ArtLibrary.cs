@@ -18,6 +18,8 @@ namespace MummyEscape.Visual
         public int Fire;
         /// <summary>Animation frame (currents).</summary>
         public int Frame;
+        /// <summary>Teleporter pair (both ends share its colour), -1 for a portal leading nowhere.</summary>
+        public int Pair;
     }
 
     /// <summary>
@@ -127,9 +129,12 @@ namespace MummyEscape.Visual
                         return l.Armed ? Tiled(t.Param == 1 ? "turn_cw" : "turn_ccw", () => PaintTurning(true, t.Param == 1)) : Tiled("turn_off", () => PaintTurning(false, false));
                     return Tiled(l.Armed ? "dark" : "dark_off", () => PaintDarkness(l.Armed));
                 case TileType.Teleporter:
-                    if (t.Teleporter == TeleporterKind.Locked && !l.Active) return Tiled("tp_locked", () => PaintPortal(new Color32(110, 110, 120, 255), true));
-                    if (t.Teleporter == TeleporterKind.Cursed) return Tiled("tp_cursed", () => PaintPortal(new Color32(150, 230, 80, 255), false));
-                    return Tiled("tp", () => PaintPortal(S == TombTheme.Style.Tech ? Accent : Turquoise, false));
+                    // The ring tells the kind (grey locked, green cursed), the heart and glyph the pair.
+                    int pair = l.Pair;
+                    Color32 heart = PairColor(pair);
+                    if (t.Teleporter == TeleporterKind.Locked && !l.Active) return Tiled($"tp_locked{pair}", () => PaintPortal(new Color32(110, 110, 120, 255), true, heart));
+                    if (t.Teleporter == TeleporterKind.Cursed) return Tiled($"tp_cursed{pair}", () => PaintPortal(new Color32(150, 230, 80, 255), false, heart));
+                    return Tiled($"tp{pair}", () => PaintPortal(S == TombTheme.Style.Tech ? Accent : Turquoise, false, heart));
                 case TileType.BreakableFloor: return Tiled("breakable", PaintBreakable);
                 case TileType.LadderUp: return Tiled("ladder_up", () => PaintLadder(true));
                 case TileType.LadderDown: return Tiled("ladder_down", () => PaintLadder(false));
@@ -246,9 +251,8 @@ namespace MummyEscape.Visual
                 case TileType.Button: return l.Active ? new Color(0.3f, 1f, 0.9f) : new Color(0.35f, 0.5f, 1f);
                 case TileType.Door: return l.Open ? new Color(0.3f, 1f, 0.9f) : new Color(1f, 0.35f, 0.25f);
                 case TileType.Teleporter:
-                    if (t.Teleporter == TeleporterKind.Cursed) return new Color(0.6f, 1f, 0.3f);
                     if (t.Teleporter == TeleporterKind.Locked && !l.Active) return null;
-                    return new Color(0.3f, 0.95f, 1f);
+                    return PairColor(l.Pair);
                 case TileType.Trap:
                     if (!l.Armed) return null;
                     return t.Trap == TrapKind.Darkness ? new Color(0.55f, 0.25f, 0.9f)
@@ -733,12 +737,30 @@ namespace MummyEscape.Visual
             return p;
         }
 
-        static Px PaintPortal(Color32 ring, bool sealedBar)
+        /// <summary>
+        /// One colour per teleporter pair, far from each other and from the cursed green; past the sixth pair they come
+        /// round again (never seen on one floor). A portal leading nowhere stays pale.
+        /// </summary>
+        static readonly Color32[] PairColors =
+        {
+            new Color32(70, 230, 255, 255),   // turquoise
+            new Color32(255, 140, 40, 255),   // orange
+            new Color32(255, 80, 210, 255),   // pink
+            new Color32(255, 230, 60, 255),   // yellow
+            new Color32(100, 130, 255, 255),  // blue
+            new Color32(255, 70, 70, 255),    // red
+        };
+
+        public static Color32 PairColor(int pair) => pair < 0 ? new Color32(200, 200, 210, 255) : PairColors[pair % PairColors.Length];
+
+        static Px PaintPortal(Color32 ring, bool sealedBar, Color32 heart)
         {
             var p = PaintFloor(1);
             p.Circle(16, 16, 12, StoneDark, false);
             p.Circle(16, 16, 11, ring, false);
-            p.Circle(16, 16, 9, Black, true);
+            p.Circle(16, 16, 9, Px.Shade(heart, -0.55f), true);
+            p.Circle(16, 16, 6, Px.Shade(heart, -0.3f), true);
+            ring = heart;
             for (int k = 0; k < 8; k++)
             {
                 float a = k * Mathf.PI / 4f;

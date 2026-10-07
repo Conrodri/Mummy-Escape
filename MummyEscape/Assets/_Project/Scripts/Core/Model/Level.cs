@@ -66,29 +66,26 @@ namespace MummyEscape.Core
 
         public bool TryGetTeleportTarget(Cell from, out Cell to) => _teleportTargets.TryGetValue(IndexOf(from), out to);
 
-        public const int MinPreviewSeconds = 4;
-        public const int MaxPreviewSeconds = 10;
+        /// <summary>
+        /// Which pair this teleporter belongs to (0, 1, 2… in cell order), -1 when it leads nowhere: both ends of a pair share
+        /// a colour on screen, so four portals on a floor never leave the player guessing which goes where.
+        /// </summary>
+        public int TeleporterPair(Cell c)
+        {
+            if (!_teleportTargets.TryGetValue(IndexOf(c), out var to)) return -1;
+            int key = Math.Min(IndexOf(c), IndexOf(to)), rank = 0;
+            foreach (var kv in _teleportTargets)
+                if (kv.Key < IndexOf(kv.Value) && kv.Key < key) rank++;
+            return rank;
+        }
+
+        public const int PreviewSecondsPerFloor = 7;
 
         /// <summary>
-        /// How long one floor is shown before the fog falls: the more ground and elements (buttons, doors, portals,
-        /// ladders, traps, hazards, torches) there are to remember, the longer, in whole seconds between
-        /// <see cref="MinPreviewSeconds"/> and <see cref="MaxPreviewSeconds"/>. A first tomb takes a glance, a burning
-        /// sanctuary a real look.
+        /// How long the map is shown before the fog falls: <see cref="PreviewSecondsPerFloor"/> per floor, pooled. The player
+        /// spends them as they like, swiping from floor to floor (3 floors: 21 s to share out).
         /// </summary>
-        public int PreviewSeconds(int floor)
-        {
-            int ground = 0, elements = 0;
-            for (int y = 0; y < Height; y++)
-                for (int x = 0; x < Width; x++)
-                {
-                    var t = this[new Cell(floor, x, y)].Type;
-                    if (t == TileType.Wall) continue;
-                    if (t != TileType.WallTorch) ground++;
-                    if (t != TileType.Floor) elements++;
-                }
-            float seconds = 1.5f + ground * 0.05f + elements * 0.5f;
-            return Math.Max(MinPreviewSeconds, Math.Min(MaxPreviewSeconds, (int)Math.Round(seconds)));
-        }
+        public int PreviewSeconds => Floors * PreviewSecondsPerFloor;
 
         /// <summary>
         /// The same tomb trimmed to the bounding box of its ground (every floor alike, so ladders stay aligned), with a

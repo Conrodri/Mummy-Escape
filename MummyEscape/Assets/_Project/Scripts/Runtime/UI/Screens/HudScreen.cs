@@ -423,16 +423,15 @@ namespace MummyEscape.UI.Screens
             if (preview)
             {
                 var act = DifficultyTable.GetAct(level.Id.Act);
-                string sub = level.Floors > 1 ? Loc.F("Étage {0} / {1}", App.Game.PreviewFloor + 1, level.Floors) : Loc.F("Acte {0} — {1}", level.Id.Act, Loc.T(act.Name));
+                string sub = level.Floors > 1 ? Loc.F("Étage {0} / {1}", App.Game.PreviewFloor + 1, level.Floors) + "  ·  " + Loc.T("glisse pour changer d'étage") : Loc.F("Acte {0} — {1}", level.Id.Act, Loc.T(act.Name));
                 if (App.Game.InRelay)
                 {
                     // Both mazes, every floor, nothing to skip: the four phones keep in step.
                     string maze = App.Game.PreviewMaze == 0 ? Loc.T("Labyrinthe 1 · départ") : Loc.T("Labyrinthe 2 · arrivée");
                     if (level.Floors > 1) maze += "  ·  " + Loc.F("Étage {0} / {1}", App.Game.PreviewFloor + 1, level.Floors);
-                    sub = maze;
+                    sub = maze + (App.Game.PreviewPages > 1 ? "  ·  " + Loc.T("glisse pour changer") : "");
                 }
                 _previewTitle.text = Loc.T("Mémorise le tombeau !") + $"\n<size=30>{sub}</size>";
-                UIKit.SetLabel(_ready, App.Game.PreviewOnLastFloor ? "Prêt" : "Étage suivant");
                 _ready.gameObject.SetActive(!App.Game.InRelay && !App.Game.InLiveDuel); // live: same time for everyone
             }
 

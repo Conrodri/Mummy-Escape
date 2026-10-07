@@ -232,31 +232,42 @@ namespace MummyEscape.Tests
             }
         }
 
-        /// <summary>The map preview lasts as long as the tomb asks for: a glance for a first tomb, a real look later on.</summary>
+        /// <summary>Both ends of a teleporter share a pair number (its colour on screen), and no two pairs share one.</summary>
         [Test]
-        public void Preview_GrowsWithWhatThereIsToRemember()
+        public void Teleporters_EachPairHasItsOwnColour()
         {
-            // Whole preview of a level (every floor): stacked floors are smaller, but there are more of them.
-            double Average(int act)
-            {
-                var seconds = new List<int>();
+            int levelsWithPairs = 0;
+            for (int act = 1; act <= DifficultyTable.ActCount; act++)
                 for (int i = 1; i <= DifficultyTable.GetAct(act).Levels; i++)
                 {
                     var level = Get(new LevelId(act, i), 0);
-                    int sum = 0;
-                    for (int f = 0; f < level.Floors; f++)
+                    var pairs = new Dictionary<int, HashSet<Cell>>();
+                    for (int c = 0; c < level.Width * level.Height * level.Floors; c++)
                     {
-                        int s = level.PreviewSeconds(f);
-                        Assert.That(s, Is.InRange(Level.MinPreviewSeconds, Level.MaxPreviewSeconds));
-                        sum += s;
+                        var cell = level.CellAt(c);
+                        if (!level.TryGetTeleportTarget(cell, out var to)) continue;
+                        int pair = level.TeleporterPair(cell);
+                        Assert.AreEqual(pair, level.TeleporterPair(to), $"{cell} and {to} are one pair");
+                        if (!pairs.TryGetValue(pair, out var ends)) pairs[pair] = ends = new HashSet<Cell>();
+                        ends.Add(cell);
+                        ends.Add(to);
                     }
-                    seconds.Add(sum);
+                    Assert.IsTrue(pairs.Values.All(e => e.Count == 2), "one number per pair");
+                    CollectionAssert.AreEquivalent(Enumerable.Range(0, pairs.Count), pairs.Keys);
+                    if (pairs.Count >= 2) levelsWithPairs++;
                 }
-                return seconds.Average();
+            Assert.Greater(levelsWithPairs, 0, "some tombs have several pairs");
+        }
+
+        /// <summary>The map preview is 7 s per floor, pooled: a 3-floor tomb gives 21 s to share out between its floors.</summary>
+        [Test]
+        public void Preview_SevenSecondsPerFloor()
+        {
+            for (int act = 1; act <= DifficultyTable.ActCount; act++)
+            {
+                var level = Get(new LevelId(act, DifficultyTable.GetAct(act).Levels), 0);
+                Assert.AreEqual(7 * level.Floors, level.PreviewSeconds);
             }
-            Assert.That(Average(1), Is.LessThanOrEqualTo(7), "a first tomb takes a few seconds, not 10");
-            Assert.That(Average(3), Is.GreaterThan(Average(1)));
-            Assert.That(Average(5), Is.GreaterThan(Average(3)));
         }
 
         /// <summary>The game plays on memory and logic, not length: the ideal route stays short in every act.</summary>

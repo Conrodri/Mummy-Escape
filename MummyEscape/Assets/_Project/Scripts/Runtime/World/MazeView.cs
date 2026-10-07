@@ -141,6 +141,7 @@ namespace MummyEscape.World
                 WallFace = !Solid(0, -1),
                 // Gates are drawn for a north-south passage; turn them when the corridor runs east-west.
                 Vertical = Solid(0, 1) && Solid(0, -1),
+                Pair = level[c].Type == TileType.Teleporter ? level.TeleporterPair(c) : -1,
             };
         }
 
@@ -328,7 +329,7 @@ namespace MummyEscape.World
                 case TileType.Teleporter:
                     if (t.Teleporter == TeleporterKind.Locked && !tv.Look.Active) { SetLoop(tv, false); return; }
                     kind = FxRig.Loop.PortalSwirl;
-                    color = t.Teleporter == TeleporterKind.Cursed ? new Color(0.6f, 1f, 0.3f) : new Color(0.4f, 0.95f, 1f);
+                    color = ArtLibrary.PairColor(tv.Look.Pair); // both ends of a pair swirl alike
                     break;
                 case TileType.Trap when t.Trap == TrapKind.Darkness && tv.Look.Armed:
                     kind = FxRig.Loop.DarkWisps; color = new Color(0.4f, 0.15f, 0.65f, 0.7f); break;

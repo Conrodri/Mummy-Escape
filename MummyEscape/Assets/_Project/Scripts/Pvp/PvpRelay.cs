@@ -57,7 +57,7 @@ namespace MummyEscape.Pvp
             return leg < Relays[maze].Count ? Relays[maze][leg] : Mazes[maze].Exit;
         }
 
-        /// <summary>Étages montrés avant la course, labyrinthe 0 puis 1 (<see cref="RelayConfig.PreviewSecondsPerFloor"/> chacun).</summary>
+        /// <summary>Étages montrés avant la course, labyrinthe 0 puis 1 (<see cref="RelayConfig.PreviewSecondsPerFloor"/> par étage, mis en commun : on passe de l'un à l'autre en glissant).</summary>
         public int PreviewFloors => Mazes[0].Floors + Mazes[1].Floors;
 
         public int PreviewSeconds => PreviewFloors * RelayConfig.PreviewSecondsPerFloor;

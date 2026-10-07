@@ -49,8 +49,7 @@ namespace MummyEscape.Tests
             public void At(LiveDuel duel, int timeMs)
             {
                 var level = PvpServer.Arena(duel.Seed);
-                long preview = 0;
-                for (int f = 0; f < level.Floors; f++) preview += level.PreviewSeconds(f) * 1000L + 350;
+                long preview = level.PreviewSeconds * 1000L + 350;
                 Now = DateTimeOffset.FromUnixTimeMilliseconds(duel.CreatedAtUnixMs).UtcDateTime
                       .AddMilliseconds(preview + LiveDuelConfig.VsScreenMs + 1000 + timeMs + 500);
             }

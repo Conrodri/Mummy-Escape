@@ -51,7 +51,7 @@ namespace LevelLab
                         for (int attempt = 0; ; attempt++)
                         {
                             var level = LevelGenerator.Generate(id, k * 13 + attempt);
-                            for (int f = 0; f < level.Floors; f++) t += level.PreviewSeconds(f); // preview, sized to the tomb
+                            t += level.PreviewSeconds; // preview, 7 s per floor
                             if (attempt > 0) t += 3; // restart
                             var r = HumanSim.Play(level, prof, rng);
                             runs++; wrong += r.WrongTurns;

@@ -37,13 +37,16 @@ namespace MummyEscape.Game
 
         public bool Previewing { get; private set; }
         public float PreviewLeft { get; private set; }
-        /// <summary>Floor shown by the preview right now (0 = bottom), and how many floors are still to come.</summary>
+        /// <summary>Floor shown by the preview right now (0 = bottom).</summary>
         public int PreviewFloor { get; private set; }
-        public int PreviewFloorsLeft { get; private set; }
-        public bool PreviewOnLastFloor => PreviewFloorsLeft <= 0;
+        /// <summary>The preview's pages (one per floor; in a 2v2, every floor of both mazes) and the one on screen.</summary>
+        public int PreviewPage { get; private set; }
+        public int PreviewPages { get; private set; }
         public event Action PreviewChanged;
         bool _skipPreview;
-        /// <summary>Swipe made on the last floor of the preview: played as soon as the fog falls.</summary>
+        /// <summary>Puts a page of the preview on screen (solo and duel: a floor; 2v2: a maze and a floor).</summary>
+        Action<int> _showPreviewPage;
+        /// <summary>Swipe made on a one-floor preview: played as soon as the fog falls.</summary>
         Dir? _pendingMove;
 
         bool _busy;
@@ -273,10 +276,10 @@ namespace MummyEscape.Game
         // ------------------------------------------------------------------ map preview
 
         /// <summary>
-        /// Shows the floors one after the other, from the first one up, each as long as its content asks for
-        /// (<see cref="Level.PreviewSeconds"/>: a few seconds for a first tomb, up to 10 s); "Ready" moves on
-        /// to the next floor (or starts on the last one), and so does a swipe: on the last floor the swipe also makes
-        /// the first move. Turned off for good in the settings, the run starts at once.
+        /// Shows the tomb before the run: <see cref="Level.PreviewSeconds"/> (7 s per floor) pooled, the first floor first,
+        /// and a swipe goes up or down a floor as often as the player likes until the time is spent. "Ready" starts at
+        /// once; on a one-floor tomb a swipe does too, as the first move. Turned off for good in the settings, the run
+        /// starts at once.
         /// </summary>
         IEnumerator PreviewRoutine()
         {
@@ -288,40 +291,39 @@ namespace MummyEscape.Game
             }
             Previewing = true;
             _pendingMove = null;
-            _input.Enabled = !_paused; // a swipe moves the preview on
+            _skipPreview = false;
+            _input.Enabled = !_paused; // a swipe changes floor
             _app.Guard.Arm(true); // the map must not leave the phone (screenshot / recording)
             _app.Lighting.SetPreview(true);
-            // Floors in order, the first one first (the mummy wakes up on it).
-            var order = new List<int>();
             int startFloor = Session.Level.Start.Floor;
-            for (int f = 0; f < Session.Level.Floors; f++) order.Add(f);
-            for (int step = 0; step < order.Count; step++)
+            PreviewPages = Session.Level.Floors;
+            _showPreviewPage = floor =>
             {
-                PreviewFloor = order[step];
-                PreviewFloorsLeft = order.Count - 1 - step;
-                _skipPreview = false;
-                PreviewLeft = Session.Level.PreviewSeconds(PreviewFloor);
-                _maze.SetPreview(true, PreviewFloor);
-                _player.gameObject.SetActive(PreviewFloor == startFloor); // the mummy stands on the start floor only
+                PreviewPage = PreviewFloor = floor;
+                _maze.SetPreview(true, floor);
+                _player.gameObject.SetActive(floor == startFloor); // the mummy stands on the start floor only
                 _app.Camera.ShowArea(_maze.PreviewBounds());
                 PreviewChanged?.Invoke();
-                // Let the camera settle on the floor before the clock starts.
-                yield return new WaitForSeconds(0.35f);
-                while (PreviewLeft > 0f && !_skipPreview)
+            };
+            PreviewLeft = Session.Level.PreviewSeconds;
+            _showPreviewPage(0);
+            // Let the camera settle on the floor before the clock starts.
+            yield return new WaitForSeconds(0.35f);
+            while (PreviewLeft > 0f && !_skipPreview)
+            {
+                // Screen being recorded or mirrored: the tomb stays dark, and the clock waits for it to stop (as in the pause menu).
+                bool captured = _app.Guard.IsCaptured;
+                if (captured != _maze.Concealed)
                 {
-                    // Screen being recorded or mirrored: the tomb stays dark, and the clock waits for it to stop (as in the pause menu).
-                    bool captured = _app.Guard.IsCaptured;
-                    if (captured != _maze.Concealed)
-                    {
-                        _maze.Concealed = captured;
-                        PreviewChanged?.Invoke();
-                    }
-                    // In a duel the pause menu does not stop the preview either (no studying the map at leisure).
-                    if (!captured && (!_paused || Match != null)) PreviewLeft -= Time.deltaTime;
-                    yield return null;
+                    _maze.Concealed = captured;
+                    PreviewChanged?.Invoke();
                 }
+                // In a duel the pause menu does not stop the preview either (no studying the map at leisure).
+                if (!captured && (!_paused || Match != null)) PreviewLeft -= Time.deltaTime;
+                yield return null;
             }
             PreviewLeft = 0f;
+            _showPreviewPage = null;
             _player.gameObject.SetActive(true);
             EndPreviewVisuals();
             // Live duel: both phones start together.
@@ -330,9 +332,17 @@ namespace MummyEscape.Game
             _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
             PreviewChanged?.Invoke();
             Changed?.Invoke();
-            // The swipe that ended the preview on its last floor is the first move of the run.
+            // The swipe that ended a one-floor preview is the first move of the run.
             if (_pendingMove.HasValue) Submit(PlayerAction.Move(_pendingMove.Value));
             _pendingMove = null;
+        }
+
+        /// <summary>Up or right: the next page of the preview (the floor above); down or left: the one before.</summary>
+        public void TurnPreviewPage(int delta)
+        {
+            if (!Previewing || _showPreviewPage == null) return;
+            int page = Mathf.Clamp(PreviewPage + delta, 0, PreviewPages - 1);
+            if (page != PreviewPage) _showPreviewPage(page);
         }
 
         /// <summary>Set when the last tomb was thrown away because of a screenshot (the HUD tells the player why).</summary>
@@ -359,7 +369,7 @@ namespace MummyEscape.Game
             PreviewChanged?.Invoke();
         }
 
-        /// <summary>"Ready": next floor of the preview, or the start of the run on the last one.</summary>
+        /// <summary>"Ready": the run starts now, whatever floor the preview shows.</summary>
         public void SkipPreview()
         {
             if (!InLiveDuel) _skipPreview = true; // a live duel shows the tomb as long to both rivals
@@ -442,12 +452,15 @@ namespace MummyEscape.Game
 
         void OnSwipe(Dir d)
         {
-            // During the map preview, a swipe skips to the next floor, or on the last one starts the run with that move.
+            // During the map preview, a swipe changes floor; on a one-floor tomb it starts the run with that move.
             if (Previewing)
             {
-                if (InLiveDuel) return;
-                if (PreviewFloorsLeft == 0) _pendingMove = d;
-                SkipPreview();
+                if (PreviewPages > 1) TurnPreviewPage(d == Dir.Up || d == Dir.Right ? 1 : -1);
+                else if (!InLiveDuel && !InRelay)
+                {
+                    _pendingMove = d;
+                    SkipPreview();
+                }
                 return;
             }
             Submit(PlayerAction.Move(d));

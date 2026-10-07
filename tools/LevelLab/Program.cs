@@ -90,28 +90,6 @@ if (args.Length >= 1 && args[0] == "--specs")
     return;
 }
 
-if (args.Length >= 1 && args[0] == "--preview")
-{
-    // --preview [variants]: map preview time per floor (Level.PreviewSeconds), per act.
-    int n = args.Length > 1 ? int.Parse(args[1]) : 10;
-    Console.WriteLine("act | seconds per floor min-avg-max | whole preview avg");
-    for (int act = 1; act <= DifficultyTable.ActCount; act++)
-    {
-        var perFloor = new List<int>();
-        var whole = new List<int>();
-        for (int i = 1; i <= DifficultyTable.GetAct(act).Levels; i++)
-            for (int v = 0; v < n; v++)
-            {
-                var level = LevelGenerator.Generate(new LevelId(act, i), v);
-                int sum = 0;
-                for (int f = 0; f < level.Floors; f++) { int s = level.PreviewSeconds(f); perFloor.Add(s); sum += s; }
-                whole.Add(sum);
-            }
-        Console.WriteLine($"{act,3} | {perFloor.Min(),2} {perFloor.Average(),5:0.0} {perFloor.Max(),2} | {whole.Average(),5:0.0} s");
-    }
-    return;
-}
-
 if (args.Length >= 1 && args[0] == "--compact")
 {
     // --compact [variants]: how much of each tomb the ideal walk actually uses, per act.

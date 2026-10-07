@@ -111,13 +111,10 @@ namespace MummyEscape.Pvp
             return new LiveDuelResponse { Match = duel };
         }
 
-        /// <summary>Durée de l'aperçu du tombeau d'un duel (les étages l'un après l'autre).</summary>
+        /// <summary>Durée de l'aperçu du tombeau d'un duel (7 s par étage, à répartir entre eux, après 350 ms de mise en place).</summary>
         static long PreviewMs(int seed)
         {
-            var level = Arena(seed);
-            long ms = 0;
-            for (int f = 0; f < level.Floors; f++) ms += level.PreviewSeconds(f) * 1000L + 350;
-            return ms;
+            return Arena(seed).PreviewSeconds * 1000L + 350;
         }
 
         /// <summary>
