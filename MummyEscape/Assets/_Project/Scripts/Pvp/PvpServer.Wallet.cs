@@ -137,8 +137,10 @@ namespace MummyEscape.Pvp
             return new WalletResponse { Wallet = WalletOf(data) };
         }
 
+        /// <summary>The order's Cloud Save key: only ASCII letters, digits, - and _ are allowed there (GPA.3342-… becomes GPA_3342-…).</summary>
         static string OrderKey(string orderId) =>
-            new string(orderId.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_' || c == '.').Take(120).ToArray());
+            new string(orderId.Select(c => c == '.' ? '_' : c)
+                .Where(c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_').Take(120).ToArray());
 
         /// <summary>Retire <paramref name="price"/> du portefeuille et applique <paramref name="grant"/> ; "GOLD" s'il en manque.</summary>
         async Task<WalletResponse> SpendAsync(string me, int price, Func<Wallet, string> grant)

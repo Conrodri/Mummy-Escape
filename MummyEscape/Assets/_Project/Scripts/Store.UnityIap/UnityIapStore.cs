@@ -63,6 +63,9 @@ namespace MummyEscape.Monetization
         public Task<PurchaseOutcome> BuyAsync(string productId)
         {
             if (!_fetched) return Task.FromResult(new PurchaseOutcome { Error = "NOT_READY" }); // noloc
+            // Already paid, not credited yet (Google refuses to sell it again until then): try crediting that order.
+            var paid = _pending.FirstOrDefault(p => p.Value.product == productId);
+            if (paid.Key != null) return Task.FromResult(new PurchaseOutcome { Ok = true, TransactionId = paid.Key });
             _buying?.TrySetResult(new PurchaseOutcome { Cancelled = true });
             _buying = new TaskCompletionSource<PurchaseOutcome>();
             _buyingProduct = productId;
@@ -86,6 +89,7 @@ namespace MummyEscape.Monetization
             if (string.IsNullOrEmpty(product) || string.IsNullOrEmpty(token)) return;
             _pending[token] = (product, order);
             if (product == _buyingProduct) Complete(new PurchaseOutcome { Ok = true, TransactionId = token });
+            else Store.UnfinishedFound?.Invoke();
         }
 
         void OnFailed(FailedOrder order)

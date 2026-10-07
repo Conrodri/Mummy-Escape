@@ -1083,6 +1083,8 @@ namespace MummyEscape
             ["Possédé"] = "Owned",
             ["Acheter · {0} scarabées"] = "Buy · {0} scarabs",
             ["À gagner ou à acheter"] = "Win it or buy it",
+            ["Copier l'identifiant"] = "Copy the ID",
+            ["Copié !"] = "Copied!",
             ["Ton identifiant de joueur, à donner au support si besoin."] = "Your player ID, to give to the support if needed.",
             ["Réservé à l'équipe de Mummy Rush"] = "Reserved for the Mummy Rush team",
             ["Développeur"] = "Developer",

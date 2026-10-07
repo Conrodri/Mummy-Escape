@@ -59,7 +59,7 @@ namespace MummyEscape.Online
                 }
                 await AuthenticationService.Instance.GetPlayerInfoAsync();
                 PlayerName = await AuthenticationService.Instance.GetPlayerNameAsync();
-                await FriendsService.Instance.InitializeAsync();
+                await InitFriendsAsync();
                 IsAvailable = true;
                 Status = "En ligne";
             }
@@ -126,7 +126,7 @@ namespace MummyEscape.Online
                 else
                 {
                     var ids = new List<string> { PlayerId };
-                    foreach (var f in FriendsService.Instance.Friends) ids.Add(f.Member.Id);
+                    foreach (var f in Friends) ids.Add(f.Member.Id);
                     var res = await lb.GetScoresByPlayerIdsAsync(id, ids, new GetScoresByPlayerIdsOptions { IncludeMetadata = true });
                     var entries = res.Results;
                     entries.Sort((a, b) => a.Score.CompareTo(b.Score));
@@ -183,7 +183,7 @@ namespace MummyEscape.Online
         {
             var list = new List<FriendInfo>();
             if (IsAvailable)
-                foreach (var r in FriendsService.Instance.Friends)
+                foreach (var r in Friends)
                     list.Add(new FriendInfo
                     {
                         PlayerId = r.Member.Id,
@@ -197,7 +197,7 @@ namespace MummyEscape.Online
         {
             var list = new List<FriendRequest>();
             if (IsAvailable)
-                foreach (var r in FriendsService.Instance.IncomingFriendRequests)
+                foreach (var r in FriendRequests)
                     list.Add(new FriendRequest { PlayerId = r.Member.Id, Name = r.Member.Profile?.Name ?? r.Member.Id });
             return Task.FromResult<IReadOnlyList<FriendRequest>>(list);
         }
@@ -219,17 +219,17 @@ namespace MummyEscape.Online
 
         public async Task AcceptFriendRequestAsync(string playerId)
         {
-            if (IsAvailable) await FriendsService.Instance.AddFriendAsync(playerId);
+            if (IsAvailable && _friendsReady) await FriendsService.Instance.AddFriendAsync(playerId);
         }
 
         public async Task DeclineFriendRequestAsync(string playerId)
         {
-            if (IsAvailable) await FriendsService.Instance.DeleteIncomingFriendRequestAsync(playerId);
+            if (IsAvailable && _friendsReady) await FriendsService.Instance.DeleteIncomingFriendRequestAsync(playerId);
         }
 
         public async Task RemoveFriendAsync(string playerId)
         {
-            if (IsAvailable) await FriendsService.Instance.DeleteFriendAsync(playerId);
+            if (IsAvailable && _friendsReady) await FriendsService.Instance.DeleteFriendAsync(playerId);
         }
 
         // ================================================================== account
@@ -347,15 +347,52 @@ namespace MummyEscape.Online
             var auth = AuthenticationService.Instance;
             await auth.GetPlayerInfoAsync();
             PlayerName = await auth.GetPlayerNameAsync();
-            await FriendsService.Instance.InitializeAsync();
+            await InitFriendsAsync();
             IsAvailable = true;
             Status = "En ligne";
+        }
+
+        static bool _friendsReady;
+
+        static IReadOnlyList<Unity.Services.Friends.Models.Relationship> Friends =>
+            _friendsReady ? FriendsService.Instance.Friends : Array.Empty<Unity.Services.Friends.Models.Relationship>();
+
+        static IReadOnlyList<Unity.Services.Friends.Models.Relationship> FriendRequests =>
+            _friendsReady ? FriendsService.Instance.IncomingFriendRequests : Array.Empty<Unity.Services.Friends.Models.Relationship>();
+
+        /// <summary>
+        /// Friends right after a sign-out can fail (its live connection still closing: Wire 23002): tried again, then the
+        /// game stays online without the friends list rather than going offline.
+        /// </summary>
+        static async Task InitFriendsAsync()
+        {
+            _friendsReady = false;
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    await FriendsService.Instance.InitializeAsync();
+                    _friendsReady = true;
+                    return;
+                }
+                catch (Exception e) when (attempt < 3)
+                {
+                    Debug.LogWarning("[Online] Friends not ready, trying again: " + e.Message);
+                    await Task.Delay(1500 * attempt);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning("[Online] Friends unavailable: " + e.Message);
+                    return;
+                }
+            }
         }
 
         public Task SignOutAsync()
         {
             if (UnityServices.State == ServicesInitializationState.Initialized && AuthenticationService.Instance.IsSignedIn)
                 AuthenticationService.Instance.SignOut(true); // forget the session on this device
+            _friendsReady = false;
             IsAvailable = false;
             PlayerName = "";
             Status = "Déconnecté";
@@ -382,7 +419,7 @@ namespace MummyEscape.Online
                 await DeleteKey(SaveKey, false);
                 await DeleteKey(ProgressKey, true);
                 await DeleteKey("solo_total_stars", false); // duels: the protected PvP data goes with the player
-                foreach (var f in new List<Unity.Services.Friends.Models.Relationship>(FriendsService.Instance.Friends))
+                foreach (var f in new List<Unity.Services.Friends.Models.Relationship>(Friends))
                     try { await FriendsService.Instance.DeleteFriendAsync(f.Member.Id); } catch (Exception) { }
                 await AuthenticationService.Instance.DeleteAccountAsync();
                 AuthenticationService.Instance.SignOut(true);
@@ -442,7 +479,7 @@ namespace MummyEscape.Online
             x.playerId = PlayerId;
             x.playerName = PlayerName;
             x.username = Username;
-            foreach (var f in FriendsService.Instance.Friends) x.friends.Add($"{f.Member.Profile?.Name ?? f.Member.Id} ({f.Member.Id})");
+            foreach (var f in Friends) x.friends.Add($"{f.Member.Profile?.Name ?? f.Member.Id} ({f.Member.Id})");
             foreach (var id in DifficultyTable.AllLevels())
             {
                 try
@@ -471,7 +508,8 @@ namespace MummyEscape.Online
             if (e.ErrorCode == CommonErrorCodes.TransportError || e.ErrorCode == CommonErrorCodes.Timeout || e.ErrorCode == CommonErrorCodes.ServiceUnavailable)
                 return "Connexion impossible. Vérifie ton accès à Internet.";
             if (e.ErrorCode == CommonErrorCodes.TooManyRequests) return "Trop de tentatives, réessaie dans quelques minutes.";
-            return fallback;
+            // The service's code, for the support: one message covers several causes.
+            return Loc.T(fallback) + " (" + e.ErrorCode + ")";
         }
 
         public async Task PublishProgressAsync(ProgressSnapshot snapshot)

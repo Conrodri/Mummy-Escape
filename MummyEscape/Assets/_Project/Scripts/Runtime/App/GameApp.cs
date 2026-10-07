@@ -47,6 +47,9 @@ namespace MummyEscape.App
         {
             I = this;
             Application.targetFrameRate = 60;
+            // Portrait only, whatever the phone's auto-rotate setting.
+            Screen.autorotateToLandscapeLeft = Screen.autorotateToLandscapeRight = Screen.autorotateToPortraitUpsideDown = false;
+            Screen.orientation = ScreenOrientation.Portrait;
             LegacyData.Migrate(); // before the save and the settings are read (the game was renamed)
 
             if (spriteMaterial == null)
@@ -112,6 +115,7 @@ namespace MummyEscape.App
                 if (Monetization.Store.Provider == null || Monetization.Store.Provider is SimulatedStore) Monetization.Store.Provider = new SimulatedStore(UI);
             }
             PvpServiceFactory.UpdateRequired = AskForUpdate;
+            Monetization.Store.UnfinishedFound = () => _ = Monetization.GoldWallet.RecoverAsync(this);
             UI.Open<MainMenuScreen>();
             if (Privacy.NeedsAnswer) UI.Open<WelcomeScreen>();
             StudioIntro.Play(Audio); // the studio's logo, over the first screen, in silence

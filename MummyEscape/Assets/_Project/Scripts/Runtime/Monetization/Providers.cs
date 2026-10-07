@@ -65,5 +65,8 @@ namespace MummyEscape.Monetization
         public static bool Available => Provider != null && Provider.IsReady;
 
         public static string Price(GoldPack pack) => Provider?.LocalizedPrice(pack.ProductId) ?? pack.FallbackPrice;
+
+        /// <summary>Called by the store when a paid order shows up outside a purchase (paid earlier, not credited yet).</summary>
+        public static System.Action UnfinishedFound;
     }
 }

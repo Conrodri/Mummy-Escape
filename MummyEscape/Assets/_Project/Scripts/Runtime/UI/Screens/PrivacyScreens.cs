@@ -437,6 +437,12 @@ namespace MummyEscape.UI.Screens
             field.text = id;
             field.readOnly = true;
             UIKit.Size(field, 70);
+            Button copy = null;
+            copy = PrivacyUI.Wide(card, "Copier l'identifiant", () =>
+            {
+                GUIUtility.systemCopyBuffer = id;
+                UIKit.SetLabel(copy, "Copié !");
+            }, 28, 80);
             PrivacyUI.Paragraph(card, "Ton identifiant de joueur, à donner au support si besoin.", 24, UIKit.Dim);
         }
 
@@ -577,7 +583,8 @@ namespace MummyEscape.UI.Screens
                 var f = UIKit.Input(_fields, fields[i].placeholder, 38);
                 f.characterLimit = AccountRules.PasswordMax;
                 f.contentType = fields[i].secret ? InputField.ContentType.Password : InputField.ContentType.Alphanumeric;
-                if (!fields[i].secret) f.contentType = InputField.ContentType.Standard;
+                // An e-mail field: no autocorrect nor capital letter added by the keyboard, and . - _ @ allowed.
+                if (!fields[i].secret) f.contentType = InputField.ContentType.EmailAddress;
                 f.keyboardType = TouchScreenKeyboardType.ASCIICapable;
                 UIKit.Size(f, 96);
                 _inputs[i] = f;
