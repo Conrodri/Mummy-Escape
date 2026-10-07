@@ -133,6 +133,21 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("KickGuildMember")]
         public Task<GuildResponse> KickGuildMember(IExecutionContext ctx, string memberId) => Server(ctx).KickGuildMemberAsync(ctx.PlayerId, memberId);
 
+        [CloudCodeFunction("SetGuildPolicy")]
+        public Task<GuildResponse> SetGuildPolicy(IExecutionContext ctx, int policy) => Server(ctx).SetGuildPolicyAsync(ctx.PlayerId, (GuildJoinPolicy)policy);
+
+        [CloudCodeFunction("AnswerGuildRequest")]
+        public Task<GuildResponse> AnswerGuildRequest(IExecutionContext ctx, string playerId, bool accept) =>
+            Server(ctx).AnswerGuildRequestAsync(ctx.PlayerId, playerId, accept);
+
+        [CloudCodeFunction("InviteToGuild")]
+        public Task<TeamActionResponse> InviteToGuild(IExecutionContext ctx, string playerName, string playerId) =>
+            Server(ctx).InviteToGuildAsync(ctx.PlayerId, playerName, playerId);
+
+        [CloudCodeFunction("RespondGuildInvite")]
+        public Task<GuildResponse> RespondGuildInvite(IExecutionContext ctx, string playerName, string guildId, bool accept) =>
+            Server(ctx).RespondGuildInviteAsync(ctx.PlayerId, playerName, guildId, accept);
+
         /// <summary>Le chef ou un officier lance une guerre (3, 5 ou 10 manches) avec l'ordre de passage choisi.</summary>
         [CloudCodeFunction("StartWar")]
         public Task<GuildResponse> StartWar(IExecutionContext ctx, int size, System.Collections.Generic.List<string> order, int generatorVersion) =>

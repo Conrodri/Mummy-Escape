@@ -183,6 +183,11 @@ namespace MummyEscape.UI.Screens
                 case "IN_GUILD": return Loc.T("Tu es déjà dans une guilde."); // noloc
                 case "NO_GUILD": return Loc.T("Tu n'es dans aucune guilde."); // noloc
                 case "FULL": return Loc.F("Guilde complète ({0} membres).", TeamConfig.GuildMaxMembers); // noloc
+                case "CLOSED": return Loc.T("Cette guilde est fermée : on n'y entre que sur invitation."); // noloc
+                case "REQUESTED": return Loc.T("Demande envoyée : le chef ou un officier te répondra."); // noloc
+                case "LEADER": return Loc.T("Réservé au chef de la guilde."); // noloc
+                case "MEMBER": return Loc.T("Ce joueur est déjà dans ta guilde."); // noloc
+                case "THEIR_GUILD": return Loc.T("Ce joueur est déjà dans une autre guilde."); // noloc
                 case "NOT_YOUR_TURN": return Loc.T("Ce n'est pas encore ton tour."); // noloc
                 case "UNKNOWN": return Loc.T("Introuvable : il a peut-être disparu."); // noloc
                 default: return PvpScreen.ErrorText(code);

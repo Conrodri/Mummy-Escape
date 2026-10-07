@@ -30,6 +30,9 @@ namespace MummyEscape.UI.Screens
         UIKit.Segmented _tabs;
         int _tab;
         int _request;
+        // Members who are already friends, or were just asked (one tap from the members list).
+        readonly HashSet<string> _friends = new HashSet<string>();
+        readonly HashSet<string> _asked = new HashSet<string>();
 
         protected override void Build()
         {
@@ -57,6 +60,16 @@ namespace MummyEscape.UI.Screens
             _scroll.verticalNormalizedPosition = 1f;
             Fill();
             Reload();
+            LoadFriends();
+        }
+
+        async void LoadFriends()
+        {
+            var friends = await App.Online.GetFriendsAsync();
+            if (this == null || friends == null) return;
+            _friends.Clear();
+            foreach (var f in friends) _friends.Add(f.PlayerId);
+            if (_tab == 2 && _guild?.Guild != null) Fill();
         }
 
         async void Reload()
@@ -108,6 +121,12 @@ namespace MummyEscape.UI.Screens
 
         void FillNoGuild()
         {
+            if (_guild.Invites.Count > 0)
+            {
+                UIKit.SectionTitle(_list, "Invitations");
+                foreach (var invite in _guild.Invites) InviteRow(invite);
+            }
+
             UIKit.SectionTitle(_list, "Fonder une guilde");
             _name = UIKit.Input(_list, "Nom de la guilde");
             _name.characterLimit = TeamConfig.GuildNameMax;
@@ -147,11 +166,58 @@ namespace MummyEscape.UI.Screens
             var name = UIKit.Label(col, $"[{g.Tag}] {g.Name}", 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold); // noloc
             UIKit.FitText(name, 18);
             UIKit.Size(name, 46);
-            var sub = UIKit.Label(col, Loc.F("{0}/{1} membres", g.MemberCount, TeamConfig.GuildMaxMembers) + "  ·  " + Loc.F("{0} points", g.Points), 22, UIKit.Dim, TextAnchor.MiddleLeft);
+            var sub = UIKit.Label(col, Loc.F("{0}/{1} membres", g.MemberCount, TeamConfig.GuildMaxMembers) + "  ·  " + Loc.F("{0} points", g.Points)
+                + "  ·  " + PolicyName(g.JoinPolicy), 22, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.FitText(sub, 14);
             UIKit.Size(sub, 32);
-            var join = UIKit.Button(h.transform, "Rejoindre", () => Join(g), 26, ButtonStyle.Primary);
+            bool applied = _guild.Applied.Contains(g.Id);
+            string label = g.JoinPolicy == GuildJoinPolicy.Open ? "Rejoindre" : g.JoinPolicy == GuildJoinPolicy.Closed ? "Fermée"
+                         : applied ? "Envoyée" : "Postuler";
+            var join = UIKit.Button(h.transform, label, () => Join(g), 26, ButtonStyle.Primary);
+            UIKit.FitText(join.GetComponentInChildren<Text>(), 16);
             UIKit.Size(join, 80, 200);
-            join.interactable = g.MemberCount < TeamConfig.GuildMaxMembers;
+            join.interactable = g.MemberCount < TeamConfig.GuildMaxMembers && g.JoinPolicy != GuildJoinPolicy.Closed && !applied;
+        }
+
+        static string PolicyName(GuildJoinPolicy policy) =>
+            policy == GuildJoinPolicy.Open ? Loc.T("Ouverte") : policy == GuildJoinPolicy.Closed ? Loc.T("Fermée") : Loc.T("Sur demande");
+
+        void InviteRow(GuildInvite invite)
+        {
+            UIKit.ListItem(_list, 116, null, out var h, true);
+            var col = UIKit.Rect("Text", h.transform); // noloc
+            UIKit.Size(col, -1, -1, 1);
+            UIKit.Column(col, 0, 0, TextAnchor.MiddleLeft);
+            var name = UIKit.Label(col, $"[{invite.GuildTag}] {invite.GuildName}", 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold); // noloc
+            UIKit.FitText(name, 18);
+            UIKit.Size(name, 46);
+            var sub = UIKit.Label(col, Loc.F("Invité par {0}", invite.FromName), 22, UIKit.Dim, TextAnchor.MiddleLeft);
+            UIKit.FitText(sub, 14);
+            UIKit.Size(sub, 32);
+            UIKit.IconButton(h.transform, UISprites.Close, () => AnswerInvite(invite, false), 72, ButtonStyle.Danger);
+            UIKit.IconButton(h.transform, UISprites.Check, () => AnswerInvite(invite, true), 72, ButtonStyle.Primary);
+        }
+
+        async void AnswerInvite(GuildInvite invite, bool accept)
+        {
+            if (_busy) return;
+            _busy = true;
+            var r = await App.Pvp.RespondGuildInviteAsync(invite.GuildId, accept, App.Online.PlayerName);
+            if (this == null) return;
+            _busy = false;
+            if (r == null || r.Error != null)
+            {
+                _info.text = TeamView.ErrorText(r?.Error);
+                Reload();
+                return;
+            }
+            if (r.Guild != null)
+            {
+                _info.text = Loc.F("Bienvenue dans {0} !", r.Guild.Name);
+                App.Audio.Play(Services.Sfx.Win);
+            }
+            Take(r);
+            Fill();
         }
 
         async void Create()
@@ -195,6 +261,13 @@ namespace MummyEscape.UI.Screens
             var r = await App.Pvp.JoinGuildAsync(g.Id, App.Online.PlayerName);
             if (this == null) return;
             _busy = false;
+            if (r?.Error == "REQUESTED")
+            {
+                _info.text = Loc.F("Demande envoyée à {0} : le chef ou un officier te répondra.", g.Name);
+                Take(r);
+                Fill();
+                return;
+            }
             if (r?.Guild == null)
             {
                 _info.text = TeamView.ErrorText(r?.Error);
@@ -230,13 +303,45 @@ namespace MummyEscape.UI.Screens
             if (_tab == 1) { FillWars(g, boss); return; }
             if (_tab == 2)
             {
+                if (boss && g.Applicants.Count > 0)
+                {
+                    UIKit.SectionTitle(_list, Loc.F("Demandes ({0})", g.Applicants.Count));
+                    foreach (var a in g.Applicants) ApplicantRow(a);
+                    UIKit.SectionTitle(_list, "Membres");
+                }
                 foreach (var m in g.Members.OrderByDescending(x => x.Role).ThenByDescending(x => x.Points)) MemberRow(g, m, me);
+                if (boss || g.JoinPolicy == GuildJoinPolicy.Open)
+                {
+                    var inviteHow = UIKit.Label(_list, "Pour inviter quelqu'un : touche un de ses messages dans le tchat.", 22, UIKit.Dim);
+                    UIKit.FitText(inviteHow, 16);
+                    UIKit.Size(inviteHow, 50);
+                }
                 return;
             }
 
             // The guild's channel in the chat.
             var talk = UIKit.Button(_list, "Tchat de guilde", () => Router.Open<ChatScreen>().OpenGuild(), 32, ButtonStyle.Primary);
             UIKit.Size(talk, 92);
+
+            // Who gets in: the leader decides, everyone sees it.
+            if (boss && g.Applicants.Count > 0)
+            {
+                var pending = UIKit.Button(_list, Loc.F("Demandes en attente ({0})", g.Applicants.Count), () => { _tab = 2; Fill(); }, 30, ButtonStyle.Primary);
+                UIKit.Size(pending, 88);
+            }
+            UIKit.SectionTitle(_list, "Entrée dans la guilde");
+            if (me?.Role == GuildRole.Leader)
+            {
+                var policies = new[] { GuildJoinPolicy.Request, GuildJoinPolicy.Open, GuildJoinPolicy.Closed };
+                var choice = new UIKit.Segmented(_list, policies.Select(PolicyName).ToArray(), i => SetPolicy(policies[i]), 80);
+                choice.Select(System.Array.IndexOf(policies, g.JoinPolicy));
+            }
+            string rule = g.JoinPolicy == GuildJoinPolicy.Open ? Loc.T("Ouverte : tout le monde peut entrer.")
+                        : g.JoinPolicy == GuildJoinPolicy.Closed ? Loc.T("Fermée : on n'entre que sur invitation.")
+                        : Loc.T("Sur demande : le chef ou un officier accepte les candidatures.");
+            var ruleLabel = UIKit.Label(_list, rule, 24, UIKit.Sand);
+            UIKit.FitText(ruleLabel, 16);
+            UIKit.Size(ruleLabel, 44);
 
             // Guild skins.
             UIKit.SectionTitle(_list, "Skins de guilde");
@@ -353,6 +458,12 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(sub, 30);
 
             if (me == null || self) return;
+            if (!_friends.Contains(m.PlayerId))
+            {
+                bool asked = _asked.Contains(m.PlayerId);
+                var friend = UIKit.IconButton(h.transform, asked ? UISprites.Check : UISprites.Plus, () => AddFriend(m), 64);
+                friend.interactable = !asked;
+            }
             if (me.Role == GuildRole.Leader)
             {
                 bool officer = m.Role == GuildRole.Officer;
@@ -362,6 +473,67 @@ namespace MummyEscape.UI.Screens
             }
             if (me.Role >= GuildRole.Officer && m.Role < me.Role)
                 UIKit.IconButton(h.transform, UISprites.Close, () => Kick(m), 64, ButtonStyle.Danger);
+        }
+
+        async void AddFriend(GuildMember m)
+        {
+            if (_busy) return;
+            _busy = true;
+            string error = await App.Online.SendFriendRequestToIdAsync(m.PlayerId);
+            if (this == null) return;
+            _busy = false;
+            if (error == null) _asked.Add(m.PlayerId);
+            _info.text = error != null ? Loc.T(error) : Loc.F("Demande d'ami envoyée à {0}.", m.Name);
+            Keep(Fill);
+        }
+
+        void ApplicantRow(GuildApplicant a)
+        {
+            UIKit.ListItem(_list, 100, null, out var h, true);
+            var name = UIKit.Label(h.transform, a.Name, 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(name, 18);
+            UIKit.Size(name, -1, 0, 1);
+            UIKit.IconButton(h.transform, UISprites.Close, () => Answer(a, false), 64, ButtonStyle.Danger);
+            UIKit.IconButton(h.transform, UISprites.Check, () => Answer(a, true), 64, ButtonStyle.Primary);
+        }
+
+        async void Answer(GuildApplicant a, bool accept)
+        {
+            if (_busy) return;
+            _busy = true;
+            var r = await App.Pvp.AnswerGuildRequestAsync(a.PlayerId, accept);
+            if (this == null) return;
+            _busy = false;
+            if (r?.Guild == null)
+            {
+                _info.text = TeamView.ErrorText(r?.Error);
+                Reload();
+                return;
+            }
+            _info.text = r.Error != null ? TeamView.ErrorText(r.Error) : accept ? Loc.F("{0} rejoint la guilde !", a.Name) : "";
+            Take(r);
+            Keep(Fill);
+        }
+
+        async void SetPolicy(GuildJoinPolicy policy)
+        {
+            if (_busy || _guild?.Guild == null || _guild.Guild.JoinPolicy == policy) return;
+            _busy = true;
+            var r = await App.Pvp.SetGuildPolicyAsync(policy);
+            if (this == null) return;
+            _busy = false;
+            if (r?.Guild == null) _info.text = TeamView.ErrorText(r?.Error);
+            else Take(r);
+            Keep(Fill);
+        }
+
+        /// <summary>Rebuilds the list without jumping back to its top.</summary>
+        void Keep(System.Action rebuild)
+        {
+            float at = _scroll.verticalNormalizedPosition;
+            rebuild();
+            Canvas.ForceUpdateCanvases();
+            _scroll.verticalNormalizedPosition = at;
         }
 
         async void SetRole(GuildMember m, bool officer)

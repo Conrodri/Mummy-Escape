@@ -206,6 +206,18 @@ namespace MummyEscape.Online
         public Task<GuildResponse> KickGuildMemberAsync(string memberId) =>
             Call("KickGuildMember", Args("memberId", memberId), e => new GuildResponse { Error = e });
 
+        public Task<GuildResponse> SetGuildPolicyAsync(GuildJoinPolicy policy) =>
+            Call("SetGuildPolicy", Args("policy", (int)policy), e => new GuildResponse { Error = e });
+
+        public Task<GuildResponse> AnswerGuildRequestAsync(string playerId, bool accept) =>
+            Call("AnswerGuildRequest", Args("playerId", playerId, "accept", accept), e => new GuildResponse { Error = e });
+
+        public Task<TeamActionResponse> InviteToGuildAsync(string playerId, string playerName) =>
+            Call("InviteToGuild", Args("playerName", playerName ?? "", "playerId", playerId), e => new TeamActionResponse { Error = e });
+
+        public Task<GuildResponse> RespondGuildInviteAsync(string guildId, bool accept, string playerName) =>
+            Call("RespondGuildInvite", Args("playerName", playerName ?? "", "guildId", guildId, "accept", accept), e => new GuildResponse { Error = e });
+
         public Task<GuildResponse> StartWarAsync(int size, List<string> order) =>
             Call("StartWar", Args("size", size, "order", order, "generatorVersion", Gen), e => new GuildResponse { Error = e });
 

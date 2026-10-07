@@ -534,23 +534,181 @@ namespace MummyEscape.Pvp
 
         public async Task<GuildSearchResponse> GetGuildBoardAsync(int limit) => await SearchGuildsAsync("", limit);
 
+        /// <summary>
+        /// Entrer dans une guilde selon son réglage : ouverte, le joueur entre ; sur demande, il postule ("REQUESTED", le
+        /// chef ou un officier répond) ; fermée, personne n'entre ("CLOSED", sauf sur invitation).
+        /// </summary>
         public async Task<GuildResponse> JoinGuildAsync(string me, string myName, string guildId)
         {
             var d = await Update(me);
             if (d.GuildId != null) return new GuildResponse { Error = "IN_GUILD" };
+            var probe = await Shared<Guild>(GuildsCollection, guildId);
+            if (probe == null || probe.Members.Count == 0) return new GuildResponse { Error = "UNKNOWN" };
+            // An invitation from this guild opens its door whatever its setting.
+            if (probe.JoinPolicy == GuildJoinPolicy.Open || d.GuildInvites?.Any(i => i.GuildId == guildId) == true)
+                return await EnterGuildAsync(me, myName, guildId, null);
+            if (probe.JoinPolicy == GuildJoinPolicy.Closed) return new GuildResponse { Error = "CLOSED" };
+
+            // On demand: an application the leader or an officer answers.
+            if (d.GuildApplications != null && !d.GuildApplications.Contains(guildId) && d.GuildApplications.Count >= TeamConfig.MaxGuildApplications)
+                return new GuildResponse { Error = "LIMIT" };
+            string error = null;
+            await Shared<Guild>(GuildsCollection, guildId, g =>
+            {
+                error = null;
+                if (g == null || g.Members.Count == 0) { error = "UNKNOWN"; return g; }
+                if (g.Members.Count >= TeamConfig.GuildMaxMembers) { error = "FULL"; return g; }
+                g.Applicants ??= new List<GuildApplicant>();
+                if (g.Applicants.Any(a => a.PlayerId == me)) return g;
+                if (g.Applicants.Count >= TeamConfig.MaxGuildApplicants) { error = "LIMIT"; return g; }
+                g.Applicants.Add(new GuildApplicant { PlayerId = me, Name = myName ?? "", AtUnixMs = NowMs });
+                return g;
+            });
+            if (error != null) return new GuildResponse { Error = error };
+            await Update(me, x =>
+            {
+                x.GuildApplications ??= new List<string>();
+                if (!x.GuildApplications.Contains(guildId)) x.GuildApplications.Add(guildId);
+            });
+            var response = await GetGuildAsync(me);
+            response.Error = "REQUESTED";
+            return response;
+        }
+
+        /// <summary>
+        /// Fait entrer le joueur s'il reste de la place ; ses invitations et candidatures tombent. <paramref name="gate"/>
+        /// peut encore refuser (code d'erreur), sous le verrou de la guilde.
+        /// </summary>
+        async Task<GuildResponse> EnterGuildAsync(string playerId, string name, string guildId, Func<Guild, string> gate)
+        {
             string error = null;
             var guild = await Shared<Guild>(GuildsCollection, guildId, g =>
             {
                 error = null;
                 if (g == null || g.Members.Count == 0) { error = "UNKNOWN"; return g; }
+                error = gate?.Invoke(g);
+                if (error != null) return g;
+                g.Applicants?.RemoveAll(a => a.PlayerId == playerId);
+                if (g.Member(playerId) != null) return g;
                 if (g.Members.Count >= TeamConfig.GuildMaxMembers) { error = "FULL"; return g; }
-                if (g.Member(me) == null) g.Members.Add(new GuildMember { PlayerId = me, Name = myName ?? "", Role = GuildRole.Member, JoinedAtUnixMs = NowMs });
+                g.Members.Add(new GuildMember { PlayerId = playerId, Name = name ?? "", Role = GuildRole.Member, JoinedAtUnixMs = NowMs });
                 return g;
             });
             if (error != null) return new GuildResponse { Error = error };
-            await Update(me, x => x.GuildId = guildId);
+            List<string> applied = null;
+            await Update(playerId, x =>
+            {
+                x.GuildId = guildId;
+                applied = x.GuildApplications?.Where(id => id != guildId).ToList();
+                x.GuildApplications?.Clear();
+                x.GuildInvites?.Clear();
+            });
+            // Its other applications leave the lists of those guilds.
+            foreach (var other in applied ?? new List<string>())
+                await Shared<Guild>(GuildsCollection, other, g => { g?.Applicants?.RemoveAll(a => a.PlayerId == playerId); return g; });
+            await IndexGuildAsync(guild);
+            return await GetGuildAsync(playerId);
+        }
+
+        /// <summary>Le chef choisit qui entre : sur demande, tout le monde, ou personne.</summary>
+        public async Task<GuildResponse> SetGuildPolicyAsync(string me, GuildJoinPolicy policy)
+        {
+            if (!Enum.IsDefined(typeof(GuildJoinPolicy), policy)) return new GuildResponse { Error = "UNKNOWN" };
+            var d = await Update(me);
+            if (d.GuildId == null) return new GuildResponse { Error = "NO_GUILD" };
+            string error = null;
+            var guild = await Shared<Guild>(GuildsCollection, d.GuildId, g =>
+            {
+                error = null;
+                var boss = g?.Member(me);
+                if (boss == null) error = "UNKNOWN";
+                else if (boss.Role != GuildRole.Leader) error = "LEADER";
+                else g.JoinPolicy = policy;
+                return g;
+            });
+            if (error != null) return new GuildResponse { Error = error };
             await IndexGuildAsync(guild);
             return await GetGuildAsync(me);
+        }
+
+        /// <summary>Le chef ou un officier accepte ou refuse une candidature.</summary>
+        public async Task<GuildResponse> AnswerGuildRequestAsync(string me, string playerId, bool accept)
+        {
+            var d = await Update(me);
+            if (d.GuildId == null) return new GuildResponse { Error = "NO_GUILD" };
+            string guildId = d.GuildId;
+            var guild = await Shared<Guild>(GuildsCollection, guildId);
+            var boss = guild?.Member(me);
+            if (boss == null) return new GuildResponse { Error = "UNKNOWN" };
+            if (boss.Role < GuildRole.Officer) return new GuildResponse { Error = "RIGHTS" };
+            var applicant = guild.Applicants?.Find(a => a.PlayerId == playerId);
+            if (applicant == null) return new GuildResponse { Error = "UNKNOWN" };
+
+            var theirs = await Update(playerId);
+            if (!accept || theirs.GuildId != null)
+            {
+                await Shared<Guild>(GuildsCollection, guildId, g => { g?.Applicants?.RemoveAll(a => a.PlayerId == playerId); return g; });
+                await Update(playerId, x => x.GuildApplications?.Remove(guildId));
+                var after = await GetGuildAsync(me);
+                if (accept) after.Error = "THEIR_GUILD";
+                return after;
+            }
+            var entered = await EnterGuildAsync(playerId, applicant.Name, guildId,
+                g => g.Member(me) is GuildMember b && b.Role >= GuildRole.Officer ? null : "RIGHTS");
+            return entered.Error != null ? new GuildResponse { Error = entered.Error } : await GetGuildAsync(me);
+        }
+
+        /// <summary>
+        /// Invite un joueur (vu dans un tchat) : le chef ou un officier, ou n'importe quel membre d'une guilde ouverte.
+        /// S'il avait déjà postulé, il entre tout de suite.
+        /// </summary>
+        public async Task<TeamActionResponse> InviteToGuildAsync(string me, string myName, string playerId)
+        {
+            if (string.IsNullOrEmpty(playerId) || playerId == me) return new TeamActionResponse { Error = "SELF" };
+            var d = await Update(me);
+            if (d.GuildId == null) return new TeamActionResponse { Error = "NO_GUILD" };
+            var guild = await Shared<Guild>(GuildsCollection, d.GuildId);
+            var mine = guild?.Member(me);
+            if (mine == null) return new TeamActionResponse { Error = "UNKNOWN" };
+            if (mine.Role < GuildRole.Officer && guild.JoinPolicy != GuildJoinPolicy.Open) return new TeamActionResponse { Error = "RIGHTS" };
+            if (guild.Member(playerId) != null) return new TeamActionResponse { Error = "MEMBER" };
+            if (guild.Members.Count >= TeamConfig.GuildMaxMembers) return new TeamActionResponse { Error = "FULL" };
+            var theirs = await Update(playerId);
+            if (theirs.GuildId != null) return new TeamActionResponse { Error = "THEIR_GUILD" };
+
+            var applicant = guild.Applicants?.Find(a => a.PlayerId == playerId);
+            if (applicant != null || IsBot?.Invoke(playerId) == true)
+            {
+                // Already asked to come in (or an offline rival, who says yes at once).
+                string name = applicant?.Name ?? BotName?.Invoke(playerId) ?? PvpBots.NameOf(playerId);
+                var entered = await EnterGuildAsync(playerId, name, guild.Id, null);
+                return new TeamActionResponse { Ok = entered.Error == null, Joined = entered.Error == null, Error = entered.Error };
+            }
+            string error = null;
+            await Update(playerId, x =>
+            {
+                error = null;
+                x.GuildInvites ??= new List<GuildInvite>();
+                if (x.GuildInvites.Any(i => i.GuildId == guild.Id)) error = "EXISTS";
+                else if (x.GuildInvites.Count >= TeamConfig.MaxGuildInvites) error = "LIMIT";
+                else x.GuildInvites.Add(new GuildInvite { GuildId = guild.Id, GuildName = guild.Name, GuildTag = guild.Tag, FromName = myName ?? "", AtUnixMs = NowMs });
+            });
+            return new TeamActionResponse { Ok = error == null, Error = error };
+        }
+
+        /// <summary>Accepte (le joueur entre, même dans une guilde fermée ou sur demande) ou refuse une invitation.</summary>
+        public async Task<GuildResponse> RespondGuildInviteAsync(string me, string myName, string guildId, bool accept)
+        {
+            GuildInvite invite = null;
+            var d = await Update(me, x =>
+            {
+                invite = x.GuildInvites?.Find(i => i.GuildId == guildId);
+                if (invite != null) x.GuildInvites.Remove(invite);
+            });
+            if (invite == null) return new GuildResponse { Error = "UNKNOWN" };
+            if (!accept) return await GetGuildAsync(me);
+            if (d.GuildId != null) return new GuildResponse { Error = "IN_GUILD" };
+            return await EnterGuildAsync(me, myName, guildId, null);
         }
 
         public async Task<GuildResponse> LeaveGuildAsync(string me)
@@ -580,7 +738,7 @@ namespace MummyEscape.Pvp
         public async Task<GuildResponse> GetGuildAsync(string me)
         {
             var d = await Update(me);
-            if (d.GuildId == null) return new GuildResponse { Me = me };
+            if (d.GuildId == null) return new GuildResponse { Me = me, Invites = d.GuildInvites ?? new List<GuildInvite>(), Applied = d.GuildApplications ?? new List<string>() };
             var guild = await Shared<Guild>(GuildsCollection, d.GuildId);
             if (guild == null || guild.Member(me) == null)
             {
@@ -685,7 +843,7 @@ namespace MummyEscape.Pvp
             PutIndexAsync(GuildIndexKey, g.Id, g.Members.Count == 0 ? null : new GuildSummary
             {
                 Id = g.Id, Name = g.Name, Tag = g.Tag, MemberCount = g.Members.Count, Points = g.Points,
-                WarElo = g.WarElo, WarWins = g.WarWins, WarLosses = g.WarLosses,
+                WarElo = g.WarElo, WarWins = g.WarWins, WarLosses = g.WarLosses, JoinPolicy = g.JoinPolicy,
             }, s => s.Id);
 
         /// <summary>Points de guilde gagnés par un joueur (sa victoire en duel, en 2v2…), s'il est dans une guilde.</summary>

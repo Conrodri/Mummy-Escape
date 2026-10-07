@@ -150,6 +150,10 @@ namespace MummyEscape.Pvp
         public List<DuoInvite> DuoInvites = new List<DuoInvite>();
         /// <summary>Guilde du joueur, null s'il n'en a pas.</summary>
         public string GuildId;
+        /// <summary>Invitations à rejoindre une guilde.</summary>
+        public List<GuildInvite> GuildInvites = new List<GuildInvite>();
+        /// <summary>Guildes où le joueur a postulé (pour l'affichage ; la guilde garde la vraie liste).</summary>
+        public List<string> GuildApplications = new List<string>();
     }
 
     /// <summary>Profil renvoyé au client.</summary>

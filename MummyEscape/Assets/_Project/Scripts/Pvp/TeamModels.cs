@@ -9,6 +9,9 @@ namespace MummyEscape.Pvp
 
     public enum GuildRole { Member = 0, Officer = 1, Leader = 2 }
 
+    /// <summary>Qui entre dans la guilde : sur demande (le chef ou un officier accepte, par défaut), tout le monde, ou personne.</summary>
+    public enum GuildJoinPolicy { Request = 0, Open = 1, Closed = 2 }
+
     /// <summary>Tous les réglages des équipes à un seul endroit.</summary>
     public static class TeamConfig
     {
@@ -26,6 +29,9 @@ namespace MummyEscape.Pvp
         public const int GuildTagMin = 2, GuildTagMax = 4;
         public static readonly int[] WarSizes = { 3, 5, 10 };
         public const int GuildStartingWarElo = 1000;
+        public const int MaxGuildApplicants = 30;
+        public const int MaxGuildInvites = 10;
+        public const int MaxGuildApplications = 5;
 
         // --- Combats ---
         public const int BattleHours = 24;             // fenêtre pour courir ses manches, une fois l'adversaire trouvé
@@ -189,6 +195,9 @@ namespace MummyEscape.Pvp
         public int WarWins, WarLosses, WarDraws;
         public string ActiveWar;
         public List<string> RecentWars = new List<string>();
+        public GuildJoinPolicy JoinPolicy;
+        /// <summary>Joueurs qui ont postulé (guilde sur demande), en attente du chef ou d'un officier.</summary>
+        public List<GuildApplicant> Applicants = new List<GuildApplicant>();
 
         public GuildMember Member(string playerId) => Members.Find(m => m.PlayerId == playerId);
     }
@@ -204,6 +213,26 @@ namespace MummyEscape.Pvp
         public int Points;
         public int WarElo;
         public int WarWins, WarLosses;
+        public GuildJoinPolicy JoinPolicy;
+    }
+
+    [Serializable]
+    public class GuildApplicant
+    {
+        public string PlayerId;
+        public string Name;
+        public long AtUnixMs;
+    }
+
+    /// <summary>Invitation à rejoindre une guilde, envoyée par son chef ou un officier (depuis un tchat).</summary>
+    [Serializable]
+    public class GuildInvite
+    {
+        public string GuildId;
+        public string GuildName;
+        public string GuildTag;
+        public string FromName;
+        public long AtUnixMs;
     }
 
     // ------------------------------------------------------------------ réponses
@@ -231,7 +260,11 @@ namespace MummyEscape.Pvp
         public List<TeamBattle> Wars = new List<TeamBattle>();
         /// <summary>Skins de guilde que le joueur vient de recevoir.</summary>
         public List<string> NewRewards = new List<string>();
-        public string Error;   // "NAME", "TAG", "TAKEN", "IN_GUILD", "NO_GUILD", "FULL", "RIGHTS", "ORDER", "BUSY", "UNKNOWN"
+        /// <summary>Invitations reçues (joueur sans guilde).</summary>
+        public List<GuildInvite> Invites = new List<GuildInvite>();
+        /// <summary>Guildes où le joueur a postulé (joueur sans guilde).</summary>
+        public List<string> Applied = new List<string>();
+        public string Error;   // "NAME", "TAG", "TAKEN", "IN_GUILD", "NO_GUILD", "FULL", "RIGHTS", "ORDER", "BUSY", "REQUESTED", "CLOSED", "UNKNOWN"
     }
 
     [Serializable]
@@ -252,6 +285,8 @@ namespace MummyEscape.Pvp
     {
         public bool Ok;
         public TeamBattle Battle;
-        public string Error;   // "LIMIT", "SELF", "EXISTS", "UNKNOWN", "RIGHTS", "ORDER", "BUSY"
+        /// <summary>Invitation en guilde : le joueur est entré tout de suite (il avait postulé).</summary>
+        public bool Joined;
+        public string Error;   // "LIMIT", "SELF", "EXISTS", "UNKNOWN", "RIGHTS", "ORDER", "BUSY", "NO_GUILD", "MEMBER", "THEIR_GUILD", "FULL"
     }
 }

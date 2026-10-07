@@ -129,7 +129,7 @@ namespace MummyEscape.Online
             var index = new List<GuildSummary>();
             for (int g = 0; g < DemoGuilds.Length; g++)
             {
-                var guild = new Guild { Id = "demo_guild_" + g, Name = DemoGuilds[g].name, Tag = DemoGuilds[g].tag, WarElo = 850 + rng.Next(500) }; // noloc
+                var guild = new Guild { Id = "demo_guild_" + g, Name = DemoGuilds[g].name, Tag = DemoGuilds[g].tag, WarElo = 850 + rng.Next(500), JoinPolicy = (GuildJoinPolicy)(g % 3) }; // noloc
                 int members = 6 + rng.Next(20);
                 for (int i = 0; i < members; i++)
                 {
@@ -146,7 +146,7 @@ namespace MummyEscape.Online
                 index.Add(new GuildSummary
                 {
                     Id = guild.Id, Name = guild.Name, Tag = guild.Tag, MemberCount = guild.Members.Count, Points = guild.Points,
-                    WarElo = guild.WarElo, WarWins = guild.WarWins, WarLosses = guild.WarLosses,
+                    WarElo = guild.WarElo, WarWins = guild.WarWins, WarLosses = guild.WarLosses, JoinPolicy = guild.JoinPolicy,
                 });
             }
             _store.Shared[PvpServer.IndexCollection + "/" + PvpServer.GuildIndexKey] = index;
@@ -477,6 +477,7 @@ namespace MummyEscape.Online
                 string id = "recruit_" + r.Guild.Id + "_" + i; // noloc
                 lock (_rng) lock (_names) _names[id] = DemoNames[_rng.Next(DemoNames.Length)] + "#" + (1000 + _rng.Next(9000));
                 await _server.JoinGuildAsync(id, BotNameOf(id), r.Guild.Id);
+                await _server.AnswerGuildRequestAsync(Me, id, true);
             }
             EnrollDemoMembers();
             return await _server.GetGuildAsync(Me);
@@ -495,6 +496,14 @@ namespace MummyEscape.Online
             SeedDemoWars();
             EnrollDemoMembers();
             var r = await _server.JoinGuildAsync(Me, playerName, guildId);
+            if (r.Error == "REQUESTED")
+            {
+                // Offline, the simulated leader says yes at once.
+                var boss = SharedOf<Guild>(PvpServer.GuildsCollection, guildId)?.Members.Find(m => m.Role == GuildRole.Leader);
+                if (boss != null && boss.PlayerId != Me) await _server.AnswerGuildRequestAsync(boss.PlayerId, Me, true);
+                var answered = await _server.GetGuildAsync(Me);
+                if (answered.Guild != null) r = answered;
+            }
             if (r.Guild == null) return r;
             await WelcomeAsync(playerName);
             return await _server.GetGuildAsync(Me);
@@ -505,6 +514,14 @@ namespace MummyEscape.Online
         public Task<GuildResponse> SetGuildRoleAsync(string memberId, bool officer) => Run(() => _server.SetGuildRoleAsync(Me, memberId, officer));
 
         public Task<GuildResponse> KickGuildMemberAsync(string memberId) => Run(() => _server.KickGuildMemberAsync(Me, memberId));
+
+        public Task<GuildResponse> SetGuildPolicyAsync(GuildJoinPolicy policy) => Run(() => _server.SetGuildPolicyAsync(Me, policy));
+
+        public Task<GuildResponse> AnswerGuildRequestAsync(string playerId, bool accept) => Run(() => _server.AnswerGuildRequestAsync(Me, playerId, accept));
+
+        public Task<TeamActionResponse> InviteToGuildAsync(string playerId, string playerName) => Run(() => _server.InviteToGuildAsync(Me, playerName, playerId));
+
+        public Task<GuildResponse> RespondGuildInviteAsync(string guildId, bool accept, string playerName) => Run(() => _server.RespondGuildInviteAsync(Me, playerName, guildId, accept));
 
         public Task<GuildResponse> StartWarAsync(int size, List<string> order) => Run(async () =>
         {

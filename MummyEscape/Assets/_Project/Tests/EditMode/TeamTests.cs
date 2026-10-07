@@ -201,6 +201,8 @@ namespace MummyEscape.Tests
             Assert.AreEqual("ANUB", made.Guild.Tag);
             Assert.AreEqual("TAKEN", server.CreateGuildAsync("x", "x", "fils d'anubis", "ZZ").Result.Error);
             string g1 = made.Guild.Id;
+            Assert.AreEqual(GuildJoinPolicy.Request, made.Guild.JoinPolicy, "a new guild takes requests");
+            Assert.IsNull(server.SetGuildPolicyAsync("lead", GuildJoinPolicy.Open).Result.Error);
             foreach (var id in new[] { "m1", "m2", "m3" }) Assert.IsNull(server.JoinGuildAsync(id, id, g1).Result.Error);
             Assert.AreEqual("IN_GUILD", server.JoinGuildAsync("m1", "m1", g1).Result.Error);
 
@@ -211,6 +213,7 @@ namespace MummyEscape.Tests
             Assert.IsNull(server.JoinGuildAsync("m3", "m3", g1).Result.Error);
 
             string g2 = server.CreateGuildAsync("boss", "Boss", "Scarabées", "SCAR").Result.Guild.Id;
+            server.SetGuildPolicyAsync("boss", GuildJoinPolicy.Open).Wait();
             foreach (var id in new[] { "r1", "r2" }) server.JoinGuildAsync(id, id, g2).Wait();
             Assert.AreEqual("ORDER", server.StartWarAsync("boss", 3, new List<string> { "boss", "r1", "m1" }, Gen).Result.Error);
 
@@ -260,6 +263,7 @@ namespace MummyEscape.Tests
         {
             var (server, _, _, _) = NewServer();
             string g = server.CreateGuildAsync("lead", "Lead", "Les Momies", "MOM").Result.Guild.Id;
+            server.SetGuildPolicyAsync("lead", GuildJoinPolicy.Open).Wait();
             server.JoinGuildAsync("m1", "m1", g).Wait();
             server.JoinGuildAsync("m2", "m2", g).Wait();
             server.SetGuildRoleAsync("lead", "m2", true).Wait();
@@ -267,6 +271,62 @@ namespace MummyEscape.Tests
             var guild = server.GetGuildAsync("m1").Result.Guild;
             Assert.AreEqual(GuildRole.Leader, guild.Member("m2").Role, "the officer takes the lead");
             Assert.IsNull(server.GetGuildAsync("lead").Result.Guild);
+        }
+
+        [Test]
+        public void Guild_OnRequestClosedAndInvitations()
+        {
+            var (server, _, _, _) = NewServer();
+            string g = server.CreateGuildAsync("lead", "Lead", "Les Momies", "MOM").Result.Guild.Id;
+            server.JoinGuildAsync("off", "Off", g).Wait();
+            Assert.IsNull(server.GetGuildAsync("lead").Result.Guild.Member("off"), "nobody walks into a guild on request");
+            Assert.IsNull(server.AnswerGuildRequestAsync("lead", "off", true).Result.Error);
+            server.SetGuildRoleAsync("lead", "off", true).Wait();
+
+            // On request: an application, answered by the leader or an officer.
+            var asked = server.JoinGuildAsync("ann", "Ann", g).Result;
+            Assert.AreEqual("REQUESTED", asked.Error);
+            CollectionAssert.AreEqual(new[] { g }, asked.Applied);
+            Assert.AreEqual("NO_GUILD", server.AnswerGuildRequestAsync("ann", "ann", true).Result.Error);
+            server.JoinGuildAsync("bob", "Bob", g).Wait();
+            Assert.IsNull(server.AnswerGuildRequestAsync("off", "bob", false).Result.Error);
+            Assert.IsEmpty(server.GetGuildAsync("bob").Result.Applied, "a refusal clears the application");
+            var accepted = server.AnswerGuildRequestAsync("off", "ann", true).Result;
+            Assert.IsNotNull(accepted.Guild.Member("ann"));
+            Assert.IsEmpty(accepted.Guild.Applicants);
+            Assert.AreEqual(GuildRole.Member, server.GetGuildAsync("ann").Result.Guild.Member("ann").Role);
+
+            // Only the leader sets the door; closed, nobody gets in, not even by applying.
+            Assert.AreEqual("LEADER", server.SetGuildPolicyAsync("off", GuildJoinPolicy.Open).Result.Error);
+            Assert.IsNull(server.SetGuildPolicyAsync("lead", GuildJoinPolicy.Closed).Result.Error);
+            Assert.AreEqual(GuildJoinPolicy.Closed, server.SearchGuildsAsync("MOM", 5).Result.Guilds.Single().JoinPolicy);
+            Assert.AreEqual("CLOSED", server.JoinGuildAsync("cid", "Cid", g).Result.Error);
+
+            // An invitation opens even a closed guild; a plain member can't send one there.
+            Assert.AreEqual("RIGHTS", server.InviteToGuildAsync("ann", "Ann", "cid").Result.Error);
+            Assert.IsTrue(server.InviteToGuildAsync("off", "Off", "cid").Result.Ok);
+            Assert.AreEqual("EXISTS", server.InviteToGuildAsync("lead", "Lead", "cid").Result.Error);
+            Assert.AreEqual("MEMBER", server.InviteToGuildAsync("lead", "Lead", "ann").Result.Error);
+            var invites = server.GetGuildAsync("cid").Result.Invites;
+            Assert.AreEqual("Off", invites.Single().FromName);
+            var joined = server.RespondGuildInviteAsync("cid", "Cid", g, true).Result;
+            Assert.IsNull(joined.Error);
+            Assert.IsNotNull(joined.Guild.Member("cid"));
+
+            // A player in another guild is neither invited nor taken from an old application.
+            string other = server.CreateGuildAsync("dan", "Dan", "Scarabées", "SCAR").Result.Guild.Id;
+            Assert.AreEqual("THEIR_GUILD", server.InviteToGuildAsync("lead", "Lead", "dan").Result.Error);
+            server.SetGuildPolicyAsync("lead", GuildJoinPolicy.Request).Wait();
+            server.JoinGuildAsync("eve", "Eve", g).Wait();
+            server.JoinGuildAsync("eve", "Eve", other).Wait();
+            Assert.IsNull(server.AnswerGuildRequestAsync("dan", "eve", true).Result.Error);
+            Assert.IsEmpty(server.GetGuildAsync("lead").Result.Guild.Applicants, "joining one guild withdraws the other applications");
+
+            // Inviting someone who already applied lets them in at once.
+            server.JoinGuildAsync("fay", "Fay", g).Wait();
+            var invited = server.InviteToGuildAsync("lead", "Lead", "fay").Result;
+            Assert.IsTrue(invited.Joined);
+            Assert.IsNotNull(server.GetGuildAsync("fay").Result.Guild);
         }
     }
 }

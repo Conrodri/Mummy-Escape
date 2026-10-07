@@ -26,7 +26,7 @@ namespace MummyEscape.UI.Screens
         ScrollRect _scroll;
         Text _info, _conversationTitle, _menuTitle;
         InputField _input;
-        Button _send, _menuDirect, _menuFriend, _menuBlock;
+        Button _send, _menuDirect, _menuFriend, _menuGuild, _menuBlock;
         Toggle _enabled;
         string _channel, _directName;
         long _lastSeq;
@@ -35,6 +35,8 @@ namespace MummyEscape.UI.Screens
         bool _polling, _sending;
         ChatMessage _target;
         IReadOnlyList<FriendInfo> _friends = new List<FriendInfo>();
+        // The player's guild, to offer an invitation from a message (null: none, or not loaded yet).
+        Guild _guild;
 
         string Me => App.Online.PlayerId;
 
@@ -101,6 +103,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_menuDirect, 92);
             _menuFriend = UIKit.Button(card, "Ajouter en ami", () => { var t = _target; CloseMenu(); AddFriend(t.From); }, 32);
             UIKit.Size(_menuFriend, 92);
+            _menuGuild = UIKit.Button(card, "Inviter dans la guilde", () => { var t = _target; CloseMenu(); InviteToGuild(t.From, t.FromName); }, 32);
+            UIKit.Size(_menuGuild, 92);
             var report = UIKit.Button(card, "Signaler ce message", () => { var t = _target; CloseMenu(); AskReport(t); }, 32);
             UIKit.Size(report, 92);
             _menuBlock = UIKit.Button(card, "Bloquer", () => { var t = _target; CloseMenu(); AskBlock(t.From, t.FromName); }, 32, ButtonStyle.Danger);
@@ -117,6 +121,7 @@ namespace MummyEscape.UI.Screens
             CloseMenu();
             _request++;
             LoadFriends();
+            LoadGuild();
             _ = ChatState.RefreshAsync(App.Pvp);
             if (_channel == null) SelectTab(0);
             else Refresh();
@@ -135,6 +140,22 @@ namespace MummyEscape.UI.Screens
             _friends = friends;
             _ = ChatState.SyncProfileAsync(App, friends);
             if (_tabs.Selected == 2 && _channel == null) ShowFriends();
+        }
+
+        async void LoadGuild()
+        {
+            if (App.Pvp == null) return;
+            var r = await App.Pvp.GetGuildAsync();
+            if (this == null || r == null || r.Error != null) return;
+            _guild = r.Guild;
+        }
+
+        /// <summary>The leader or an officer invites; in an open guild, any member does.</summary>
+        bool CanInvite(string playerId)
+        {
+            var mine = _guild?.Member(Me);
+            return mine != null && playerId != Me && _guild.Member(playerId) == null
+                && (mine.Role >= GuildRole.Officer || _guild.JoinPolicy == GuildJoinPolicy.Open);
         }
 
         bool IsFriend(string playerId) => _friends.Any(f => f.PlayerId == playerId);
@@ -432,6 +453,7 @@ namespace MummyEscape.UI.Screens
             _menuTitle.text = m.FromName ?? "?";
             _menuDirect.gameObject.SetActive(IsFriend(m.From) && _channel != ChatConfig.Direct(m.From));
             _menuFriend.gameObject.SetActive(!IsFriend(m.From) && m.From != Me);
+            _menuGuild.gameObject.SetActive(CanInvite(m.From));
             _menu.gameObject.SetActive(true);
             _menu.SetAsLastSibling();
         }
@@ -441,6 +463,16 @@ namespace MummyEscape.UI.Screens
             string error = await App.Online.SendFriendRequestToIdAsync(playerId);
             if (this == null) return;
             Router.Open<OfferDialog>().Configure("Ajouter en ami", Loc.T(error ?? "Demande d'ami envoyée."), ("OK", ButtonStyle.Primary, null)); // noloc
+        }
+
+        async void InviteToGuild(string playerId, string name)
+        {
+            var r = await App.Pvp.InviteToGuildAsync(playerId, App.Online.PlayerName);
+            if (this == null) return;
+            string text = r == null || r.Error != null ? TeamView.ErrorText(r?.Error)
+                        : r.Joined ? Loc.F("{0} rejoint la guilde !", name ?? "?") : Loc.F("Invitation envoyée à {0}.", name ?? "?");
+            if (r?.Joined == true) LoadGuild();
+            Router.Open<OfferDialog>().Configure("Inviter dans la guilde", text, ("OK", ButtonStyle.Primary, null)); // noloc
         }
 
         void CloseMenu()

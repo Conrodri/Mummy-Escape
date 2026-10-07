@@ -110,6 +110,13 @@ namespace MummyEscape.Online
         Task<GuildResponse> LeaveGuildAsync();
         Task<GuildResponse> SetGuildRoleAsync(string memberId, bool officer);
         Task<GuildResponse> KickGuildMemberAsync(string memberId);
+        /// <summary>Leader: who gets in (on request, anyone, nobody).</summary>
+        Task<GuildResponse> SetGuildPolicyAsync(GuildJoinPolicy policy);
+        /// <summary>Leader or officer: accepts or refuses an application.</summary>
+        Task<GuildResponse> AnswerGuildRequestAsync(string playerId, bool accept);
+        /// <summary>Invites a player (seen in a chat) into the guild.</summary>
+        Task<TeamActionResponse> InviteToGuildAsync(string playerId, string playerName);
+        Task<GuildResponse> RespondGuildInviteAsync(string guildId, bool accept, string playerName);
         /// <summary>Leader or officer: a war of <paramref name="size"/> rounds with this running order.</summary>
         Task<GuildResponse> StartWarAsync(int size, List<string> order);
     }
