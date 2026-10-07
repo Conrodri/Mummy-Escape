@@ -103,8 +103,33 @@ namespace MummyEscape.Game
             StartCoroutine(PreviewRoutine());
         }
 
+        /// <summary>The tutorial corridor is being played (no preview, no record, no energy).</summary>
+        public bool InTutorial { get; private set; }
+        /// <summary>The tutorial run is over: true when the mummy got out.</summary>
+        public event Action<bool> TutorialEnded;
+
+        /// <summary>Starts the tutorial: a hand-made corridor that meets every mechanic, lit and without preview.</summary>
+        public void StartTutorial()
+        {
+            ++_loadToken;
+            ResetForLoad();
+            DetachDuelLink();
+            Match = null;
+            Pace = null;
+            InTutorial = true;
+            CurrentLevel = Tutorial.Id;
+            _app.Audio.PlayMusic(Tutorial.Id.Act);
+            LevelLoading?.Invoke(Tutorial.Id);
+            Setup(Tutorial.Build());
+            LevelStarted?.Invoke();
+            _input.Enabled = !_paused;
+            PreviewChanged?.Invoke();
+            Changed?.Invoke();
+        }
+
         void ResetForLoad()
         {
+            InTutorial = false;
             StopAllCoroutines();
             EndPreviewVisuals();
             _busy = false;
@@ -388,7 +413,8 @@ namespace MummyEscape.Game
 
         public void Restart()
         {
-            if (Match == null) _ = StartLevel(CurrentLevel);
+            if (InTutorial) StartTutorial();
+            else             if (Match == null) _ = StartLevel(CurrentLevel);
         }
 
         public void Abandon()
@@ -398,6 +424,7 @@ namespace MummyEscape.Game
             DetachDuelLink();
             EndPreviewVisuals();
             StopAllCoroutines();
+            InTutorial = false;
             Session = null;
             Match = null;
             _ghost.Hide();
@@ -824,6 +851,16 @@ namespace MummyEscape.Game
             }
             yield return new WaitForSeconds(0.35f);
 
+            if (InTutorial)
+            {
+                if (result.Won && !_app.Save.Data.TutorialDone)
+                {
+                    _app.Save.Data.TutorialDone = true;
+                    _app.Save.Save();
+                }
+                TutorialEnded?.Invoke(result.Won);
+                yield break;
+            }
             if (Match != null)
             {
                 // A duel touches neither the solo records nor the scarabs: its result comes from the server.

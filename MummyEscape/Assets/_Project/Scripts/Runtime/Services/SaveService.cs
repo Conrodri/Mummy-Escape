@@ -30,6 +30,8 @@ namespace MummyEscape.Services
         public string Country = "";
         /// <summary>The name and country were chosen at the first online connection (<see cref="UI.Screens.ProfileSetupScreen"/>).</summary>
         public bool ProfileDone;
+        /// <summary>The tutorial corridor was walked to its exit once.</summary>
+        public bool TutorialDone;
 
         // ---- Real-money economy (see Monetization): golden scarabs, solo energy, season pass.
         /// <summary>Golden scarabs: the copy of the wallet the PvP server keeps (bought in the store, earned on the pass).</summary>
@@ -143,6 +145,7 @@ namespace MummyEscape.Services
             foreach (var s in other.OwnedSkins) if (!Data.OwnedSkins.Contains(s)) Data.OwnedSkins.Add(s);
             if (string.IsNullOrEmpty(Data.Country)) Data.Country = other.Country ?? "";
             Data.ProfileDone |= other.ProfileDone;
+            Data.TutorialDone |= other.TutorialDone;
             MergeEconomy(other);
             bool changed = JsonUtility.ToJson(Data) != before;
             if (changed) Save();

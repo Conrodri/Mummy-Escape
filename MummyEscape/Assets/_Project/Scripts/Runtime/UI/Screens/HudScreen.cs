@@ -21,6 +21,10 @@ namespace MummyEscape.UI.Screens
         RectTransform _bottomBar;
         Button _disarm;
         MoveControls _controls;
+        // Tutorial: what the stretch the mummy walks in teaches.
+        RectTransform _lesson;
+        Text _lessonText;
+        TutorialLesson _shownLesson;
         CanvasGroup _preview;
         Text _previewTitle;
         Text _previewCount;
@@ -70,6 +74,17 @@ namespace MummyEscape.UI.Screens
 
             _status = UIKit.Label(Root, "", 40, new Color(0.75f, 0.55f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.TopBand(_status.rectTransform, 90, 240);
+
+            _lesson = UIKit.Rect("Lesson", Root); // noloc
+            UIKit.TopBand(_lesson, 170, 340);
+            _lesson.offsetMin = new Vector2(40, _lesson.offsetMin.y);
+            _lesson.offsetMax = new Vector2(-40, _lesson.offsetMax.y);
+            var lbg = UIKit.Plate(_lesson, new Color(0.05f, 0.035f, 0.02f, 0.82f), 32, UIKit.Gold);
+            UIKit.Stretch(lbg.rectTransform);
+            _lessonText = UIKit.Label(_lesson, "", 34, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Stretch(_lessonText.rectTransform, 28, 12, 28, 12);
+            UIKit.FitText(_lessonText, 22);
+            _lesson.gameObject.SetActive(false);
 
             // Duel panel under the top bar: how far each mummy got, and the clock running down.
             _duel = UIKit.Rect("Duel", Root);
@@ -332,6 +347,7 @@ namespace MummyEscape.UI.Screens
             App.Game.RelayChanged += OnRelayChanged;
             App.Game.SetPaused(false);
             App.Settings.Changed += ApplyControls;
+            App.Game.TutorialEnded += OnTutorialEnded;
             ApplyControls();
             Refresh();
         }
@@ -344,9 +360,26 @@ namespace MummyEscape.UI.Screens
             App.Game.LevelStarted -= ShowIntro;
             App.Game.RelayChanged -= OnRelayChanged;
             App.Settings.Changed -= ApplyControls;
+            App.Game.TutorialEnded -= OnTutorialEnded;
         }
 
         void ApplyControls() => _controls.Apply(App.Settings.Controls);
+
+        void OnTutorialEnded(bool won) => Router.Open<TutorialEndScreen>().Show(won);
+
+        /// <summary>Tutorial: the lesson of the stretch the mummy walks in, popping in as each new one starts.</summary>
+        void UpdateLesson(GameSession s)
+        {
+            if (!App.Game.InTutorial) { _shownLesson = null; _lesson.gameObject.SetActive(false); return; }
+            var lesson = Tutorial.LessonAt(s.Position) ?? _shownLesson;
+            if (lesson != _shownLesson && lesson != null)
+            {
+                _lessonText.text = Loc.T(lesson.Text);
+                if (_lesson.gameObject.activeInHierarchy) UIFx.PopIn(_lesson);
+            }
+            _shownLesson = lesson;
+            _lesson.gameObject.SetActive(lesson != null && s.Status == SessionStatus.Playing);
+        }
 
         public void OnBack()
         {
@@ -357,7 +390,8 @@ namespace MummyEscape.UI.Screens
         void ShowLoading(LevelId id)
         {
             var match = App.Game.Match;
-            string title = match == null ? Loc.F("Niveau {0}", id)
+            string title = App.Game.InTutorial ? Loc.T("Tutoriel")
+                         : match == null ? Loc.F("Niveau {0}", id)
                          : match.HasGhost ? Loc.F("Duel contre {0}", match.Ghost.PlayerName)
                          : Loc.T("Duel");
             _introText.text = title + "\n<size=36>" + Loc.T("Les dieux scellent un nouveau tombeau…") + "</size>";
@@ -423,8 +457,9 @@ namespace MummyEscape.UI.Screens
             var s = App.Game.Session;
             if (s == null) return;
             var level = s.Level;
-            _level.text = App.Game.InRelay ? "2v2" : App.Game.InDuel ? Loc.T("Duel") : Loc.F("Niveau {0}", level.Id); // noloc
+            _level.text = App.Game.InRelay ? "2v2" : App.Game.InTutorial ? Loc.T("Tutoriel") : App.Game.InDuel ? Loc.T("Duel") : Loc.F("Niveau {0}", level.Id); // noloc
             UpdateCounter(s);
+            UpdateLesson(s);
             _floor.text = level.Floors > 1 && !App.Game.Previewing ? Loc.F("Étage {0} / {1}", s.Position.Floor + 1, level.Floors) : "";
 
             bool preview = App.Game.Previewing;
@@ -480,7 +515,7 @@ namespace MummyEscape.UI.Screens
             string Controls = Loc.T("Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines.");
             string Map = Loc.T("Maintiens « Carte » pour revoir ce que tu as exploré.");
             string mechanic = ActHint(level.Id.Act);
-            _hint.text = preview ? ""
+            _hint.text = preview || App.Game.InTutorial ? ""
                 : mechanic == null ? (s.Moves == 0 ? Controls : s.Moves < 4 ? Map : "")
                 : s.Moves < 4 ? mechanic
                 : s.Moves < 8 ? Map

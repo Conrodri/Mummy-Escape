@@ -34,6 +34,9 @@ namespace MummyEscape.UI.Screens
             // The music of the tombs, with the solo game it belongs to.
             var jukebox = UIKit.IconButton(title.transform.parent, UISprites.Note, () => Router.Open<JukeboxScreen>(), 92);
             UIKit.Place((RectTransform)jukebox.transform, 1, 0.5f, 92, 92, -36, 0);
+            // The tutorial corridor, to walk again whenever a trap is forgotten.
+            var tutorial = UIKit.IconButton(title.transform.parent, UISprites.Hand, () => { Router.Open<HudScreen>(); App.Game.StartTutorial(); }, 92);
+            UIKit.Place((RectTransform)tutorial.transform, 1, 0.5f, 92, 92, -148, 0);
             var body = Body(190, 40);
             UIKit.Column(body, 22);
             // A horizontal swipe anywhere on the page changes the act.

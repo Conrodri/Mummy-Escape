@@ -127,6 +127,13 @@ namespace MummyEscape.UI.Screens
             var save = App.Save;
             var next = save.FurthestUnlocked();
             var rec = save.GetRecord(next);
+            // A new player meets the traps in the tutorial corridor first.
+            if (!save.Data.TutorialDone && next.Equals(new LevelId(1, 1)) && (rec == null || rec.Completions == 0))
+            {
+                _goal.text = Loc.T("Apprends à déjouer les pièges : tutoriel");
+                _goalAction = () => { Router.Open<HudScreen>(); App.Game.StartTutorial(); };
+                return;
+            }
             if (rec == null || rec.Completions == 0)
             {
                 _goal.text = Loc.F("Évade-toi du tombeau {0}", next.ToString());
