@@ -156,7 +156,10 @@ namespace MummyEscape.Online
 
         Task<IReadOnlyList<FriendInfo>> GetFriendsAsync();
         Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync();
-        Task<bool> SendFriendRequestAsync(string playerName);
+        /// <summary>Sends a friend request to this friend code (Name#1234). Returns the error to show, or null once sent.</summary>
+        Task<string> SendFriendRequestAsync(string playerName);
+        /// <summary>Sends a friend request to this player (seen in a chat, a ranking...). Returns the error to show, or null.</summary>
+        Task<string> SendFriendRequestToIdAsync(string playerId);
         Task AcceptFriendRequestAsync(string playerId);
         Task DeclineFriendRequestAsync(string playerId);
         Task RemoveFriendAsync(string playerId);
@@ -172,5 +175,31 @@ namespace MummyEscape.Online
 
         /// <summary>Leaderboard id for a level. Includes the generator version so different layouts never mix.</summary>
         public static string LeaderboardId(LevelId id) => $"v{DifficultyTable.GeneratorVersion}s{LevelResult.ScoreFormat}_{id.Key}";
+    }
+
+    /// <summary>
+    /// A friend code as typed: the public name, a # and digits (as many as the service gave: Lycoris#16510). Spaces and a
+    /// full-width ＃ are tidied; typed without its #, every place it could go before the final digits is a candidate.
+    /// </summary>
+    public static class FriendCode
+    {
+        public static List<string> Candidates(string typed)
+        {
+            var list = new List<string>();
+            string code = (typed ?? "").Replace(" ", "").Replace('＃', '#');
+            int hash = code.LastIndexOf('#');
+            if (hash > 0 && hash < code.Length - 1)
+            {
+                list.Add(code);
+                return list;
+            }
+            if (hash >= 0) return list;
+            int digits = 0;
+            while (digits < code.Length && char.IsDigit(code[code.Length - 1 - digits])) digits++;
+            // At least 4 digits after the #, and a name before it; the shortest number first (the usual code).
+            for (int n = 4; n <= digits && n < code.Length; n++)
+                list.Add(code.Substring(0, code.Length - n) + "#" + code.Substring(code.Length - n));
+            return list;
+        }
     }
 }

@@ -6,6 +6,7 @@ using Unity.Services.Authentication;
 using Unity.Services.CloudSave;
 using Unity.Services.Core;
 using Unity.Services.Friends;
+using Unity.Services.Friends.Exceptions;
 using Unity.Services.Leaderboards;
 using UnityEngine;
 using CloudPlayer = Unity.Services.CloudSave.Models.Data.Player;
@@ -202,18 +203,45 @@ namespace MummyEscape.Online
             return Task.FromResult<IReadOnlyList<FriendRequest>>(list);
         }
 
-        public async Task<bool> SendFriendRequestAsync(string playerName)
+        public Task<string> SendFriendRequestAsync(string playerName) =>
+            string.IsNullOrWhiteSpace(playerName) ? Task.FromResult(NotFound) : RequestFriend(() => FriendsService.Instance.AddFriendByNameAsync(playerName.Trim()));
+
+        public Task<string> SendFriendRequestToIdAsync(string playerId) =>
+            string.IsNullOrEmpty(playerId) ? Task.FromResult(NotFound) : RequestFriend(() => FriendsService.Instance.AddFriendAsync(playerId));
+
+        const string NotFound = "Joueur introuvable.";
+
+        async Task<string> RequestFriend(Func<Task> send)
         {
-            if (!IsAvailable || string.IsNullOrWhiteSpace(playerName)) return false;
+            if (!IsAvailable) return Status;
+            if (!_friendsReady) await InitFriendsAsync(); // it could not start with the session: one more try
+            if (!_friendsReady) return "La liste d'amis ne répond pas : réessaie dans un instant.";
             try
             {
-                await FriendsService.Instance.AddFriendByNameAsync(playerName.Trim());
-                return true;
+                await send();
+                return null;
             }
+            catch (FriendsServiceException e)
+            {
+                Debug.LogWarning($"[Online] friend request failed: {e.ErrorCode} ({e.StatusCode}) {e.Message}");
+                switch (e.ErrorCode)
+                {
+                    case FriendsErrorCode.UserTargetingSelf: return "C'est ton propre code ami.";
+                    case FriendsErrorCode.FriendshipAlreadyExists: return "Vous êtes déjà amis.";
+                    case FriendsErrorCode.RelationshipAlreadyExists:
+                    case FriendsErrorCode.DuplicateMember: return "Demande déjà envoyée.";
+                    case FriendsErrorCode.ActionUnauthorizedWhenBlocked: return "Impossible : l'un de vous a bloqué l'autre.";
+                    case FriendsErrorCode.FriendLimitReached:
+                    case FriendsErrorCode.FriendRequestLimitReached: return "Tu as atteint le nombre maximum d'amis ou de demandes.";
+                    case FriendsErrorCode.TargetsFriendLimitReached: return "Ce joueur a déjà trop d'amis.";
+                }
+                return e.StatusCode == System.Net.HttpStatusCode.NotFound ? NotFound : Loc.T("Demande impossible pour le moment.") + " (" + (int)e.ErrorCode + ")";
+            }
+            catch (RequestFailedException e) { return Explain(e, NotFound); }
             catch (Exception e)
             {
                 Debug.LogWarning("[Online] friend request failed: " + e.Message);
-                return false;
+                return NotFound;
             }
         }
 

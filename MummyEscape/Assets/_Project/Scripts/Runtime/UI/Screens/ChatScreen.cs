@@ -26,7 +26,7 @@ namespace MummyEscape.UI.Screens
         ScrollRect _scroll;
         Text _info, _conversationTitle, _menuTitle;
         InputField _input;
-        Button _send, _menuDirect, _menuBlock;
+        Button _send, _menuDirect, _menuFriend, _menuBlock;
         Toggle _enabled;
         string _channel, _directName;
         long _lastSeq;
@@ -99,6 +99,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_menuTitle, 70);
             _menuDirect = UIKit.Button(card, "Message privé", () => { var t = _target; CloseMenu(); OpenDirect(t.From, t.FromName); }, 32);
             UIKit.Size(_menuDirect, 92);
+            _menuFriend = UIKit.Button(card, "Ajouter en ami", () => { var t = _target; CloseMenu(); AddFriend(t.From); }, 32);
+            UIKit.Size(_menuFriend, 92);
             var report = UIKit.Button(card, "Signaler ce message", () => { var t = _target; CloseMenu(); AskReport(t); }, 32);
             UIKit.Size(report, 92);
             _menuBlock = UIKit.Button(card, "Bloquer", () => { var t = _target; CloseMenu(); AskBlock(t.From, t.FromName); }, 32, ButtonStyle.Danger);
@@ -429,8 +431,16 @@ namespace MummyEscape.UI.Screens
             _target = m;
             _menuTitle.text = m.FromName ?? "?";
             _menuDirect.gameObject.SetActive(IsFriend(m.From) && _channel != ChatConfig.Direct(m.From));
+            _menuFriend.gameObject.SetActive(!IsFriend(m.From) && m.From != Me);
             _menu.gameObject.SetActive(true);
             _menu.SetAsLastSibling();
+        }
+
+        async void AddFriend(string playerId)
+        {
+            string error = await App.Online.SendFriendRequestToIdAsync(playerId);
+            if (this == null) return;
+            Router.Open<OfferDialog>().Configure("Ajouter en ami", Loc.T(error ?? "Demande d'ami envoyée."), ("OK", ButtonStyle.Primary, null)); // noloc
         }
 
         void CloseMenu()

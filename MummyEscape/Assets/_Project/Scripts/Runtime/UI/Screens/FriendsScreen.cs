@@ -233,10 +233,17 @@ namespace MummyEscape.UI.Screens
             Router.Open<PromptDialog>().Configure("Ajouter un ami", "Demande-lui son code ami\n(exemple : Nefertari#2041).",
                 "Code ami", "", "Inviter", async code =>
                 {
-                    if (!code.Contains("#")) return "Le code contient un # suivi de 4 chiffres.";
+                    var candidates = FriendCode.Candidates(code);
+                    if (candidates.Count == 0) return "Le code ami, c'est le nom, un # et des chiffres (exemple : Nefertari#2041).";
                     if (!App.Online.IsAvailable && !App.Online.IsDemo) return App.Online.Status;
-                    bool ok = await App.Online.SendFriendRequestAsync(code);
-                    return ok ? null : "Joueur introuvable.";
+                    // Typed without its #: each place it could go, until one is a player.
+                    string error = null;
+                    foreach (var c in candidates)
+                    {
+                        error = await App.Online.SendFriendRequestAsync(c);
+                        if (error != "Joueur introuvable.") break;
+                    }
+                    return error;
                 });
 
         void ShareCode()

@@ -82,8 +82,11 @@ namespace MummyEscape.Online
         public Task<IReadOnlyList<FriendInfo>> GetFriendsAsync() => Task.FromResult<IReadOnlyList<FriendInfo>>(new List<FriendInfo>(_friends));
         public Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync() => Task.FromResult<IReadOnlyList<FriendRequest>>(new List<FriendRequest>(_requests));
 
-        public Task<bool> SendFriendRequestAsync(string playerName) =>
-            Task.FromResult(IsDemo && !string.IsNullOrWhiteSpace(playerName) && playerName.Contains("#"));
+        public Task<string> SendFriendRequestAsync(string playerName) =>
+            Task.FromResult(IsDemo && !string.IsNullOrWhiteSpace(playerName) && playerName.Contains("#") ? null : IsDemo ? "Joueur introuvable." : Status);
+
+        public Task<string> SendFriendRequestToIdAsync(string playerId) =>
+            Task.FromResult(IsDemo && !string.IsNullOrEmpty(playerId) ? null : IsDemo ? "Joueur introuvable." : Status);
 
         public Task AcceptFriendRequestAsync(string playerId)
         {
