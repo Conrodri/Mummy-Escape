@@ -74,8 +74,16 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 12;
 
-            UIKit.Size(UIKit.Button(body, "+  Ajouter un ami", AddFriend, 36, ButtonStyle.Primary), 104);
+            // Adding a friend, and the community server beside it (friends to be found there too).
+            var actions = UIKit.Row(body, 104, 20);
+            UIKit.Size(UIKit.Button(actions.transform, "+  Ajouter un ami", AddFriend, 36, ButtonStyle.Primary), -1, -1, 2);
+            var discord = UIKit.Button(actions.transform, "Discord", () => Application.OpenURL(DiscordInvite), 36);
+            discord.image.color = new Color(0.45f, 0.5f, 0.95f); // Discord's blurple, on the pixel button
+            UIKit.Size(discord, -1, -1, 1);
         }
+
+        /// <summary>The Mummy Rush community server (a permanent invitation).</summary>
+        public const string DiscordInvite = "https://discord.gg/myuCgZXmGK"; // noloc
 
         /// <summary>Friends (this screen) or the guild (<see cref="GuildScreen"/>), one tab away from each other; Back leads home.</summary>
         internal static UIKit.Segmented Social(Transform body, UIRouter router, int selected) =>
