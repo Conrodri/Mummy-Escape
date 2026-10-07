@@ -131,8 +131,11 @@ namespace MummyEscape.UI.Screens
             {
                 // A tier name, then what the next star asks for: humans rarely walk the ideal path, so no "+40 moves" verdict.
                 string tier = Loc.T(result.Stars >= 3 ? "Excellent !" : result.Stars == 2 ? "Bien joué !" : "Évadée de justesse !");
+                // The next star asks for both: name whichever this run missed (the moves first).
+                int next = result.Stars + 1, maxMoves = result.MaxMovesFor(next), maxTime = result.MaxTimeFor(next);
                 string goal = result.Stars >= 3 ? Loc.F("chemin idéal : {0} coups", result.Par)
-                                                : Loc.F("{0} coups ou moins pour l'étoile suivante", result.MaxMovesFor(result.Stars + 1));
+                            : result.Moves > maxMoves || maxTime <= 0 ? Loc.F("{0} coups ou moins pour l'étoile suivante", maxMoves)
+                            : Loc.F("{0} ou moins pour l'étoile suivante", LevelResult.FormatTime(maxTime));
                 _verdict.text = $"<b>{tier}</b> · {goal}";
             }
             else

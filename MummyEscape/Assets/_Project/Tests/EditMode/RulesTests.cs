@@ -266,18 +266,28 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void Stars_LeaveRoomForHumanWrongTurns()
+        public void Stars_LostAt130And160PercentOfMovesOrTime()
         {
-            LevelResult Run(int moves, bool won = true) => new LevelResult { Won = won, Moves = moves, Par = 24, MaxHp = 2, HpLeft = 2 };
-            Assert.AreEqual(3, Run(24).Stars, "ideal path");
-            Assert.AreEqual(3, Run(36).Stars, "1.5x the ideal path");
-            Assert.AreEqual(2, Run(37).Stars);
-            Assert.AreEqual(2, Run(60).Stars, "2.5x the ideal path");
-            Assert.AreEqual(1, Run(61).Stars);
+            LevelResult Run(int moves, int timeMs = 0, int targetMs = 0, bool won = true) =>
+                new LevelResult { Won = won, Moves = moves, Par = 20, TimeMs = timeMs, TargetMs = targetMs, MaxHp = 2, HpLeft = 2 };
+            Assert.AreEqual(3, Run(20).Stars, "ideal path");
+            Assert.AreEqual(3, Run(25).Stars, "125% of the ideal path");
+            Assert.AreEqual(2, Run(26).Stars, "130% of the ideal path");
+            Assert.AreEqual(2, Run(31).Stars);
+            Assert.AreEqual(1, Run(32).Stars, "160% of the ideal path");
             Assert.AreEqual(1, Run(400).Stars, "escaping always earns a star");
-            Assert.AreEqual(0, Run(30, false).Stars);
-            Assert.AreEqual(36, Run(50).MaxMovesFor(3));
-            Assert.AreEqual(60, Run(50).MaxMovesFor(2));
+            Assert.AreEqual(0, Run(20, won: false).Stars);
+
+            Assert.AreEqual(3, Run(20, 12_999, 10_000).Stars, "just under 130% of the expert's time");
+            Assert.AreEqual(2, Run(20, 13_000, 10_000).Stars, "130% of the expert's time");
+            Assert.AreEqual(1, Run(20, 16_000, 10_000).Stars, "160% of the expert's time");
+            Assert.AreEqual(1, Run(32, 5_000, 10_000).Stars, "the worse of moves and time decides");
+            Assert.AreEqual(3, Run(20, 90_000).Stars, "no expert time: the moves alone");
+
+            Assert.AreEqual(25, Run(20).MaxMovesFor(3));
+            Assert.AreEqual(31, Run(20).MaxMovesFor(2));
+            Assert.AreEqual(12_999, Run(20, 1, 10_000).MaxTimeFor(3));
+            Assert.AreEqual(0, Run(20).MaxTimeFor(3));
         }
 
         [Test]

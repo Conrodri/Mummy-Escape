@@ -275,6 +275,7 @@ namespace MummyEscape
             ["Évadée de justesse !"] = "A narrow escape!",
             ["chemin idéal : {0} coups"] = "ideal path: {0} moves",
             ["{0} coups ou moins pour l'étoile suivante"] = "{0} moves or fewer for the next star",
+            ["{0} ou moins pour l'étoile suivante"] = "{0} or less for the next star",
             ["Courants, dalles effondrées et barrières ne pardonnent pas."] = "Currents, collapsed slabs and barriers are unforgiving.",
             ["Nouveau record ! ({0} → {1})"] = "New record! ({0} → {1})",
             ["Premier passage !"] = "First clear!",

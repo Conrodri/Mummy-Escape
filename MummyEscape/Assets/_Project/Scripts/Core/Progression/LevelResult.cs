@@ -31,27 +31,34 @@ namespace MummyEscape.Core
         public int OverPar => Math.Max(0, Moves - Par);
 
         /// <summary>
-        /// Moves allowed for 3 and 2 stars, in % of the ideal path. The tomb is played from memory in the dark, so a
-        /// human hardly ever walks the ideal path: simulated players (tools/LevelLab --human) need 1.6× (attentive) to
-        /// 2.3× (average) the ideal moves on act 1. 3 stars = a well-remembered tomb, 2 = a few wrong turns.
+        /// A star is lost at 130% of the ideal path or of the expert mummy's time, both at 160%: the moves and the time
+        /// each count, the worse of the two decides.
         /// </summary>
-        public const int ThreeStarsPercent = 150, TwoStarsPercent = 250;
+        public const int TwoStarsPercent = 130, OneStarPercent = 160;
 
-        /// <summary>3 stars within 1.5× the ideal path, 2 stars within 2.5×, 1 star for escaping at all.</summary>
+        /// <summary>3 stars under 1.3× the ideal path and the expert's time, 2 under 1.6×, 1 star for escaping at all.</summary>
         public int Stars
         {
             get
             {
                 if (!Won) return 0;
-                if (Moves <= MaxMovesFor(3)) return 3;
-                if (Moves <= MaxMovesFor(2)) return 2;
-                return 1;
+                int percent = Math.Max(Percent(Moves, Par), Percent(TimeMs, TargetMs));
+                return percent >= OneStarPercent ? 1 : percent >= TwoStarsPercent ? 2 : 3;
             }
         }
 
+        /// <summary>Value in % of its reference, 0 when the reference is unknown (an expert time not measured).</summary>
+        static int Percent(int value, int reference) => reference > 0 ? (int)Math.Min(int.MaxValue, (long)value * 100 / reference) : 0;
+
         /// <summary>Most moves that still earn this many stars in this maze (never below the ideal path).</summary>
-        public int MaxMovesFor(int stars) =>
-            stars >= 3 ? Par * ThreeStarsPercent / 100 : stars == 2 ? Par * TwoStarsPercent / 100 : int.MaxValue;
+        public int MaxMovesFor(int stars) => stars >= 3 ? Below(Par, TwoStarsPercent) : stars == 2 ? Below(Par, OneStarPercent) : int.MaxValue;
+
+        /// <summary>Longest time that still earns this many stars (0: no expert time to compare with).</summary>
+        public int MaxTimeFor(int stars) =>
+            TargetMs <= 0 ? 0 : stars >= 3 ? Below(TargetMs, TwoStarsPercent) : stars == 2 ? Below(TargetMs, OneStarPercent) : int.MaxValue;
+
+        /// <summary>The largest value under <paramref name="percent"/>% of the reference, never below the reference itself.</summary>
+        static int Below(int reference, int percent) => Math.Max(reference, (int)(((long)reference * percent - 1) / 100));
 
         /// <summary>Bump when the score encoding changes: it is part of the leaderboard ids.</summary>
         public const int ScoreFormat = 2;
