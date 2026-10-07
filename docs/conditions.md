@@ -1,6 +1,6 @@
 # Mummy Rush — Conditions d'utilisation
 
-Version 2 — mise à jour le 6 octobre 2026.
+Version 3 — mise à jour le 7 octobre 2026.
 
 ## Objet
 

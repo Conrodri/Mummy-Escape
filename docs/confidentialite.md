@@ -1,6 +1,6 @@
 # Mummy Rush — Politique de confidentialité
 
-Version 2 — mise à jour le 6 octobre 2026.
+Version 3 — mise à jour le 7 octobre 2026.
 
 ## En bref
 
@@ -22,7 +22,7 @@ Ces données restent sur l'appareil ; tu peux les effacer à tout moment (Param�
 • Ton pseudonyme, public (attribué au hasard, modifiable). N'utilise pas ton vrai nom.  
 • Tes meilleurs scores par niveau (coups au-dessus du chemin idéal et temps), publics dans les classements, avec ton pays seulement si tu l'as choisi.  
 • Tes amis, tes demandes d'ami et ton statut « en ligne », visibles de tes amis.  
-• Ta progression (niveau atteint, étoiles), visible de tes amis seulement si tu actives le partage (désactivé par défaut).  
+• Ta progression (niveau atteint, étoiles, meilleurs scores), visible de tes amis : c'est le principe de la liste d'amis.  
 • Si tu utilises le tchat : tes messages, leur date et les replays que tu y partages, visibles des membres du canal (global, ta guilde, ou l'ami à qui tu écris). Chaque canal garde ses 100 derniers messages, les plus anciens sont effacés au fur et à mesure. Tes blocages et tes signalements sont aussi conservés, pour la modération. Les messages privés ne sont possibles qu'entre amis : le jeu envoie au serveur la liste de tes amis et l'indication que tu es mineur (pour te fermer le canal global).  
 • Si tu affrontes d'autres joueurs (duels, 2v2, guildes) : tes courses (actions et temps, rejouées par le serveur pour vérifier qu'elles sont possibles), ton classement Elo, tes résultats et ton historique de matchs, tes sceaux et récompenses, ton énergie de combat, tes duos et ta guilde. Tes adversaires et coéquipiers voient ton pseudonyme, ton apparence, ton Elo et les replays de vos matchs.  
 • Si tu achètes des scarabées dorés : le produit, l'identifiant de commande et le jeton d'achat transmis par Google Play, la date, et ton portefeuille (scarabées dorés, pass, objets payants), gardés par notre serveur. Nous ne recevons jamais tes coordonnées bancaires : le paiement est traité par Google.  
@@ -34,13 +34,13 @@ Ces données restent sur l'appareil ; tu peux les effacer à tout moment (Param�
 • Fournir les fonctions en ligne que tu as choisies (classements, amis, compte, sauvegarde) : exécution des conditions d'utilisation (RGPD, art. 6.1.b).  
 • Vérifier et créditer tes achats, en garder la preuve : exécution du contrat et obligations légales comptables (art. 6.1.b et 6.1.c).  
 • Sécuriser le service, lutter contre la triche et les abus : intérêt légitime (art. 6.1.f).  
-• Partage de ta progression avec tes amis : ton choix, que tu peux retirer à tout moment.  
+• Montrer ta progression à tes amis : exécution des conditions d'utilisation, c'est la fonction même de la liste d'amis (art. 6.1.b). Pour ne plus la montrer à quelqu'un, retire-le de tes amis.  
 • Publicités personnalisées : ton consentement, recueilli par le formulaire de Google et retirable à tout moment (art. 6.1.a).  
 Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne demande l'accord d'un parent ou tuteur (RGPD art. 8, loi Informatique et Libertés art. 45).
 
 ## Qui peut voir ces données ?
 
-• Les autres joueurs : ton pseudonyme, ton apparence (tenue, titre), ton rang de duel, tes scores et ton pays (s'il est choisi) ; tes amis voient aussi ton statut et ta progression si tu la partages.  
+• Les autres joueurs : ton pseudonyme, ton apparence (tenue, titre), ton rang de duel, tes scores et ton pays (s'il est choisi) ; tes amis voient aussi ton statut et ta progression.  
 • Notre prestataire technique, Unity Technologies (services Unity Gaming Services : Authentication, Leaderboards, Friends, Cloud Save, Cloud Code), qui agit pour notre compte et selon nos instructions.  
 • Google, seulement si tu regardes une publicité (voir « Publicités »), et Google Play pour le paiement et la vérification de tes achats.  
 Tes données de jeu ne sont ni vendues ni louées, et ne sont jamais transmises pour de la publicité.
@@ -65,7 +65,7 @@ Unity Technologies et Google LLC sont établies aux États-Unis. Les transferts 
 Tu peux accéder à tes données, les corriger, les effacer, les récupérer dans un format lisible (portabilité), t'opposer à un traitement ou le limiter, et définir des directives sur le sort de tes données après ton décès. Directement dans le jeu (Paramètres › Confidentialité) :  
 • « Exporter mes données » : tout ce que le jeu et le serveur savent de toi ;  
 • « Supprimer mes données en ligne » : efface ton profil, ton compte, tes scores, tes amis, ta sauvegarde, tes données de duel, de 2v2 et de guilde, tes messages et ton portefeuille (les scarabées dorés non dépensés sont alors perdus) ;  
-• désactiver le mode en ligne ou le partage de progression ; changer de pseudonyme ou de pays.  
+• désactiver le mode en ligne ; changer de pseudonyme ou de pays.  
 Tu peux aussi écrire à [ADRESSE E-MAIL DE CONTACT] : nous répondons sous un mois. Si tu estimes que tes droits ne sont pas respectés, tu peux saisir la CNIL (www.cnil.fr, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07) ou l'autorité de protection des données de ton pays.
 
 ## Sécurité

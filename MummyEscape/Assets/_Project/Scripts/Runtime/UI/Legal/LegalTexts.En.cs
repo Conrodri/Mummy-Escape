@@ -3,7 +3,7 @@ namespace MummyEscape.UI.Legal
     /// <summary>English versions of the legal texts. Keep them in sync with the French ones (LegalTexts.cs), which prevail.</summary>
     public static partial class LegalTexts
     {
-        public const string UpdatedEn = "October 6, 2026";
+        public const string UpdatedEn = "October 7, 2026";
 
         /// <summary>The documents in the current game language.</summary>
         public static string[] CurrentPrivacy => Loc.Current == Loc.Lang.En ? PrivacyEn : Privacy;
@@ -29,7 +29,7 @@ namespace MummyEscape.UI.Legal
             "• Your public nickname (randomly assigned, editable). Do not use your real name.\n" +
             "• Your best scores per level (moves above the ideal path and time), public in the leaderboards, with your country only if you chose one.\n" +
             "• Your friends, your friend requests and your \"online\" status, visible to your friends.\n" +
-            "• Your progress (furthest level, stars), visible to your friends only if you turn on sharing (off by default).\n" +
+            "• Your progress (furthest level, stars, best scores), visible to your friends: that is what the friends list is for.\n" +
             "• If you use the chat: your messages, their date and the replays you share there, visible to the members of the channel (global, your guild, or the friend you write to). " +
             "Each channel keeps its last 100 messages, the oldest ones being erased as new ones arrive. Your blocks and reports are kept too, for moderation. " +
             "Private messages are only possible between friends: the game sends the server your list of friends and whether you are a minor (to close the global channel to you).\n" +
@@ -45,11 +45,11 @@ namespace MummyEscape.UI.Legal
             "• Providing the online features you chose (leaderboards, friends, account, backup): performance of the terms of use (GDPR, art. 6.1.b).\n" +
             "• Checking and crediting your purchases, keeping proof of them: performance of the contract and legal accounting obligations (art. 6.1.b and 6.1.c).\n" +
             "• Securing the service, fighting cheating and abuse: legitimate interest (art. 6.1.f).\n" +
-            "• Sharing your progress with your friends: your choice, which you can withdraw at any time.\n" +
+            "• Showing your progress to your friends: performance of the terms of use, it is what the friends list does (art. 6.1.b). To stop showing it to someone, remove them from your friends.\n" +
             "• Personalized ads: your consent, collected by Google's form and withdrawable at any time (art. 6.1.a).\n" +
             "Below the digital age of consent in your country (15 in France), online mode requires the consent of a parent or guardian (GDPR art. 8, French Data Protection Act art. 45).",
             "# Who can see this data?",
-            "• Other players: your nickname, your look (outfit, title), your duel rank, your scores and your country (if chosen); your friends also see your status, and your progress if you share it.\n" +
+            "• Other players: your nickname, your look (outfit, title), your duel rank, your scores and your country (if chosen); your friends also see your status and your progress.\n" +
             "• Our technical provider, Unity Technologies (Unity Gaming Services: Authentication, Leaderboards, Friends, Cloud Save, Cloud Code), acting on our behalf and under our instructions.\n" +
             "• Google, only if you watch an ad (see \"Ads\"), and Google Play for the payment and verification of your purchases.\n" +
             "Your game data is never sold or rented, and never passed on for advertising.",
@@ -74,7 +74,7 @@ namespace MummyEscape.UI.Legal
             "• \"Export my data\": everything the game and the server know about you;\n" +
             "• \"Delete my online data\": erases your profile, your account, your scores, your friends, your backup, your duel, 2v2 and guild data, " +
             "your messages and your wallet (unspent golden scarabs are then lost);\n" +
-            "• turn off online mode or progress sharing; change your nickname or country.\n" +
+            "• turn off online mode; change your nickname or country.\n" +
             $"You can also write to {Contact}: we answer within one month. " +
             "If you believe your rights are not respected, you can lodge a complaint with the CNIL (www.cnil.fr, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France) " +
             "or with the data protection authority of your country.",
@@ -98,7 +98,7 @@ namespace MummyEscape.UI.Legal
             "To prevent abusive deletions, we may ask for proof that the account is yours (for example the friend code shown in the game).",
             "# What is deleted",
             "Your profile and its ID, your account (login and password), your nickname, your leaderboard scores, " +
-            "your friends and friend requests, your shared progress and your online backup, your Elo and your duel and 2v2 history, your duos, " +
+            "your friends and friend requests, the progress shown to your friends and your online backup, your Elo and your duel and 2v2 history, your duos, " +
             "your place in your guild, your messages and shared replays, and your wallet (golden scarabs, passes, paid items).",
             "# What is kept",
             "Proof of purchase (order ID, product, date, player ID), for 10 years, as accounting law requires. " +

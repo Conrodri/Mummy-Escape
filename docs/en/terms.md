@@ -1,6 +1,6 @@
 # Mummy Rush — Terms of use
 
-Version 2 — updated October 6, 2026. English translation: the French version prevails.
+Version 3 — updated October 7, 2026. English translation: the French version prevails.
 
 ## Purpose
 

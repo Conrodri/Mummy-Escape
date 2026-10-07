@@ -197,7 +197,7 @@ namespace MummyEscape.UI.Screens
             var p = await App.Online.GetProgressAsync(f.PlayerId);
             if (progress == null) return;
             string status = f.Online ? Loc.T("En ligne") + " · " : "";
-            progress.text = status + (p == null || !p.HasProgress ? Loc.T("progression non partagée") : Loc.F("niveau {0} · {1} étoiles", p.FurthestLevel, p.TotalStars));
+            progress.text = status + (p == null || !p.HasProgress ? Loc.T("progression indisponible") : Loc.F("niveau {0} · {1} étoiles", p.FurthestLevel, p.TotalStars));
             var look = p?.Look;
             var loadout = PvpSkins.Loadout(look);
             portrait.color = Color.white;
@@ -347,7 +347,7 @@ namespace MummyEscape.UI.Screens
             {
                 _furthest.text = _stars.text = "—";
                 // One line across the whole list (the level column is far too narrow for it).
-                var note = UIKit.Label(_list, Loc.F("{0} ne partage pas sa progression.", friend.Name), 28, UIKit.Dim);
+                var note = UIKit.Label(_list, Loc.F("La progression de {0} n'est pas encore disponible (son jeu doit être à jour).", friend.Name), 28, UIKit.Dim);
                 note.horizontalOverflow = HorizontalWrapMode.Wrap;
                 UIKit.FitText(note, 18);
                 UIKit.Size(note, 120);

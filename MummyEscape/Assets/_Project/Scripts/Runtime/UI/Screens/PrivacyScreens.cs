@@ -260,7 +260,6 @@ namespace MummyEscape.UI.Screens
             PrivacyUI.Paragraph(online, App.Online.IsAvailable ? Loc.F("État : en ligne ({0})", AccountLabel()) : Loc.F("État : {0}", Loc.T(App.Online.Status)), 28, UIKit.Dim);
             if (p.IsMinor && p.ParentalConsent)
                 PrivacyUI.Wide(online, "Retirer l'autorisation parentale", () => { App.Privacy.SetParentalConsent(false); App.StopOnline(); Rebuild(); }, 30, 88);
-            UIKit.Toggle(online, "Mes amis voient ma progression", p.ShareProgress, v => { App.Privacy.SetShareProgress(v); _ = App.PublishProgress(); });
             string country = App.Save.Data.Country;
             string countryLabel = string.IsNullOrEmpty(country) ? Loc.T("non affiché") : country == SaveService.AutoCountry ? Loc.T("celui de l'appareil") : CountryService.NameOf(country);
             PrivacyUI.Wide(online, Loc.F("Pays dans les classements : {0}", countryLabel), () => Router.Open<CountryPickerScreen>().OnPicked(Rebuild), 30, 88);

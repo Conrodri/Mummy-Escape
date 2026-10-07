@@ -321,7 +321,7 @@ namespace MummyEscape
             ["Aucun ami pour l'instant.\nPartage ton code pour qu'on t'ajoute !"] = "No friends yet.\nShare your code so people can add you!",
             ["Aucune demande en attente."] = "No pending requests.",
             ["En ligne"] = "Online",
-            ["progression non partagée"] = "progress not shared",
+            ["progression indisponible"] = "progress unavailable",
             ["niveau {0} · {1} étoiles"] = "level {0} · {1} stars",
             ["veut devenir ton ami"] = "wants to be your friend",
             ["Refuser"] = "Decline",
@@ -355,7 +355,6 @@ namespace MummyEscape
             ["Toi"] = "You",
             ["/ toi {0}"] = "/ you {0}",
             ["Retirer des amis"] = "Remove friend",
-            ["Progression non partagée pour l'instant."] = "Progress not shared yet.",
             ["Confirmer le retrait ?"] = "Confirm removal?",
             ["Momie"] = "Mummy",
 
@@ -434,7 +433,6 @@ namespace MummyEscape
             ["État : en ligne ({0})"] = "Status: online ({0})",
             ["État : {0}"] = "Status: {0}",
             ["Retirer l'autorisation parentale"] = "Withdraw parental consent",
-            ["Mes amis voient ma progression"] = "My friends see my progress",
             ["non affiché"] = "not shown",
             ["celui de l'appareil"] = "the device's",
             ["Pays dans les classements : {0}"] = "Country in leaderboards: {0}",
@@ -1184,7 +1182,7 @@ namespace MummyEscape
             ["Inviter dans la guilde"] = "Invite to the guild",
             ["glisse pour changer d'étage"] = "swipe to change floor",
             ["glisse pour changer"] = "swipe to switch",
-            ["{0} ne partage pas sa progression."] = "{0} doesn't share their progress.",
+            ["La progression de {0} n'est pas encore disponible (son jeu doit être à jour)."] = "{0}'s progress isn't available yet (their game needs updating).",
         };
     }
 }

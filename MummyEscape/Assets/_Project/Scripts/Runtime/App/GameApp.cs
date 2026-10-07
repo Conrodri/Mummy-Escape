@@ -256,16 +256,11 @@ namespace MummyEscape.App
             else if (UI.Current is FriendsScreen friends) friends.OnShow();
         }
 
-        /// <summary>
-        /// What friends see: the outfit, title and duel rank always (they show in every duel anyway), the progression
-        /// (furthest level, stars, scores) only if the player opted in.
-        /// </summary>
+        /// <summary>What friends see: the outfit, title, duel rank and progression (furthest level, stars, scores).</summary>
         public Task PublishProgress()
         {
             if (!Online.IsAvailable) return Task.CompletedTask;
-            var snapshot = BuildProgressSnapshot();
-            if (!Privacy.Data.ShareProgress) snapshot = new ProgressSnapshot { Look = snapshot.Look, Elo = snapshot.Elo };
-            return Online.PublishProgressAsync(snapshot);
+            return Online.PublishProgressAsync(BuildProgressSnapshot());
         }
 
         // Cloud save: written at most every 20 s while dirty, and when the app goes to the background.

@@ -21,8 +21,6 @@ namespace MummyEscape.Services
         public bool AgeChecked;
         /// <summary>A parent or guardian confirmed the online features for a minor.</summary>
         public bool ParentalConsent;
-        /// <summary>Friends may see the player's progression (off by default: privacy by default, art. 25).</summary>
-        public bool ShareProgress;
     }
 
     /// <summary>
@@ -33,7 +31,7 @@ namespace MummyEscape.Services
     public sealed class PrivacyService
     {
         /// <summary>Bump when the privacy policy or the terms change materially: players are asked again.</summary>
-        public const int PolicyVersion = 2;
+        public const int PolicyVersion = 3;
 
         /// <summary>Age of digital consent per EU/EEA country (GDPR art. 8, national choices between 13 and 16).</summary>
         static readonly Dictionary<string, int> ConsentAge = new Dictionary<string, int>
@@ -118,12 +116,6 @@ namespace MummyEscape.Services
             Data.ParentalConsent = Data.IsMinor && on;
             if (!Data.ParentalConsent && Data.IsMinor) Data.OnlineEnabled = false;
             Data.AnsweredAtUtc = DateTime.UtcNow.ToString("o");
-            Save();
-        }
-
-        public void SetShareProgress(bool on)
-        {
-            Data.ShareProgress = on;
             Save();
         }
 
