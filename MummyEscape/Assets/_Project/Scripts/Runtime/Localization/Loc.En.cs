@@ -1183,6 +1183,10 @@ namespace MummyEscape
             ["glisse pour changer d'étage"] = "swipe to change floor",
             ["glisse pour changer"] = "swipe to switch",
             ["Lecture pour lancer"] = "press play to start",
+            ["Déplacements"] = "Movement",
+            ["Glisser"] = "Swipe",
+            ["Croix"] = "D-pad",
+            ["Joystick"] = "Joystick",
             ["Plusieurs joueurs portent ce nom : il faut le code complet, avec son # et ses chiffres."] = "Several players have this name: the full code is needed, with its # and digits.",
             ["La progression de {0} n'est pas encore disponible (son jeu doit être à jour)."] = "{0}'s progress isn't available yet (their game needs updating).",
         };

@@ -420,6 +420,7 @@ namespace MummyEscape.Game
             // animations from the time (nobody beats RunTiming's minimum).
             if (Session != null && Relay == null && !Previewing && !DuelWaiting && (!_paused || duel || _busy) && !(duel && Match.Over)) Session.Tick(Time.deltaTime);
             if (duel) UpdateDuel();
+            RepeatHeld();
             // A floor may have its own music (Resources/Music/act{n}_f{floor}); no-op while the track playing fits.
             if (Session != null && Session.Status == SessionStatus.Playing && !Previewing)
                 _app.Audio.PlayLevelMusic(CurrentLevel.Act, Session.Position.Floor + 1);
@@ -449,6 +450,32 @@ namespace MummyEscape.Game
         }
 
         // ------------------------------------------------------------------ input
+
+        Dir? _held;
+        bool _heldBlocked;
+
+        /// <summary>A direction pressed on the on-screen pad or joystick: the same as a swipe.</summary>
+        public void PressMove(Dir d)
+        {
+            if (_input.Enabled) OnSwipe(d);
+        }
+
+        /// <summary>
+        /// The joystick held in a direction (null: let go). That move repeats at the game's own pace, each step as soon as
+        /// the last one is shown, until a wall stops it (pushing the other way, or again, goes on).
+        /// </summary>
+        public void HoldMove(Dir? d)
+        {
+            if (d != _held) _heldBlocked = false;
+            _held = d;
+        }
+
+        void RepeatHeld()
+        {
+            if (!_held.HasValue || _heldBlocked || _busy || _buffered.HasValue || !_input.Enabled || Previewing) return;
+            if (Session == null || Session.Status != SessionStatus.Playing) return;
+            Submit(PlayerAction.Move(_held.Value));
+        }
 
         void OnSwipe(Dir d)
         {
@@ -513,6 +540,7 @@ namespace MummyEscape.Game
             {
                 if (action.Kind == ActionKind.Move)
                 {
+                    if (_held == action.Dir) _heldBlocked = true; // the joystick stops repeating into a wall
                     _app.Audio.Play(Sfx.Bump);
                     fx.Bump(MazeView.CellToWorld(from), r.Dir);
                     _busy = true;
@@ -720,6 +748,7 @@ namespace MummyEscape.Game
                 _buffered = null;
                 Submit(next);
             }
+            else RepeatHeld();
         }
 
         /// <summary>Dust or sparks on every known gate of this floor that opened or closed with the last press.</summary>

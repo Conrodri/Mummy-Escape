@@ -3,6 +3,9 @@ using UnityEngine;
 
 namespace MummyEscape.Services
 {
+    /// <summary>How the mummy is moved on a touch screen.</summary>
+    public enum MoveControl { Swipe = 0, Pad = 1, Joystick = 2 }
+
     /// <summary>Player preferences: audio, comfort and visual effects. Persisted in PlayerPrefs.</summary>
     public sealed class SettingsService
     {
@@ -21,6 +24,8 @@ namespace MummyEscape.Services
         /// <summary>2v2: when no real duo is found within a minute, play against a duo of bots rather than keep waiting.</summary>
         /// <summary>Duels and 2v2: a bot of the league when nobody of it shows up within a minute.</summary>
         public bool PvpBots { get; private set; }
+        /// <summary>Swipes, an on-screen directional pad, or a joystick that keeps moving while held.</summary>
+        public MoveControl Controls { get; private set; }
 
         public event Action Changed;
 
@@ -35,6 +40,7 @@ namespace MummyEscape.Services
             ShowPreview = PlayerPrefs.GetInt("preview", 1) == 1;
             Language = PlayerPrefs.GetString("lang", "");
             PvpBots = PlayerPrefs.GetInt("pvp_bots", 1) == 1;
+            Controls = (MoveControl)Mathf.Clamp(PlayerPrefs.GetInt("controls", 0), 0, 2);
         }
 
         public void SetMusicVolume(float v) { MusicVolume = Mathf.Clamp01(v); PlayerPrefs.SetFloat("music", MusicVolume); Commit(); }
@@ -44,6 +50,7 @@ namespace MummyEscape.Services
         public void SetAdvancedLighting(bool on) { AdvancedLighting = on; PlayerPrefs.SetInt("fx", on ? 1 : 0); Commit(); }
         public void SetHaptics(bool on) { Haptics = on; PlayerPrefs.SetInt("haptics", on ? 1 : 0); Commit(); }
         public void SetPvpBots(bool on) { PvpBots = on; PlayerPrefs.SetInt("pvp_bots", on ? 1 : 0); Commit(); }
+        public void SetControls(MoveControl c) { Controls = c; PlayerPrefs.SetInt("controls", (int)c); Commit(); }
         public void SetShowPreview(bool on) { ShowPreview = on; PlayerPrefs.SetInt("preview", on ? 1 : 0); Commit(); }
         public void SetLanguage(string code) { Language = code ?? ""; PlayerPrefs.SetString("lang", Language); Commit(); Loc.Apply(Language); }
 

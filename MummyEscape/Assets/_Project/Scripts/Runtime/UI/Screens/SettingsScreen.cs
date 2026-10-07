@@ -38,6 +38,10 @@ namespace MummyEscape.UI.Screens
             UIKit.SectionTitle(comfort, "Confort et compte");
             UIKit.Toggle(comfort, "Vibrations", s.Haptics, s.SetHaptics);
             UIKit.Toggle(comfort, "Aperçu du tombeau au départ", s.ShowPreview, s.SetShowPreview);
+            var moveLabel = UIKit.Label(comfort, "Déplacements", UIKit.TextSize, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.Size(moveLabel, 56);
+            var controls = new UIKit.Segmented(comfort, new[] { "Glisser", "Croix", "Joystick" }, i => s.SetControls((Services.MoveControl)i));
+            controls.Select((int)s.Controls);
             _language = UIKit.Button(comfort, "Langue", () => Router.Open<LanguagePickerScreen>());
             UIKit.Size(_language, UIKit.ButtonHeight);
             RefreshLanguage();

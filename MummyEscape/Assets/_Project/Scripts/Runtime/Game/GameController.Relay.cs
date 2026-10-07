@@ -337,6 +337,7 @@ namespace MummyEscape.Game
             {
                 if (action.Kind == ActionKind.Move)
                 {
+                    if (_held == action.Dir) _heldBlocked = true;
                     _app.Audio.Play(Sfx.Bump);
                     _app.Fx.Bump(MazeView.CellToWorld(from), r.Value.Dir);
                     _busy = true;

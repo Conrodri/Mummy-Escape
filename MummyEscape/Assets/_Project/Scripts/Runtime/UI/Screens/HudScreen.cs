@@ -20,6 +20,7 @@ namespace MummyEscape.UI.Screens
         readonly List<Image> _ankhs = new List<Image>();
         RectTransform _bottomBar;
         Button _disarm;
+        MoveControls _controls;
         CanvasGroup _preview;
         Text _previewTitle;
         Text _previewCount;
@@ -125,6 +126,9 @@ namespace MummyEscape.UI.Screens
             _hint = UIKit.Label(bottom, "", 30, UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Italic);
             UIKit.Stretch(_hint.rectTransform, 44, 0, 290, 0);
             _bottomBar = bottom;
+
+            // On-screen pad or joystick, when the player chose one over swipes.
+            _controls = MoveControls.Create(Root, App.Game);
 
             // Start-of-run map preview: countdown + "ready" to start early. Replaces the bottom bar meanwhile.
             var pv = UIKit.Rect("Preview", Root);
@@ -327,6 +331,8 @@ namespace MummyEscape.UI.Screens
             App.Game.LevelStarted += ShowIntro;
             App.Game.RelayChanged += OnRelayChanged;
             App.Game.SetPaused(false);
+            App.Settings.Changed += ApplyControls;
+            ApplyControls();
             Refresh();
         }
 
@@ -337,7 +343,10 @@ namespace MummyEscape.UI.Screens
             App.Game.LevelLoading -= ShowLoading;
             App.Game.LevelStarted -= ShowIntro;
             App.Game.RelayChanged -= OnRelayChanged;
+            App.Settings.Changed -= ApplyControls;
         }
+
+        void ApplyControls() => _controls.Apply(App.Settings.Controls);
 
         public void OnBack()
         {
