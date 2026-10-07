@@ -57,7 +57,7 @@ namespace MummyEscape.UI.Legal
             "• Publicités personnalisées : ton consentement, recueilli par le formulaire de Google et retirable à tout moment (art. 6.1.a).\n" +
             "Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne demande l'accord d'un parent ou tuteur (RGPD art. 8, loi Informatique et Libertés art. 45).",
             "# Qui peut voir ces données ?",
-            "• Les autres joueurs : ton pseudonyme, tes scores et ton pays (s'il est choisi) ; tes amis voient aussi ton statut et ta progression si tu la partages.\n" +
+            "• Les autres joueurs : ton pseudonyme, ton apparence (tenue, titre), ton rang de duel, tes scores et ton pays (s'il est choisi) ; tes amis voient aussi ton statut et ta progression si tu la partages.\n" +
             "• Notre prestataire technique, Unity Technologies (services Unity Gaming Services : Authentication, Leaderboards, Friends, Cloud Save, Cloud Code), qui agit pour notre compte et selon nos instructions.\n" +
             "• Google, seulement si tu regardes une publicité (voir « Publicités »), et Google Play pour le paiement et la vérification de tes achats.\n" +
             "Tes données de jeu ne sont ni vendues ni louées, et ne sont jamais transmises pour de la publicité.",

@@ -35,6 +35,7 @@ namespace MummyEscape.UI.Screens
         bool _polling, _sending;
         ChatMessage _target;
         IReadOnlyList<FriendInfo> _friends = new List<FriendInfo>();
+        bool _friendsLoaded;
         // The player's guild, to offer an invitation from a message (null: none, or not loaded yet).
         Guild _guild;
 
@@ -138,6 +139,7 @@ namespace MummyEscape.UI.Screens
             var friends = await App.Online.GetFriendsAsync();
             if (this == null || friends == null) return;
             _friends = friends;
+            _friendsLoaded = true;
             _ = ChatState.SyncProfileAsync(App, friends);
             if (_tabs.Selected == 2 && _channel == null) ShowFriends();
         }
@@ -182,7 +184,11 @@ namespace MummyEscape.UI.Screens
             _tabs.Select(i);
             if (i == 0) SetChannel(ChatConfig.Global);
             else if (i == 1) SetChannel(ChatConfig.Guild);
-            else ShowFriends();
+            else
+            {
+                ShowFriends();
+                LoadFriends(); // fresh list each time the tab opens (a friend added meanwhile)
+            }
         }
 
         void SetChannel(string channel)
@@ -396,7 +402,7 @@ namespace MummyEscape.UI.Screens
             }
             foreach (var f in _friends)
                 if (!shown.Contains(f.PlayerId)) FriendRow(f.PlayerId, f.Name, null);
-            if (_friends.Count == 0) _info.text = Loc.T("Ajoute des amis (onglet Amis) pour leur écrire.");
+            if (_friends.Count == 0) _info.text = _friendsLoaded ? Loc.T("Ajoute des amis (onglet Amis) pour leur écrire.") : Loc.T("Chargement…");
             BlockedList();
         }
 

@@ -40,7 +40,7 @@ Below the digital age of consent in your country (15 in France), online mode req
 
 ## Who can see this data?
 
-• Other players: your nickname, your scores and your country (if chosen); your friends also see your status, and your progress if you share it.  
+• Other players: your nickname, your look (outfit, title), your duel rank, your scores and your country (if chosen); your friends also see your status, and your progress if you share it.  
 • Our technical provider, Unity Technologies (Unity Gaming Services: Authentication, Leaderboards, Friends, Cloud Save, Cloud Code), acting on our behalf and under our instructions.  
 • Google, only if you watch an ad (see "Ads"), and Google Play for the payment and verification of your purchases.  
 Your game data is never sold or rented, and never passed on for advertising.

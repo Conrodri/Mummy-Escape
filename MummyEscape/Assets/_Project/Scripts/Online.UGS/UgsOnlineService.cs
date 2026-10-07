@@ -180,8 +180,9 @@ namespace MummyEscape.Online
             catch (Exception) { return ""; }
         }
 
-        public Task<IReadOnlyList<FriendInfo>> GetFriendsAsync()
+        public async Task<IReadOnlyList<FriendInfo>> GetFriendsAsync()
         {
+            await FreshFriendsAsync();
             var list = new List<FriendInfo>();
             if (IsAvailable)
                 foreach (var r in Friends)
@@ -191,16 +192,33 @@ namespace MummyEscape.Online
                         Name = r.Member.Profile?.Name ?? r.Member.Id,
                         Online = r.Member.Presence != null && r.Member.Presence.Availability == Unity.Services.Friends.Models.Availability.Online,
                     });
-            return Task.FromResult<IReadOnlyList<FriendInfo>>(list);
+            return list;
         }
 
-        public Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync()
+        static float _friendsRefreshedAt = -999f;
+
+        /// <summary>
+        /// The friends list as the server has it: started again if it could not start with the session, and re-read at most
+        /// every 10 s (the live updates can miss a friend added on the other phone, leaving a screen empty).
+        /// </summary>
+        async Task FreshFriendsAsync()
         {
+            if (!IsAvailable) return;
+            if (!_friendsReady) await InitFriendsAsync();
+            if (!_friendsReady || Time.realtimeSinceStartup - _friendsRefreshedAt < 10f) return;
+            _friendsRefreshedAt = Time.realtimeSinceStartup;
+            try { await FriendsService.Instance.ForceRelationshipsRefreshAsync(); }
+            catch (Exception e) { Debug.LogWarning("[Online] friends not refreshed: " + e.Message); }
+        }
+
+        public async Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync()
+        {
+            await FreshFriendsAsync();
             var list = new List<FriendRequest>();
             if (IsAvailable)
                 foreach (var r in FriendRequests)
                     list.Add(new FriendRequest { PlayerId = r.Member.Id, Name = r.Member.Profile?.Name ?? r.Member.Id });
-            return Task.FromResult<IReadOnlyList<FriendRequest>>(list);
+            return list;
         }
 
         public Task<string> SendFriendRequestAsync(string playerName) =>

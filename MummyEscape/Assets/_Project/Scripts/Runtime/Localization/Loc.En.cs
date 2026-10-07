@@ -1184,6 +1184,7 @@ namespace MummyEscape
             ["Inviter dans la guilde"] = "Invite to the guild",
             ["glisse pour changer d'étage"] = "swipe to change floor",
             ["glisse pour changer"] = "swipe to switch",
+            ["{0} ne partage pas sa progression."] = "{0} doesn't share their progress.",
         };
     }
 }

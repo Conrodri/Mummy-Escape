@@ -55,6 +55,8 @@ namespace MummyEscape.Online
         public Pvp.PlayerLook Look;
         /// <summary>Duel rating (0 = never played a duel).</summary>
         public int Elo;
+        /// <summary>False when the player keeps their progression to themselves: only the look and the rank are published.</summary>
+        public bool HasProgress => !string.IsNullOrEmpty(FurthestLevel);
     }
 
     /// <summary>Offline = no session; Guest = anonymous player (tied to this install); Account = username + password.</summary>

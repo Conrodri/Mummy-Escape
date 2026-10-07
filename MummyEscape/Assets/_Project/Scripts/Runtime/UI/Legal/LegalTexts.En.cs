@@ -49,7 +49,7 @@ namespace MummyEscape.UI.Legal
             "• Personalized ads: your consent, collected by Google's form and withdrawable at any time (art. 6.1.a).\n" +
             "Below the digital age of consent in your country (15 in France), online mode requires the consent of a parent or guardian (GDPR art. 8, French Data Protection Act art. 45).",
             "# Who can see this data?",
-            "• Other players: your nickname, your scores and your country (if chosen); your friends also see your status, and your progress if you share it.\n" +
+            "• Other players: your nickname, your look (outfit, title), your duel rank, your scores and your country (if chosen); your friends also see your status, and your progress if you share it.\n" +
             "• Our technical provider, Unity Technologies (Unity Gaming Services: Authentication, Leaderboards, Friends, Cloud Save, Cloud Code), acting on our behalf and under our instructions.\n" +
             "• Google, only if you watch an ad (see \"Ads\"), and Google Play for the payment and verification of your purchases.\n" +
             "Your game data is never sold or rented, and never passed on for advertising.",
