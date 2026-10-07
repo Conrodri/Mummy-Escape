@@ -92,7 +92,9 @@ namespace MummyEscape.EditorTools
                 PlayerSettings.Android.keyaliasName = "";
                 PlayerSettings.Android.keyaliasPass = "";
                 EditorUserBuildSettings.buildAppBundle = false;
-                AssetDatabase.SaveAssets(); // the build saved them to disk: write the cleared values back
+                // The build saved them to disk: write the cleared values back (marked dirty, or SaveAssets may skip the file).
+                EditorUtility.SetDirty(Unsupported.GetSerializedAssetInterfaceSingleton("PlayerSettings"));
+                AssetDatabase.SaveAssets();
             }
         }
 
