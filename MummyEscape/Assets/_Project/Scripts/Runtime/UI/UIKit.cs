@@ -598,6 +598,9 @@ namespace MummyEscape.UI
             field.textComponent = text;
             field.placeholder = ph;
             field.characterLimit = 20;
+            // The phone's own text box above the keyboard: what is typed stays readable even where the keyboard covers
+            // the field (Android Activity entry; see Player Settings).
+            field.shouldHideMobileInput = false;
             return field;
         }
 
