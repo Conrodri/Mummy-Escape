@@ -248,6 +248,7 @@ namespace MummyEscape.Visual
             {
                 case TileType.Exit: return new Color(1f, 0.85f, 0.45f);
                 case TileType.WallTorch: return T.SconceLight;
+                case TileType.Dust: return new Color(0.75f, 0.72f, 0.85f);
                 case TileType.Button: return l.Active ? new Color(0.3f, 1f, 0.9f) : new Color(0.35f, 0.5f, 1f);
                 case TileType.Door: return l.Open ? new Color(0.3f, 1f, 0.9f) : new Color(1f, 0.35f, 0.25f);
                 case TileType.Teleporter:
@@ -785,17 +786,30 @@ namespace MummyEscape.Visual
                 case TombTheme.Style.Inferno: a = new Color32(40, 36, 36, 255); b = new Color32(90, 84, 82, 255); break;
                 default: a = new Color32(150, 140, 128, 255); b = new Color32(186, 176, 160, 255); break;
             }
+            // A round heap set in the floor, ringed so it reads as a trap at a glance.
             for (int y = 0; y < 32; y++)
                 for (int x = 0; x < 32; x++)
                 {
+                    float r = Mathf.Sqrt((x - 15.5f) * (x - 15.5f) + (y - 15.5f) * (y - 15.5f));
+                    if (r > 13f) continue;
                     float d = Mathf.Sin(x * 0.35f + y * 0.12f) * 0.5f + Mathf.Sin(y * 0.41f - x * 0.2f) * 0.5f + Px.Hash(x, y, 77) * 0.6f;
-                    if (S == TombTheme.Style.Flooded) d = 1.2f - (((x - 15.5f) * (x - 15.5f)) + ((y - 15.5f) * (y - 15.5f))) / 180f + Px.Hash(x, y, 3) * 0.2f;
-                    if (d > 0.35f) p.Set(x, y, Px.Lerp(p.Get(x, y), d > 0.8f ? b : a, 0.85f));
+                    p.Set(x, y, Px.Lerp(p.Get(x, y), d > 0.6f ? b : a, 0.9f));
                 }
-            if (S == TombTheme.Style.Flooded) { p.Circle(16, 16, 6, b, false); p.Circle(16, 16, 10, Px.Shade(b, -0.2f), false); }
-            if (S == TombTheme.Style.Tech) { p.Rect(9, 9, 22, 22, MetalDark); for (int x = 10; x < 22; x += 3) p.Rect(x, 10, x, 21, Black); }
-            if (S == TombTheme.Style.Inferno) for (int k = 0; k < 5; k++) p.Set((int)(Px.Hash(k, 4, 9) * 31), (int)(Px.Hash(4, k, 9) * 31), T.Accent);
-            for (int k = 0; k < 10; k++) p.Set((int)(Px.Hash(k, 3, 91) * 31), (int)(Px.Hash(3, k, 91) * 31), b);
+            p.Circle(16, 16, 13, Black, false);
+            p.Circle(16, 16, 12, Px.Shade(b, 0.25f), false);
+            if (S == TombTheme.Style.Inferno) for (int k = 0; k < 5; k++) p.Set(6 + (int)(Px.Hash(k, 4, 9) * 20), 6 + (int)(Px.Hash(4, k, 9) * 20), T.Accent);
+
+            // A snuffed torch in the middle: dead wick, a curl of smoke going up.
+            var wood = new Color32(70, 44, 20, 255);
+            var smoke = new Color32(232, 232, 238, 255);
+            p.Rect(15, 5, 16, 12, wood);
+            p.Rect(13, 12, 18, 14, MetalDark);
+            p.Rect(14, 15, 17, 15, Black);
+            for (int y = 16; y <= 27; y++)
+            {
+                int x = 16 + Mathf.RoundToInt(Mathf.Sin((y - 16) * 0.75f) * 3f);
+                p.Rect(x - 1, y, x, y, Px.Lerp(smoke, a, (y - 16) / 18f));
+            }
             return p;
         }
 

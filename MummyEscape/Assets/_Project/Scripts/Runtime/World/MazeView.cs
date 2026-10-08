@@ -243,7 +243,7 @@ namespace MummyEscape.World
             foreach (var tiles in _floors)
                 foreach (var tv in tiles)
                 {
-                    if (!Preview && !_session.IsExplored(tv.Cell) && !_session.IsVisible(tv.Cell)) continue;
+                    if (!Preview && !_session.IsExplored(tv.Cell) && !_session.IsVisible(tv.Cell) && !Beacon(tv)) continue;
                     Refresh(tv);
                 }
         }
@@ -333,6 +333,7 @@ namespace MummyEscape.World
                     break;
                 case TileType.Trap when t.Trap == TrapKind.Darkness && tv.Look.Armed:
                     kind = FxRig.Loop.DarkWisps; color = new Color(0.4f, 0.15f, 0.65f, 0.7f); break;
+                case TileType.Dust: kind = FxRig.Loop.DarkWisps; color = new Color(0.72f, 0.7f, 0.68f, 0.6f); break;
                 case TileType.Current: kind = FxRig.Loop.CurrentFoam; color = new Color(0.85f, 0.97f, 1f, 0.85f); break;
                 case TileType.FireJet: kind = FxRig.Loop.FireSmoke; color = new Color(0.3f, 0.26f, 0.24f, 0.55f); break;
                 case TileType.Barrier when !tv.Look.Open:
@@ -400,9 +401,15 @@ namespace MummyEscape.World
             foreach (var tv in _floors[f]) Paint(tv, false, dt, pulse);
         }
 
+        /// <summary>
+        /// Wall torches shine through the dark: seen from anywhere on their floor, even with the torch out, so the player
+        /// can steer towards the light. The preview showed them already.
+        /// </summary>
+        bool Beacon(TileView tv) => !Spectator && _session.Level[tv.Cell].Type == TileType.WallTorch;
+
         void Paint(TileView tv, bool preview, float dt, float pulse)
         {
-            bool visible = !Concealed && (preview || _session.IsVisible(tv.Cell));
+            bool visible = !Concealed && (preview || _session.IsVisible(tv.Cell) || Beacon(tv));
             float target = Concealed ? 0f : visible ? 1f : _session.IsExplored(tv.Cell) ? 0.5f : 0f;
             bool steady = Mathf.Approximately(tv.Visibility, target);
             if (steady && tv.Glow == null && tv.Beam == null && !tv.HasLoop) return;
