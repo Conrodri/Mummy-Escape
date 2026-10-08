@@ -10,7 +10,8 @@ namespace MummyEscape.UI.Screens
     /// <summary>
     /// The casino, a tab of its own: two wheels, one paid in scarabs (drawn here, the scarabs live in the save), one in
     /// seals (drawn by the server). Each turn has a 0.5 % chance of an exclusive animated legendary colour; the odds are
-    /// shown in full. The wheel sits under blinking bulbs and a turning glow; a legendary opens in the zoom.
+    /// shown in full. The wheel sits under blinking bulbs and a turning glow; a legendary opens in the zoom. Ten turns at
+    /// once cost nine (<see cref="Casino.MultiSpins"/>): the wheel lands on the best of them, the note adds them all up.
     /// </summary>
     public sealed class CasinoScreen : UIScreen
     {
@@ -25,8 +26,8 @@ namespace MummyEscape.UI.Screens
         UIKit.Segmented _tabs;
         RectTransform _disc, _legendaries, _resultPop;
         Image _glow;
-        Button _spin;
-        Text _spinLabel;
+        Button _spin, _spin10;
+        Text _spinLabel, _spin10Label;
         int _tab;
         int _request;
         readonly System.Random _rng = new System.Random();
@@ -113,12 +114,18 @@ namespace MummyEscape.UI.Screens
 
             var spinRow = UIKit.Rect("SpinRow", body); // noloc
             UIKit.Size(spinRow, 120);
-            var pulse = UIKit.Stretch(UIKit.Rect("Pulse", spinRow), 40, 0, 40, 0); // noloc
+            var pulse = UIKit.Stretch(UIKit.Rect("Pulse", spinRow), 20, 0, 20, 0); // noloc
             UIFx.Pulse(pulse, 0.025f, 1.4f);
-            _spin = UIKit.Button(pulse, "Lancer", OnSpin, 40, ButtonStyle.Primary);
-            UIKit.Stretch((RectTransform)_spin.transform);
+            var buttons = UIKit.Row(pulse, 120, 18);
+            UIKit.Stretch((RectTransform)buttons.transform);
+            _spin = UIKit.Button(buttons.transform, "Lancer", () => OnSpin(1), 36, ButtonStyle.Primary);
+            UIKit.Size(_spin, -1, -1, 1);
             _spinLabel = _spin.GetComponentInChildren<Text>();
-            UIKit.FitText(_spinLabel, 22);
+            UIKit.FitText(_spinLabel, 20);
+            _spin10 = UIKit.Button(buttons.transform, "", () => OnSpin(Casino.MultiSpins), 36, ButtonStyle.Primary);
+            UIKit.Size(_spin10, -1, -1, 1);
+            _spin10Label = _spin10.GetComponentInChildren<Text>();
+            UIKit.FitText(_spin10Label, 20);
         }
 
         public override void OnShow()
@@ -191,10 +198,14 @@ namespace MummyEscape.UI.Screens
             _odds.text = OddsText(wheel);
 
             bool online = !seals || App.Pvp != null;
-            bool can = !_spinning && online && (seals ? d != null && d.Seals >= wheel.Price : save.Data.Coins >= wheel.Price);
+            int balance = seals ? d?.Seals ?? -1 : save.Data.Coins;
+            int price10 = Casino.PriceOf(wheel, Casino.MultiSpins);
             _spinLabel.text = !online ? Loc.T("Duels hors ligne")
                             : seals ? Loc.F("Lancer · {0} sceaux", wheel.Price) : Loc.F("Lancer · {0} scarabées", wheel.Price);
-            _spin.interactable = can;
+            _spin10Label.text = seals ? Loc.F("×10 · {0} sceaux (-10 %)", price10) : Loc.F("×10 · {0} scarabées (-10 %)", price10);
+            _spin.interactable = !_spinning && online && balance >= wheel.Price;
+            _spin10.gameObject.SetActive(online);
+            _spin10.interactable = !_spinning && online && balance >= price10;
             _wheelNote.TryGetValue(wheel.Id, out var note);
             _result.text = note ?? "";
         }
@@ -294,24 +305,25 @@ namespace MummyEscape.UI.Screens
             return (Loc.Current == Loc.Lang.En ? s : s.Replace('.', ',')) + " %"; // noloc
         }
 
-        void OnSpin()
+        void OnSpin(int count)
         {
             if (_spinning) return;
             var wheel = Wheel;
-            if (Seals) { SpinSeals(wheel); return; }
-            var r = App.Save.SpinScarabWheel(_rng);
-            if (r == null) return;
+            if (Seals) { SpinSeals(wheel, count); return; }
+            var results = App.Save.SpinScarabWheel(_rng, count);
+            if (results == null) return;
             Started();
-            // The price leaves the wallet now, the prize lands when the wheel stops.
-            _coins.text = (App.Save.Data.Coins - (r.Kind == PrizeKind.Currency ? r.Amount : 0)).ToString();
-            StartCoroutine(Turn(wheel, r, () => Landed(wheel, r, false)));
+            // The price leaves the wallet now, the prizes land when the wheel stops.
+            _coins.text = (App.Save.Data.Coins - Casino.Winnings(results)).ToString();
+            var best = Casino.Best(results);
+            StartCoroutine(Turn(wheel, best, () => Landed(wheel, results, false)));
         }
 
-        async void SpinSeals(WheelDef wheel)
+        async void SpinSeals(WheelDef wheel, int count)
         {
             if (App.Pvp == null) return;
             Started();
-            var r = await App.Pvp.SpinSealWheelAsync();
+            var r = await App.Pvp.SpinSealWheelAsync(count);
             if (this == null) return;
             if (r == null || !r.Ok || r.Result == null)
             {
@@ -322,14 +334,17 @@ namespace MummyEscape.UI.Screens
             }
             App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
             if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
-            _seals.text = (r.Seals - (r.Result.Kind == PrizeKind.Currency ? r.Result.Amount : 0)).ToString();
-            StartCoroutine(Turn(wheel, r.Result, () => Landed(wheel, r.Result, true)));
+            // An older server answers a single turn without the list.
+            var results = r.Results != null && r.Results.Count > 0 ? r.Results : new List<SpinResult> { r.Result };
+            _seals.text = (r.Seals - Casino.Winnings(results)).ToString();
+            StartCoroutine(Turn(wheel, r.Result, () => Landed(wheel, results, true)));
         }
 
         void Started()
         {
             _spinning = true;
             _spin.interactable = false;
+            _spin10.interactable = false;
             _result.text = "";
         }
 
@@ -359,19 +374,28 @@ namespace MummyEscape.UI.Screens
             done();
         }
 
-        void Landed(WheelDef wheel, SpinResult r, bool seals)
+        void Landed(WheelDef wheel, List<SpinResult> results, bool seals)
         {
             _spinning = false;
+            var r = Casino.Best(results);
             string note;
             SkinDef won = null;
             if (r.Legendary != null)
             {
                 // Wear it right away: that is what the player wants to see.
-                App.Save.GrantSkins(new[] { r.Legendary });
+                var legendaries = new List<string>();
+                foreach (var x in results) if (x.Legendary != null) legendaries.Add(x.Legendary);
+                App.Save.GrantSkins(legendaries.ToArray());
                 App.Save.SelectSkin(r.Legendary);
                 App.Audio.Play(Sfx.Win);
                 won = SkinCatalog.Get(r.Legendary);
                 note = $"<color=#{ColorUtility.ToHtmlStringRGB(LegendaryColor)}>" + Loc.F("LÉGENDAIRE ! {0} est à toi !", Loc.T(won.Name)) + "</color>"; // noloc
+                if (results.Count > 1) note += "\n" + (seals ? Loc.F("{0} tours : +{1} sceaux", results.Count, Casino.Winnings(results)) : Loc.F("{0} tours : +{1} scarabées", results.Count, Casino.Winnings(results)));
+            }
+            else if (results.Count > 1)
+            {
+                App.Audio.Play(Sfx.Coin);
+                note = seals ? Loc.F("{0} tours : +{1} sceaux", results.Count, Casino.Winnings(results)) : Loc.F("{0} tours : +{1} scarabées", results.Count, Casino.Winnings(results));
             }
             else if (r.Kind == PrizeKind.Currency)
             {

@@ -107,6 +107,28 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public async Task SealWheel_TenTurnsForThePriceOfNine()
+        {
+            var store = new MemoryPvpStore();
+            double next = 0.0; // every turn on the legendary wedge
+            var server = new PvpServer(store, () => new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc), null, () => next);
+            Assert.AreEqual(450, Casino.PriceOf(Casino.Seals, Casino.MultiSpins));
+
+            await store.UpdatePlayerAsync("bob", d => d.Seals = 449);
+            Assert.AreEqual("SEALS", (await server.SpinSealWheelAsync("bob", Casino.MultiSpins)).Error);
+            Assert.AreEqual("COUNT", (await server.SpinSealWheelAsync("bob", 3)).Error);
+
+            await store.UpdatePlayerAsync("bob", d => d.Seals = 450);
+            var r = await server.SpinSealWheelAsync("bob", Casino.MultiSpins);
+            Assert.IsTrue(r.Ok);
+            Assert.AreEqual(Casino.MultiSpins, r.Results.Count);
+            // Five legendaries, each once; the other five turns pay the jackpot instead.
+            Assert.AreEqual(Casino.Seals.Legendaries.Length, r.UnlockedRewards.Count);
+            Assert.AreEqual(5 * Casino.Seals.Segments[0].Amount, r.Seals);
+            Assert.IsNotNull(r.Result.Legendary, "the wheel shows the best turn");
+        }
+
+        [Test]
         public void Titles_DuelOnesAreCheckedAgainstTheServerData()
         {
             var d = new PlayerPvpData { Wins = 60, HighestLeague = League.Or };

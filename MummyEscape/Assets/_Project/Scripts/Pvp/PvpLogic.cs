@@ -256,6 +256,7 @@ namespace MummyEscape.Pvp
                 d.DuelsToday = 0;
                 d.CountedDuelsToday = 0;
                 d.WinsToday = 0;
+                d.LossesToday = 0;
                 d.ReportsToday = 0;
                 d.DailyChestGranted = false;
                 d.OpponentsToday = new Dictionary<string, int>();
@@ -359,7 +360,10 @@ namespace MummyEscape.Pvp
             return seals;
         }
 
-        /// <summary>Applique le résultat d'un duel résolu. Retourne les sceaux gagnés (bonus 1re victoire).</summary>
+        /// <summary>
+        /// Applique le résultat d'un duel résolu. Retourne les sceaux gagnés : <see cref="PvpConfig.WinSeals"/> par victoire,
+        /// <see cref="PvpConfig.FirstLossSeals"/> pour la 1re défaite (ou nul) du jour, puis 1 de moins à chacune, jusqu’à 0.
+        /// </summary>
         public static int ApplyResult(PlayerPvpData d, string opponentId, int opponentElo, DuelResult result, bool vsBot = false)
         {
             int seals = 0;
@@ -371,8 +375,13 @@ namespace MummyEscape.Pvp
 
             if (result == DuelResult.Win)
             {
-                if (d.WinsToday == 0) seals += PvpConfig.FirstWinOfDaySeals;
+                seals += PvpConfig.WinSeals;
                 d.WinsToday++;
+            }
+            else
+            {
+                seals += Math.Max(0, PvpConfig.FirstLossSeals - d.LossesToday);
+                d.LossesToday++;
             }
 
             if (!string.IsNullOrEmpty(opponentId))

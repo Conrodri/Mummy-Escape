@@ -56,7 +56,8 @@ namespace MummyEscape.Pvp
         public const int RequiredSoloStars = 35;        // acte 3 atteint en solo
 
         // --- Récompenses quotidiennes (sceaux de Maât) ---
-        public const int FirstWinOfDaySeals = 30;
+        public const int WinSeals = 20;                 // chaque victoire en duel
+        public const int FirstLossSeals = 10;           // 1re défaite du jour, puis 1 de moins par défaite (jusqu’à 0)
         public const int MinCountedDuelMs = 20_000;     // un duel compte pour la participation s'il dure 20 s
         public const int MaxCountedDuelsPerDay = 15;
 

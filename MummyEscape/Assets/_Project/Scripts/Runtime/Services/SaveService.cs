@@ -287,17 +287,25 @@ namespace MummyEscape.Services
         /// One turn of the casino's scarab wheel: pays, draws, cashes in the prize (scarabs or a legendary colour).
         /// Null when the player cannot pay.
         /// </summary>
-        public Pvp.SpinResult SpinScarabWheel(System.Random rng)
+        /// <summary>
+        /// <paramref name="count"/> tours de la roue des scarabées (1, ou <see cref="Pvp.Casino.MultiSpins"/> au prix de
+        /// <see cref="Pvp.Casino.MultiSpinsPaid"/>). Null si le joueur n'a pas de quoi payer.
+        /// </summary>
+        public System.Collections.Generic.List<Pvp.SpinResult> SpinScarabWheel(System.Random rng, int count = 1)
         {
             var wheel = Pvp.Casino.Scarabs;
-            if (Data.Coins < wheel.Price) return null;
-            Data.Coins -= wheel.Price;
-            var result = Pvp.Casino.Spin(wheel, rng.NextDouble(), rng.NextDouble(), Data.OwnedSkins);
-            if (result.Kind == Pvp.PrizeKind.Currency) Data.Coins += result.Amount;
-            else if (result.Legendary != null && !Data.OwnedSkins.Contains(result.Legendary)) Data.OwnedSkins.Add(result.Legendary);
-            Data.WheelSpins++;
+            int price = Pvp.Casino.PriceOf(wheel, count);
+            if (Data.Coins < price) return null;
+            Data.Coins -= price;
+            var results = Pvp.Casino.SpinMany(wheel, count, rng.NextDouble, Data.OwnedSkins);
+            foreach (var result in results)
+            {
+                if (result.Kind == Pvp.PrizeKind.Currency) Data.Coins += result.Amount;
+                else if (result.Legendary != null && !Data.OwnedSkins.Contains(result.Legendary)) Data.OwnedSkins.Add(result.Legendary);
+            }
+            Data.WheelSpins += count;
             Save();
-            return result;
+            return results;
         }
 
         /// <summary>Buys a legendary of the scarab wheel outright, without the draw. False when it is not for sale, owned or too dear.</summary>

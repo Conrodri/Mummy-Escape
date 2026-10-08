@@ -57,6 +57,10 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("SpinSealWheel")]
         public Task<WheelSpinResponse> SpinSealWheel(IExecutionContext ctx) => Server(ctx).SpinSealWheelAsync(ctx.PlayerId);
 
+        /// <summary>Plusieurs tours de la roue des sceaux d'un coup (10 pour le prix de 9).</summary>
+        [CloudCodeFunction("SpinSealWheelMany")]
+        public Task<WheelSpinResponse> SpinSealWheelMany(IExecutionContext ctx, int count) => Server(ctx).SpinSealWheelAsync(ctx.PlayerId, count);
+
         /// <summary>Classement mensuel vérifié : chaque score est comparé à l'Elo protégé du joueur (0 = ce mois, 1 = le précédent).</summary>
         [CloudCodeFunction("GetPvpBoard")]
         public Task<PvpBoardPage> GetPvpBoard(IExecutionContext ctx, int seasonsAgo, int limit) =>

@@ -21,7 +21,8 @@ namespace MummyEscape.Online
         Task<SeasonRewardsResponse> ClaimSeasonRewardsAsync();
         Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId);
         /// <summary>One turn of the casino's seal wheel (paid and drawn by the server).</summary>
-        Task<WheelSpinResponse> SpinSealWheelAsync();
+        /// <summary>Un tour de la roue des sceaux, ou <see cref="Casino.MultiSpins"/> (payés <see cref="Casino.MultiSpinsPaid"/>).</summary>
+        Task<WheelSpinResponse> SpinSealWheelAsync(int count = 1);
         /// <summary>Top of the monthly Elo ranking, checked by the server: <paramref name="seasonsAgo"/> 0 = this month, 1 = last month.</summary>
         Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit);
         /// <summary>Publishes the solo star count, which unlocks the duels (<see cref="PvpConfig.RequiredSoloStars"/>).</summary>

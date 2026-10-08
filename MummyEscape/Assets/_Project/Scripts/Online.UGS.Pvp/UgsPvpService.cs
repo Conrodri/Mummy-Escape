@@ -57,8 +57,9 @@ namespace MummyEscape.Online
         public Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId) =>
             Call("BuyWithSeals", new Dictionary<string, object> { { "itemId", itemId } }, e => new SealPurchaseResponse { Error = e });
 
-        public Task<WheelSpinResponse> SpinSealWheelAsync() =>
-            Call("SpinSealWheel", null, e => new WheelSpinResponse { Error = e });
+        public Task<WheelSpinResponse> SpinSealWheelAsync(int count = 1) => count == 1
+            ? Call("SpinSealWheel", null, e => new WheelSpinResponse { Error = e })
+            : Call("SpinSealWheelMany", new Dictionary<string, object> { { "count", count } }, e => new WheelSpinResponse { Error = e });
 
         public async Task SyncSoloStarsAsync(int stars)
         {

@@ -49,7 +49,9 @@ namespace MummyEscape.Pvp
     {
         public bool Ok;
         public SpinResult Result;
-        /// <summary>Solde de sceaux après le tour (prix payé, gain encaissé).</summary>
+        /// <summary>Tous les tours, dans l'ordre (un seul, ou <see cref="Casino.MultiSpins"/>) ; <see cref="Result"/> est le meilleur.</summary>
+        public List<SpinResult> Results = new List<SpinResult>();
+        /// <summary>Solde de sceaux après les tours (prix payé, gains encaissés).</summary>
         public int Seals;
         public List<string> UnlockedRewards = new List<string>();
         public string Error;   // "SEALS"
@@ -60,6 +62,48 @@ namespace MummyEscape.Pvp
         public const int WeightTotal = 10_000;
         /// <summary>Chance d'un skin légendaire à chaque tour : 0,5 %.</summary>
         public const int LegendaryWeight = 50;
+        /// <summary>Tours d'un lancer groupé, payés <see cref="MultiSpinsPaid"/> (10 % de remise).</summary>
+        public const int MultiSpins = 10, MultiSpinsPaid = 9;
+
+        /// <summary>Prix de <paramref name="count"/> tours : 1 au prix normal, <see cref="MultiSpins"/> au prix de <see cref="MultiSpinsPaid"/>.</summary>
+        public static int PriceOf(WheelDef wheel, int count) => count == MultiSpins ? wheel.Price * MultiSpinsPaid : wheel.Price * count;
+
+        /// <summary>
+        /// Plusieurs tours d'affilée : un légendaire gagné compte comme possédé pour les tours suivants (jamais deux fois le
+        /// même). <paramref name="random"/> donne des tirages dans [0, 1).
+        /// </summary>
+        public static List<SpinResult> SpinMany(WheelDef wheel, int count, Func<double> random, ICollection<string> owned)
+        {
+            var have = new HashSet<string>();
+            if (owned != null) foreach (var id in owned) have.Add(id);
+            var results = new List<SpinResult>(count);
+            for (int i = 0; i < count; i++)
+            {
+                var r = Spin(wheel, random(), random(), have);
+                if (r.Legendary != null) have.Add(r.Legendary);
+                results.Add(r);
+            }
+            return results;
+        }
+
+        /// <summary>Le tour le plus marquant d'une série : un légendaire, sinon le plus gros gain (celui que la roue montre).</summary>
+        public static SpinResult Best(IList<SpinResult> results)
+        {
+            SpinResult best = null;
+            foreach (var r in results)
+                if (best == null || Rank(r) > Rank(best)) best = r;
+            return best;
+        }
+
+        static int Rank(SpinResult r) => r.Legendary != null ? int.MaxValue : r.Amount;
+
+        /// <summary>Monnaie rendue par une série de tours.</summary>
+        public static int Winnings(IEnumerable<SpinResult> results)
+        {
+            int sum = 0;
+            foreach (var r in results) if (r.Kind == PrizeKind.Currency) sum += r.Amount;
+            return sum;
+        }
 
         static WheelSegment[] Segments(int jackpot, int big, int good, int refund, int half, int small) => new[]
         {
@@ -120,15 +164,23 @@ namespace MummyEscape.Pvp
             return result;
         }
 
-        /// <summary>Le serveur fait tourner la roue des sceaux : paie, tire, encaisse. Null en cas de succès, sinon l'erreur.</summary>
-        public static string SpinSeals(PlayerPvpData d, double roll, double pick, out SpinResult result)
+        /// <summary>
+        /// Le serveur fait tourner la roue des sceaux <paramref name="count"/> fois (1 ou <see cref="MultiSpins"/>) : paie, tire,
+        /// encaisse. Null en cas de succès, sinon l'erreur.
+        /// </summary>
+        public static string SpinSeals(PlayerPvpData d, int count, Func<double> random, out List<SpinResult> results)
         {
-            result = null;
-            if (d.Seals < Seals.Price) return "SEALS";
-            d.Seals -= Seals.Price;
-            result = Spin(Seals, roll, pick, d.UnlockedRewards);
-            if (result.Kind == PrizeKind.Currency) d.Seals += result.Amount;
-            else if (result.Legendary != null) d.UnlockedRewards.Add(result.Legendary);
+            results = null;
+            if (count != 1 && count != MultiSpins) return "COUNT";
+            int price = PriceOf(Seals, count);
+            if (d.Seals < price) return "SEALS";
+            d.Seals -= price;
+            results = SpinMany(Seals, count, random, d.UnlockedRewards);
+            foreach (var r in results)
+            {
+                if (r.Kind == PrizeKind.Currency) d.Seals += r.Amount;
+                else if (r.Legendary != null && !d.UnlockedRewards.Contains(r.Legendary)) d.UnlockedRewards.Add(r.Legendary);
+            }
             return null;
         }
     }

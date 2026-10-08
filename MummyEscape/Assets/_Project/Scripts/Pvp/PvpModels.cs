@@ -123,6 +123,8 @@ namespace MummyEscape.Pvp
         public int DuelsToday;
         public int CountedDuelsToday;
         public int WinsToday;
+        /// <summary>Défaites (et nuls) du jour : chacune rapporte 1 sceau de moins que la précédente.</summary>
+        public int LossesToday;
         /// <summary>Signalements de triche envoyés aujourd'hui (limités par <see cref="PvpConfig.MaxReportsPerDay"/>).</summary>
         public int ReportsToday;
         public bool DailyChestGranted;

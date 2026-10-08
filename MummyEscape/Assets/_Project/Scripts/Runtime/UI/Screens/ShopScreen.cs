@@ -482,12 +482,12 @@ namespace MummyEscape.UI.Screens
         // ------------------------------------------------------------------ seals
 
         /// <summary>
-        /// Maât's seal shop: skins bought with seals (first win of the day, daily chest), each from a league up.
+        /// Maât's seal shop: skins bought with seals (every duel, daily chest), each from a league up.
         /// The purchase goes through the server, which holds the seals.
         /// </summary>
         void FillSeals(PlayerPvpData d)
         {
-            Intro("Les sceaux de Maât se gagnent en duel (1re victoire du jour, coffre quotidien). Chaque article demande d'avoir atteint sa ligue.");
+            Intro("Les sceaux de Maât se gagnent en duel (20 par victoire, 10 par défaite puis 1 de moins à chacune dans la journée, coffre quotidien). Chaque article demande d'avoir atteint sa ligue.");
             _note = UIKit.Label(_list, "", 26, UIKit.Sand);
             UIKit.FitText(_note, 18);
             UIKit.Size(_note, 44);

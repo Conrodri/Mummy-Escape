@@ -111,21 +111,28 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void DailyRewards_ChestOnce_FirstWinBonus_CappedParticipation()
+        public void DailyRewards_ChestOnce_SealsPerDuel_CappedParticipation()
         {
             var p = new PlayerPvpData { Elo = 1150 };
             var day = new DateTime(2026, 10, 4, 12, 0, 0, DateTimeKind.Utc);
             Seasons.Roll(p, day);
             Assert.AreEqual(45, DuelBookkeeping.RecordDuelPlayed(p, 45000, day, false), "Or chest");
             Assert.AreEqual(0, DuelBookkeeping.RecordDuelPlayed(p, 45000, day, false), "once a day");
-            Assert.AreEqual(30, DuelBookkeeping.ApplyResult(p, "p9", 1150, DuelResult.Win));
-            Assert.AreEqual(0, DuelBookkeeping.ApplyResult(p, "p9", 1150, DuelResult.Win));
+            Assert.AreEqual(20, DuelBookkeeping.ApplyResult(p, "p9", 1150, DuelResult.Win));
+            Assert.AreEqual(20, DuelBookkeeping.ApplyResult(p, "p9", 1150, DuelResult.Win), "every win");
             Assert.AreEqual(2, p.OpponentsToday["p9"]);
             Assert.AreEqual(2, p.Wins);
+            Assert.AreEqual(10, DuelBookkeeping.ApplyResult(p, "p8", 1150, DuelResult.Loss));
+            Assert.AreEqual(9, DuelBookkeeping.ApplyResult(p, "p7", 1150, DuelResult.Draw), "a draw counts as a loss");
+            for (int i = 0; i < 12; i++) DuelBookkeeping.ApplyResult(p, "x" + i, 1150, DuelResult.Loss);
+            Assert.AreEqual(0, DuelBookkeeping.ApplyResult(p, "p6", 1150, DuelResult.Loss), "down to nothing");
+            Assert.AreEqual(20, DuelBookkeeping.ApplyResult(p, "p5", 1150, DuelResult.Win));
             for (int i = 0; i < 30; i++) DuelBookkeeping.RecordDuelPlayed(p, 45000, day, false);
             Assert.AreEqual(PvpConfig.MaxCountedDuelsPerDay, p.CountedDuelsToday);
             DuelBookkeeping.RecordDuelPlayed(p, 5000, day, false);
             Assert.AreEqual(15, p.SeasonCountedDuels, "a too short duel does not count");
+            Seasons.Roll(p, day.AddDays(1));
+            Assert.AreEqual(10, DuelBookkeeping.ApplyResult(p, "p8", 1150, DuelResult.Loss), "a new day starts again");
         }
 
         [Test]

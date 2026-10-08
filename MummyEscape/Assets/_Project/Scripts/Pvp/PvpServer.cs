@@ -343,15 +343,20 @@ namespace MummyEscape.Pvp
             return response;
         }
 
-        /// <summary>Un tour de la roue des sceaux du casino : prix, tirage et gain décidés ici, jamais par le client.</summary>
-        public async Task<WheelSpinResponse> SpinSealWheelAsync(string me)
+        /// <summary>
+        /// Un tour (ou <see cref="Casino.MultiSpins"/> pour le prix de <see cref="Casino.MultiSpinsPaid"/>) de la roue des sceaux
+        /// du casino : prix, tirages et gains décidés ici, jamais par le client.
+        /// </summary>
+        public async Task<WheelSpinResponse> SpinSealWheelAsync(string me, int count = 1)
         {
             var response = new WheelSpinResponse();
             var data = await Update(me, d =>
             {
-                response.Error = Casino.SpinSeals(d, _random(), _random(), out var result);
-                response.Result = result;
+                response.Error = Casino.SpinSeals(d, count, _random, out var results);
                 response.Ok = response.Error == null;
+                if (results == null) return;
+                response.Results = results;
+                response.Result = Casino.Best(results);
             });
             response.Seals = data.Seals;
             response.UnlockedRewards = data.UnlockedRewards;
