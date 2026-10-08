@@ -37,6 +37,8 @@ namespace MummyEscape.Core
 
             var far = CheckExitDistance(level, spec);
             if (far != null) return far;
+            var floors = CheckFloors(level);
+            if (floors != null) return floors;
             var deadEnd = CheckDeadEnds(level);
             if (deadEnd != null) return deadEnd;
             var pads = CheckDeadEndPortals(level);
@@ -49,9 +51,38 @@ namespace MummyEscape.Core
             if (torches != null) return torches;
             var spacing = CheckSpacing(level, spec);
             if (spacing != null) return spacing;
-            var spikes = CheckSpikeShortcuts(level);
+            var spikes = CheckSpikeShortcuts(level, solution, spec);
             if (spikes != null) return spikes;
             return CheckNoDeadLock(level, hazards: true, darkTolls: HasTollSpikes(level));
+        }
+
+        /// <summary>Least ground on each floor of a tomb with several: no floor is a mere landing.</summary>
+        public const int MinFloorTiles = 12;
+        /// <summary>Least points of interest (anything but plain ground, rock and ladders) on each floor of a tomb with several.</summary>
+        public const int MinFloorInterests = 2;
+
+        /// <summary>
+        /// Every floor is worth the climb: at least <see cref="MinFloorTiles"/> tiles of ground and
+        /// <see cref="MinFloorInterests"/> things to remember besides its ladders (a corridor from the start to a ladder is
+        /// not a floor).
+        /// </summary>
+        public static string CheckFloors(Level level)
+        {
+            if (level.Floors < 2) return null;
+            var ground = new int[level.Floors];
+            var interests = new int[level.Floors];
+            foreach (var c in level.AllCells())
+            {
+                var t = level[c];
+                if (!t.IsSolid) ground[c.Floor]++;
+                if (t.Type != TileType.Floor && t.Type != TileType.Wall && t.Type != TileType.LadderUp && t.Type != TileType.LadderDown) interests[c.Floor]++;
+            }
+            for (int f = 0; f < level.Floors; f++)
+            {
+                if (ground[f] < MinFloorTiles) return $"floor: {f} has {ground[f]} tiles of ground < {MinFloorTiles}";
+                if (interests[f] < MinFloorInterests) return $"floor: {f} has {interests[f]} points of interest < {MinFloorInterests}";
+            }
+            return null;
         }
 
         /// <summary>The way round a spike trap costs at least this many moves more than walking across it.</summary>
@@ -61,13 +92,17 @@ namespace MummyEscape.Core
         public const int TollSpikes = 2;
 
         /// <summary>
-        /// Spikes guard a shortcut: next to each one runs a longer way without spikes. Only in a tomb with a wall torch,
-        /// spikes may bar the way (<see cref="TollSpikes"/>): a lit torch shows them to disarm. Either way the whole tomb
-        /// can be cleared without a hit: losing a life is a choice, never a toll.
+        /// Spikes guard a shortcut: the walk across them is the fast way, and a spike-free way round costs at least
+        /// <see cref="MinSpikeDetour"/> more moves <b>on the walk the player makes</b> (<see cref="SpikeSaving"/>), not just
+        /// between the two sides of the trap: on a ring entered and left at opposite corners both halves are as long, and
+        /// spikes on one half would save nothing. Each tomb holds at least <see cref="LevelSpec.SpikeTraps"/> of them.
+        /// Only in a tomb with a wall torch, spikes may bar the way (<see cref="TollSpikes"/>): a lit torch shows them to
+        /// disarm. Either way the whole tomb can be cleared without a hit: losing a life is a choice, never a toll.
         /// </summary>
-        public static string CheckSpikeShortcuts(Level level)
+        public static string CheckSpikeShortcuts(Level level, Solution solution, LevelSpec spec)
         {
             bool any = false, toll = false, torch = HasWallTorch(level);
+            int shortcuts = 0;
             foreach (var c in level.AllCells())
             {
                 var t = level[c];
@@ -76,13 +111,33 @@ namespace MummyEscape.Core
                 int extra = SpikeDetour(level, c);
                 if (extra < 0 && torch) { toll = true; continue; }
                 if (extra < 0) return $"spikes: no way around {c}";
-                if (extra < MinSpikeDetour) return $"spikes: {c} saves only {extra} moves";
+                int saving = SpikeSaving(level, c, solution.Moves);
+                if (saving < MinSpikeDetour) return $"spikes: {c} saves only {saving} moves on the walk";
+                shortcuts++;
             }
+            if (shortcuts < spec.SpikeTraps) return $"spikes: {shortcuts} shortcuts < {spec.SpikeTraps}";
             if (!any) return null;
             var safe = SolverOptions.Default;
             safe.AvoidSpikes = true;
             safe.DisarmSpikes = toll;
             return Solver.Solve(level, safe) == null ? "spikes: the exit cannot be reached without a spike" : null;
+        }
+
+        /// <summary>
+        /// Moves the best walk loses when these spikes turn to rock (<paramref name="par"/> = the best walk with them): what
+        /// crossing them saves over the spike-free way round, from wherever the walk leaves and rejoins. -1 when the exit
+        /// cannot be reached without them.
+        /// </summary>
+        public static int SpikeSaving(Level level, Cell spike, int par)
+        {
+            var tile = level[spike];
+            level[spike] = Tile.Wall;
+            try
+            {
+                var without = Solver.Solve(level);
+                return without == null ? -1 : without.Moves - par;
+            }
+            finally { level[spike] = tile; }
         }
 
         static bool HasWallTorch(Level level)
@@ -181,12 +236,13 @@ namespace MummyEscape.Core
             {
                 if (seen[level.IndexOf(c0)] || onWalk[level.IndexOf(c0)] || !Ground(c0)) continue;
                 touches.Clear();
-                bool touchesTorch = false;
+                bool touchesTorch = false, decoy = false;
                 seen[level.IndexOf(c0)] = true;
                 queue.Enqueue(c0);
                 while (queue.Count > 0)
                 {
                     var c = queue.Dequeue();
+                    decoy |= level.IsDecoy(c);
                     foreach (var d in DirExt.All)
                     {
                         var n = c.Step(d);
@@ -199,7 +255,8 @@ namespace MummyEscape.Core
                     }
                 }
                 // 2 apart is the way around a fragile slab or a current, kept so they never wall the player in.
-                bool apart = touchesTorch;
+                // A decoy alcove is a pocket on purpose (see Level.IsDecoy).
+                bool apart = touchesTorch || decoy;
                 foreach (var a in touches)
                     foreach (var b in touches)
                         apart |= a.Floor == b.Floor && a.Manhattan(b) >= 2;
@@ -355,16 +412,17 @@ namespace MummyEscape.Core
             var states = new List<RuleState>();
             var preds = new List<List<int>>();
             var canWin = new List<bool>();
+            // Every way is tried from each state, so the turned screen and the mirror change nothing here.
             RuleState Norm(RuleState x)
             {
                 if (!hazards) return new RuleState { Position = x.Position, Pressed = x.Pressed, Crumbled = x.Crumbled, Disarmed = -1, Hp = 7 };
                 if (!tick) x.Tick = 0;
+                x.Rotation = 0;
+                x.Reversed = 0;
                 return x;
             }
-            long Key(RuleState x) =>
-                (long)level.IndexOf(x.Position) | ((long)(x.Pressed & 0xFFF) << 12) | ((long)(x.Crumbled & 0xFFF) << 24)
-                | (hazards ? ((long)(x.Disarmed & 0xFFF) << 36) | ((long)(x.Hp & 0x7) << 48) | ((long)(x.Blind & 0x3) << 51)
-                             | (x.TorchOut ? 1L << 53 : 0) | ((long)(x.Tick & 0x3) << 54) : 0);
+            var layout = Solver.Layout(level, tick);
+            long Key(RuleState x) => layout.Pack(x);
             int Id(RuleState x)
             {
                 long k = Key(x);
@@ -437,7 +495,7 @@ namespace MummyEscape.Core
             foreach (var c in level.AllCells())
             {
                 var t = level[c];
-                if (t.IsSolid || t.Type != TileType.Floor || c == level.Start || IsMeaningfulFloor(level, c) || !reach[level.IndexOf(c)]) continue;
+                if (t.IsSolid || t.Type != TileType.Floor || c == level.Start || IsMeaningfulFloor(level, c) || level.IsDecoy(c) || !reach[level.IndexOf(c)]) continue;
                 int degree = 0;
                 foreach (var d in DirExt.All) if (!level.Get(c.Step(d)).IsSolid) degree++;
                 if (degree == 1) return $"dead-end: nothing to find at {c}";

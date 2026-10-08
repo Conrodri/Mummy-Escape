@@ -507,6 +507,7 @@ namespace MummyEscape.UI.Screens
                 : App.Game.DuelWaiting ? Loc.F("En attente de {0}…", App.Game.Match.Ghost?.PlayerName ?? "?")
                 : reversed > 0 ? Loc.F("Commandes inversées ! ({0})", reversed)
                 : justTurned ? Loc.T("Le tombeau a pivoté !\nTes gestes suivent l'écran.")
+                : s.CanDisarm(out _) && (s.IsBlind || !s.TorchLit) ? Loc.T("Ces pics, tu les as sentis :\ndésarme-les à tâtons")
                 : s.IsBlind ? Loc.F("Aveuglé ! ({0})", s.BlindTurnsLeft)
                 : !s.TorchLit ? Loc.T("Torche éteinte : longe une torche murale")
                 : "";

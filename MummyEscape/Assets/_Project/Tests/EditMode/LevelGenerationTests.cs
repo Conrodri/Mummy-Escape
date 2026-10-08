@@ -147,14 +147,16 @@ namespace MummyEscape.Tests
         }
 
         /// <summary>
-        /// Spikes guard shortcuts: each one has a longer spike-free way round (but those barring the way past dust, to
-        /// disarm by torchlight), and the exit can be reached without a hit (a life is traded for moves, never owed).
+        /// Spikes guard shortcuts: at least <see cref="DifficultyTable.MinSpikeTraps"/> per tomb, each saving moves on the
+        /// walk the player makes over a spike-free way round (but those barring the way past dust, to disarm by
+        /// torchlight), and the exit can be reached without a hit (a life is traded for moves, never owed).
         /// </summary>
         [TestCaseSource(nameof(AllMazes))]
         public void Maze_SpikesOnlyGuardShortcuts(int act, int index, int variant)
         {
             var level = Get(new LevelId(act, index), variant);
-            Assert.IsNull(LevelValidator.CheckSpikeShortcuts(level));
+            Assert.That(level.Spec.SpikeTraps, Is.GreaterThanOrEqualTo(DifficultyTable.MinSpikeTraps));
+            Assert.IsNull(LevelValidator.CheckSpikeShortcuts(level, level.Solution, level.Spec), level.ToAscii());
         }
 
         /// <summary>No lure: every button, door, portal, ladder, hazard and wall torch serves the ideal route.</summary>
@@ -167,15 +169,21 @@ namespace MummyEscape.Tests
         }
 
         /// <summary>
-        /// Dust early on, then spikes with no way round past it: the exit can't be reached unhurt without relighting the
-        /// torch at the wall sconce to see them and disarm them.
+        /// Dust early on, then a reason to light the wall torch again: either spikes with no way round past it (the exit
+        /// can't be reached unhurt without relighting the torch to see them and disarm them), or a torch shape (spikes to
+        /// cross in the dark, beside a safe way past the torch, a few moves longer).
         /// </summary>
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_WallTorchIsNeededForTheSpikes(int act, int index, int variant)
+        public void Maze_WallTorchIsWorthLighting(int act, int index, int variant)
         {
             var level = Get(new LevelId(act, index), variant);
             if (!level.AllCells().Any(c => level[c].Type == TileType.WallTorch)) return;
             int toll = level.AllCells().Count(c => level[c].Type == TileType.Trap && level[c].Trap == TrapKind.Spikes && LevelValidator.SpikeDetour(level, c) < 0);
+            if (toll == 0)
+            {
+                Assert.IsNull(LevelValidator.CheckTorches(level, level.Solution), level.ToAscii());
+                return;
+            }
             Assert.That(toll, Is.GreaterThanOrEqualTo(LevelValidator.TollSpikes), level.ToAscii());
             var unhurt = SolverOptions.Default;
             unhurt.AvoidSpikes = true;
@@ -209,12 +217,14 @@ namespace MummyEscape.Tests
                 if (seen[level.IndexOf(c0)] || onWalk[level.IndexOf(c0)] || !Ground(c0)) continue;
                 var touches = new List<Cell>();
                 bool touchesTorch = false; // the alcove of a wall torch: a dead end worth its moves
+                bool decoy = false; // the alcoves of a turning-slab corridor, on purpose
                 var q = new Queue<Cell>();
                 seen[level.IndexOf(c0)] = true;
                 q.Enqueue(c0);
                 while (q.Count > 0)
                 {
                     var c = q.Dequeue();
+                    decoy |= level.IsDecoy(c);
                     foreach (var d in DirExt.All)
                     {
                         var n = c.Step(d);
@@ -227,7 +237,7 @@ namespace MummyEscape.Tests
                     }
                 }
                 // 2 apart is the way around a fragile slab or a current, kept so they never wall the player in.
-                bool apart = touchesTorch || touches.Any(a => touches.Any(b => a.Floor == b.Floor && a.Manhattan(b) >= 2));
+                bool apart = touchesTorch || decoy || touches.Any(a => touches.Any(b => a.Floor == b.Floor && a.Manhattan(b) >= 2));
                 Assert.IsTrue(apart, $"{c0} sits in a pocket the ideal walk never needs\n{level.ToAscii(new[] { c0 })}");
             }
         }

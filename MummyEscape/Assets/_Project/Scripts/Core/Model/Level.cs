@@ -66,6 +66,16 @@ namespace MummyEscape.Core
 
         public bool TryGetTeleportTarget(Cell from, out Cell to) => _teleportTargets.TryGetValue(IndexOf(from), out to);
 
+        readonly HashSet<Cell> _decoys = new HashSet<Cell>();
+
+        /// <summary>
+        /// Empty alcoves of a decoy corridor (a turning slab at its entry): dead ends drawn on purpose, so the real way on
+        /// has to be told from memory once the tomb has turned. The one exception to "every dead end means something".
+        /// </summary>
+        public bool IsDecoy(Cell c) => _decoys.Contains(c);
+
+        internal void AddDecoy(Cell c) => _decoys.Add(c);
+
         /// <summary>
         /// Which pair this teleporter belongs to (0, 1, 2… in cell order), -1 when it leads nowhere: both ends of a pair share
         /// a colour on screen, so four portals on a floor never leave the player guessing which goes where.
@@ -115,6 +125,7 @@ namespace MummyEscape.Core
                 cropped[c] = Get(new Cell(c.Floor, c.X + x0, c.Y + y0));
             foreach (var kv in _teleportTargets)
                 cropped._teleportTargets[cropped.IndexOf(Map(CellAt(kv.Key)))] = Map(kv.Value);
+            foreach (var c in _decoys) cropped._decoys.Add(Map(c));
             return cropped;
         }
 
@@ -131,6 +142,7 @@ namespace MummyEscape.Core
             };
             Array.Copy(_tiles, copy._tiles, _tiles.Length);
             foreach (var kv in _teleportTargets) copy._teleportTargets[kv.Key] = kv.Value;
+            foreach (var d in _decoys) copy._decoys.Add(d);
             copy[c] = tile;
             return copy;
         }

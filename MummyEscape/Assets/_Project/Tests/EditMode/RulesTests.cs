@@ -151,6 +151,25 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Spikes_FeltInTheDarkCanBeDisarmed()
+        {
+            var s = new GameSession(FromAscii("#########", "#S,.^..E#", "#########"));
+            s.Move(Dir.Right);
+            s.Move(Dir.Right);
+            Assert.IsFalse(s.TorchLit);
+            Assert.IsFalse(s.CanDisarm(out _), "never walked on: unknown in the dark");
+            int hp = s.Hp;
+            s.Move(Dir.Right);
+            Assert.AreEqual(hp - 1, s.Hp);
+            s.Move(Dir.Right);
+            Assert.IsTrue(s.CanDisarm(out var dir), "walked on: found by touch");
+            Assert.AreEqual(Dir.Left, dir);
+            Assert.IsTrue(s.Disarm(dir).Has(StepFlags.Disarmed));
+            s.Move(Dir.Left);
+            Assert.AreEqual(hp - 1, s.Hp, "disarmed: no second hit");
+        }
+
+        [Test]
         public void Spikes_ShortcutHasAWayRound()
         {
             // Spikes across the short way, a spike-free loop above.
@@ -161,14 +180,16 @@ namespace MummyEscape.Tests
                 "#S.^..E#",
                 "########");
             Assert.AreEqual(8, LevelValidator.SpikeDetour(lvl, new Cell(0, 3, 1)), "10 moves round instead of 2");
-            Assert.IsNull(LevelValidator.CheckSpikeShortcuts(lvl));
+            var one = new LevelSpec { SpikeTraps = 1 };
+            Assert.AreEqual(4, LevelValidator.SpikeSaving(lvl, new Cell(0, 3, 1), Solver.Solve(lvl).Moves), "9 moves round instead of 5 on the walk");
+            Assert.IsNull(LevelValidator.CheckSpikeShortcuts(lvl, Solver.Solve(lvl), one));
             var safe = SolverOptions.Default;
             safe.AvoidSpikes = true;
             Assert.AreEqual(9, Solver.Solve(lvl, safe).Moves, "the long way: up, across, down");
             Assert.AreEqual(5, Solver.Solve(lvl).Moves, "par trades a life for the shortcut");
 
             var corridor = FromAscii("#######", "#S.^.E#", "#######");
-            Assert.IsNotNull(LevelValidator.CheckSpikeShortcuts(corridor), "spikes with no way round are refused");
+            Assert.IsNotNull(LevelValidator.CheckSpikeShortcuts(corridor, Solver.Solve(corridor), one), "spikes with no way round are refused");
         }
 
         [Test]

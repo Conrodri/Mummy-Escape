@@ -74,7 +74,7 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 11;
+        public const int GeneratorVersion = 12;
 
         /// <summary>
         /// One theme and one signature mechanic per act: the intact antechamber (doors, portals), the flooded galleries
@@ -138,6 +138,8 @@ namespace MummyEscape.Core
         public const int LockedPortalExtraMoves = 3;
         /// <summary>Longest ideal walk the dust's room may stretch a tomb to (still about 2 minutes of play).</summary>
         public const int MaxMovesCap = 56;
+        /// <summary>Spikes guarding a shortcut in every tomb (besides those past the dust that bar the way).</summary>
+        public const int MinSpikeTraps = 2;
 
         /// <summary>Step of a level inside its act: 1 for levels 1-3, 2 for 4-7, 3 for 8-10 (mechanisms and traps).</summary>
         public static int Tier(int index) => index <= 3 ? 1 : index <= 7 ? 2 : 3;
@@ -213,6 +215,8 @@ namespace MummyEscape.Core
                 // A locked portal is two mechanics (its lever, then the portal): room for the lever's detour.
                 if (spec.Gates[k].Kind == GateKind.Portal && spec.Gates[k].Portal == TeleporterKind.Locked) spec.MaxMoves += LockedPortalExtraMoves;
             }
+            // Every tomb has its risky shortcuts: spikes to cross fast or a safe way round to walk.
+            spec.SpikeTraps = Math.Max(spec.SpikeTraps, MinSpikeTraps);
             // Relighting is part of the ideal walk (the spikes past the dust are disarmed by torchlight): room for it, within
             // about 2 minutes of play.
             spec.MaxMoves = Math.Max(spec.MaxMoves, Math.Min(spec.MaxMoves + dustRoom, MaxMovesCap));

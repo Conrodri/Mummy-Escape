@@ -70,8 +70,8 @@ namespace MummyEscape.Core
         {
             if (Status != SessionStatus.Playing) return new StepResult { State = State, Flags = StepFlags.Blocked };
 
-            // A trap can only be disarmed if the player can actually see it.
-            if (action.Kind == ActionKind.Disarm && !IsVisible(Position.Step(action.Dir)))
+            // A trap can only be disarmed if the player can see it, or has walked on it before (in the dark).
+            if (action.Kind == ActionKind.Disarm && !CanReach(Position.Step(action.Dir)))
                 return new StepResult { State = State, Flags = StepFlags.Blocked };
 
             var r = Rules.Step(Level, State, action);
@@ -140,19 +140,22 @@ namespace MummyEscape.Core
         public bool IsTrapArmed(Cell c) => Rules.IsTrapArmed(Level.Get(c), State.Disarmed);
 
         /// <summary>
-        /// Visible armed spikes next to the mummy (traps are spaced out, so there is at most one): what the disarm
-        /// button acts on. False in the dark, while blinded, and next to cursed sand (it cannot be disarmed).
+        /// Armed spikes next to the mummy (traps are spaced out, so there is at most one): what the disarm button acts on.
+        /// Seen by torchlight, or, in the dark or while blinded, already walked on. False next to cursed sand (it cannot
+        /// be disarmed).
         /// </summary>
         public bool CanDisarm(out Dir dir)
         {
             foreach (var d in DirExt.All)
             {
                 var c = Position.Step(d);
-                if (IsVisible(c) && Rules.IsDisarmable(Level.Get(c), State.Disarmed)) { dir = d; return true; }
+                if (CanReach(c) && Rules.IsDisarmable(Level.Get(c), State.Disarmed)) { dir = d; return true; }
             }
             dir = default;
             return false;
         }
+
+        bool CanReach(Cell c) => c.Floor == Position.Floor && (IsVisible(c) || Rules.CanFeelFor(State, Level.Get(c)));
 
         public LevelResult BuildResult() => new LevelResult
         {

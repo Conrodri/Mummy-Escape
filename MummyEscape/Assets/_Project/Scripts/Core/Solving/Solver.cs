@@ -50,8 +50,8 @@ namespace MummyEscape.Core
         /// <summary>Shortest way to the exit from any situation of a run (PvP progress: moves still to go).</summary>
         public static Solution Solve(Level level, RuleState start, SolverOptions options)
         {
-            bool tick = HasFireJets(level);
-            var startKey = Pack(level, start, tick);
+            var layout = Layout(level, HasFireJets(level));
+            var startKey = layout.Pack(start);
             var parent = new Dictionary<long, (long prev, PlayerAction action)>();
             var states = new Dictionary<long, RuleState>();
             var queue = new Queue<long>();
@@ -83,7 +83,7 @@ namespace MummyEscape.Core
                     if (!options.AllowTeleporters && r.Has(StepFlags.Teleported)) r.State.Position = r.SteppedOn; // stand on the pad, no transport
                     var ns = r.State;
                     if (!options.AllowButtons) ns.Pressed = s.Pressed;
-                    long nk = Pack(level, ns, tick);
+                    long nk = layout.Pack(ns);
                     if (parent.ContainsKey(nk)) continue;
                     parent[nk] = (key, a);
                     if (r.Has(StepFlags.Won)) return Rebuild(level, start, parent, nk, options);
@@ -104,8 +104,8 @@ namespace MummyEscape.Core
         public static Solution SolveFastest(Level level, System.Func<RuleState, PlayerAction, StepResult, int> cost, SolverOptions options)
         {
             var start = Rules.Initial(level);
-            bool tick = HasFireJets(level);
-            var startKey = Pack(level, start, tick);
+            var layout = Layout(level, HasFireJets(level));
+            var startKey = layout.Pack(start);
             var parent = new Dictionary<long, (long prev, PlayerAction action)>();
             var best = new Dictionary<long, int>();
             var states = new Dictionary<long, RuleState>();
@@ -136,7 +136,7 @@ namespace MummyEscape.Core
                 {
                     var r = Rules.Step(level, s, a);
                     if (r.Has(StepFlags.Blocked) || r.Has(StepFlags.Died)) continue;
-                    long nk = Pack(level, r.State, tick);
+                    long nk = layout.Pack(r.State);
                     if (r.Has(StepFlags.Won))
                     {
                         // States leave the queue by increasing time: the first way out found is the fastest.
@@ -187,23 +187,18 @@ namespace MummyEscape.Core
         public const int MaxCells = 1 << 12, MaxChannels = 12, MaxTraps = 12, MaxCrumbling = 12;
 
         /// <summary>
-        /// 12 bits position, 12 channels, 12 traps, 3 hp, 2 blind, 1 torch, 12 collapsed slabs, 2 flame tick, 2 turns of the tomb,
-        /// 4 reversed steps = 62 bits.
-        /// The tick only matters when the tomb has flame jets (otherwise it would triple the states for nothing).
+        /// The packing of states for this tomb (<see cref="StateLayout"/>). The tick only matters when the tomb has flame
+        /// jets (otherwise it would triple the states for nothing).
         /// </summary>
-        static long Pack(Level level, RuleState s, bool tick)
+        internal static StateLayout Layout(Level level, bool tick)
         {
-            return (long)level.IndexOf(s.Position)
-                   | ((long)(s.Pressed & 0xFFF) << 12)
-                   | ((long)(s.Disarmed & 0xFFF) << 24)
-                   | ((long)(s.Hp & 0x7) << 36)
-                   | ((long)(s.Blind & 0x3) << 39)
-                   | (s.TorchOut ? 1L << 41 : 0)
-                   | ((long)(s.Crumbled & 0xFFF) << 42)
-                   | (tick ? (long)(s.Tick & 0x3) << 54 : 0)
-                   | ((long)(s.Rotation & 0x3) << 56)
-                   | ((long)(s.Reversed & 0xF) << 58);
+            var layout = new StateLayout(level, tick);
+            if (layout.Bits > 64) throw new System.InvalidOperationException($"tomb too rich to search: {layout.Bits} bits of state");
+            return layout;
         }
+
+        /// <summary>Whether every state of the tomb packs into 64 bits (what the generator checks before solving).</summary>
+        public static bool CanPack(Level level) => new StateLayout(level, HasFireJets(level)).Bits <= 64;
 
         static bool HasFireJets(Level level)
         {
@@ -221,8 +216,9 @@ namespace MummyEscape.Core
             var seen = new HashSet<long>();
             var queue = new Queue<RuleState>();
             RuleState Norm(RuleState s) => new RuleState { Position = s.Position, Pressed = s.Pressed, Crumbled = s.Crumbled, Disarmed = -1, Hp = 7 };
+            var layout = Layout(level, false);
             var start = Norm(from);
-            seen.Add(Pack(level, start, false));
+            seen.Add(layout.Pack(start));
             queue.Enqueue(start);
             while (queue.Count > 0 && seen.Count < maxStates)
             {
@@ -234,7 +230,7 @@ namespace MummyEscape.Core
                     if (r.Has(StepFlags.Blocked)) continue;
                     if (r.Has(StepFlags.Won)) return true;
                     var ns = Norm(r.State);
-                    if (seen.Add(Pack(level, ns, false))) queue.Enqueue(ns);
+                    if (seen.Add(layout.Pack(ns))) queue.Enqueue(ns);
                 }
             }
             return queue.Count > 0; // state cap hit: give the player the benefit of the doubt

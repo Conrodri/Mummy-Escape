@@ -122,6 +122,20 @@ namespace MummyEscape.Core
                 BraidDeadEnds();
                 var walk = PlannedWalk();
                 if (walk == null) { failure = "route: chain lost after braiding"; return null; }
+
+                // Risky shortcuts first, while the wings and the rock beside the walk are still there to draw them on: dust
+                // before a torch pattern for each dust patch, then spike patterns. What cannot be drawn now is placed the old
+                // way on the final route. Pruning then keeps their safe ways and drops the rest of the wings.
+                int torchDust = 0, drawnSpikes = 0, turned = 0;
+                // The turning slab before a corridor of decoy alcoves (once), its torch variant taking a dust patch.
+                if (_spec.RotateTraps > 0)
+                {
+                    if (torchDust < _spec.DustPatches && DrawDecoyCorridor(walk, torch: true)) { torchDust++; turned++; }
+                    else if (DrawDecoyCorridor(walk, torch: false)) turned++;
+                }
+                for (; torchDust < _spec.DustPatches && drawnSpikes < _spec.SpikeTraps && DrawTorchPattern(ref walk); torchDust++) drawnSpikes += _shapeSpikes;
+                while (drawnSpikes < _spec.SpikeTraps && DrawSpikePattern(ref walk)) drawnSpikes += _shapeSpikes;
+                if (walk == null) { failure = "route: lost after a shortcut"; return null; }
                 PruneWings(walk);
 
                 AddLoops(_spec.ExtraLoops);
@@ -132,6 +146,14 @@ namespace MummyEscape.Core
                 if (route == null) { failure = "route: lost after braiding"; return null; }
                 // New loops can shift the walk: drop any pocket it no longer needs.
                 PruneWings(route);
+                // Cheap early reject: a floor too small to be worth it (LevelValidator.CheckFloors).
+                if (_spec.Floors > 1)
+                {
+                    var ground = new int[_spec.Floors];
+                    foreach (var c in _level.AllCells()) if (Walkable(c)) ground[c.Floor]++;
+                    for (int f = 0; f < _spec.Floors; f++)
+                        if (ground[f] < LevelValidator.MinFloorTiles) { failure = $"floor: {f} has {ground[f]} tiles of ground"; return null; }
+                }
                 // Cheap early reject: the planned walk is close to the par (each portal pad jump counts as no move).
                 int planned = route.Count - 1 - _spec.RequiredPortals;
                 if (planned > _spec.MaxMoves) { failure = $"too-long: planned walk {planned} > {_spec.MaxMoves}"; return null; }
@@ -147,7 +169,7 @@ namespace MummyEscape.Core
                 for (int k = 0; k < _spec.FireJets; k++)
                     if (!PlaceFireJet(route)) { failure = "fire: no spot"; return null; }
 
-                for (int k = 0; k < _spec.DustPatches; k++)
+                for (int k = torchDust; k < _spec.DustPatches; k++)
                 {
                     if (!PlaceDust(route, out int dustAt, out var sconce)) { failure = "dust: no spot"; return null; }
                     if (!PlaceTollSpikes(route, dustAt, sconce)) { failure = "dust: no spikes past it to need the torch for"; return null; }
@@ -155,13 +177,13 @@ namespace MummyEscape.Core
 
                 // Traps sit on the route only: something to remember and get past, never a pointless side hazard.
                 // Spikes guard a shortcut, with a longer way round: a life for a few moves, the player's call.
-                for (int k = 0; k < _spec.SpikeTraps; k++)
+                for (int k = drawnSpikes; k < _spec.SpikeTraps; k++)
                     if (!PlaceSpikes(route)) { failure = "spikes: no shortcut with a way round"; return null; }
                 for (int k = 0; k < _spec.DarknessTraps; k++)
                     if (!PlaceTrap(TrapKind.Darkness, route)) { failure = "darkness: no spot"; return null; }
                 for (int k = 0; k < _spec.ReverseTraps; k++)
                     if (!PlaceTrap(TrapKind.Reverse, route)) { failure = "mirror: no spot"; return null; }
-                for (int k = 0; k < _spec.RotateTraps; k++)
+                for (int k = turned; k < _spec.RotateTraps; k++)
                 {
                     if (!PlaceTrap(TrapKind.Rotate, route)) { failure = "turning slab: no spot"; return null; }
                     var slab = _traps[_traps.Count - 1];
@@ -170,7 +192,7 @@ namespace MummyEscape.Core
                     _level[slab] = turning;
                 }
 
-                if (_channels > Solver.MaxChannels || _traps.Count > Solver.MaxTraps || _crumbling > Solver.MaxCrumbling)
+                if (_channels > Solver.MaxChannels || _traps.Count > Solver.MaxTraps || _crumbling > Solver.MaxCrumbling || !Solver.CanPack(_level))
                 {
                     failure = "too-many: channels, traps or fragile slabs exceed the solver packing";
                     return null;
@@ -322,7 +344,8 @@ namespace MummyEscape.Core
                 {
                     var dist = Distances(from, 0, out _);
                     int floorsLeft = _spec.Floors - f;
-                    int legLo = Math.Max(4, (lo - used) / floorsLeft - 2);
+                    // Long enough a leg that the floor left behind is more than a corridor to its ladder.
+                    int legLo = Math.Max(MinLeg, (lo - used) / floorsLeft - 2);
                     int legHi = Math.Max(legLo + 2, (hi - used) / floorsLeft);
                     var list = Candidates(f, c =>
                     {
@@ -356,6 +379,9 @@ namespace MummyEscape.Core
                 Reserve(exit);
                 return true;
             }
+
+            /// <summary>Least moves from where a floor is entered to its ladder up.</summary>
+            const int MinLeg = 8;
 
             // ------------------------------------------------------------------ gates
 
@@ -542,9 +568,13 @@ namespace MummyEscape.Core
             /// The walk the chain asks for, in play order: each button / lever, each portal jump, then the exit, along
             /// shortest paths with what is open at that point. Mechanics and pruning work on this walk.
             /// </summary>
+            /// <summary>Channels open at each step of the last <see cref="PlannedWalk"/>.</summary>
+            List<int> _walkMasks;
+
             List<Cell> PlannedWalk()
             {
                 var walk = new List<Cell> { _level.Start };
+                var masks = new List<int> { 0 };
                 var cur = _level.Start;
                 int mask = 0;
                 bool Leg(Cell to, int stage)
@@ -552,7 +582,7 @@ namespace MummyEscape.Core
                     var dist = Distances(cur, mask, out var parent, null, p => !_gatePads.TryGetValue(p, out int j) || j < stage);
                     if (dist[_level.IndexOf(to)] < 0) return false;
                     var path = BuildPath(parent, to);
-                    for (int k = 1; k < path.Count; k++) walk.Add(path[k]);
+                    for (int k = 1; k < path.Count; k++) { walk.Add(path[k]); masks.Add(mask); }
                     cur = to;
                     return true;
                 }
@@ -567,10 +597,13 @@ namespace MummyEscape.Core
                     {
                         if (!Leg(_padA[i].Value, i)) return null;
                         walk.Add(_padB[i].Value);
+                        masks.Add(mask);
                         cur = _padB[i].Value;
                     }
                 }
-                return Leg(_level.Exit, _spec.Gates.Count) ? walk : null;
+                if (!Leg(_level.Exit, _spec.Gates.Count)) return null;
+                _walkMasks = masks;
+                return walk;
             }
 
 
@@ -724,6 +757,8 @@ namespace MummyEscape.Core
             void PruneWings(List<Cell> walk)
             {
                 var onWalk = new bool[_level.CellCount];
+                // The safe ways of the patterns count as walked: kept, and what hangs off them is judged like the rest.
+                foreach (var c in _patternGround) onWalk[_level.IndexOf(c)] = true;
                 foreach (var c in walk)
                 {
                     onWalk[_level.IndexOf(c)] = true;
@@ -840,7 +875,7 @@ namespace MummyEscape.Core
                 if (count <= 0) return;
                 var comp = FloorComponents();
                 bool Rock(Cell c) => _level.InBounds(c) && IsInterior(c) && IsCell(c) && _level[c].Type == TileType.Wall;
-                bool End(Cell c) => _level.InBounds(c) && IsInterior(c) && IsCell(c) && IsFloorType(c) && c != _level.Start;
+                bool End(Cell c) => _level.InBounds(c) && IsInterior(c) && IsCell(c) && IsFloorType(c) && c != _level.Start && !_patternGround.Contains(c);
                 var starts = new List<Cell>();
                 foreach (var c in _level.AllCells()) if (End(c)) starts.Add(c);
                 _rng.Shuffle(starts);
@@ -910,6 +945,7 @@ namespace MummyEscape.Core
                     int diff = Math.Abs(depth[ia] - depth[ib]);
                     if (diff < 3 || IsMeaningfulDeadEnd(a) || IsMeaningfulDeadEnd(b)) continue;
                     if (_reserved[_level.IndexOf(w)] && !IsFloorType(w)) continue;
+                    if (_patternRock.Contains(w)) continue;
                     walls.Add((w, a, b));
                 }
                 _rng.Shuffle(walls);
@@ -1259,110 +1295,456 @@ namespace MummyEscape.Core
             const int MaxSpikeDetour = 14;
 
             /// <summary>
-            /// Spikes on a corridor of the route that a spike-free way bypasses, a few moves longer
-            /// (<see cref="LevelValidator.MinSpikeDetour"/>): the short way costs a life (or a disarm), the long one only time.
+            /// Spikes on a corridor of the route that a spike-free way bypasses, a few moves longer for the walk the player
+            /// makes (<see cref="LevelValidator.MinSpikeDetour"/>): the short way costs a life (or a disarm), the long one only
+            /// time. A natural shortcut first; when the tomb has none, one of the <see cref="SpikePatterns"/> is dug.
             /// </summary>
             bool PlaceSpikes(List<Cell> route)
             {
-                var spots = new List<Cell>();
+                var spots = new List<int>();
                 for (int i = 2; i < route.Count - 1; i++)
                 {
                     var c = route[i];
-                    if (IsFree(c) && Degree(c) == 2 && FarFromTraps(c) && !spots.Contains(c)) spots.Add(c);
+                    if (IsFree(c) && Degree(c) == 2 && FarFromTraps(c) && route.IndexOf(c) == i) spots.Add(i);
                 }
                 _rng.Shuffle(spots);
-                foreach (var c in spots)
-                {
-                    _level[c] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)_traps.Count };
-                    int extra = LevelValidator.SpikeDetour(_level, c);
-                    if (extra < LevelValidator.MinSpikeDetour || extra > MaxSpikeDetour) { _level[c] = Tile.Floor; continue; }
-                    _traps.Add(c);
-                    _reserved[_level.IndexOf(c)] = true;
-                    return true;
-                }
-                return DigSpikeDetour(route);
+                foreach (int k in spots)
+                    if (TrySpikes(route, k)) return true;
+                return DrawPattern(ref route, torch: false, open: false); // the route stays: mechanics already lie on it
+            }
+
+            /// <summary>Spikes at route[k], kept when the way round them costs the walk a fair number of moves.</summary>
+            bool TrySpikes(List<Cell> route, int k)
+            {
+                var c = route[k];
+                _level[c] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)_traps.Count };
+                int saving = RouteSaving(route, k);
+                if (saving < LevelValidator.MinSpikeDetour || saving > MaxSpikeDetour) { _level[c] = Tile.Floor; return false; }
+                _traps.Add(c);
+                _reserved[_level.IndexOf(c)] = true;
+                return true;
             }
 
             /// <summary>
-            /// No natural shortcut: dig the long way round a short stretch of the route through the rock (up to 3 maze cells),
-            /// then put the spikes on the stretch it doubles. Undone when the detour is too short or too long.
+            /// Moves the walk loses at each crossing of route[k] when it may not cross: the worst of them (a corridor walked
+            /// there and back is crossed twice; disarming once clears both). -1 when a crossing has no way round.
+            /// The planner's twin of <see cref="LevelValidator.SpikeSaving"/>.
             /// </summary>
-            bool DigSpikeDetour(List<Cell> route)
+            int RouteSaving(List<Cell> route, int k)
             {
-                bool Rock(Cell c) => _level.InBounds(c) && IsInterior(c) && IsCell(c) && _level[c].Type == TileType.Wall;
-                var starts = new List<int>();
-                for (int i = 1; i < route.Count - 3; i++) if (IsCell(route[i])) starts.Add(i);
-                _rng.Shuffle(starts);
-                foreach (int ia in starts)
+                var spike = route[k];
+                var crossings = new List<int>();
+                for (int i = 0; i < route.Count; i++) if (route[i] == spike) crossings.Add(i);
+                int worst = int.MaxValue;
+                for (int m = 0; m < crossings.Count; m++)
                 {
-                    // Plain walk on one floor ahead of the start: the stretch the detour may double.
-                    var ahead = new Dictionary<Cell, int>();
-                    for (int k = ia + 1; k < Math.Min(route.Count - 1, ia + 9); k++)
-                    {
-                        if (route[k].Floor != route[ia].Floor || route[k].Manhattan(route[k - 1]) != 1) break;
-                        if (IsCell(route[k]) && !ahead.ContainsKey(route[k])) ahead[route[k]] = k;
-                    }
-                    if (ahead.Count == 0) continue;
+                    int at = crossings[m], mask = _walkMasks[at];
+                    // The stretch of the walk around the crossing with the same doors open: a way round elsewhere would
+                    // skip a button the walk goes back for, which is no shortcut.
+                    int from = at, to = at;
+                    int lo = m == 0 ? 0 : crossings[m - 1] + 1, hi = m == crossings.Count - 1 ? route.Count - 1 : crossings[m + 1] - 1;
+                    while (from > lo && _walkMasks[from - 1] == mask) from--;
+                    while (to < hi && _walkMasks[to + 1] == mask) to++;
+                    int saving = CrossingSaving(route, spike, mask, from, at, to);
+                    if (saving < 0) return -1;
+                    worst = Math.Min(worst, saving);
+                }
+                return worst;
+            }
 
-                    var a = route[ia];
-                    var prev = new Dictionary<Cell, Cell>();
-                    var frontier = new List<Cell> { a };
-                    Cell? hit = null, last = null;
-                    // The dug way (2 tiles per maze cell) must be longer than the stretch it doubles: that is the detour.
-                    for (int depth = 1; depth <= 4 && !hit.HasValue; depth++)
+            /// <summary>
+            /// The shortest spike-free way, with the channels of <paramref name="mask"/> open, from a point of the walk before
+            /// the crossing at <paramref name="at"/> (from <paramref name="from"/>) to a point after it (up to
+            /// <paramref name="to"/>), against the walk itself.
+            /// </summary>
+            int CrossingSaving(List<Cell> route, Cell spike, int mask, int from, int at, int to)
+            {
+                var dist = new int[_level.CellCount];
+                for (int i = 0; i < dist.Length; i++) dist[i] = -1;
+                // Each point of the walk before the spikes joins the search at the move the walk reaches it.
+                var frontier = new List<Cell>();
+                for (int time = from; time < at || frontier.Count > 0; time++)
+                {
+                    if (time < at && dist[_level.IndexOf(route[time])] < 0)
                     {
-                        var next = new List<Cell>();
-                        foreach (var c in frontier)
+                        dist[_level.IndexOf(route[time])] = time;
+                        frontier.Add(route[time]);
+                    }
+                    var next = new List<Cell>();
+                    foreach (var c in frontier)
+                    {
+                        if (_level[c].Type == TileType.Exit) continue;
+                        var s = new RuleState { Position = c, Pressed = mask, Disarmed = -1, Hp = 99 };
+                        foreach (var d in DirExt.All)
                         {
-                            foreach (var d in DirExt.All)
-                            {
-                                var wall = c.Step(d);
-                                var n = wall.Step(d);
-                                if (!_level.InBounds(n) || _level[wall].Type != TileType.Wall || prev.ContainsKey(n) || n == a) continue;
-                                if (Rock(n)) { prev[n] = c; next.Add(n); continue; }
-                                if (ahead.TryGetValue(n, out int kb) && 2 * depth - (kb - ia) >= LevelValidator.MinSpikeDetour)
-                                {
-                                    hit = n; last = c;
-                                    break;
-                                }
-                            }
-                            if (hit.HasValue) break;
+                            if (c.Step(d) == spike) continue;
+                            var r = Rules.Step(_level, s, PlayerAction.Move(d));
+                            // Portals stay out of it: the walk may not have the right to take them yet.
+                            if (r.Has(StepFlags.Blocked) || r.Has(StepFlags.Teleported) || r.SteppedOn == spike) continue;
+                            int ni = _level.IndexOf(r.State.Position);
+                            if (dist[ni] >= 0) continue;
+                            dist[ni] = time + 1;
+                            next.Add(r.State.Position);
                         }
-                        frontier = next;
                     }
-                    if (!hit.HasValue) continue;
+                    frontier = next;
+                }
+                int best = -1;
+                for (int j = at + 1; j <= to; j++)
+                {
+                    int there = dist[_level.IndexOf(route[j])];
+                    if (there >= 0 && (best < 0 || there - j < best)) best = there - j;
+                }
+                return best;
+            }
 
-                    var dug = new List<Cell>();
-                    void Dig(Cell t) { if (_level[t].Type == TileType.Wall) { _level[t] = Tile.Floor; dug.Add(t); } }
-                    var cur = hit.Value;
-                    var from = last.Value;
-                    while (true)
-                    {
-                        Dig(new Cell(cur.Floor, (cur.X + from.X) / 2, (cur.Y + from.Y) / 2));
-                        if (from == a) break;
-                        Dig(from);
-                        cur = from;
-                        from = prev[from];
-                    }
+            /// <summary>Ground of the safe ways the patterns lay, and the rock between the two ways: kept as drawn.</summary>
+            readonly HashSet<Cell> _patternGround = new HashSet<Cell>();
+            readonly HashSet<Cell> _patternRock = new HashSet<Cell>();
 
-                    var spots = new List<Cell>();
-                    for (int k = ia + 1; k < ahead[hit.Value]; k++)
-                        if (IsFree(route[k]) && Degree(route[k]) == 2 && FarFromTraps(route[k])) spots.Add(route[k]);
-                    _rng.Shuffle(spots);
-                    foreach (var s in spots)
+            /// <summary>
+            /// Lays one of the <see cref="SpikePatterns"/> (without a torch) on the walk; <paramref name="walk"/> is planned
+            /// again when the shape changed it.
+            /// </summary>
+            bool DrawSpikePattern(ref List<Cell> walk) => DrawPattern(ref walk, torch: false, open: true);
+
+            /// <summary>
+            /// Dust on the walk, then 2 or 3 tiles further one of the torch <see cref="SpikePatterns"/>: cross the spikes in the
+            /// dark, or take the safe way past the wall torch and see again. Early on the walk, so the light matters for most
+            /// of the tomb.
+            /// </summary>
+            bool DrawTorchPattern(ref List<Cell> walk) => DrawPattern(ref walk, torch: true, open: true);
+
+            /// <summary>
+            /// Two ways to lay a shape. Where the walk already goes round it (its safe way is walked), the rock along the
+            /// spike row is opened and the spikes put in the gaps: the walk becomes the risky shortcut, the old way the safe
+            /// one. Otherwise the safe way is dug beside a straight stretch of the walk, through rock or along plain ground
+            /// already there, inside the area the walk is in (with every door closed): it never lets the player round a gate.
+            /// The first way moves the walk, so only with <paramref name="open"/> (before anything else lies on it).
+            /// </summary>
+            bool DrawPattern(ref List<Cell> walk, bool torch, bool open)
+            {
+                if (walk == null) return false;
+                var route = walk;
+                int lastSpot = torch ? Math.Max(6, route.Count / 2) : route.Count - 2;
+                var shapes = new List<SpikePatterns.Pattern>();
+                foreach (var p in SpikePatterns.All)
+                    if (p.HasTorch == torch) { shapes.Add(p); shapes.Add(SpikePatterns.Mirrored(p)); }
+                var comp = FloorComponents();
+                var onRoute = new HashSet<Cell>(route);
+                var starts = new List<int>();
+                for (int i = 1; i <= lastSpot && i < route.Count - 1; i++) if (IsCell(route[i])) starts.Add(i);
+
+                if (open)
+                {
+                    _rng.Shuffle(starts);
+                    foreach (int i in starts)
                     {
-                        _level[s] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)_traps.Count };
-                        int extra = LevelValidator.SpikeDetour(_level, s);
-                        if (extra < LevelValidator.MinSpikeDetour || extra > MaxSpikeDetour) { _level[s] = Tile.Floor; continue; }
-                        _traps.Add(s);
-                        _reserved[_level.IndexOf(s)] = true;
-                        return true;
+                        _rng.Shuffle(shapes);
+                        foreach (var shape in shapes)
+                            foreach (var dir in DirExt.All)
+                                foreach (var side in DirExt.All)
+                                    if (side != dir && side != dir.Opposite() && TryShape(route, i, shape, dir, side, comp, onRoute, open: true))
+                                    {
+                                        walk = PlannedWalk();
+                                        return true;
+                                    }
                     }
-                    foreach (var t in dug) _level[t] = Tile.Wall;
+                }
+
+                _rng.Shuffle(starts);
+                foreach (int i in starts)
+                {
+                    if (route[i + 1].Manhattan(route[i]) != 1) continue;
+                    var dir = DirTo(route[i], route[i + 1]);
+                    _rng.Shuffle(shapes);
+                    foreach (var shape in shapes)
+                        foreach (var side in DirExt.All)
+                            if (side != dir && side != dir.Opposite() && TryShape(route, i, shape, dir, side, comp, onRoute, open: false))
+                                return true;
                 }
                 return false;
             }
 
+            /// <summary>
+            /// Lays <paramref name="shape"/> with its left end on route[<paramref name="first"/>], the walk heading
+            /// <paramref name="dir"/>, its drawn top towards <paramref name="side"/>. With <paramref name="open"/> the walk goes
+            /// round along the safe way and the spike row is opened; otherwise the walk runs along the spike row and the
+            /// safe way is dug.
+            /// </summary>
+            bool TryShape(List<Cell> route, int first, SpikePatterns.Pattern shape, Dir dir, Dir side, int[] comp, HashSet<Cell> onRoute, bool open)
+            {
+                Cell At(int x, int y)
+                {
+                    var c = route[first];
+                    for (int n = 0; n < x; n++) c = c.Step(dir);
+                    var s = y >= 0 ? side : side.Opposite();
+                    for (int n = 0; n < Math.Abs(y); n++) c = c.Step(s);
+                    return c;
+                }
+                var tiles = new List<(Cell c, char ch, int y)>();
+                foreach (var (x, y, ch) in shape.Tiles)
+                {
+                    if (ch == '.') continue;
+                    var c = At(x, y);
+                    if (!_level.InBounds(c) || !IsInterior(c) && y != 0) return false;
+                    tiles.Add((c, ch, y));
+                }
+                var shapeCells = new HashSet<Cell>();
+                foreach (var (x, y, _) in shape.Tiles) shapeCells.Add(At(x, y));
+                bool Sealed(Cell c)
+                {
+                    foreach (var d in DirExt.All)
+                    {
+                        var n = c.Step(d);
+                        if (!shapeCells.Contains(n) && Walkable(n)) return false;
+                    }
+                    return true;
+                }
+                // Portal pads and ladders keep a single way out: nothing opened beside them.
+                bool ByPad(Cell c)
+                {
+                    foreach (var d in DirExt.All)
+                    {
+                        var t = _level.Get(c.Step(d)).Type;
+                        if (t == TileType.Teleporter || t == TileType.LadderUp || t == TileType.LadderDown) return true;
+                    }
+                    return false;
+                }
+                var a = At(0, 0);
+                var b = At(shape.Width - 1, 0);
+                if (!_level.InBounds(b) || comp[_level.IndexOf(a)] != comp[_level.IndexOf(b)]) return false;
+
+                var safe = new HashSet<Cell>();
+                var row = new HashSet<Cell>();
+                foreach (var t in tiles)
+                {
+                    if (t.ch == '+') safe.Add(t.c);
+                    else if (t.y == 0) row.Add(t.c);
+                }
+
+                // Where the walk goes: along the spike row, or round by the safe way.
+                int last;
+                if (open)
+                {
+                    last = route.IndexOf(b, first + 1);
+                    if (last < 0) return false;
+                    for (int m = first + 1; m < last; m++)
+                    {
+                        var c = route[m];
+                        if (!safe.Contains(c) && !row.Contains(c)) return false;
+                        if (_level[c].Type != TileType.Floor || c == _level.Start || route.IndexOf(c) != m || route.LastIndexOf(c) != m) return false;
+                    }
+                    foreach (var c in safe) if (route.IndexOf(c) <= first || route.IndexOf(c) >= last) return false;
+                }
+                else
+                {
+                    last = first + shape.Width - 1;
+                    if (last >= route.Count) return false;
+                    for (int x = 0; x < shape.Width; x++)
+                        if (route[first + x] != At(x, 0)) return false; // walked there and back is fine: each crossing must pay
+                }
+
+                Cell? dust = null;
+                if (shape.HasTorch && !TorchDust(route, first, out dust)) return false;
+
+                var dig = new List<Cell>();
+                var spikes = new List<Cell>();
+                var rock = new List<Cell>();
+                Cell? sconce = null;
+                foreach (var (c, ch, y) in tiles)
+                {
+                    var t = _level[c];
+                    switch (ch)
+                    {
+                        case '#':
+                            if (t.Type != TileType.Wall) return false;
+                            rock.Add(c);
+                            break;
+                        case 'T':
+                            if (t.Type != TileType.Wall || !Sealed(c)) return false;
+                            sconce = c;
+                            break;
+                        case '+':
+                            if (open) break; // walked already
+                            if (onRoute.Contains(c)) return false; // not the walk itself (that is a corner, which saves nothing)
+                            if (t.Type == TileType.Floor) { if (comp[_level.IndexOf(c)] != comp[_level.IndexOf(a)]) return false; break; }
+                            if (t.Type != TileType.Wall || !IsInterior(c)) return false;
+                            foreach (var d in DirExt.All)
+                            {
+                                var n = c.Step(d);
+                                if (!shapeCells.Contains(n) && Walkable(n) && comp[_level.IndexOf(n)] != comp[_level.IndexOf(a)]) return false;
+                            }
+                            dig.Add(c);
+                            break;
+                        default: // the spike row
+                            if (ch == '^') spikes.Add(c);
+                            if (!open)
+                            {
+                                if (ch == '^' && (!IsFree(c) || Degree(c) != 2 || !FarFromTraps(c))) return false;
+                                break;
+                            }
+                            if (c == a || c == b || route.IndexOf(c, first) is int m && m > first && m < last)
+                            {
+                                if (ch == '^') return false; // spikes go in the rock that is opened
+                                break;
+                            }
+                            if (t.Type != TileType.Wall || !IsInterior(c) || _patternRock.Contains(c) || !Sealed(c)) return false;
+                            if (ch == '^' && !FarFromTraps(c)) return false;
+                            dig.Add(c);
+                            break;
+                    }
+                }
+
+                foreach (var c in dig) if (ByPad(c)) return false;
+                foreach (var c in dig) _level[c] = Tile.Floor;
+                foreach (var c in spikes)
+                {
+                    _level[c] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)_traps.Count };
+                    _traps.Add(c);
+                    _reserved[_level.IndexOf(c)] = true;
+                }
+                // Laid beside the walk, each spike must save the walk its moves (opened, the walk now goes across them).
+                if (!open)
+                    foreach (var c in spikes)
+                    {
+                        int saving = RouteSaving(route, route.IndexOf(c));
+                        if (saving >= LevelValidator.MinSpikeDetour && saving <= MaxSpikeDetour) continue;
+                        foreach (var s in spikes) { _level[s] = Tile.Floor; _traps.Remove(s); _reserved[_level.IndexOf(s)] = false; }
+                        foreach (var d in dig) _level[d] = Tile.Wall;
+                        return false;
+                    }
+                foreach (var c in dig) _reserved[_level.IndexOf(c)] = true;
+                foreach (var c in safe) { _reserved[_level.IndexOf(c)] = true; _patternGround.Add(c); }
+                foreach (var c in rock) _patternRock.Add(c);
+                if (sconce.HasValue) PlaceTorchAndDust(sconce.Value, dust.Value);
+                _shapeSpikes = spikes.Count;
+                return true;
+            }
+
+            /// <summary>Spikes the last shape laid (the snake has three).</summary>
+            int _shapeSpikes;
+
+            /// <summary>Dust on the walk 2 or 3 tiles before route[<paramref name="start"/>], where the torch shapes begin.</summary>
+            bool TorchDust(List<Cell> route, int start, out Cell? dust)
+            {
+                dust = null;
+                foreach (int back in new[] { 2, 3 })
+                {
+                    int di = start - back;
+                    if (di < 1) continue;
+                    var c = route[di];
+                    if (IsFree(c) && Degree(c) == 2 && _level[c].Type == TileType.Floor && FarFromTraps(c) && route.IndexOf(c) == di)
+                    {
+                        dust = c;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            void PlaceTorchAndDust(Cell sconce, Cell dust)
+            {
+                _level[sconce] = new Tile { Type = TileType.WallTorch };
+                _patternRock.Add(sconce);
+                _level[dust] = new Tile { Type = TileType.Dust };
+                _reserved[_level.IndexOf(dust)] = true;
+            }
+
+            /// <summary>
+            /// The corridor of the turning slab: a straight stretch of the walk with the slab at its entry, empty alcoves on
+            /// both sides in turn, and the corridor going on one cell past where the walk turns off. Once the tomb has turned,
+            /// the real way on is one opening among several, to tell from memory. With <paramref name="torch"/>: dust before
+            /// the slab and a wall torch at the end of that last stretch, a short detour to see again.
+            /// The alcoves are decoys on purpose (<see cref="Level.IsDecoy"/>); one such corridor per tomb at most.
+            /// </summary>
+            bool DrawDecoyCorridor(List<Cell> route, bool torch)
+            {
+                const int MinAlcoves = 2;
+                int lastSpot = torch ? Math.Max(6, route.Count / 2) : route.Count - 2;
+                var starts = new List<int>();
+                for (int i = 2; i <= lastSpot && i < route.Count - 1; i++) if (IsCell(route[i])) starts.Add(i);
+                _rng.Shuffle(starts);
+                bool Rock(Cell c) => _level.InBounds(c) && IsInterior(c) && _level[c].Type == TileType.Wall && !_patternRock.Contains(c);
+                // Rock whose only ground around, once dug, is the given tiles.
+                bool Sealed(Cell c, Cell from, Cell next)
+                {
+                    foreach (var d in DirExt.All)
+                    {
+                        var n = c.Step(d);
+                        if (n != from && n != next && Walkable(n)) return false;
+                        var t = _level.Get(n).Type;
+                        if (t == TileType.Teleporter || t == TileType.LadderUp || t == TileType.LadderDown) return false;
+                    }
+                    return true;
+                }
+                foreach (int s in starts)
+                {
+                    if (route[s + 1].Manhattan(route[s]) != 1) continue;
+                    var dir = DirTo(route[s], route[s + 1]);
+                    int e = s;
+                    while (e + 1 < route.Count && route[e + 1] == route[e].Step(dir)) e++;
+                    while (e > s && !IsCell(route[e])) e--;
+                    if (e - s < 4) continue;
+                    bool plain = true;
+                    for (int m = s; m <= e; m++)
+                        plain &= _level[route[m]].Type == TileType.Floor && route[m] != _level.Start && route.IndexOf(route[m]) == m && route.LastIndexOf(route[m]) == m;
+                    if (!plain) continue;
+
+                    // The slab just before the corridor, the dust (torch corridor) 2 or 3 tiles before the slab.
+                    var slab = route[s - 1];
+                    if (!IsFree(slab) || Degree(slab) != 2 || _level[slab].Type != TileType.Floor || !FarFromTraps(slab) || route.IndexOf(slab) != s - 1) continue;
+                    Cell? dust = null;
+                    if (torch && !TorchDust(route, s - 1, out dust)) continue;
+
+                    // The corridor goes on past the turn: one more cell straight ahead (and the torch beyond it).
+                    var stub1 = route[e].Step(dir);
+                    var stub2 = stub1.Step(dir);
+                    if (e + 1 < route.Count && route[e + 1] == stub1) continue;
+                    if (!Rock(stub1) || !Rock(stub2) || !Sealed(stub1, route[e], stub2) || !Sealed(stub2, stub1, stub1)) continue;
+                    Cell? sconce = null;
+                    if (torch)
+                    {
+                        var w = stub2.Step(dir);
+                        if (!Rock(w) || !Sealed(w, stub2, stub2)) continue;
+                        sconce = w;
+                    }
+
+                    // Alcoves on the cells of the corridor, on alternate sides.
+                    var sides = new[] { dir.Turn(1), dir.Turn(-1) };
+                    int flip = _rng.Range(0, 2);
+                    var alcoves = new List<(Cell door, Cell end)>();
+                    for (int m = s + 2; m < e; m += 2)
+                    {
+                        var side = sides[(flip + (m - s) / 2) & 1];
+                        var door = route[m].Step(side);
+                        var end = door.Step(side);
+                        if (Rock(door) && Rock(end) && Sealed(door, route[m], end) && Sealed(end, door, door)) alcoves.Add((door, end));
+                    }
+                    if (alcoves.Count < MinAlcoves) continue;
+
+                    var ground = new List<Cell> { stub1, stub2 };
+                    foreach (var (door, end) in alcoves) { ground.Add(door); ground.Add(end); }
+                    foreach (var c in ground)
+                    {
+                        _level[c] = Tile.Floor;
+                        _level.AddDecoy(c);
+                        _reserved[_level.IndexOf(c)] = true;
+                        _patternGround.Add(c);
+                    }
+                    // Keep the alcoves as drawn: no loop knocked through their walls later.
+                    foreach (var c in ground)
+                        foreach (var d in DirExt.All)
+                            if (_level.Get(c.Step(d)).Type == TileType.Wall) _patternRock.Add(c.Step(d));
+
+                    _level[slab] = new Tile { Type = TileType.Trap, Trap = TrapKind.Rotate, TrapIndex = (byte)_traps.Count, Param = (byte)(_rng.Chance(500) ? 1 : 3) };
+                    _traps.Add(slab);
+                    _reserved[_level.IndexOf(slab)] = true;
+                    if (sconce.HasValue) PlaceTorchAndDust(sconce.Value, dust.Value);
+                    return true;
+                }
+                return false;
+            }
             bool FarFromTraps(Cell c)
             {
                 foreach (var t in _traps)

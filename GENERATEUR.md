@@ -30,6 +30,7 @@ Le tag pointe sur le commit qui a introduit la version ; des commits ultérieurs
 
 | Version | Date | Commit | Changements |
 |---------|------|--------|-------------|
+| 12 | en cours | — | Le gain des pics se mesure sur le trajet réel : chaque pic qui n'est pas un péage doit faire gagner au moins 4 coups (`LevelValidator.SpikeSaving`). Cela élimine les anneaux traversés par deux coins opposés, où les deux moitiés ont la même longueur. Chaque tombeau a au moins **2 raccourcis à pics** (`DifficultyTable.MinSpikeTraps`). Chaque étage d’un tombeau à plusieurs étages a au moins 12 cases de sol et 2 points d’intérêt hors échelles (`LevelValidator.CheckFloors`). Des pics déjà foulés se désamorcent à tâtons, torche éteinte ou aveuglé (`RuleState.Felt`, état du solveur dimensionné par tombeau : `StateLayout`). Ajout de motifs dessinés réutilisables (`SpikePatterns`, voir plus bas) et d'un couloir à alcôves leurres derrière une dalle tournante. Version pas encore stabilisée : ni tag ni empreinte. |
 | 11 | 2026-10-07 | `a81060d` | La torche murale vaut le détour : la poussière tombe tôt (premier tiers du chemin), deux pics impossibles à contourner après elle, à désamorcer à la lumière (deux coups tuent). Le validateur n'accepte des pics en travers du chemin que s'il y a une torche murale. Fenêtre de par jusqu'à 56 coups pour les tombeaux avec poussière. Relais 2v2 : pas de poussière, un piège d'obscurité à la place. |
 | 10 | 2026-10-04 | `a0b390d` | La torche murale n'est plus le long du chemin idéal : dans un autre couloir ou au fond d'une alcôve creusée pour elle, à 2–6 coups (`LevelValidator.CheckTorches`). Finir dans le noir ou payer le détour. |
 | 9 | 2026-10-04 | `a1d71f0` | Pièges **miroir de Seth** (acte 2+, inverse les commandes pendant 10 pas) et **dalle tournante** (acte 3+, le tombeau tourne d'un quart de tour à l'écran). État du solveur élargi ; le validateur rejette les tombeaux dont le chemin idéal laisse une poche. |
@@ -43,3 +44,30 @@ Le tag pointe sur le commit qui a introduit la version ; des commits ultérieurs
 | 1 | 2026-10-02 | `63383b5` | Générateur procédural déterministe initial (5 actes), solveur BFS, tests de résolution. |
 
 Empreintes enregistrées (`GeneratorVersionTests.Recorded`) : à partir de la v11.
+
+## Motifs dessinés (v12)
+
+`Core/Generation/SpikePatterns.cs` dessine, case par case, des formes que le générateur pose sur le chemin pour donner un choix au joueur : un chemin rapide mais dangereux par les pics, ou un chemin sûr mais plus long. Chaque forme est tournée pour suivre le chemin et peut être posée d'un côté ou de l'autre, ou en miroir. Ces formes complètent le tombeau sans le remplir.
+
+Légende : `W` chemin, `^` pics, `+` chemin sûr, `#` roche à garder entre les deux, `T` torche murale, `.` indifférent. Le chemin traverse la forme de gauche à droite, sur la rangée des pics.
+
+| Motif | Forme (de haut en bas) | Par les pics / par le détour |
+|-------|------------------------|------------------------------|
+| pont | `+++` / `+#+` / `W^W` | 2 coups / 6 coups |
+| long pont | `+++++` / `+###+` / `W^WWW` | 4 coups / 8 coups |
+| pont profond | `+++` / `+#+` ×3 / `W^W` | 2 coups / 10 coups |
+| pont à torche | `.T.` / `+++` / `+#+` / `W^W` | comme le pont, poussière 2 ou 3 cases avant |
+| long pont à torche | `..T..` / `+++++` / `+###+` / `W^WWW` | comme le long pont, poussière 2 ou 3 cases avant |
+| serpent | `+++#+++` / `+#+#+#+` / `W^W^W^W` / `..+#+..` / `..+++..` / `...T...` | trois pics, chacun avec sa boucle (dessus, dessous, dessus) ; torche sur la boucle du dessous, poussière avant |
+
+Avec torche, le joueur a deux options :
+- aller tout droit, prendre les pics dans le noir (sans lumière, impossible de les désamorcer) et continuer à l'aveugle ;
+- faire le détour, éviter les pics et récupérer la vue pour la suite.
+
+`LevelGenerator.DrawPattern` pose une forme de deux façons :
+- **ouvrir** : quand le chemin contourne déjà par le chemin sûr, on perce la rangée des pics et on y place les pics. Le chemin idéal passe alors par les pics ;
+- **creuser** : on creuse le chemin sûr à côté d'une portion droite du chemin. Ce chemin ne doit jamais rejoindre une autre zone, pour qu'on ne puisse pas contourner une porte, ni déboucher à côté d'un téléporteur ou d'une échelle.
+
+Chaque pic posé est vérifié sur le trajet complet (`RouteSaving`) : il doit faire gagner entre 4 et 14 coups. Les cases du motif sont réservées : les boucles ajoutées ensuite ne percent pas sa roche `#` et l'élagage ne les supprime pas.
+
+**Couloir à alcôves leurres** (`DrawDecoyCorridor`) : une dalle tournante à l'entrée d'une portion droite, au moins 2 alcôves vides qui alternent d'un côté à l'autre, et un couloir prolongé d'une case après le virage. Une fois le tombeau tourné, la vraie sortie n'est qu'une ouverture parmi d'autres : il faut la retrouver de mémoire. Une variante place une torche au bout du prolongement et de la poussière avant la dalle. Ces alcôves sont la seule exception aux règles « chaque élément sert » et « aucune partie inutile ». Elles sont marquées `Level.IsDecoy`, ignorées par `CheckDeadEnds` et `CheckNoPocket`, et un tombeau compte au plus un couloir de ce type.

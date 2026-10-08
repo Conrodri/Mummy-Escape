@@ -34,6 +34,8 @@ namespace MummyEscape.Core
         public int Blind;
         /// <summary>The torch was smothered by dust: only the own tile is lit (and traps cannot be seen to disarm).</summary>
         public bool TorchOut;
+        /// <summary>Bit i set = spikes with TrapIndex i walked on: the mummy knows where they are, it can disarm them in the dark.</summary>
+        public int Felt;
         /// <summary>Bit i set = fragile slab with Param i has collapsed (impassable rubble).</summary>
         public int Crumbled;
         /// <summary>Actions taken, modulo 3: the rhythm of the flame jets.</summary>
@@ -50,11 +52,11 @@ namespace MummyEscape.Core
         public Dir WorldDir(Dir swipe) => swipe.Turn(-Rotation + (Reversed > 0 ? 2 : 0));
 
         public bool Equals(RuleState o) => Position == o.Position && Pressed == o.Pressed && Disarmed == o.Disarmed && Hp == o.Hp && Blind == o.Blind
-                                           && TorchOut == o.TorchOut && Crumbled == o.Crumbled && Tick == o.Tick
+                                           && TorchOut == o.TorchOut && Felt == o.Felt && Crumbled == o.Crumbled && Tick == o.Tick
                                            && Rotation == o.Rotation && Reversed == o.Reversed;
         public override bool Equals(object obj) => obj is RuleState s && Equals(s);
         public override int GetHashCode() => Position.GetHashCode() ^ (Pressed * 397) ^ (Disarmed * 7919) ^ Hp ^ (Blind << 20) ^ (TorchOut ? 1 << 24 : 0)
-                                             ^ (Crumbled * 1543) ^ (Tick << 28) ^ (Rotation << 26) ^ (Reversed << 16);
+                                             ^ (Felt * 104729) ^ (Crumbled * 1543) ^ (Tick << 28) ^ (Rotation << 26) ^ (Reversed << 16);
     }
 
     [Flags]
@@ -127,6 +129,11 @@ namespace MummyEscape.Core
         public static bool IsTrapArmed(Tile t, int disarmed) => t.Type == TileType.Trap && (disarmed & (1 << t.TrapIndex)) == 0;
         /// <summary>Only traps that hurt (spikes) can be disarmed; cursed sand cannot.</summary>
         public static bool IsDisarmable(Tile t, int disarmed) => IsTrapArmed(t, disarmed) && t.Trap == TrapKind.Spikes;
+        /// <summary>
+        /// The mummy can reach for these spikes: it sees them by torchlight, or, blind or with its torch out, it has
+        /// already walked on them and knows where they are.
+        /// </summary>
+        public static bool CanFeelFor(RuleState s, Tile t) => s.SeesNeighbours || (t.Type == TileType.Trap && (s.Felt & (1 << t.TrapIndex)) != 0);
 
         /// <summary>Doors open with their channel; red barriers too, blue barriers do the opposite.</summary>
         public static bool IsGateOpen(Tile t, int pressed)
@@ -168,7 +175,7 @@ namespace MummyEscape.Core
             if (action.Kind == ActionKind.Disarm)
             {
                 var tt = level.Get(target);
-                if (!s.SeesNeighbours || !IsDisarmable(tt, s.Disarmed)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
+                if (!IsDisarmable(tt, s.Disarmed) || !CanFeelFor(s, tt)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
                 r.State.Disarmed |= 1 << tt.TrapIndex;
                 r.Flags = StepFlags.Disarmed;
                 return r;
@@ -237,6 +244,7 @@ namespace MummyEscape.Core
                         if (t.Trap == TrapKind.Spikes)
                         {
                             r.State.Hp--;
+                            r.State.Felt |= 1 << t.TrapIndex;
                             r.Flags |= StepFlags.Damaged;
                             if (r.State.Hp <= 0) r.Flags |= StepFlags.Died;
                         }

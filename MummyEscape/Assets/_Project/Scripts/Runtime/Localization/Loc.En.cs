@@ -254,6 +254,7 @@ namespace MummyEscape
             ["Commandes inversées ! ({0})"] = "Controls reversed! ({0})",
             ["Le tombeau a pivoté !\nTes gestes suivent l'écran."] = "The tomb has turned!\nYour swipes follow the screen.",
             ["Torche éteinte : longe une torche murale"] = "Torch out: walk past a wall torch",
+            ["Ces pics, tu les as sentis :\ndésarme-les à tâtons"] = "You felt these spikes:\ndisarm them by touch",
             ["Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines."] = "Swipe to move one tile.\nYour torch lights up the tiles around you.",
             ["Maintiens « Carte » pour revoir ce que tu as exploré."] = "Hold \"Map\" to review what you have explored.",
             ["Les courants t'emportent jusqu'au bout\net ne se remontent pas."] = "Currents carry you all the way\nand cannot be walked against.",
