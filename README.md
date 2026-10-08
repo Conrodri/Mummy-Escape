@@ -155,6 +155,8 @@ dotnet run -c Release -- --preview [n]      # durée d'aperçu par étage et par
 2. relancer LevelLab (aucun niveau ne doit échouer, temps raisonnable sur l'acte 5) et les tests,
 3. ré-exporter les leaderboards (ci-dessous).
 
+L'historique des versions, leurs tags `generator-vN` et le test d'empreinte qui détecte un changement de cartes sans changement de version sont décrits dans [`GENERATEUR.md`](GENERATEUR.md).
+
 ## MCP / Pipeline
 
 `.mcp.json` déclare le serveur `unity mcp` pour ce projet : redémarrer Claude Code et approuver le serveur. Il a besoin d'un éditeur ouvert (`unity open MummyEscape`). Commandes spécifiques au jeu :
