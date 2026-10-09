@@ -44,6 +44,12 @@ namespace MummyEscape.Online
             }
             try
             {
+#if UNITY_EDITOR
+                // In the editor, Leaderboards and Friends null their instance in a [RuntimeInitializeOnLoadMethod] that runs
+                // after the first scene loads: initialized before it (the game starts online from that scene), they were wiped
+                // and every call said "not initialized". One frame later the reset is done.
+                await Task.Yield();
+#endif
                 await UnityServices.InitializeAsync();
                 // Resumes the cached session (guest or account) or creates a guest player.
                 var auth = AuthenticationService.Instance;

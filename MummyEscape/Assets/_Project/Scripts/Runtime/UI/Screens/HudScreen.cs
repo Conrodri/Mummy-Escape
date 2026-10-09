@@ -135,7 +135,7 @@ namespace MummyEscape.UI.Screens
             AddTrigger(trigger, EventTriggerType.PointerDown, () => App.Game.SetMapView(true));
             AddTrigger(trigger, EventTriggerType.PointerUp, () => App.Game.SetMapView(false));
 
-            // Disarm: lights up only next to spikes the torch shows (not in the dark, not blinded, not cursed sand).
+            // Disarm: works next to spikes the torch shows or felt underfoot (not cursed sand); 1 s cooldown after each press.
             _disarm = UIKit.Button(bottom, "Désamorcer", () => App.Game.DisarmAdjacent(), 34, ButtonStyle.Primary);
             UIKit.FitText(_disarm.GetComponentInChildren<Text>(), 22);
             UIKit.Place((RectTransform)_disarm.transform, 1, 1, 330, 100, -30, 110);
@@ -487,7 +487,8 @@ namespace MummyEscape.UI.Screens
 
 
             float cooldown = App.Game.DisarmCooldownLeft;
-            _disarm.interactable = !preview && s.Status == SessionStatus.Playing && s.CanDisarm(out _) && cooldown <= 0f;
+            // Always pressable while playing, spikes or not: a press anywhere costs the cooldown, so spamming it does not pay.
+            _disarm.interactable = !preview && s.Status == SessionStatus.Playing && cooldown <= 0f;
             if (cooldown > 0f)
             {
                 _disarmCooldown.gameObject.SetActive(true);
