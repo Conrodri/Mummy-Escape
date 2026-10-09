@@ -538,10 +538,18 @@ namespace MummyEscape.Game
             Submit(PlayerAction.Move(swipe));
         }
 
+        /// <summary>Seconds before the disarm button answers again: no spamming it.</summary>
+        public const float DisarmCooldown = 1f;
+        float _disarmReadyAt;
+        /// <summary>Seconds left before the disarm button works again (0: ready).</summary>
+        public float DisarmCooldownLeft => Mathf.Max(0f, _disarmReadyAt - Time.unscaledTime);
+
         /// <summary>The HUD disarm button: disarms the visible spikes next to the mummy, if any.</summary>
         public void DisarmAdjacent()
         {
-            if (Session != null && Session.CanDisarm(out var dir)) Submit(PlayerAction.Disarm(dir));
+            if (Session == null || DisarmCooldownLeft > 0f) return;
+            _disarmReadyAt = Time.unscaledTime + DisarmCooldown;
+            if (Session.CanDisarm(out var dir)) Submit(PlayerAction.Disarm(dir));
         }
 
         /// <summary>Feeds one action to the game (swipe / tap handlers, and the editor autoplay tool).</summary>

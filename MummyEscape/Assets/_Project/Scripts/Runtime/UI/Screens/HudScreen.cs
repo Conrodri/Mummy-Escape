@@ -20,6 +20,8 @@ namespace MummyEscape.UI.Screens
         readonly List<Image> _ankhs = new List<Image>();
         RectTransform _bottomBar;
         Button _disarm;
+        RectTransform _disarmCooldown;
+        bool _disarmCooling;
         MoveControls _controls;
         // Tutorial: what the stretch the mummy walks in teaches.
         RectTransform _lesson;
@@ -137,6 +139,10 @@ namespace MummyEscape.UI.Screens
             _disarm = UIKit.Button(bottom, "Désamorcer", () => App.Game.DisarmAdjacent(), 34, ButtonStyle.Primary);
             UIKit.FitText(_disarm.GetComponentInChildren<Text>(), 22);
             UIKit.Place((RectTransform)_disarm.transform, 1, 1, 330, 100, -30, 110);
+            // Recharge: a dark veil over the button that shrinks to the right during the cooldown.
+            var veil = UIKit.Image(_disarm.transform, null, new Color(0f, 0f, 0f, 0.55f), false, "Cooldown");
+            _disarmCooldown = UIKit.Stretch(veil.rectTransform);
+            veil.gameObject.SetActive(false);
 
             _hint = UIKit.Label(bottom, "", 30, UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Italic);
             UIKit.Stretch(_hint.rectTransform, 44, 0, 290, 0);
@@ -480,7 +486,21 @@ namespace MummyEscape.UI.Screens
             }
 
 
-            _disarm.interactable = !preview && s.Status == SessionStatus.Playing && s.CanDisarm(out _);
+            float cooldown = App.Game.DisarmCooldownLeft;
+            _disarm.interactable = !preview && s.Status == SessionStatus.Playing && s.CanDisarm(out _) && cooldown <= 0f;
+            if (cooldown > 0f)
+            {
+                _disarmCooldown.gameObject.SetActive(true);
+                _disarmCooldown.anchorMin = new Vector2(1f - cooldown / MummyEscape.Game.GameController.DisarmCooldown, 0f);
+                _disarmCooling = true;
+            }
+            else if (_disarmCooling)
+            {
+                // Ready again: the veil goes and the button pops.
+                _disarmCooldown.gameObject.SetActive(false);
+                _disarmCooling = false;
+                UIFx.PopIn(_disarm, 0f, 0.9f);
+            }
 
             while (_ankhs.Count < level.MaxHp)
             {
