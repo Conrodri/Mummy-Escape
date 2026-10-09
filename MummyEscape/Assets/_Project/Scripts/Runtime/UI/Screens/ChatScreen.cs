@@ -319,6 +319,9 @@ namespace MummyEscape.UI.Screens
             var r = await app.Pvp.GetSharedReplayAsync(replay.Id);
             var shared = r?.Replay;
             if (shared == null) { app.Audio.Play(Sfx.Bump); return; }
+            // Shared on another version of the game: its tombs cannot be drawn again here.
+            int version = shared.Duel?.GeneratorVersion ?? shared.Relay?.GeneratorVersion ?? 0;
+            if (!ReplayScreen.Playable(version)) { app.Audio.Play(Sfx.Bump); return; }
             if (shared.Duel != null)
             {
                 var d = shared.Duel;

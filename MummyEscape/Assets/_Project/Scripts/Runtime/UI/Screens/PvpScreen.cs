@@ -229,7 +229,7 @@ namespace MummyEscape.UI.Screens
                 }
                 var h = DuelRow(_saved, d, () => Watch(d));
                 UIKit.IconButton(h.transform, UISprites.Close, () => { Online.ReplayStore.Forget(d.MatchId); FillHistory(); }, 72);
-                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(d), 84).interactable = d.Me != null;
+                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(d), 84).interactable = d.Me != null && ReplayScreen.Playable(d.GeneratorVersion);
             }
 
             UIKit.ClearChildren(_history);
@@ -242,8 +242,8 @@ namespace MummyEscape.UI.Screens
                 var h = DuelRow(_history, d, () => Watch(d));
                 bool kept = Online.ReplayStore.IsSaved(d.MatchId);
                 var save = UIKit.IconButton(h.transform, kept ? UISprites.Check : UISprites.Plus, () => Keep(d), 72);
-                save.interactable = !kept && d.Me != null;
-                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(d), 84).interactable = d.Me != null;
+                save.interactable = !kept && d.Me != null && ReplayScreen.Playable(d.GeneratorVersion);
+                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(d), 84).interactable = d.Me != null && ReplayScreen.Playable(d.GeneratorVersion);
             }
         }
 
@@ -300,6 +300,7 @@ namespace MummyEscape.UI.Screens
         void Watch(DuelRecord d)
         {
             if (_busy || d.Me == null) return;
+            if (!ReplayScreen.Playable(d.GeneratorVersion)) { App.Audio.Play(Sfx.Bump); return; }
             Router.Open<ReplayScreen>().Show(d);
         }
 

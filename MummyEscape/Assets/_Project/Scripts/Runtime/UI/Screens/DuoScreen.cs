@@ -170,7 +170,7 @@ namespace MummyEscape.UI.Screens
                 var r = record;
                 var h = MatchRow(r);
                 UIKit.IconButton(h.transform, UISprites.Close, () => { RelayReplayStore.Forget(r.Id); Fill(); }, 72);
-                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(r), 84);
+                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(r), 84).interactable = Playable(r);
             }
 
             UIKit.SectionTitle(_list, "Derniers matchs");
@@ -185,8 +185,8 @@ namespace MummyEscape.UI.Screens
                 var h = MatchRow(r);
                 bool kept = RelayReplayStore.IsSaved(r.Id);
                 var keep = UIKit.IconButton(h.transform, kept ? UISprites.Check : UISprites.Plus, () => Keep(r), 72);
-                keep.interactable = !kept;
-                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(r), 84);
+                keep.interactable = !kept && Playable(r);
+                UIKit.IconButton(h.transform, UISprites.Play, () => Watch(r), 84).interactable = Playable(r);
             }
         }
 
@@ -200,8 +200,11 @@ namespace MummyEscape.UI.Screens
         void Watch(RelayRecord r)
         {
             if (_busy || _search != null) return;
+            if (!Playable(r)) { App.Audio.Play(Sfx.Bump); return; }
             Router.Open<ReplayScreen>().ShowRelay(r);
         }
+
+        static bool Playable(RelayRecord r) => r.Match != null && ReplayScreen.Playable(r.Match.GeneratorVersion);
 
         /// <summary>One match: result, rival duo, date and Elo change; the caller adds the buttons at the end.</summary>
         HorizontalLayoutGroup MatchRow(RelayRecord r)

@@ -17,6 +17,12 @@ namespace MummyEscape.UI.Screens
     /// </summary>
     public sealed class ReplayScreen : UIScreen
     {
+        /// <summary>
+        /// A replay can only be shown with the generator that drew its tombs: another version (or none, a record older than
+        /// the field) would draw other mazes. The lists grey out the others and this screen refuses them.
+        /// </summary>
+        public static bool Playable(int generatorVersion) => generatorVersion == DifficultyTable.GeneratorVersion;
+
         const int StripSlots = 9;
         const float SeekEvery = 0.12f;
 
@@ -216,7 +222,7 @@ namespace MummyEscape.UI.Screens
         {
             int load = ++_load;
             var match = record.Match;
-            if (match.GeneratorVersion != 0 && match.GeneratorVersion != DifficultyTable.GeneratorVersion)
+            if (!Playable(match.GeneratorVersion))
             {
                 _status.text = Loc.T("Match joué sur une ancienne version du jeu : il ne peut plus être rejoué.");
                 return;
@@ -295,7 +301,7 @@ namespace MummyEscape.UI.Screens
         async void Load(DuelRecord duel)
         {
             int load = ++_load;
-            if (duel.GeneratorVersion != 0 && duel.GeneratorVersion != DifficultyTable.GeneratorVersion)
+            if (!Playable(duel.GeneratorVersion))
             {
                 _status.text = Loc.T("Duel joué sur une ancienne version du jeu : il ne peut plus être rejoué.");
                 return;

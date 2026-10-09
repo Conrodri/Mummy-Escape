@@ -105,7 +105,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Stretch(letter.rectTransform);
             Runner(row.transform, theirs != null && k < theirs.Names.Count ? theirs.Names[k] : "—", theirs?.Runs[k], TextAnchor.MiddleLeft);
 
-            bool watchable = result != null && mine.Runs[k] != null && theirs?.Runs[k] != null && !TeamLogic.IsHidden(theirs.Runs[k]);
+            bool watchable = result != null && mine.Runs[k] != null && theirs?.Runs[k] != null && !TeamLogic.IsHidden(theirs.Runs[k])
+                             && ReplayScreen.Playable(b.GeneratorVersion);
             var watch = UIKit.IconButton(row.transform, UISprites.Play, () => Watch(router, b, k, mineA), 64);
             watch.interactable = watchable;
         }
