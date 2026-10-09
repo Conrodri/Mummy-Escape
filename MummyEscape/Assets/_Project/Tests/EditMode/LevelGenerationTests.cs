@@ -18,6 +18,8 @@ namespace MummyEscape.Tests
 
         static readonly Dictionary<(LevelId, int), Level> Cache = new Dictionary<(LevelId, int), Level>();
 
+        static LevelId Id(string name) => LevelId.TryParse(name, out var id) ? id : throw new ArgumentException(name);
+
         static Level Get(LevelId id, int variant)
         {
             if (!Cache.TryGetValue((id, variant), out var level)) Cache[(id, variant)] = level = LevelGenerator.Generate(id, variant);
@@ -26,15 +28,16 @@ namespace MummyEscape.Tests
 
         public static IEnumerable<TestCaseData> AllMazes() =>
             DifficultyTable.AllLevels().SelectMany(id => Enumerable.Range(0, FastVariants)
-                .Select(v => new TestCaseData(id.Act, id.Index, v).SetName($"Level {id} maze {v}")));
+                .Select(v => new TestCaseData(id.ToString(), v).SetName($"Level {id} maze {v}")));
 
         public static IEnumerable<TestCaseData> AllLevels() =>
-            DifficultyTable.AllLevels().Select(id => new TestCaseData(id.Act, id.Index).SetName($"Level {id}"));
+            DifficultyTable.AllLevels().Select(id => new TestCaseData(id.ToString()).SetName($"Level {id}"));
 
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_RespectsItsSpec(int act, int index, int variant)
+        public void Maze_RespectsItsSpec(string name, int variant)
         {
-            var id = new LevelId(act, index);
+            var id = Id(name);
+            int act = id.Act;
             var level = Get(id, variant);
             var spec = level.Spec; // the act spec, or its slightly wider fallback for a rare unlucky seed
             var sol = level.Solution;
@@ -52,9 +55,9 @@ namespace MummyEscape.Tests
         }
 
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_ParReplaysInGameSession(int act, int index, int variant)
+        public void Maze_ParReplaysInGameSession(string name, int variant)
         {
-            var level = Get(new LevelId(act, index), variant);
+            var level = Get(Id(name), variant);
             var session = new GameSession(level);
             foreach (var action in level.Solution.Actions)
             {
@@ -68,9 +71,9 @@ namespace MummyEscape.Tests
         }
 
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_GatesAreMandatory(int act, int index, int variant)
+        public void Maze_GatesAreMandatory(string name, int variant)
         {
-            var id = new LevelId(act, index);
+            var id = Id(name);
             var spec = DifficultyTable.Spec(id);
             var level = Get(id, variant);
             if (spec.RequiredButtons > 0)
@@ -92,23 +95,23 @@ namespace MummyEscape.Tests
         }
 
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_DeadEndsAlwaysHoldSomething(int act, int index, int variant)
+        public void Maze_DeadEndsAlwaysHoldSomething(string name, int variant)
         {
-            Assert.IsNull(LevelValidator.CheckDeadEnds(Get(new LevelId(act, index), variant)));
+            Assert.IsNull(LevelValidator.CheckDeadEnds(Get(Id(name), variant)));
         }
 
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_PutsPortalsInDeadEnds(int act, int index, int variant)
+        public void Maze_PutsPortalsInDeadEnds(string name, int variant)
         {
-            var level = Get(new LevelId(act, index), variant);
+            var level = Get(Id(name), variant);
             Assert.IsNull(LevelValidator.CheckDeadEndPortals(level), "one way out of each teleporter");
             Assert.That(level.Floors, Is.LessThanOrEqualTo(3), "a human memorises 3 floors at most");
         }
 
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_ExitIsFarOrBehindAFarButton(int act, int index, int variant)
+        public void Maze_ExitIsFarOrBehindAFarButton(string name, int variant)
         {
-            var id = new LevelId(act, index);
+            var id = Id(name);
             var spec = DifficultyTable.Spec(id);
             var level = Get(id, variant);
             bool far = level.Start.Manhattan(level.Exit) >= spec.MinExitDistance;
@@ -118,9 +121,11 @@ namespace MummyEscape.Tests
 
         /// <summary>Each act has its own signature mechanic, present in every one of its tombs.</summary>
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_HasItsActMechanic(int act, int index, int variant)
+        public void Maze_HasItsActMechanic(string name, int variant)
         {
-            var level = Get(new LevelId(act, index), variant);
+            var id = Id(name);
+            int act = id.Act;
+            var level = Get(id, variant);
             int Count(TileType type) => level.AllCells().Count(c => level[c].Type == type);
             switch (act)
             {
@@ -130,7 +135,7 @@ namespace MummyEscape.Tests
                     Assert.That(Count(TileType.Switch), Is.GreaterThanOrEqualTo(1), "city of Anubis: switches");
                     Assert.That(level.AllCells().Count(c => level[c].Type == TileType.Barrier && level[c].Param == 0), Is.GreaterThanOrEqualTo(1), "red barriers");
                     break;
-                case 5: Assert.That(Count(TileType.FireJet), Is.GreaterThanOrEqualTo(2), "burning sanctuary: flame jets"); break;
+                case 5: Assert.That(Count(TileType.FireJet), Is.GreaterThanOrEqualTo(1), "burning sanctuary: flame jets"); break;
             }
             if (act >= 2)
             {
@@ -141,29 +146,29 @@ namespace MummyEscape.Tests
 
         /// <summary>Currents, fragile slabs and barriers may cost a detour, never the run: no move sequence walls the mummy in.</summary>
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_NeverWallsThePlayerIn(int act, int index, int variant)
+        public void Maze_NeverWallsThePlayerIn(string name, int variant)
         {
-            Assert.IsNull(LevelValidator.CheckNoDeadLock(Get(new LevelId(act, index), variant)));
+            Assert.IsNull(LevelValidator.CheckNoDeadLock(Get(Id(name), variant)));
         }
 
         /// <summary>
-        /// Spikes guard shortcuts: at least <see cref="DifficultyTable.MinSpikeTraps"/> per tomb, each saving moves on the
+        /// Spikes guard shortcuts: at least the mode's <see cref="ModeDefinition.MinSpikes"/> per tomb, each saving moves on the
         /// walk the player makes over a spike-free way round (but those barring the way past dust, to disarm by
         /// torchlight), and the exit can be reached without a hit (a life is traded for moves, never owed).
         /// </summary>
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_SpikesOnlyGuardShortcuts(int act, int index, int variant)
+        public void Maze_SpikesOnlyGuardShortcuts(string name, int variant)
         {
-            var level = Get(new LevelId(act, index), variant);
-            Assert.That(level.Spec.SpikeTraps, Is.GreaterThanOrEqualTo(DifficultyTable.MinSpikeTraps));
+            var level = Get(Id(name), variant);
+            Assert.That(level.Spec.SpikeTraps, Is.GreaterThanOrEqualTo(DifficultyTable.GetMode(level.Id.Mode).MinSpikes));
             Assert.IsNull(LevelValidator.CheckSpikeShortcuts(level, level.Solution, level.Spec), level.ToAscii());
         }
 
         /// <summary>No lure: every button, door, portal, ladder, hazard and wall torch serves the ideal route.</summary>
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_EveryElementServesTheRoute(int act, int index, int variant)
+        public void Maze_EveryElementServesTheRoute(string name, int variant)
         {
-            var level = Get(new LevelId(act, index), variant);
+            var level = Get(Id(name), variant);
             Assert.IsNull(LevelValidator.CheckEverythingUsed(level, level.Solution));
             Assert.IsFalse(level.AllCells().Any(c => level[c].Teleporter == TeleporterKind.Hidden), "every portal shows on the preview");
         }
@@ -174,9 +179,9 @@ namespace MummyEscape.Tests
         /// cross in the dark, beside a safe way past the torch, a few moves longer).
         /// </summary>
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_WallTorchIsWorthLighting(int act, int index, int variant)
+        public void Maze_WallTorchIsWorthLighting(string name, int variant)
         {
-            var level = Get(new LevelId(act, index), variant);
+            var level = Get(Id(name), variant);
             if (!level.AllCells().Any(c => level[c].Type == TileType.WallTorch)) return;
             int toll = level.AllCells().Count(c => level[c].Type == TileType.Trap && level[c].Trap == TrapKind.Spikes && LevelValidator.SpikeDetour(level, c) < 0);
             if (toll == 0)
@@ -197,9 +202,9 @@ namespace MummyEscape.Tests
         /// way to choose between), never a pocket entered and left through the same spot.
         /// </summary>
         [TestCaseSource(nameof(AllMazes))]
-        public void Maze_HasNoUnusedWing(int act, int index, int variant)
+        public void Maze_HasNoUnusedWing(string name, int variant)
         {
-            var level = Get(new LevelId(act, index), variant);
+            var level = Get(Id(name), variant);
             var onWalk = new bool[level.CellCount];
             var s = Rules.Initial(level);
             onWalk[level.IndexOf(s.Position)] = true;
@@ -247,10 +252,9 @@ namespace MummyEscape.Tests
         public void Teleporters_EachPairHasItsOwnColour()
         {
             int levelsWithPairs = 0;
-            for (int act = 1; act <= DifficultyTable.ActCount; act++)
-                for (int i = 1; i <= DifficultyTable.GetAct(act).Levels; i++)
+            foreach (var id in DifficultyTable.AllLevels())
                 {
-                    var level = Get(new LevelId(act, i), 0);
+                    var level = Get(id, 0);
                     var pairs = new Dictionary<int, HashSet<Cell>>();
                     for (int c = 0; c < level.Width * level.Height * level.Floors; c++)
                     {
@@ -275,7 +279,7 @@ namespace MummyEscape.Tests
         {
             for (int act = 1; act <= DifficultyTable.ActCount; act++)
             {
-                var level = Get(new LevelId(act, DifficultyTable.GetAct(act).Levels), 0);
+                var level = Get(new LevelId(Difficulty.Normal, act, DifficultyTable.GetAct(act).Levels), 0);
                 Assert.AreEqual(7 * level.Floors, level.PreviewSeconds);
             }
         }
@@ -284,18 +288,19 @@ namespace MummyEscape.Tests
         [Test]
         public void Acts_IdealRouteStaysShort()
         {
-            // A tomb with dust gets room for the torch and the spikes it shows, up to DifficultyTable.MaxMovesCap.
+            // Gates, floors and the dust each widen the window, never past DifficultyTable.MaxMovesCap; the first modes stay shorter.
             foreach (var id in DifficultyTable.AllLevels())
             {
                 var spec = DifficultyTable.Spec(id);
-                Assert.That(spec.MaxMoves, Is.LessThanOrEqualTo(spec.DustPatches > 0 ? DifficultyTable.MaxMovesCap : 48), $"{id}: a level must fit in about 2 minutes");
+                int cap = id.Mode == Difficulty.Extreme || spec.DustPatches > 0 ? DifficultyTable.MaxMovesCap : 53;
+                Assert.That(spec.MaxMoves, Is.LessThanOrEqualTo(cap), $"{id}: a level must fit in about 2 minutes");
             }
         }
 
         [TestCaseSource(nameof(AllLevels))]
-        public void Level_IsDeterministicPerVariant(int act, int index)
+        public void Level_IsDeterministicPerVariant(string name)
         {
-            var id = new LevelId(act, index);
+            var id = Id(name);
             var a = Get(id, 0);
             var b = LevelGenerator.Generate(id, 0);
             Assert.AreEqual(a.ComputeHash(), b.ComputeHash(), "the same (level, variant) must rebuild the same tomb");
@@ -303,9 +308,9 @@ namespace MummyEscape.Tests
         }
 
         [TestCaseSource(nameof(AllLevels))]
-        public void Level_EveryRunDrawsANewMaze(int act, int index)
+        public void Level_EveryRunDrawsANewMaze(string name)
         {
-            var id = new LevelId(act, index);
+            var id = Id(name);
             var hashes = Enumerable.Range(0, FastVariants).Select(v => Get(id, v).ComputeHash()).ToList();
             Assert.AreEqual(hashes.Count, hashes.Distinct().Count(), "replaying must give a different tomb");
         }
@@ -314,10 +319,11 @@ namespace MummyEscape.Tests
         public void Act1_IsAtLeast14MovesWithOneMechanic()
         {
             Assert.AreEqual(14, DifficultyTable.GetAct(1).MinMoves);
-            for (int i = 1; i <= DifficultyTable.GetAct(1).Levels; i++)
+            foreach (var id in DifficultyTable.AllLevels())
             {
-                var spec = DifficultyTable.Spec(new LevelId(1, i));
-                Assert.That(spec.Gates.Count, Is.GreaterThanOrEqualTo(1), $"1-{i} needs a button or a portal");
+                if (id.Act != 1) continue;
+                var spec = DifficultyTable.Spec(id);
+                Assert.That(spec.Gates.Count, Is.GreaterThanOrEqualTo(1), $"{id} needs a button or a portal");
             }
         }
 
@@ -328,21 +334,58 @@ namespace MummyEscape.Tests
                 Assert.That(DifficultyTable.GetAct(a).MinMoves, Is.GreaterThan(DifficultyTable.GetAct(a - 1).MinMoves));
         }
 
+        /// <summary>Each mode of an act climbs its band: scores never drop level after level and stay inside the band.</summary>
         [Test]
-        public void Acts_InteractionsGrowWithinAct()
+        public void Acts_DifficultyClimbsWithinEachModeBand()
         {
-            foreach (var act in Enumerable.Range(1, DifficultyTable.ActCount))
-            {
-                int levels = DifficultyTable.GetAct(act).Levels;
-                int Load(int i)
+            foreach (var mode in DifficultyExt.All)
+                foreach (var act in Enumerable.Range(1, DifficultyTable.ActCount))
                 {
-                    var s = DifficultyTable.Spec(new LevelId(act, i));
-                    return s.Gates.Count + s.SpikeTraps + s.DarknessTraps + s.ReverseTraps + s.RotateTraps + s.DustPatches + s.Currents + s.CrumblingTiles + s.FireJets;
+                    DifficultyTable.Band(mode, act, out int min, out int max);
+                    int levels = DifficultyTable.GetAct(act).Levels, previous = int.MinValue;
+                    for (int i = 1; i <= levels; i++)
+                    {
+                        var id = new LevelId(mode, act, i);
+                        int score = DifficultyScore.Of(DifficultyTable.Spec(id)).Score;
+                        Assert.That(score, Is.InRange(min, max), $"{id} out of its band");
+                        Assert.That(score, Is.GreaterThanOrEqualTo(previous), $"{id} lighter than the level before");
+                        previous = score;
+                    }
                 }
-                Assert.That(Load(levels), Is.GreaterThanOrEqualTo(Load(1)), $"act {act} should end harder than it starts");
-                for (int i = 2; i <= levels; i++)
-                    Assert.That(Load(i), Is.GreaterThanOrEqualTo(Load(i - 1)), $"act {act} level {i} lighter than {i - 1}");
+        }
+
+        /// <summary>The modes do not overlap: Normal starts where Facile ends, Extrême where Normal ends.</summary>
+        [Test]
+        public void Acts_ModeBandsFollowEachOther()
+        {
+            for (int act = 1; act <= DifficultyTable.ActCount; act++)
+            {
+                var t = DifficultyTable.GetAct(act).Thresholds;
+                Assert.AreEqual(4, t.Length);
+                for (int k = 1; k < t.Length; k++) Assert.That(t[k], Is.GreaterThan(t[k - 1]), $"act {act} thresholds");
             }
+        }
+
+        /// <summary>Acts 1-2 have one floor, acts 3-4 two, act 5 three, in every mode.</summary>
+        [Test]
+        public void Acts_FloorsPerAct()
+        {
+            var floors = new[] { 1, 1, 2, 2, 3 };
+            foreach (var id in DifficultyTable.AllLevels())
+                Assert.AreEqual(floors[id.Act - 1], DifficultyTable.Spec(id).Floors, id.ToString());
+        }
+
+        /// <summary>Finishing a mode opens the next one, at its first level.</summary>
+        [Test]
+        public void Progression_ModesOpenOneAfterTheOther()
+        {
+            var lastEasy = Progression.Last(Difficulty.Easy);
+            Assert.AreEqual(new LevelId(Difficulty.Normal, 1, 1), Progression.Next(lastEasy));
+            Assert.AreEqual(lastEasy, Progression.Previous(new LevelId(Difficulty.Normal, 1, 1)));
+            Assert.IsTrue(Progression.IsUnlocked(new LevelId(Difficulty.Easy, 1, 1), _ => false));
+            Assert.IsFalse(Progression.IsModeUnlocked(Difficulty.Normal, _ => false));
+            Assert.IsTrue(Progression.IsModeUnlocked(Difficulty.Normal, id => id.Equals(lastEasy)));
+            Assert.IsNull(Progression.Next(Progression.Last(Difficulty.Extreme)));
         }
 
         /// <summary>Broad sweep: many mazes per level must all generate and pass the validator.</summary>

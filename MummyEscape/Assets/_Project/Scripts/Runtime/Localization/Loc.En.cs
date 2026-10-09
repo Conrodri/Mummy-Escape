@@ -1221,6 +1221,10 @@ namespace MummyEscape
             ["La sortie ! Avant chaque vrai tombeau, mémorise\nsa carte : ensuite, tout est dans le noir."] = "The exit! Before each real tomb, memorise\nits map: after that, it's all dark.",
             ["Plusieurs joueurs portent ce nom : il faut le code complet, avec son # et ses chiffres."] = "Several players have this name: the full code is needed, with its # and digits.",
             ["La progression de {0} n'est pas encore disponible (son jeu doit être à jour)."] = "{0}'s progress isn't available yet (their game needs updating).",
+            ["Facile"] = "Easy",
+            ["Normal"] = "Normal",
+            ["Extrême"] = "Extreme",
+            ["Termine le mode {0} pour l'ouvrir"] = "Finish {0} mode to open it",
         };
     }
 }

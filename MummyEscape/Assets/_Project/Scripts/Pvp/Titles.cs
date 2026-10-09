@@ -39,7 +39,7 @@ namespace MummyEscape.Pvp
 
     public static class Titles
     {
-        /// <summary>Un acte compte 10 niveaux de 3 étoiles : 30, c'est l'acte parfait.</summary>
+        /// <summary>Un acte compte 5 niveaux de 3 étoiles par mode : 30, ce sont ses modes Facile et Normal parfaits.</summary>
         public const int SoloStarsPerAct = 30;
         public const int SpeedLimitMs = 5_000;
 

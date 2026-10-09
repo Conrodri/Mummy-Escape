@@ -7,15 +7,19 @@ using UnityEngine.UI;
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// The solo map: one act at a time (chevrons, dots or a swipe), its banner in the act's colours with the stars won
-    /// in it, then its tombs as cards (the next one to play glows), and a big button that
-    /// resumes at the furthest tomb. The daily games left sit under it.
+    /// The solo map: the mode on top (Facile, Normal, Extrême; finishing one opens the next), then one act at a time
+    /// (chevrons, dots or a swipe), its banner in the act's colours with the stars won in it, then its tombs as cards (the
+    /// next one to play glows), and a big button that resumes at the furthest tomb of the mode. The daily games left sit
+    /// under it.
     /// </summary>
     public sealed class LevelSelectScreen : UIScreen
     {
         public override NavTab Tab => NavTab.Solo;
 
         int _act = 1;
+        Difficulty _mode;
+        bool _modeChosen;
+        UIKit.Segmented _modes;
         Image _glow, _banner, _bannerRim, _bar;
         Text _actNumber, _actTitle, _actInfo, _actStars;
         Button _prev, _next, _continue;
@@ -43,6 +47,8 @@ namespace MummyEscape.UI.Screens
             var swipeArea = body.gameObject.AddComponent<Image>();
             swipeArea.color = Color.clear;
             body.gameObject.AddComponent<SwipePager>().Swiped = dir => SetAct(_act + dir, true);
+
+            _modes = new UIKit.Segmented(body, new[] { "Facile", "Normal", "Extrême" }, i => { _modeChosen = true; SetMode((Difficulty)i); }, 76);
 
             BuildBanner(body);
 
@@ -104,15 +110,31 @@ namespace MummyEscape.UI.Screens
             App.Lighting.SetMood(false);
             App.Audio.PlayMusic(0);
             var furthest = App.Save.FurthestUnlocked();
-            SetAct(furthest.Act, false);
+            if (!_modeChosen) _mode = furthest.Mode;
             _plays.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
-            UIKit.SetLabel(_continue, Loc.F("JOUER · {0}", furthest.ToString()));
+            SetMode(_mode);
             App.Audio.PrefetchMusic(furthest.Act); // its theme is ready when the level starts
+        }
+
+        bool ModeOpen(Difficulty mode) => Progression.IsModeUnlocked(mode, App.Save.IsCompleted);
+
+        /// <summary>Shows a mode: its furthest act, and the play button on its furthest tomb (none while it is locked).</summary>
+        void SetMode(Difficulty mode)
+        {
+            _mode = mode;
+            _modes.Select((int)mode);
+            bool open = ModeOpen(mode);
+            var furthest = App.Save.FurthestUnlocked(mode);
+            _continue.gameObject.SetActive(open);
+            if (open) UIKit.SetLabel(_continue, Loc.F("JOUER · {0}", furthest.Short));
+            _act = 0;
+            SetAct(open ? furthest.Act : 1, false);
         }
 
         void SetAct(int act, bool animate)
         {
             act = Mathf.Clamp(act, 1, DifficultyTable.ActCount);
+            bool open = ModeOpen(_mode);
             if (animate && act == _act) return;
             _act = act;
             var def = DifficultyTable.GetAct(_act);
@@ -127,12 +149,9 @@ namespace MummyEscape.UI.Screens
             _actTitle.text = Loc.T(def.Name);
             _prev.gameObject.SetActive(_act > 1);
             _next.gameObject.SetActive(_act < DifficultyTable.ActCount);
-            var first = DifficultyTable.Spec(new LevelId(_act, 1));
-            int lastFloors = DifficultyTable.Spec(new LevelId(_act, def.Levels)).Floors;
-            string floors = first.Floors == lastFloors
-                ? Loc.P(first.Floors, "{0} étage", "{0} étages")
-                : Loc.F("{0} à {1} étages", first.Floors, lastFloors);
-            _actInfo.text = floors + "  ·  " + Loc.P(def.Levels, "{0} crypte", "{0} cryptes");
+            _actInfo.text = open
+                ? Loc.P(def.Floors, "{0} étage", "{0} étages") + "  ·  " + Loc.P(def.Levels, "{0} crypte", "{0} cryptes")
+                : Loc.F("Termine le mode {0} pour l'ouvrir", LevelNames.Mode(_mode - 1));
             for (int i = 0; i < _dots.childCount; i++)
             {
                 var dot = _dots.GetChild(i).GetComponent<Image>();
@@ -141,15 +160,15 @@ namespace MummyEscape.UI.Screens
                 dot.rectTransform.localScale = Vector3.one * (on ? 1.3f : 1f);
             }
 
-            var furthest = App.Save.FurthestUnlocked();
+            var furthest = App.Save.FurthestUnlocked(_mode);
             int stars = 0;
             UIKit.ClearChildren(_grid);
             for (int i = 1; i <= def.Levels; i++)
             {
-                var id = new LevelId(_act, i);
+                var id = new LevelId(_mode, _act, i);
                 var rec = App.Save.GetRecord(id);
                 stars += rec?.BestStars ?? 0;
-                LevelCard(id, rec, id.Equals(furthest) && (rec == null || rec.Completions == 0), theme, accent, i - 1);
+                LevelCard(id, rec, open && id.Equals(furthest) && (rec == null || rec.Completions == 0), theme, accent, i - 1);
             }
             _actStars.text = $"{stars} / {def.Levels * 3}";
             _bar.fillAmount = stars / (float)(def.Levels * 3);
@@ -185,7 +204,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Stretch(col, 10, 16, 10, 16);
             UIKit.Column(col, 4, 0, TextAnchor.MiddleCenter);
             var ink = current ? UIKit.Ink : unlocked ? UIKit.Sand : new Color(1f, 0.9f, 0.75f, 0.3f);
-            var num = UIKit.Label(col, id.ToString(), 60, ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            var num = UIKit.Label(col, id.Short, 60, ink, TextAnchor.MiddleCenter, FontStyle.Bold);
             if (current) num.GetComponent<Shadow>().enabled = false;
             UIKit.Size(num, 82);
             if (!unlocked)
@@ -213,7 +232,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(best, 34);
         }
 
-        void ContinueRun() => Play(App.Save.FurthestUnlocked());
+        void ContinueRun() => Play(App.Save.FurthestUnlocked(_mode));
 
         void Play(LevelId id)
         {

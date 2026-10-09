@@ -62,7 +62,10 @@ namespace MummyEscape.Core
         public int MinMechanics = 1;
 
         // ---- Hazards, all on the route (nothing is placed just to mislead) ----
+        /// <summary>Spikes barring the walk (no way round): seen by torchlight, they are disarmed; the dust's spikes count.</summary>
         public int SpikeTraps;
+        /// <summary>Spikes on a shortcut: a spike-free way round costs a few more moves (drawn patterns included).</summary>
+        public int SpikeShortcuts;
         public int DarknessTraps;
         /// <summary>Mirrors of Seth: the controls are reversed for a few steps.</summary>
         public int ReverseTraps;
@@ -81,6 +84,25 @@ namespace MummyEscape.Core
         public int FireJets;
         /// <summary>Laser gates also raise a blue barrier on the way back when their switch is flipped.</summary>
         public bool BlueBarriers;
+
+        // ---- Floors ----
+        /// <summary>Least ground on each floor of a tomb with several (<see cref="LevelValidator.CheckFloors"/>).</summary>
+        public int MinFloorTiles = 12;
+        /// <summary>Least points of interest on each floor of a tomb with several (anything but ground, rock and ladders).</summary>
+        public int MinFloorInterests = 2;
+
+        // ---- Drawn patterns ----
+        /// <summary>Names of the <see cref="SpikePatterns"/> the generator may draw (null = all of them).</summary>
+        public string[] SpikePatternNames;
+        /// <summary>A turning slab may open a corridor of decoy alcoves (<see cref="Level.IsDecoy"/>).</summary>
+        public bool DecoyCorridor = true;
+
+        // ---- Difficulty ----
+        /// <summary>Band the tomb's <see cref="DifficultyScore"/> must land in (0 / int.MaxValue = unchecked).</summary>
+        public int MinScore;
+        public int MaxScore = int.MaxValue;
+
+        public bool AllowsPattern(string name) => SpikePatternNames == null || System.Array.IndexOf(SpikePatternNames, name) >= 0;
 
         // ---- Feel ----
         /// <summary>Minimum Manhattan distance between two points of interest.</summary>
@@ -124,7 +146,7 @@ namespace MummyEscape.Core
 
         public override string ToString() =>
             $"{Id} moves[{MinMoves}-{MaxMoves}] floors:{Floors} cells:{CellsX}x{CellsY} gates:[{string.Join(",", Gates)}] " +
-            $"spikes:{SpikeTraps} dark:{DarknessTraps} mirror:{ReverseTraps} turn:{RotateTraps} dust:{DustPatches} loops:{ExtraLoops}" +
-            $" currents:{Currents} crumbling:{CrumblingTiles} fire:{FireJets}{(BlueBarriers ? " blue" : "")}";
+            $"spikes:{SpikeTraps} shortcuts:{SpikeShortcuts} dark:{DarknessTraps} mirror:{ReverseTraps} turn:{RotateTraps} dust:{DustPatches} loops:{ExtraLoops}" +
+            $" currents:{Currents} crumbling:{CrumblingTiles} fire:{FireJets}{(BlueBarriers ? " blue" : "")} score:[{MinScore}-{(MaxScore == int.MaxValue ? "" : MaxScore.ToString())}]";
     }
 }

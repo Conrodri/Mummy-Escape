@@ -21,7 +21,7 @@ namespace MummyEscape.Core
     /// </summary>
     public static class Tutorial
     {
-        public static readonly LevelId Id = new LevelId(1, 0);
+        public static readonly LevelId Id = new LevelId(Difficulty.Easy, 1, 0);
         public const int Width = 106;
         public const int Height = 5;
         const int Row = 2;

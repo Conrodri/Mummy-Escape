@@ -161,27 +161,38 @@ namespace MummyEscape.Core
         }
     }
 
-    /// <summary>Unlock rules: level N+1 opens after escaping level N; the next act opens after the act's last level.</summary>
+    /// <summary>
+    /// Unlock rules: level N+1 opens after escaping level N; the next act opens after the act's last level; the next mode
+    /// (Facile, Normal, Extrême) opens after the last level of the mode before.
+    /// </summary>
     public static class Progression
     {
         public static bool IsUnlocked(LevelId id, Func<LevelId, bool> isCompleted)
         {
-            if (id.Act == 1 && id.Index == 1) return true;
             var prev = Previous(id);
-            return prev.HasValue && isCompleted(prev.Value);
+            return !prev.HasValue || isCompleted(prev.Value);
         }
+
+        /// <summary>A mode is open once the last level of the mode before it is escaped.</summary>
+        public static bool IsModeUnlocked(Difficulty mode, Func<LevelId, bool> isCompleted) => IsUnlocked(First(mode), isCompleted);
+
+        public static LevelId First(Difficulty mode) => new LevelId(mode, 1, 1);
+
+        public static LevelId Last(Difficulty mode) => new LevelId(mode, DifficultyTable.ActCount, DifficultyTable.GetAct(DifficultyTable.ActCount).Levels);
 
         public static LevelId? Previous(LevelId id)
         {
-            if (id.Index > 1) return new LevelId(id.Act, id.Index - 1);
-            if (id.Act > 1) return new LevelId(id.Act - 1, DifficultyTable.GetAct(id.Act - 1).Levels);
+            if (id.Index > 1) return new LevelId(id.Mode, id.Act, id.Index - 1);
+            if (id.Act > 1) return new LevelId(id.Mode, id.Act - 1, DifficultyTable.GetAct(id.Act - 1).Levels);
+            if (id.Mode > Difficulty.Easy) return Last(id.Mode - 1);
             return null;
         }
 
         public static LevelId? Next(LevelId id)
         {
-            if (id.Index < DifficultyTable.GetAct(id.Act).Levels) return new LevelId(id.Act, id.Index + 1);
-            if (id.Act < DifficultyTable.ActCount) return new LevelId(id.Act + 1, 1);
+            if (id.Index < DifficultyTable.GetAct(id.Act).Levels) return new LevelId(id.Mode, id.Act, id.Index + 1);
+            if (id.Act < DifficultyTable.ActCount) return new LevelId(id.Mode, id.Act + 1, 1);
+            if (id.Mode < Difficulty.Extreme) return First(id.Mode + 1);
             return null;
         }
 

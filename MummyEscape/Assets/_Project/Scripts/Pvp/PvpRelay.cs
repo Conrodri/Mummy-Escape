@@ -76,18 +76,18 @@ namespace MummyEscape.Pvp
         const int MaxTries = 40;
 
         /// <summary>
-        /// Niveau dont chaque labyrinthe reprend le contrat, parmi les actes ouverts au PvP : aux actes 1 et 2, un tombeau
-        /// moyen (niveaux 4 à 7) et 2 étapes par coureur ; à l'acte 3, un grand (niveaux 8 à 10) et 3 étapes.
+        /// Niveau dont chaque labyrinthe reprend le contrat, parmi les actes ouverts au PvP (mode Normal) : aux actes 1 et 2,
+        /// un tombeau moyen (niveaux 2 à 4) et 2 étapes par coureur ; à l'acte 3, un grand (niveaux 4 et 5) et 3 étapes.
         /// </summary>
         public static LevelId LevelFor(int seed)
         {
             uint u = (uint)seed;
             int act = 1 + (int)(u % 3);
-            return act < 3 ? new LevelId(act, 4 + (int)(u / 3 % 4)) : new LevelId(act, 8 + (int)(u / 3 % 3));
+            return act < 3 ? new LevelId(Difficulty.Normal, act, 2 + (int)(u / 3 % 3)) : new LevelId(Difficulty.Normal, act, 4 + (int)(u / 3 % 2));
         }
 
         /// <summary>Dalles de relais de chaque labyrinthe : une de moins que d'étapes par coureur.</summary>
-        public static int RelaysFor(LevelId id) => DifficultyTable.Tier(id.Index) - 1;
+        public static int RelaysFor(LevelId id) => id.Act < 3 ? 1 : 2;
 
         public static ulong GeneratorSeed(int seed) =>
             Pcg32.Hash(Pcg32.Hash(0x52454C4159UL /* "RELAY" */, (ulong)DifficultyTable.GeneratorVersion), (ulong)(uint)seed);
@@ -101,6 +101,15 @@ namespace MummyEscape.Pvp
         {
             var spec = DifficultyTable.Spec(id);
             int relays = RelaysFor(id);
+            // Un mécanisme par étape : des portes en tête si le contrat en a moins. Le relais n'a pas de barème à tenir.
+            while (spec.Gates.Count < relays + 1)
+            {
+                spec.Gates.Insert(0, Gate.Door);
+                spec.MinMoves += 2;
+                spec.MaxMoves += DifficultyTable.ExtraMovesPerGate;
+            }
+            spec.MinScore = 0;
+            spec.MaxScore = int.MaxValue;
             for (int g = 0; g < relays && g < spec.Gates.Count; g++) spec.Gates[g] = Gate.Door;
             // Pas de poussière : ses pics sans détour se passent à la torche, et un relais coupé entre eux laisserait le
             // coéquipier sans issue. Une ombre à la place.

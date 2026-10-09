@@ -159,7 +159,7 @@ namespace MummyEscape.UI.Screens
         {
             var id = _levels[_index];
             var scope = Scopes[_scope];
-            _levelLabel.text = Loc.F("Niveau {0}", id);
+            _levelLabel.text = Loc.F("Niveau {0}", LevelNames.Of(id));
             _actLabel.text = Loc.F("Acte {0}", id.Act) + " · " + Loc.T(DifficultyTable.GetAct(id.Act).Name);
             _info.text = Loc.T("Chargement…");
             _scroll.verticalNormalizedPosition = 1f;

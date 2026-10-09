@@ -46,7 +46,7 @@ namespace MummyEscape.UI.Screens
         {
             Router.Close(this);
             if (!_won) { App.Game.Restart(); return; }
-            var first = new LevelId(1, 1);
+            var first = Progression.First(Difficulty.Easy);
             App.Game.Abandon();
             Router.Reset<MainMenuScreen>();
             PlayGate.Solo(App, first, () =>

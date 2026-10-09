@@ -47,6 +47,17 @@ namespace MummyEscape.Core
                 }
             }
 
+            /// <summary>Spikes the shape lays (the snake has three).</summary>
+            public int SpikeCount
+            {
+                get
+                {
+                    int n = 0;
+                    foreach (var row in Rows) foreach (char ch in row) if (ch == '^') n++;
+                    return n;
+                }
+            }
+
             public bool HasTorch
             {
                 get

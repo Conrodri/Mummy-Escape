@@ -128,7 +128,7 @@ namespace MummyEscape.UI.Screens
             var next = save.FurthestUnlocked();
             var rec = save.GetRecord(next);
             // A new player meets the traps in the tutorial corridor first.
-            if (!save.Data.TutorialDone && next.Equals(new LevelId(1, 1)) && (rec == null || rec.Completions == 0))
+            if (!save.Data.TutorialDone && next.Equals(Progression.First(Difficulty.Easy)) && (rec == null || rec.Completions == 0))
             {
                 _goal.text = Loc.T("Apprends à déjouer les pièges : tutoriel");
                 _goalAction = () => { Router.Open<HudScreen>(); App.Game.StartTutorial(); };
@@ -136,7 +136,7 @@ namespace MummyEscape.UI.Screens
             }
             if (rec == null || rec.Completions == 0)
             {
-                _goal.text = Loc.F("Évade-toi du tombeau {0}", next.ToString());
+                _goal.text = Loc.F("Évade-toi du tombeau {0}", LevelNames.Of(next));
                 _goalAction = () => PlayLevel(next);
                 return;
             }
@@ -144,7 +144,7 @@ namespace MummyEscape.UI.Screens
             {
                 var r = save.GetRecord(id);
                 if (r == null || r.BestStars >= 3) continue;
-                _goal.text = Loc.F("Trois étoiles au tombeau {0} ({1}/3)", id.ToString(), r.BestStars);
+                _goal.text = Loc.F("Trois étoiles au tombeau {0} ({1}/3)", LevelNames.Of(id), r.BestStars);
                 _goalAction = () => PlayLevel(id);
                 return;
             }

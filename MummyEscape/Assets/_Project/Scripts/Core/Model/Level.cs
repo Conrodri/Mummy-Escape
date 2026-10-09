@@ -76,6 +76,8 @@ namespace MummyEscape.Core
 
         internal void AddDecoy(Cell c) => _decoys.Add(c);
 
+        public bool HasDecoys => _decoys.Count > 0;
+
         /// <summary>
         /// Which pair this teleporter belongs to (0, 1, 2… in cell order), -1 when it leads nowhere: both ends of a pair share
         /// a colour on screen, so four portals on a floor never leave the player guessing which goes where.

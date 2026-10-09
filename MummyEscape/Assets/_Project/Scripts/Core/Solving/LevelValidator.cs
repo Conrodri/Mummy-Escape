@@ -37,7 +37,7 @@ namespace MummyEscape.Core
 
             var far = CheckExitDistance(level, spec);
             if (far != null) return far;
-            var floors = CheckFloors(level);
+            var floors = CheckFloors(level, spec);
             if (floors != null) return floors;
             var deadEnd = CheckDeadEnds(level);
             if (deadEnd != null) return deadEnd;
@@ -53,21 +53,32 @@ namespace MummyEscape.Core
             if (spacing != null) return spacing;
             var spikes = CheckSpikeShortcuts(level, solution, spec);
             if (spikes != null) return spikes;
+            var score = CheckScore(level, spec);
+            if (score != null) return score;
             return CheckNoDeadLock(level, hazards: true, darkTolls: HasTollSpikes(level));
         }
 
-        /// <summary>Least ground on each floor of a tomb with several: no floor is a mere landing.</summary>
-        public const int MinFloorTiles = 12;
-        /// <summary>Least points of interest (anything but plain ground, rock and ladders) on each floor of a tomb with several.</summary>
-        public const int MinFloorInterests = 2;
+        /// <summary>
+        /// The tomb's difficulty (<see cref="DifficultyScore"/>, read from its tiles) lands in the band of its act and mode:
+        /// a drawn pattern laying more spikes than asked must not push a Facile tomb into Normal.
+        /// </summary>
+        public static string CheckScore(Level level, LevelSpec spec)
+        {
+            if (spec.MinScore <= 0 && spec.MaxScore == int.MaxValue) return null;
+            int score = DifficultyScore.Of(level).Score;
+            if (score < spec.MinScore) return $"score: {score} < {spec.MinScore}";
+            if (score > spec.MaxScore) return $"score: {score} > {spec.MaxScore}";
+            return null;
+        }
 
         /// <summary>
-        /// Every floor is worth the climb: at least <see cref="MinFloorTiles"/> tiles of ground and
-        /// <see cref="MinFloorInterests"/> things to remember besides its ladders (a corridor from the start to a ladder is
+        /// Every floor is worth the climb: at least <see cref="LevelSpec.MinFloorTiles"/> tiles of ground and
+        /// <see cref="LevelSpec.MinFloorInterests"/> things to remember besides its ladders (a corridor from the start to a ladder is
         /// not a floor).
         /// </summary>
-        public static string CheckFloors(Level level)
+        public static string CheckFloors(Level level, LevelSpec spec = null)
         {
+            int minTiles = spec?.MinFloorTiles ?? 12, minInterests = spec?.MinFloorInterests ?? 2;
             if (level.Floors < 2) return null;
             var ground = new int[level.Floors];
             var interests = new int[level.Floors];
@@ -79,8 +90,8 @@ namespace MummyEscape.Core
             }
             for (int f = 0; f < level.Floors; f++)
             {
-                if (ground[f] < MinFloorTiles) return $"floor: {f} has {ground[f]} tiles of ground < {MinFloorTiles}";
-                if (interests[f] < MinFloorInterests) return $"floor: {f} has {interests[f]} points of interest < {MinFloorInterests}";
+                if (ground[f] < minTiles) return $"floor: {f} has {ground[f]} tiles of ground < {minTiles}";
+                if (interests[f] < minInterests) return $"floor: {f} has {interests[f]} points of interest < {minInterests}";
             }
             return null;
         }
@@ -101,21 +112,21 @@ namespace MummyEscape.Core
         /// </summary>
         public static string CheckSpikeShortcuts(Level level, Solution solution, LevelSpec spec)
         {
-            bool any = false, toll = false, torch = HasWallTorch(level);
-            int shortcuts = 0;
+            bool any = false, toll = false;
+            int shortcuts = 0, barring = 0;
             foreach (var c in level.AllCells())
             {
                 var t = level[c];
                 if (t.Type != TileType.Trap || t.Trap != TrapKind.Spikes) continue;
                 any = true;
                 int extra = SpikeDetour(level, c);
-                if (extra < 0 && torch) { toll = true; continue; }
-                if (extra < 0) return $"spikes: no way around {c}";
+                if (extra < 0) { toll = true; barring++; continue; }
                 int saving = SpikeSaving(level, c, solution.Moves);
                 if (saving < MinSpikeDetour) return $"spikes: {c} saves only {saving} moves on the walk";
                 shortcuts++;
             }
-            if (shortcuts < spec.SpikeTraps) return $"spikes: {shortcuts} shortcuts < {spec.SpikeTraps}";
+            if (shortcuts < spec.SpikeShortcuts) return $"spikes: {shortcuts} shortcuts < {spec.SpikeShortcuts}";
+            if (barring < spec.SpikeTraps) return $"spikes: {barring} barring the walk < {spec.SpikeTraps}";
             if (!any) return null;
             var safe = SolverOptions.Default;
             safe.AvoidSpikes = true;

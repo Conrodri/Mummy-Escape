@@ -128,13 +128,24 @@ namespace MummyEscape.Core
                 // way on the final route. Pruning then keeps their safe ways and drops the rest of the wings.
                 int torchDust = 0, drawnSpikes = 0, turned = 0;
                 // The turning slab before a corridor of decoy alcoves (once), its torch variant taking a dust patch.
-                if (_spec.RotateTraps > 0)
+                if (_spec.RotateTraps > 0 && _spec.DecoyCorridor)
                 {
                     if (torchDust < _spec.DustPatches && DrawDecoyCorridor(walk, torch: true)) { torchDust++; turned++; }
                     else if (DrawDecoyCorridor(walk, torch: false)) turned++;
                 }
-                for (; torchDust < _spec.DustPatches && drawnSpikes < _spec.SpikeTraps && DrawTorchPattern(ref walk); torchDust++) drawnSpikes += _shapeSpikes;
-                while (drawnSpikes < _spec.SpikeTraps && DrawSpikePattern(ref walk)) drawnSpikes += _shapeSpikes;
+                // Shapes lay spike shortcuts: never more than the spec asks for.
+                for (; torchDust < _spec.DustPatches && drawnSpikes < _spec.SpikeShortcuts; torchDust++)
+                {
+                    _shortcutRoom = _spec.SpikeShortcuts - drawnSpikes;
+                    if (!DrawTorchPattern(ref walk)) break;
+                    drawnSpikes += _shapeSpikes;
+                }
+                while (drawnSpikes < _spec.SpikeShortcuts)
+                {
+                    _shortcutRoom = _spec.SpikeShortcuts - drawnSpikes;
+                    if (!DrawSpikePattern(ref walk)) break;
+                    drawnSpikes += _shapeSpikes;
+                }
                 if (walk == null) { failure = "route: lost after a shortcut"; return null; }
                 PruneWings(walk);
 
@@ -152,7 +163,7 @@ namespace MummyEscape.Core
                     var ground = new int[_spec.Floors];
                     foreach (var c in _level.AllCells()) if (Walkable(c)) ground[c.Floor]++;
                     for (int f = 0; f < _spec.Floors; f++)
-                        if (ground[f] < LevelValidator.MinFloorTiles) { failure = $"floor: {f} has {ground[f]} tiles of ground"; return null; }
+                        if (ground[f] < _spec.MinFloorTiles) { failure = $"floor: {f} has {ground[f]} tiles of ground"; return null; }
                 }
                 // Cheap early reject: the planned walk is close to the par (each portal pad jump counts as no move).
                 int planned = route.Count - 1 - _spec.RequiredPortals;
@@ -161,7 +172,8 @@ namespace MummyEscape.Core
                 // Act mechanics, laid on the route once the layout is final. Each one is kept only where no sequence of
                 // moves can wall the player in (see LevelValidator.CheckNoDeadLock).
                 if (_spec.BlueBarriers)
-                    foreach (var laser in _lasers) PlaceBlueBarrier(route, laser);
+                    foreach (var laser in _lasers)
+                        if (!PlaceBlueBarrier(route, laser)) { failure = "blue: no spot behind the switch"; return null; }
                 for (int k = 0; k < _spec.Currents; k++)
                     if (!PlaceCurrent(route)) { failure = "current: no spot that cannot wall the player in"; return null; }
                 for (int k = 0; k < _spec.CrumblingTiles; k++)
@@ -169,16 +181,26 @@ namespace MummyEscape.Core
                 for (int k = 0; k < _spec.FireJets; k++)
                     if (!PlaceFireJet(route)) { failure = "fire: no spot"; return null; }
 
+                // The spikes past the dust bar the way: they are spike traps of the spec, to disarm by torchlight.
+                int barring = 0;
                 for (int k = torchDust; k < _spec.DustPatches; k++)
                 {
                     if (!PlaceDust(route, out int dustAt, out var sconce)) { failure = "dust: no spot"; return null; }
                     if (!PlaceTollSpikes(route, dustAt, sconce)) { failure = "dust: no spikes past it to need the torch for"; return null; }
+                    barring += LevelValidator.TollSpikes;
                 }
 
                 // Traps sit on the route only: something to remember and get past, never a pointless side hazard.
-                // Spikes guard a shortcut, with a longer way round: a life for a few moves, the player's call.
-                for (int k = drawnSpikes; k < _spec.SpikeTraps; k++)
+                // Spike traps bar the walk: seen by torchlight, they are disarmed; walked on in the dark, they hurt.
+                for (int k = barring; k < _spec.SpikeTraps; k++)
+                    if (!PlaceBarringSpikes(route)) { failure = "spikes: no spot to bar the walk"; return null; }
+                // Spike shortcuts, with a longer way round: a life for a few moves, the player's call.
+                for (int k = drawnSpikes; k < _spec.SpikeShortcuts; k++)
+                {
+                    _shortcutRoom = _spec.SpikeShortcuts - k;
                     if (!PlaceSpikes(route)) { failure = "spikes: no shortcut with a way round"; return null; }
+                    k += _shapeSpikes - 1;
+                }
                 for (int k = 0; k < _spec.DarknessTraps; k++)
                     if (!PlaceTrap(TrapKind.Darkness, route)) { failure = "darkness: no spot"; return null; }
                 for (int k = 0; k < _spec.ReverseTraps; k++)
@@ -970,12 +992,12 @@ namespace MummyEscape.Core
 
             /// <summary>
             /// Flipping a laser switch raises a blue barrier on the way the player came: the corridor behind closes
-            /// until the switch is flipped back. Optional: skipped when the route offers no clean spot.
+            /// until the switch is flipped back. False when the route offers no clean spot.
             /// </summary>
-            void PlaceBlueBarrier(List<Cell> route, (Cell barrier, Cell toggle, int channel) laser)
+            bool PlaceBlueBarrier(List<Cell> route, (Cell barrier, Cell toggle, int channel) laser)
             {
                 int cut = route.IndexOf(laser.barrier);
-                if (cut < 0) return;
+                if (cut < 0) return false;
                 // Where the switch branch leaves the route: blue goes before that junction, so it seals the way back.
                 var fromSwitch = Distances(laser.toggle, AllOpen, out _);
                 int junction = -1, best = int.MaxValue;
@@ -994,8 +1016,9 @@ namespace MummyEscape.Core
                     _level[c] = new Tile { Type = TileType.Barrier, Channel = (byte)laser.channel, Param = 1 };
                     if (LevelValidator.CheckNoDeadLock(_level) != null) { _level[c] = Tile.Floor; continue; }
                     Reserve(c);
-                    return;
+                    return true;
                 }
+                return false;
             }
 
             /// <summary>
@@ -1308,6 +1331,7 @@ namespace MummyEscape.Core
                     if (IsFree(c) && Degree(c) == 2 && FarFromTraps(c) && route.IndexOf(c) == i) spots.Add(i);
                 }
                 _rng.Shuffle(spots);
+                _shapeSpikes = 1;
                 foreach (int k in spots)
                     if (TrySpikes(route, k)) return true;
                 return DrawPattern(ref route, torch: false, open: false); // the route stays: mechanics already lie on it
@@ -1428,8 +1452,9 @@ namespace MummyEscape.Core
                 var route = walk;
                 int lastSpot = torch ? Math.Max(6, route.Count / 2) : route.Count - 2;
                 var shapes = new List<SpikePatterns.Pattern>();
+                // Only the shapes the mode allows (the snake and the deep bridge are for the harder ones).
                 foreach (var p in SpikePatterns.All)
-                    if (p.HasTorch == torch) { shapes.Add(p); shapes.Add(SpikePatterns.Mirrored(p)); }
+                    if (p.HasTorch == torch && _spec.AllowsPattern(p.Name) && p.SpikeCount <= _shortcutRoom) { shapes.Add(p); shapes.Add(SpikePatterns.Mirrored(p)); }
                 var comp = FloorComponents();
                 var onRoute = new HashSet<Cell>(route);
                 var starts = new List<int>();
@@ -1624,6 +1649,33 @@ namespace MummyEscape.Core
 
             /// <summary>Spikes the last shape laid (the snake has three).</summary>
             int _shapeSpikes;
+            /// <summary>Spike shortcuts the spec still asks for: no shape lays more.</summary>
+            int _shortcutRoom;
+
+            /// <summary>
+            /// Spikes across a corridor of the walk with no way round: the torch shows them, the disarm button clears them
+            /// (one action). Blind or with the torch out, walking on is a hit, and then the mummy knows where they are.
+            /// </summary>
+            bool PlaceBarringSpikes(List<Cell> route)
+            {
+                var spots = new List<int>();
+                for (int i = 3; i < route.Count - 1; i++)
+                {
+                    var c = route[i];
+                    if (IsFree(c) && Degree(c) == 2 && FarFromTraps(c) && route.IndexOf(c) == i && route[i - 1].Floor == c.Floor && route[i + 1].Floor == c.Floor) spots.Add(i);
+                }
+                _rng.Shuffle(spots);
+                foreach (int i in spots)
+                {
+                    var c = route[i];
+                    _level[c] = new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes, TrapIndex = (byte)_traps.Count };
+                    if (LevelValidator.SpikeDetour(_level, c) >= 0) { _level[c] = Tile.Floor; continue; }
+                    _traps.Add(c);
+                    _reserved[_level.IndexOf(c)] = true;
+                    return true;
+                }
+                return false;
+            }
 
             /// <summary>Dust on the walk 2 or 3 tiles before route[<paramref name="start"/>], where the torch shapes begin.</summary>
             bool TorchDust(List<Cell> route, int start, out Cell? dust)

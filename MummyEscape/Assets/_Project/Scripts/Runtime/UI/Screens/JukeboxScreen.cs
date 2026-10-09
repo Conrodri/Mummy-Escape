@@ -51,7 +51,7 @@ namespace MummyEscape.UI.Screens
             {
                 var def = DifficultyTable.GetAct(act);
                 Section(Loc.F("Acte {0} — {1}", act, Loc.T(def.Name)));
-                int floors = Mathf.Max(DifficultyTable.Spec(new LevelId(act, 1)).Floors, DifficultyTable.Spec(new LevelId(act, def.Levels)).Floors);
+                int floors = def.Floors;
                 for (int f = 1; f <= floors; f++)
                 {
                     if (floors > 1) Floor(Loc.F("Étage {0}", f));

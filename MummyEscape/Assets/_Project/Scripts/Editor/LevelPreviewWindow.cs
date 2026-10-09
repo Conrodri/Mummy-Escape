@@ -13,6 +13,7 @@ namespace MummyEscape.EditorTools
         HashSet<Cell> _path = new HashSet<Cell>();
         Vector2 _scroll;
         string _error;
+        Difficulty _mode = Difficulty.Normal;
 
         [MenuItem("Mummy Rush/Level Preview", priority = 20)]
         static void Open() => GetWindow<LevelPreviewWindow>("Level Preview");
@@ -21,6 +22,7 @@ namespace MummyEscape.EditorTools
         {
             using (new EditorGUILayout.HorizontalScope())
             {
+                _mode = (Difficulty)EditorGUILayout.EnumPopup(_mode, GUILayout.Width(80));
                 _act = EditorGUILayout.IntSlider("Acte", _act, 1, DifficultyTable.ActCount);
                 _index = EditorGUILayout.IntSlider("Niveau", _index, 1, DifficultyTable.GetAct(_act).Levels);
                 _variant = Mathf.Max(0, EditorGUILayout.IntField("Labyrinthe n°", _variant));
@@ -57,7 +59,7 @@ namespace MummyEscape.EditorTools
             _error = null;
             try
             {
-                _level = LevelGenerator.Generate(new LevelId(_act, _index), _variant);
+                _level = LevelGenerator.Generate(new LevelId(_mode, _act, _index), _variant);
                 _path.Clear();
                 var st = Rules.Initial(_level);
                 foreach (var a in _level.Solution.Actions)

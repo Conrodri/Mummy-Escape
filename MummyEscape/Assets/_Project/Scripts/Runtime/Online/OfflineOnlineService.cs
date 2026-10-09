@@ -197,7 +197,7 @@ namespace MummyEscape.Online
         void AddDemoScores(LevelId level, LeaderboardScope scope, List<(long, LeaderboardRow)> all)
         {
             var spec = DifficultyTable.Spec(level);
-            var rng = new Pcg32(Pcg32.Hash(77, (ulong)(level.Act * 1000 + level.Index)));
+            var rng = new Pcg32(Pcg32.Hash(77, (ulong)level.GetHashCode()));
             int count = scope == LeaderboardScope.Friends ? _friends.Count : 160;
             for (int i = 0; i < count; i++)
             {
@@ -218,9 +218,9 @@ namespace MummyEscape.Online
 
         void SeedDemoFriends()
         {
-            AddDemoFriend("Nefertari#2041", true, "2-4", 31, 1480);
-            AddDemoFriend("Imhotep#7310", false, "1-9", 22, 0);
-            AddDemoFriend("Tiye#5562", true, "3-2", 47, 1720);
+            AddDemoFriend("Nefertari#2041", true, "N2-4", 31, 1480);
+            AddDemoFriend("Imhotep#7310", false, "F4-3", 22, 0);
+            AddDemoFriend("Tiye#5562", true, "X1-2", 47, 1720);
             _requests.Add(new FriendRequest { PlayerId = "demo-req", Name = "Ahmose#8127" });
         }
 

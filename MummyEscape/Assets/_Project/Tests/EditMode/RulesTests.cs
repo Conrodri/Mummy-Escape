@@ -180,7 +180,7 @@ namespace MummyEscape.Tests
                 "#S.^..E#",
                 "########");
             Assert.AreEqual(8, LevelValidator.SpikeDetour(lvl, new Cell(0, 3, 1)), "10 moves round instead of 2");
-            var one = new LevelSpec { SpikeTraps = 1 };
+            var one = new LevelSpec { SpikeShortcuts = 1 };
             Assert.AreEqual(4, LevelValidator.SpikeSaving(lvl, new Cell(0, 3, 1), Solver.Solve(lvl).Moves), "9 moves round instead of 5 on the walk");
             Assert.IsNull(LevelValidator.CheckSpikeShortcuts(lvl, Solver.Solve(lvl), one));
             var safe = SolverOptions.Default;

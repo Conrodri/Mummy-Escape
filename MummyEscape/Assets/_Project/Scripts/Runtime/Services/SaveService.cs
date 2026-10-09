@@ -10,8 +10,11 @@ namespace MummyEscape.Services
     [Serializable]
     public sealed class SaveData
     {
-        /// <summary>2 = records compare runs by moves above the optimal route (every run is a new maze).</summary>
-        public int Version = 2;
+        /// <summary>
+        /// 2 = records compare runs by moves above the optimal route (every run is a new maze). 3 = the campaign in three
+        /// modes (Facile, Normal, Extrême) of 5 levels per act: the progress of the old campaign was reset.
+        /// </summary>
+        public int Version = 3;
         public List<LevelRecord> Records = new List<LevelRecord>();
         public int Coins;
         /// <summary>Every shop item owned, whatever its slot (mummy, colour, torch, hat, shoes).</summary>
@@ -84,11 +87,13 @@ namespace MummyEscape.Services
             Data.SelectedTorch = SkinCatalog.Get(Data.SelectedTorch, CosmeticSlot.Torch).Id;
             Data.SelectedHat = SkinCatalog.Get(Data.SelectedHat, CosmeticSlot.Hat).Id;
             Data.SelectedShoes = SkinCatalog.Get(Data.SelectedShoes, CosmeticSlot.Shoes).Id;
-            if (Data.Version < 2)
+            if (Data.Version < 3)
             {
-                // v1 records counted raw moves on a fixed maze: only a 3-star run is known to be perfect.
-                foreach (var r in Data.Records) r.BestOverPar = r.BestStars >= 3 ? 0 : -1;
-                Data.Version = 2;
+                // The campaign became three modes of 5 levels per act: the old levels are gone, progress starts over
+                // (scarabs, skins and the tutorial are kept).
+                Data.Records.Clear();
+                Data.Version = 3;
+                Save();
             }
         }
 
@@ -119,7 +124,8 @@ namespace MummyEscape.Services
         static void Sanitize(SaveData d)
         {
             d.Records ??= new List<LevelRecord>();
-            d.Records.RemoveAll(r => r == null || string.IsNullOrEmpty(r.Key));
+            // Records of the old campaign (keys without a mode, from a cloud copy or another device) are dropped too.
+            d.Records.RemoveAll(r => r == null || !LevelId.TryParseKey(r.Key, out _));
             d.OwnedSkins ??= new List<string>();
             d.OwnedSkins.RemoveAll(string.IsNullOrEmpty);
             d.PassesOwned ??= new List<string>();
@@ -344,11 +350,23 @@ namespace MummyEscape.Services
             Save();
         }
 
-        /// <summary>Highest unlocked level, used to resume quickly from the main menu.</summary>
+        /// <summary>Highest unlocked level (modes in order), used to resume quickly from the main menu.</summary>
         public LevelId FurthestUnlocked()
         {
-            var last = new LevelId(1, 1);
+            var last = Progression.First(Difficulty.Easy);
             foreach (var id in DifficultyTable.AllLevels())
+            {
+                if (!IsUnlocked(id)) break;
+                last = id;
+            }
+            return last;
+        }
+
+        /// <summary>Highest unlocked level of one mode (its first level while the mode is still locked).</summary>
+        public LevelId FurthestUnlocked(Difficulty mode)
+        {
+            var last = Progression.First(mode);
+            foreach (var id in DifficultyTable.Levels(mode))
             {
                 if (!IsUnlocked(id)) break;
                 last = id;

@@ -1,3 +1,4 @@
+using MummyEscape.Core;
 using MummyEscape.App;
 using MummyEscape.Pvp;
 using MummyEscape.Visual;
@@ -19,12 +20,8 @@ namespace MummyEscape.Services
             return stars;
         }
 
-        /// <summary>Act of a record key ("level_3_7" → 3), 0 when unreadable.</summary>
-        static int ActOf(string key)
-        {
-            var parts = key?.Split('_');
-            return parts != null && parts.Length == 3 && int.TryParse(parts[1], out int act) ? act : 0;
-        }
+        /// <summary>Act of a record key ("level_n3_4" → 3, whatever the mode), 0 when unreadable.</summary>
+        static int ActOf(string key) => LevelId.TryParseKey(key, out var id) ? id.Act : 0;
 
         /// <summary>Different tombs escaped in under <see cref="Titles.SpeedLimitMs"/>.</summary>
         public static int FastTombs(SaveService save)

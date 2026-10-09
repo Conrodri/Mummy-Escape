@@ -99,13 +99,13 @@ namespace MummyEscape.Tests
         {
             var d = new PlayerPvpData { Elo = 1600, Season = "2026-09", Day = "2026-09-30", SeasonDuels = 40, SeasonDuelsLastWeek = 8 };
             Seasons.Roll(d, new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc));
-            Assert.AreEqual(1300, d.Elo);
+            Assert.AreEqual(1450, d.Elo);
             Assert.AreEqual(1600, d.LastSeason.FinalElo);
             Assert.AreEqual(40, d.LastSeason.Duels);
             Assert.AreEqual(0, d.SeasonDuels);
             Assert.AreEqual("2026-10", d.Season);
             Assert.AreEqual("2026-10-01", d.Day);
-            Assert.AreEqual(900, Seasons.SoftReset(800));
+            Assert.AreEqual(850, Seasons.SoftReset(800));
             Assert.IsTrue(Seasons.IsLastWeekOfSeason(new DateTime(2026, 10, 25)));
             Assert.IsFalse(Seasons.IsLastWeekOfSeason(new DateTime(2026, 10, 24)));
         }
@@ -187,7 +187,8 @@ namespace MummyEscape.Tests
             {
                 var id = PvpArena.LevelFor(seed);
                 Assert.That(id.Act, Is.InRange(1, 3));
-                Assert.That(id.Index, Is.InRange(4, 7));
+                Assert.That(id.Index, Is.InRange(2, 4));
+                Assert.AreEqual(Difficulty.Normal, id.Mode);
             }
             var a = PvpArena.Generate(4242);
             var b = PvpArena.Generate(4242);
@@ -339,7 +340,7 @@ namespace MummyEscape.Tests
         [Test]
         public void Pace_SoloTimeToBeatAndPerfectMinimum()
         {
-            foreach (var id in new[] { new LevelId(1, 5), new LevelId(3, 10), new LevelId(5, 5) })
+            foreach (var id in new[] { new LevelId(Difficulty.Easy, 1, 5), new LevelId(Difficulty.Normal, 3, 5), new LevelId(Difficulty.Extreme, 5, 5) })
             {
                 var level = LevelGenerator.Generate(id, 2);
                 var pace = TombPace.Of(level);
@@ -642,6 +643,8 @@ namespace MummyEscape.Tests
         static (DuelRecord alice, DuelRecord rival) PlayDuel(PvpServer server, MemoryPvpStore store, string rival)
         {
             store.SoloStars[rival] = 50;
+            // Alice plays every duel: her combat energy (3 points) comes back in the meantime.
+            _now = _now.AddMilliseconds(EnergyConfig.RegenMs * EnergyConfig.PvpMax);
             var first = Find(server, "alice");
             var level = PvpServer.Arena(first.Seed);
             var run = Finish(first.MatchId, Stamp(level, level.Solution.Actions, 900));

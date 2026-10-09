@@ -21,19 +21,18 @@ namespace MummyEscape.EditorTools
                 var spec = DifficultyTable.Spec(id);
                 var l = LevelGenerator.Generate(id);
                 var s = l.Solution;
-                sb.AppendLine($"{id} | {s.Moves} [{spec.MinMoves}-{spec.MaxMoves}] | {s.ButtonsPressed} {s.Interactions} {s.HpLeft} | {spec.Floors} {spec.Width}x{spec.Height}");
+                sb.AppendLine($"{id} | {s.Moves} [{spec.MinMoves}-{spec.MaxMoves}] | {s.ButtonsPressed} {s.Interactions} {s.HpLeft} | {spec.Floors} {spec.Width}x{spec.Height} | {DifficultyScore.Of(l)}");
             }
             return sb.ToString();
         }
 
-        [CliCommand("mummy_level", "Mummy Rush: ASCII map and optimal solution of one level (e.g. --id 2-5).", Tags = new[] { "mummy" })]
-        public static string Level([CliArg("id", "Level id act-index, e.g. 1-3")] string id = "1-1",
+        [CliCommand("mummy_level", "Mummy Rush: ASCII map and optimal solution of one level (e.g. --id N2-5: mode F, N or X, then act-index).", Tags = new[] { "mummy" })]
+        public static string Level([CliArg("id", "Level id mode+act-index, e.g. F1-3, N2-5, X5-1 (F when the letter is left out)")] string id = "F1-1",
                                    [CliArg("variant", "Maze number (every run of a level draws the next one)")] int variant = 0)
         {
-            var parts = id.Split('-');
-            var lid = new LevelId(int.Parse(parts[0]), int.Parse(parts[1]));
+            if (!LevelId.TryParse(id, out var lid)) return $"Unknown level id {id} (expected F1-3, N2-5, X5-1)";
             var l = LevelGenerator.Generate(lid, variant);
-            return $"{l.Spec}\npar {l.Solution.Moves}, interactions {l.Solution.Interactions}, hp left {l.Solution.HpLeft}\n" +
+            return $"{l.Spec}\ndifficulty {DifficultyScore.Of(l)}\npar {l.Solution.Moves}, interactions {l.Solution.Interactions}, hp left {l.Solution.HpLeft}\n" +
                    $"solution: {string.Join(" ", l.Solution.Actions)}\n\n{l.ToAscii()}";
         }
 

@@ -64,17 +64,21 @@ Tout est déterministe : un couple (niveau, variante) produit **la même carte s
 
 **Des allers-retours, pas un couloir.** Les mécanismes forment une chaîne construite à rebours depuis la sortie : le dernier coupe le chemin de la sortie, son bouton (ou son portail) est placé là où l'atteindre oblige à revenir sur ses pas, la porte précédente verrouille le chemin vers ce bouton, et ainsi de suite. On va à gauche pour la porte de droite, derrière laquelle attend le bouton de la porte de gauche, derrière laquelle un portail mène à la sortie. Autour de ce parcours, des **chemins courts et longs** (boucles, contournements creusés dans la roche) à distinguer de mémoire.
 
-**Chaque acte suit trois paliers** (`DifficultyTable.Tier`) : niveaux 1 à 3 = **1 mécanisme et 1 piège**, niveaux 4 à 7 = **2 et 2**, niveaux 8 à 10 = **3 et 3** (les pièges de l'acte à tour de rôle). Les étages s'empilent : **2 étages à partir du niveau 3-5** et pour tout l'acte 4, **3 étages pour tout l'acte 5**.
+**Trois modes, cinq actes chacun** : Facile (`F`), Normal (`N`) et Extrême (`X`), 5 niveaux par acte (ids `F1-1`, `N2-3`, `X5-5`). Finir le dernier niveau d'un mode ouvre le suivant (`Progression.IsModeUnlocked`).
 
-| Acte | Par (palier 1 → 3) | Étages | Taille | Mécanismes | Pièges | Mécanique de l'acte |
-|------|-------------------|--------|--------|------------|--------|---------------------|
-| 1 | 14-22 → 18-34 | 1 | 6×6 | porte / portail | ombre, pics | — |
-| 2 | 16-24 → 20-36 | 1 | 6×6 | porte / portail | pics, poussière, ombre | 1 → 2 courants |
-| 3 | 18-26 → 22-45 | 1, puis 2 dès 3-5 | 6×6, puis 5×5 | portail (verrouillé ou non) / porte | poussière, pics, ombre | 1 → 2 dalles fragiles |
-| 4 | 20-30 → 24-45 | 2 | 5×5 | laser dans chaque niveau, portail / porte | ombre, pics, poussière | barrières rouges et bleues |
-| 5 | 22-34 → 26-46 | 3 | 4×4 | portail (maudit ou non), porte, laser | poussière, ombre, pics | 2 jets de flammes + 1 dalle |
+**Un barème de difficulté** (`Core/Generation/DifficultyScore.cs`) : chaque élément du tombeau vaut des points. Étage supplémentaire 8, dalle tournante 6, miroir 5, torche murale 5, portail verrouillé ou maudit 5, laser 4, porte 3, portail 3, ombre 3, jet de flammes 3, pic 2, raccourci à pics 3, barrière bleue 2, courant 2, dalle fragile 2. Chaque acte a 4 seuils : le maximum du Facile est le minimum du Normal, le maximum du Normal le minimum de l'Extrême. Dans un mode, le score monte du minimum au maximum au fil des 5 niveaux. `DifficultyTable.FillBudget` choisit le mélange portes / torche / pièges / raccourcis le plus proche de la cible, et le validateur vérifie le score mesuré sur le tombeau généré (`LevelValidator.CheckScore`). LevelLab affiche les scores (`--specs`, `--mode F|N|X`).
 
-(Plafond du par : base de l'acte, +6 coups par mécanisme supplémentaire, +4 par étage supplémentaire, +3 pour un portail verrouillé, qui demande son levier ; le minimum monte de 2 par palier. Si une graine ne donne aucun tombeau valide, la recherche reprend avec +3 puis +6 coups de marge, de façon déterministe.)
+| Acte | Seuils F / N / X | Étages | Taille | Mécanismes | Pièges | Mécanique de l'acte (F / N / X) |
+|------|------------------|--------|--------|------------|--------|---------------------------------|
+| 1 | 7 · 12 · 18 · 24 | 1 | 6×6 | porte / portail | ombre | — |
+| 2 | 9 · 15 · 22 · 30 | 1 | 6×6 | porte / portail, torche | ombre, miroir | 1 / 1 / 2 courants |
+| 3 | 17 · 25 · 33 · 42 | 2 | 5×5 | portail (verrouillé ou non) / porte, torche | dalle tournante, miroir, ombre | 1 / 1 / 2 dalles fragiles |
+| 4 | 16 · 25 · 34 · 44 | 2 | 5×5 | laser dans chaque niveau, portail maudit / porte, torche | ombre, miroir, dalle tournante | barrières rouges et bleues (bleues en N et X) |
+| 5 | 28 · 36 · 45 · 55 | 3 | 4×4 | portail (maudit ou non), porte, laser, torche | ombre, miroir, dalle tournante | 1 / 2 / 2 jets de flammes + 1 dalle |
+
+Par mode : Facile = 2 portes, 2 pièges au plus, motifs simples, pas de raccourci à pics ni de barrière bleue ; Normal = 3 portes et 3 pièges, un raccourci à pics possible, couloir leurre ; Extrême = 3 portes et 4 pièges, tous les motifs, 2 points d'intérêt par étage. **Chaque tombeau a 2 pièges à pics** qui barrent le chemin et se désamorcent (les pics de péage de la poussière en font partie) ; les raccourcis à pics s'y ajoutent, seulement sur les tombeaux à un étage et jamais avec une torche.
+
+(Plafond du par : base de l'acte, +9 coups par mécanisme supplémentaire, +4 par étage supplémentaire, +3 pour un portail verrouillé, +1 par pic à désamorcer, plus la place du détour de la torche, 56 coups au plus. Si une graine ne donne aucun tombeau valide, la recherche reprend avec +3 puis +6 coups de marge, de façon déterministe.)
 
 **Un thème et une mécanique par acte** (`Runtime/Visual/TombTheme.cs` pour l'ambiance, `DifficultyTable` pour les règles) :
 

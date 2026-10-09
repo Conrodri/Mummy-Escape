@@ -391,7 +391,7 @@ namespace MummyEscape.UI.Screens
         {
             var match = App.Game.Match;
             string title = App.Game.InTutorial ? Loc.T("Tutoriel")
-                         : match == null ? Loc.F("Niveau {0}", id)
+                         : match == null ? Loc.F("Niveau {0}", LevelNames.Of(id))
                          : match.HasGhost ? Loc.F("Duel contre {0}", match.Ghost.PlayerName)
                          : Loc.T("Duel");
             _introText.text = title + "\n<size=36>" + Loc.T("Les dieux scellent un nouveau tombeau…") + "</size>";

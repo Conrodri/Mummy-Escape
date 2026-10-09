@@ -369,7 +369,7 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(note, 120);
                 return;
             }
-            _furthest.text = p.FurthestLevel;
+            _furthest.text = LevelId.TryParse(p.FurthestLevel, out var furthest) ? LevelNames.Of(furthest) : p.FurthestLevel;
             int mine = App.Save.TotalStars;
             _stars.text = $"{p.TotalStars} <size=34><color=#9C8B70>" + Loc.F("/ toi {0}", mine) + "</color></size>";
 
@@ -381,7 +381,7 @@ namespace MummyEscape.UI.Screens
                 if (!theyHave && !iHave) continue;
                 bool iWin = iHave && (!theyHave || LevelResult.CompareRuns(me.BestOverPar, me.BestTimeMs, theirs.BestOverPar, theirs.BestTimeMs) < 0);
                 var level = id;
-                Row(id.ToString(), Format(theirs), Format(me), iWin, () =>
+                Row(LevelNames.Of(id), Format(theirs), Format(me), iWin, () =>
                 {
                     Router.Close(this);
                     var lb = Router.Get<LeaderboardScreen>();

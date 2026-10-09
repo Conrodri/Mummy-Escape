@@ -7,14 +7,16 @@ using MummyEscape.Core;
 // Usage: dotnet run -c Release --project tools/LevelLab              -> stats over 20 mazes (variants) of every level
 //        dotnet run -c Release --project tools/LevelLab -- --variants 100 [--act 2]
 //        dotnet run -c Release --project tools/LevelLab -- 2-5 [variant] -> ASCII map + optimal path of one maze
+//        dotnet run -c Release --project tools/LevelLab -- --mode N        -> one mode only (F, N or X); level ids take the mode letter (N2-5, F when left out)
+LevelId Parse(string text) => LevelId.TryParse(text, out var parsed) ? parsed : throw new ArgumentException($"level id expected (F2-3, N1-5, X5-1): {text}");
 if (args.Length >= 1 && args[0].Contains("-") && !args[0].StartsWith("--"))
 {
-    var parts = args[0].Split('-');
-    var id = new LevelId(int.Parse(parts[0]), int.Parse(parts[1]));
+    var id = Parse(args[0]);
     int variant = args.Length > 1 ? int.Parse(args[1]) : 0;
     var level = LevelGenerator.Generate(id, variant);
     var sol = level.Solution;
     Console.WriteLine(DifficultyTable.Spec(id));
+    Console.WriteLine($"difficulty: spec {DifficultyScore.Of(DifficultyTable.Spec(id))} | tomb {DifficultyScore.Of(level)} | target {DifficultyTable.Target(id)}");
     Console.WriteLine($"variant {variant} | par {sol.Moves} | buttons {sol.ButtonsPressed} portals {sol.Teleports} disarms {sol.Disarms} | hp left {sol.HpLeft} | attempt {level.Attempt}");
     Console.WriteLine("solution: " + string.Join(" ", sol.Actions));
     var histogram = new SortedDictionary<string, int>();
@@ -35,8 +37,7 @@ if (args.Length >= 1 && args[0].Contains("-") && !args[0].StartsWith("--"))
 
 if (args.Length >= 2 && args[0] == "--why")
 {
-    var p = args[1].Split('-');
-    var wid = new LevelId(int.Parse(p[0]), int.Parse(p[1]));
+    var wid = Parse(args[1]);
     var wspec = DifficultyTable.Spec(wid);
     int wvar = args.Length > 4 ? int.Parse(args[4]) : 0; // --why 3-10 [prefix] [n] [variant]
     for (int a = 0; a < (args.Length > 3 ? int.Parse(args[3]) : 40); a++)
@@ -55,8 +56,7 @@ if (args.Length >= 2 && args[0] == "--why")
 if (args.Length >= 3 && args[0] == "--human-why")
 {
     // --human-why 3-8 attentif [runs]: outcome of each run of one level, to look into losses and give-ups.
-    var hp = args[1].Split('-');
-    var hid = new LevelId(int.Parse(hp[0]), int.Parse(hp[1]));
+    var hid = Parse(args[1]);
     var prof = args[2] == "omniscient" ? LevelLab.HumanProfile.Omniscient : LevelLab.HumanProfile.All.First(x => x.Name == args[2]);
     var rng = new Random(1);
     for (int v = 0; v < (args.Length > 3 ? int.Parse(args[3]) : 20); v++)
@@ -85,7 +85,9 @@ if (args.Length >= 1 && args[0] == "--specs")
         if (sp.SpikeTraps > 0) traps.Add($"{sp.SpikeTraps} pics");
         if (sp.DarknessTraps > 0) traps.Add($"{sp.DarknessTraps} ombre");
         if (sp.DustPatches > 0) traps.Add($"{sp.DustPatches} poussière");
-        Console.WriteLine($"| {id} | {sp.MinMoves}-{sp.MaxMoves} | {sp.Floors} | {sp.CellsX}×{sp.CellsY} | {string.Join(" → ", sp.Gates)} | {sp.ExtraLoops} | {(mech.Count > 0 ? string.Join(", ", mech) : "—")} | {(traps.Count > 0 ? string.Join(", ", traps) : "—")} |");
+        if (sp.ReverseTraps > 0) traps.Add($"{sp.ReverseTraps} miroir");
+        if (sp.RotateTraps > 0) traps.Add($"{sp.RotateTraps} dalle tournante");
+        Console.WriteLine($"| {id} | {DifficultyScore.Of(sp)} | {sp.MinMoves}-{sp.MaxMoves} | {sp.Floors} | {sp.CellsX}×{sp.CellsY} | {string.Join(" → ", sp.Gates)} | {sp.ExtraLoops} | {(mech.Count > 0 ? string.Join(", ", mech) : "—")} | {(traps.Count > 0 ? string.Join(", ", traps) : "—")} |");
     }
     return;
 }
@@ -101,7 +103,7 @@ if (args.Length >= 1 && args[0] == "--compact")
         for (int i = 1; i <= DifficultyTable.GetAct(act).Levels; i++)
             for (int v = 0; v < n; v++)
             {
-                var level = LevelGenerator.Generate(new LevelId(act, i), v);
+                var level = LevelGenerator.Generate(new LevelId(Difficulty.Normal, act, i), v);
                 var reach = LevelLab.Compactness.ReachFromSolution(level);
                 int walk = 0, farTiles = 0, junc = 0, grid = 0;
                 foreach (var c in level.AllCells())
@@ -131,41 +133,56 @@ if (args.Length >= 1 && args[0] == "--human")
     return;
 }
 
-int variants = 20, onlyAct = 0;
+int variants = 20, onlyAct = 0, threads = -1;
+Difficulty? onlyMode = null;
 for (int i = 0; i < args.Length - 1; i++)
 {
     if (args[i] == "--variants") variants = int.Parse(args[i + 1]);
     if (args[i] == "--act") onlyAct = int.Parse(args[i + 1]);
+    if (args[i] == "--threads") threads = int.Parse(args[i + 1]);
+    if (args[i] == "--mode" && DifficultyExt.TryParse(args[i + 1][0], out var md)) onlyMode = md;
 }
 
 Console.WriteLine($"{variants} mazes per level");
-Console.WriteLine("level | window  | par min-avg-max | mech | attempts avg/max | ms avg/max | top rejections");
+Console.WriteLine("level | score spec (tomb min-max) | window  | par min-avg-max | mech | attempts avg/max | ms avg/max | top rejections");
 var total = Stopwatch.StartNew();
-foreach (var id in DifficultyTable.AllLevels())
+// Every (level, variant) on its own core; lines printed in level order.
+var ids = DifficultyTable.AllLevels().Where(id => (onlyAct == 0 || id.Act == onlyAct) && (!onlyMode.HasValue || id.Mode == onlyMode.Value)).ToList();
+var runs = ids.SelectMany(id => Enumerable.Range(0, variants).Select(v => (id, v))).ToList();
+var results = new System.Collections.Concurrent.ConcurrentDictionary<(LevelId, int), (Level level, long ms, Dictionary<string, int> failures)>();
+System.Threading.Tasks.Parallel.ForEach(runs, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = threads }, run =>
 {
-    if (onlyAct != 0 && id.Act != onlyAct) continue;
+    var failures = new Dictionary<string, int>();
+    var sw = Stopwatch.StartNew();
+    Level level = null;
+    try { level = LevelGenerator.Generate(DifficultyTable.Spec(run.id), DifficultyTable.Seed(run.id, run.v), failures); }
+    catch (LevelGenerationException) { Console.Error.WriteLine($"  {run.id} variant {run.v}: no valid tomb"); }
+    results[(run.id, run.v)] = (level, sw.ElapsedMilliseconds, failures);
+});
+foreach (var id in ids)
+{
     var spec = DifficultyTable.Spec(id);
     var pars = new List<int>();
     var attempts = new List<int>();
     var times = new List<long>();
     var mech = new List<int>();
+    var scores = new List<int>();
     var failures = new Dictionary<string, int>();
     int failed = 0;
     for (int v = 0; v < variants; v++)
     {
-        var sw = Stopwatch.StartNew();
-        try
-        {
-            var level = LevelGenerator.Generate(spec, DifficultyTable.Seed(id, v), failures);
-            pars.Add(level.Solution.Moves);
-            attempts.Add(level.Attempt + 1);
-            mech.Add(level.Solution.Mechanics);
-        }
-        catch (LevelGenerationException) { failed++; Console.Error.WriteLine($"  {id} variant {v}: no valid tomb"); }
-        times.Add(sw.ElapsedMilliseconds);
+        var (level, ms, f) = results[(id, v)];
+        foreach (var kv in f) failures[kv.Key] = failures.TryGetValue(kv.Key, out int n) ? n + kv.Value : kv.Value;
+        times.Add(ms);
+        if (level == null) { failed++; continue; }
+        pars.Add(level.Solution.Moves);
+        attempts.Add(level.Attempt + 1);
+        mech.Add(level.Solution.Mechanics);
+        scores.Add(DifficultyScore.Of(level).Score);
     }
     string top = string.Join(", ", failures.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {kv.Value}"));
-    if (pars.Count == 0) { Console.WriteLine($"{id,-5} | ALL FAILED | {top}"); continue; }
-    Console.WriteLine($"{id,-5} | {spec.MinMoves,2}-{spec.MaxMoves,-3} | {pars.Min(),3} {pars.Average(),5:0.0} {pars.Max(),3}   | {mech.Min()}-{mech.Max()}  | {attempts.Average(),6:0.0} {attempts.Max(),4}   | {times.Average(),5:0} {times.Max(),5} | {(failed > 0 ? $"FAILED {failed} " : "")}{top}");
+    int specScore = DifficultyScore.Of(spec).Score;
+    if (pars.Count == 0) { Console.WriteLine($"{id,-5} | {specScore,3} [{spec.MinScore}-{spec.MaxScore}] | ALL FAILED | {top}"); continue; }
+    Console.WriteLine($"{id,-5} | {specScore,3} ({scores.Min(),2}-{scores.Max(),2}) [{spec.MinScore}-{spec.MaxScore}] | {spec.MinMoves,2}-{spec.MaxMoves,-3} | {pars.Min(),3} {pars.Average(),5:0.0} {pars.Max(),3}   | {mech.Min()}-{mech.Max()}  | {attempts.Average(),6:0.0} {attempts.Max(),4}   | {times.Average(),5:0} {times.Max(),5} | {(failed > 0 ? $"FAILED {failed} " : "")}{top}");
 }
 Console.WriteLine($"total {total.ElapsedMilliseconds} ms");

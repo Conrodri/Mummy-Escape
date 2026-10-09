@@ -3,69 +3,60 @@ using System.Collections.Generic;
 
 namespace MummyEscape.Core
 {
-    /// <summary>Integer value that ramps from First (level 1 of the act) to Last (last level of the act).</summary>
-    public readonly struct Ramp
-    {
-        public readonly int First;
-        public readonly int Last;
-        public Ramp(int first, int last) { First = first; Last = last; }
-        public static implicit operator Ramp(int constant) => new Ramp(constant, constant);
-
-        /// <summary>Rounded linear interpolation, levelIndex in [1, levelCount].</summary>
-        public int At(int levelIndex, int levelCount)
-        {
-            if (levelCount <= 1) return Last;
-            int num = (Last - First) * (levelIndex - 1);
-            int den = levelCount - 1;
-            int rounded = (num * 2 + Math.Sign(num) * den) / (den * 2);
-            return First + rounded;
-        }
-    }
-
-    /// <summary>Traps laid on the walk; a level gets one per <see cref="DifficultyTable.Tier"/>, cycled through the act's list.</summary>
-    public enum Peril : byte
-    {
-        /// <summary>Spikes: cost a life unless disarmed.</summary>
-        Spikes,
-        /// <summary>A cloud of darkness: blinds the mummy for a few steps.</summary>
-        Darkness,
-        /// <summary>Dust that smothers the torch, with a wall torch further on to light it again.</summary>
-        Dust,
-        /// <summary>A mirror of Seth: reverses the controls for ten steps (from act 2).</summary>
-        Reverse,
-        /// <summary>A turning slab: the tomb turns a quarter turn on screen, the map in memory with it (from act 3).</summary>
-        Rotate,
-    }
-
-    /// <summary>Design data for one act. Add an entry to <see cref="DifficultyTable.Acts"/> to add an act.</summary>
+    /// <summary>Design data for one act: its look, its signature mechanics and what its tombs may hold.</summary>
     public sealed class ActDefinition
     {
         public string Name;
-        public int Levels = 10;
+        public int Levels = 5;
         /// <summary>Optimal move count window of a level with one gate on one floor; each extra gate and floor adds room.</summary>
         public int MinMoves;
         public int MaxMoves;
+        /// <summary>Floors of every tomb of the act, in every mode (acts 1-2: one, acts 3-4: two, act 5: three).</summary>
         public int Floors = 1;
-        /// <summary>From this level of the act on, one more floor (0 = never).</summary>
-        public int MoreFloorsFrom;
         /// <summary>Maze cells per side on one floor, and once floors are stacked (smaller, to keep a level short).</summary>
-        public int Cells;
-        public int StackedCells;
-        /// <summary>Loops added on top of braiding: two ways to the same spot (a short one, a long one) to tell apart.</summary>
-        public Ramp ExtraLoops;
-        /// <summary>Gate kinds, cycled through by level and gate index so consecutive levels alternate.</summary>
-        public GateKind[] GateKinds = { GateKind.Door, GateKind.Portal };
-        /// <summary>Traps of the act, handed out in turn (one per tier).</summary>
-        public Peril[] Perils = { Peril.Darkness };
-        /// <summary>Kinds of the portal gates, cycled through level after level (never hidden: the preview shows every pad).</summary>
-        public TeleporterKind[] TeleporterKinds = { TeleporterKind.Visible };
-        /// <summary>Signature mechanics of the act's theme.</summary>
-        public Ramp Currents;
-        public Ramp CrumblingTiles;
-        public Ramp FireJets;
-        public bool BlueBarriers;
+        public int Cells = 6;
+        public int StackedCells = 5;
+        /// <summary>Kinds of the first gate (the one every tomb has), cycled level after level: the act's signature.</summary>
+        public Element[] MainGates = { Element.Door, Element.Portal };
+        /// <summary>Interactions the difficulty budget may add (gates, torches), cycled.</summary>
+        public Element[] Interactions = { Element.Door, Element.Portal };
+        /// <summary>Traps the difficulty budget may add, cycled.</summary>
+        public Element[] Traps = { Element.Darkness };
+        /// <summary>Signature mechanics of the act's theme, per mode (Facile, Normal, Extrême).</summary>
+        public int[] Currents = { 0, 0, 0 };
+        public int[] CrumblingTiles = { 0, 0, 0 };
+        public int[] FireJets = { 0, 0, 0 };
+        /// <summary>
+        /// Difficulty thresholds of the act: Facile from [0] to [1], Normal from [1] to [2], Extrême from [2] to [3]. Each
+        /// mode's levels climb from its low threshold to its high one.
+        /// </summary>
+        public int[] Thresholds;
         public int MinPoiSpacing = 3;
         public int MinHpLeftForPar = 1;
+    }
+
+    /// <summary>What a difficulty mode allows, whatever the act.</summary>
+    public sealed class ModeDefinition
+    {
+        public string Name;
+        /// <summary>Caps on what the budget may add: gates (the chain to the exit), torches, traps besides spikes.</summary>
+        public int MaxGates;
+        public int MaxTorches;
+        public int MaxTraps;
+        /// <summary>Spike traps barring the walk (to disarm), and spike shortcuts (a way round exists).</summary>
+        public int MinSpikes;
+        public int MaxSpikes;
+        public int MaxShortcuts;
+        /// <summary>Loops knocked into the maze on top of braiding: more ways to tell apart.</summary>
+        public int ExtraLoops;
+        /// <summary>Floors of a stacked tomb: least ground, and least points of interest besides the ladders.</summary>
+        public int MinFloorTiles = 12;
+        public int MinFloorInterests = 2;
+        /// <summary>Spike patterns the generator may draw (<see cref="SpikePatterns"/>; null = all).</summary>
+        public string[] Patterns;
+        public bool DecoyCorridor;
+        /// <summary>Laser switches also raise a blue barrier behind the player.</summary>
+        public bool BlueBarriers;
     }
 
     public static class DifficultyTable
@@ -81,68 +72,86 @@ namespace MummyEscape.Core
         /// (currents), the collapsed ruins (fragile slabs), the high-tech city of Anubis (laser barriers and switches)
         /// and the burning sanctuary (flame jets on a beat, over crumbling ground).
         ///
-        /// Every act climbs the same three steps (<see cref="Tier"/>): levels 1-3 ask for one mechanism and hold one
-        /// trap, levels 4-7 two of each, levels 8-10 three, the mechanisms chained so the player walks back and forth.
-        /// Floors stack up: a second one from level 3-5, three in the whole of act 5. The game plays on memory and
-        /// logic, not on getting lost: every element serves the walk and no tomb can wall the player in for good.
+        /// Each act is played in three modes (<see cref="Difficulty"/>). What a level holds comes from its difficulty budget:
+        /// every element is worth points (<see cref="DifficultyScore"/>), each mode of an act has a band of points
+        /// (<see cref="ActDefinition.Thresholds"/>) and its levels climb through it. The game plays on memory and logic, not
+        /// on getting lost: every element serves the walk and no tomb can wall the player in for good.
         /// </summary>
         public static readonly IReadOnlyList<ActDefinition> Acts = new[]
         {
             new ActDefinition
             {
-                Name = "L'Antichambre", MinMoves = 14, MaxMoves = 22,
-                Cells = 6, ExtraLoops = new Ramp(2, 4),
-                GateKinds = new[] { GateKind.Door, GateKind.Portal },
-                Perils = new[] { Peril.Darkness, Peril.Spikes },
+                Name = "L'Antichambre", MinMoves = 14, MaxMoves = 22, Cells = 6,
+                MainGates = new[] { Element.Door, Element.Portal },
+                Interactions = new[] { Element.Door, Element.Portal },
+                Traps = new[] { Element.Darkness },
+                Thresholds = new[] { 7, 12, 18, 24 },
             },
             new ActDefinition
             {
-                Name = "Les Galeries inondées", MinMoves = 16, MaxMoves = 24,
-                Cells = 6, ExtraLoops = new Ramp(3, 4),
-                GateKinds = new[] { GateKind.Door, GateKind.Portal },
-                Currents = new Ramp(1, 2),
-                Perils = new[] { Peril.Spikes, Peril.Reverse, Peril.Dust, Peril.Darkness },
+                Name = "Les Galeries inondées", MinMoves = 16, MaxMoves = 24, Cells = 6,
+                MainGates = new[] { Element.Door, Element.Portal },
+                Interactions = new[] { Element.Torch, Element.Door, Element.Portal },
+                Traps = new[] { Element.Reverse, Element.Darkness },
+                Currents = new[] { 1, 1, 2 },
+                Thresholds = new[] { 9, 15, 22, 30 },
             },
             new ActDefinition
             {
-                Name = "Les Ruines effondrées", MinMoves = 18, MaxMoves = 26,
-                MoreFloorsFrom = 5, Cells = 6, StackedCells = 5, ExtraLoops = new Ramp(3, 4),
-                GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Door },
-                CrumblingTiles = new Ramp(1, 2),
-                Perils = new[] { Peril.Dust, Peril.Rotate, Peril.Spikes, Peril.Reverse, Peril.Darkness },
-                TeleporterKinds = new[] { TeleporterKind.Locked, TeleporterKind.Visible },
+                Name = "Les Ruines effondrées", MinMoves = 18, MaxMoves = 26, Floors = 2, StackedCells = 5,
+                MainGates = new[] { Element.Portal, Element.Door, Element.LockedPortal },
+                Interactions = new[] { Element.LockedPortal, Element.Torch, Element.Door, Element.Portal },
+                Traps = new[] { Element.Rotate, Element.Reverse, Element.Darkness },
+                CrumblingTiles = new[] { 1, 1, 2 },
+                Thresholds = new[] { 17, 25, 33, 42 },
             },
             new ActDefinition
             {
-                Name = "La Cité d'Anubis", MinMoves = 20, MaxMoves = 26,
-                Floors = 2, StackedCells = 5, ExtraLoops = new Ramp(3, 4),
-                // Cycled so every level, even with a single gate, has its laser.
-                GateKinds = new[] { GateKind.Laser, GateKind.Laser, GateKind.Laser, GateKind.Portal, GateKind.Laser, GateKind.Door },
-                BlueBarriers = true,
-                Perils = new[] { Peril.Darkness, Peril.Rotate, Peril.Spikes, Peril.Reverse, Peril.Dust },
-                TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Locked, TeleporterKind.Visible },
+                Name = "La Cité d'Anubis", MinMoves = 20, MaxMoves = 26, Floors = 2, StackedCells = 5,
+                // Every tomb has its laser.
+                MainGates = new[] { Element.Laser },
+                Interactions = new[] { Element.CursedPortal, Element.Laser, Element.Torch, Element.Door },
+                Traps = new[] { Element.Darkness, Element.Rotate, Element.Reverse },
+                Thresholds = new[] { 16, 25, 34, 44 },
             },
             new ActDefinition
             {
-                Name = "Le Sanctuaire embrasé", MinMoves = 22, MaxMoves = 26,
-                Floors = 3, StackedCells = 4, ExtraLoops = new Ramp(3, 4),
-                GateKinds = new[] { GateKind.Portal, GateKind.Door, GateKind.Laser, GateKind.Door },
-                FireJets = 2, CrumblingTiles = 1,
-                Perils = new[] { Peril.Dust, Peril.Reverse, Peril.Darkness, Peril.Rotate, Peril.Spikes },
-                TeleporterKinds = new[] { TeleporterKind.Cursed, TeleporterKind.Visible },
+                Name = "Le Sanctuaire embrasé", MinMoves = 22, MaxMoves = 26, Floors = 3, StackedCells = 4,
+                MainGates = new[] { Element.Portal, Element.Door },
+                Interactions = new[] { Element.Laser, Element.Torch, Element.CursedPortal, Element.Door },
+                Traps = new[] { Element.Reverse, Element.Darkness, Element.Rotate },
+                FireJets = new[] { 1, 2, 2 }, CrumblingTiles = new[] { 1, 1, 1 },
+                Thresholds = new[] { 28, 36, 45, 55 },
+            },
+        };
+
+        static readonly string[] EasyPatterns = { "pont", "long pont", "pont à torche", "long pont à torche" };
+        static readonly string[] NormalPatterns = { "pont", "long pont", "pont profond", "pont à torche", "long pont à torche" };
+
+        public static readonly IReadOnlyList<ModeDefinition> Modes = new[]
+        {
+            new ModeDefinition
+            {
+                Name = "Facile", MaxGates = 2, MaxTorches = 1, MaxTraps = 2, MinSpikes = 2, MaxSpikes = 2, MaxShortcuts = 0, ExtraLoops = 2, MinFloorInterests = 1,
+                Patterns = EasyPatterns, DecoyCorridor = false, BlueBarriers = false,
+            },
+            new ModeDefinition
+            {
+                Name = "Normal", MaxGates = 3, MaxTorches = 1, MaxTraps = 3, MinSpikes = 2, MaxSpikes = 2, MaxShortcuts = 1, ExtraLoops = 3, MinFloorInterests = 1,
+                Patterns = NormalPatterns, DecoyCorridor = true, BlueBarriers = true,
+            },
+            new ModeDefinition
+            {
+                Name = "Extrême", MaxGates = 3, MaxTorches = 1, MaxTraps = 4, MinSpikes = 2, MaxSpikes = 2, MaxShortcuts = 1, ExtraLoops = 4,
+                Patterns = null, DecoyCorridor = true, BlueBarriers = true,
             },
         };
 
         public const int ExtraMovesPerFloor = 4;
-        public const int ExtraMovesPerGate = 6;
+        public const int ExtraMovesPerGate = 9;
         public const int LockedPortalExtraMoves = 3;
         /// <summary>Longest ideal walk the dust's room may stretch a tomb to (still about 2 minutes of play).</summary>
         public const int MaxMovesCap = 56;
-        /// <summary>Spikes guarding a shortcut in every tomb (besides those past the dust that bar the way).</summary>
-        public const int MinSpikeTraps = 2;
-
-        /// <summary>Step of a level inside its act: 1 for levels 1-3, 2 for 4-7, 3 for 8-10 (mechanisms and traps).</summary>
-        public static int Tier(int index) => index <= 3 ? 1 : index <= 7 ? 2 : 3;
 
         public static int ActCount => Acts.Count;
 
@@ -152,80 +161,173 @@ namespace MummyEscape.Core
             return Acts[act - 1];
         }
 
-        public static IEnumerable<LevelId> AllLevels()
+        public static ModeDefinition GetMode(Difficulty mode) => Modes[(int)mode];
+
+        /// <summary>Every level of one mode, act by act.</summary>
+        public static IEnumerable<LevelId> Levels(Difficulty mode)
         {
             for (int a = 1; a <= Acts.Count; a++)
                 for (int i = 1; i <= Acts[a - 1].Levels; i++)
-                    yield return new LevelId(a, i);
+                    yield return new LevelId(mode, a, i);
+        }
+
+        /// <summary>Every level of every mode.</summary>
+        public static IEnumerable<LevelId> AllLevels()
+        {
+            foreach (var mode in DifficultyExt.All)
+                foreach (var id in Levels(mode))
+                    yield return id;
+        }
+
+        /// <summary>Band of points of an act in a mode.</summary>
+        public static void Band(Difficulty mode, int act, out int min, out int max)
+        {
+            var t = GetAct(act).Thresholds;
+            min = t[(int)mode];
+            max = t[(int)mode + 1];
+        }
+
+        /// <summary>Points a level aims at: its mode's band climbed level after level, from the low threshold to the high one.</summary>
+        public static int Target(LevelId id)
+        {
+            Band(id.Mode, id.Act, out int min, out int max);
+            int n = GetAct(id.Act).Levels;
+            if (n <= 1) return max;
+            return min + ((max - min) * (id.Index - 1) * 2 + (n - 1)) / ((n - 1) * 2);
         }
 
         public static LevelSpec Spec(LevelId id)
         {
             var act = GetAct(id.Act);
-            int n = act.Levels, i = id.Index;
-            if (i < 1 || i > n) throw new ArgumentOutOfRangeException(nameof(id));
+            var mode = GetMode(id.Mode);
+            int m = (int)id.Mode, i = id.Index;
+            if (i < 1 || i > act.Levels) throw new ArgumentOutOfRangeException(nameof(id));
 
-            int tier = Tier(i);
-            int floors = act.Floors + (act.MoreFloorsFrom > 0 && i >= act.MoreFloorsFrom ? 1 : 0);
-            int cells = floors > 1 ? act.StackedCells : act.Cells;
+            int cells = act.Floors > 1 ? act.StackedCells : act.Cells;
+            Band(id.Mode, id.Act, out int min, out int max);
             var spec = new LevelSpec
             {
                 Id = id,
-                // Each extra gate is a detour to walk back from, each extra floor a climb: room for both.
-                MinMoves = act.MinMoves + 2 * (tier - 1),
-                MaxMoves = act.MaxMoves + (tier - 1) * ExtraMovesPerGate + (floors - 1) * ExtraMovesPerFloor,
-                Floors = floors,
+                Floors = act.Floors,
                 CellsX = cells,
                 CellsY = cells,
-                ExtraLoops = act.ExtraLoops.At(i, n),
-                Currents = act.Currents.At(i, n),
-                CrumblingTiles = act.CrumblingTiles.At(i, n),
-                FireJets = act.FireJets.At(i, n),
-                BlueBarriers = act.BlueBarriers,
+                ExtraLoops = mode.ExtraLoops,
+                Currents = act.Currents[m],
+                CrumblingTiles = act.CrumblingTiles[m],
+                FireJets = act.FireJets[m],
+                BlueBarriers = mode.BlueBarriers,
+                SpikePatternNames = mode.Patterns,
+                DecoyCorridor = mode.DecoyCorridor,
+                MinFloorTiles = mode.MinFloorTiles,
+                MinFloorInterests = mode.MinFloorInterests,
                 MinPoiSpacing = act.MinPoiSpacing,
                 MinHpLeftForPar = act.MinHpLeftForPar,
                 // "Far from the entrance": two thirds of the tomb's side, as the crow flies.
                 MinExitDistance = (cells * 2 + 1) * 2 / 3,
                 MinMechanics = 1,
+                MinScore = min,
+                MaxScore = max,
             };
+            AddElement(spec, act.MainGates[(i - 1) % act.MainGates.Length]);
+            FillBudget(spec, act, mode, Target(id), min, max, i);
+            // The decoy corridor is drawn when a straight stretch allows it (seldom): only where its points stay in the band.
+            spec.DecoyCorridor = mode.DecoyCorridor && spec.RotateTraps > 0
+                                 && DifficultyScore.Of(spec).Score + DifficultyScore.Weight(Element.DecoyCorridor) <= max;
+            SetMoves(spec, act);
+            return spec;
+        }
 
-            int dustRoom = 0;
-            // One trap per tier, the act's kinds in turn (shifted level after level so neighbours differ).
-            for (int k = 0; k < tier; k++)
+        /// <summary>
+        /// Picks what the level holds on top of its first gate and its act mechanics: how many more gates, torches, traps and
+        /// spikes, each kind taken in turn from the act's pools (from an offset that moves level after level, so neighbours
+        /// differ). Every mix within the mode's caps is tried; the one closest to the target wins (below it on a tie), then
+        /// the one that balances interactions and traps best, then the one with fewer spikes.
+        /// </summary>
+        static void FillBudget(LevelSpec spec, ActDefinition act, ModeDefinition mode, int target, int min, int max, int index)
+        {
+            var gates = new List<Element>();
+            var traps = new List<Element>();
+            bool torches = false;
+            foreach (var e in act.Interactions) { if (e == Element.Torch) torches = true; else gates.Add(e); }
+            foreach (var e in act.Traps) if (e != Element.Spikes) traps.Add(e);
+            int maxGates = gates.Count > 0 ? mode.MaxGates - spec.Gates.Count : 0;
+            int maxTorches = torches ? mode.MaxTorches : 0;
+            int maxTraps = traps.Count > 0 ? mode.MaxTraps : 0;
+            // Spike shortcuts need room for their way round: single-floor tombs only (on stacked floors they rarely fit).
+            int maxShortcuts = act.Floors == 1 ? mode.MaxShortcuts : 0;
+
+            (int g, int t, int k, int s, int sc)? best = null;
+            (int, int, int, int, int) bestKey = default;
+            for (int g = 0; g <= maxGates; g++)
+                for (int t = 0; t <= maxTorches; t++)
+                    for (int k = 0; k <= maxTraps; k++)
+                        for (int s = mode.MinSpikes; s <= mode.MaxSpikes; s++)
+                            for (int sc = 0; sc <= maxShortcuts; sc++)
+                            {
+                                // A torch already brings its toll spikes: with a shortcut on top, the tomb rarely fits.
+                                if (t > 0 && sc > 0) continue;
+                                var trial = spec.WithMoreMoves(0);
+                                Lay(trial, gates, traps, index, g, t, k, s, sc);
+                                int score = DifficultyScore.Of(trial).Score;
+                                if (score < min || score > max) continue;
+                                var key = (Math.Abs(score - target) * 2 + (score > target ? 1 : 0), Math.Abs(g + t - k), s + sc, sc, g + t + k);
+                                if (best.HasValue && key.CompareTo(bestKey) >= 0) continue;
+                                best = (g, t, k, s, sc);
+                                bestKey = key;
+                            }
+            if (!best.HasValue) throw new InvalidOperationException($"{spec.Id}: no mix of elements lands in [{min}, {max}]");
+            var (bg, bt, bk, bs, bsc) = best.Value;
+            Lay(spec, gates, traps, index, bg, bt, bk, bs, bsc);
+        }
+
+        static void Lay(LevelSpec spec, List<Element> gates, List<Element> traps, int index, int g, int t, int k, int s, int sc)
+        {
+            for (int j = 0; j < g; j++) AddElement(spec, gates[(index + j) % gates.Count]);
+            spec.DustPatches += t;
+            for (int j = 0; j < k; j++) AddElement(spec, traps[(index - 1 + j) % traps.Count]);
+            // The spikes past the dust bar the walk: they are spike traps too.
+            spec.SpikeTraps = Math.Max(s, LevelValidator.TollSpikes * spec.DustPatches);
+            spec.SpikeShortcuts = sc;
+        }
+
+        static void AddElement(LevelSpec spec, Element e)
+        {
+            switch (e)
             {
-                switch (act.Perils[(i - 1 + k) % act.Perils.Length])
-                {
-                    case Peril.Spikes: spec.SpikeTraps++; break;
-                    case Peril.Darkness: spec.DarknessTraps++; break;
-                    case Peril.Reverse: spec.ReverseTraps++; break;
-                    case Peril.Rotate: spec.RotateTraps++; break;
-                    default:
-                        spec.DustPatches++;
-                        dustRoom += LevelValidator.MaxTorchDetour + LevelValidator.TollSpikes;
-                        break;
-                }
+                case Element.Spikes: spec.SpikeTraps++; break;
+                case Element.Darkness: spec.DarknessTraps++; break;
+                case Element.Reverse: spec.ReverseTraps++; break;
+                case Element.Rotate: spec.RotateTraps++; break;
+                case Element.Torch: spec.DustPatches++; break;
+                case Element.Door: spec.Gates.Add(Gate.Door); break;
+                case Element.Laser: spec.Gates.Add(Gate.Laser); break;
+                case Element.Portal: spec.Gates.Add(Gate.Teleporter(TeleporterKind.Visible)); break;
+                case Element.LockedPortal: spec.Gates.Add(Gate.Teleporter(TeleporterKind.Locked)); break;
+                case Element.CursedPortal: spec.Gates.Add(Gate.Teleporter(TeleporterKind.Cursed)); break;
+                default: throw new ArgumentException($"{e} is not laid by the budget");
             }
+        }
 
-            int kinds = act.TeleporterKinds.Length, portal = 0;
-            for (int k = 0; k < tier; k++)
-            {
-                var kind = act.GateKinds[(i - 1 + k) % act.GateKinds.Length];
-                spec.Gates.Add(kind == GateKind.Door ? Gate.Door : kind == GateKind.Laser ? Gate.Laser
-                               : Gate.Teleporter(act.TeleporterKinds[(i + portal++) % kinds]));
+        /// <summary>The par window: each gate is a detour to walk back from, each floor a climb, each torch its detour.</summary>
+        static void SetMoves(LevelSpec spec, ActDefinition act)
+        {
+            int gates = spec.Gates.Count;
+            spec.MinMoves = act.MinMoves + 2 * (gates - 1);
+            spec.MaxMoves = act.MaxMoves + (gates - 1) * ExtraMovesPerGate + (spec.Floors - 1) * ExtraMovesPerFloor;
+            foreach (var g in spec.Gates)
                 // A locked portal is two mechanics (its lever, then the portal): room for the lever's detour.
-                if (spec.Gates[k].Kind == GateKind.Portal && spec.Gates[k].Portal == TeleporterKind.Locked) spec.MaxMoves += LockedPortalExtraMoves;
-            }
-            // Every tomb has its risky shortcuts: spikes to cross fast or a safe way round to walk.
-            spec.SpikeTraps = Math.Max(spec.SpikeTraps, MinSpikeTraps);
+                if (g.Kind == GateKind.Portal && g.Portal == TeleporterKind.Locked) spec.MaxMoves += LockedPortalExtraMoves;
             // Relighting is part of the ideal walk (the spikes past the dust are disarmed by torchlight): room for it, within
             // about 2 minutes of play.
+            int dustRoom = spec.DustPatches * (LevelValidator.MaxTorchDetour + LevelValidator.TollSpikes);
+            // Each spike trap barring the walk is one disarm (the dust's are in its room).
+            spec.MaxMoves += Math.Max(0, spec.SpikeTraps - LevelValidator.TollSpikes * spec.DustPatches);
             spec.MaxMoves = Math.Max(spec.MaxMoves, Math.Min(spec.MaxMoves + dustRoom, MaxMovesCap));
-            return spec;
         }
 
         /// <summary>Base seed of a level; every run mixes in its own variant number to draw a new maze.</summary>
         public static ulong Seed(LevelId id) =>
-            Pcg32.Hash(Pcg32.Hash(0x4D554D4D59UL /* "MUMMY" */, (ulong)GeneratorVersion), (ulong)(id.Act * 1000 + id.Index));
+            Pcg32.Hash(Pcg32.Hash(0x4D554D4D59UL /* "MUMMY" */, (ulong)GeneratorVersion), (ulong)(((int)id.Mode + 1) * 100000 + id.Act * 1000 + id.Index));
 
         /// <summary>Seed of one maze of a level: (level, variant) always rebuilds the same tomb on every device.</summary>
         public static ulong Seed(LevelId id, int variant) => Pcg32.Hash(Seed(id), (ulong)(uint)variant);

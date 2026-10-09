@@ -17,9 +17,9 @@ namespace MummyEscape.PvpSim
             double[] skills = { 0.4, 0.7, 1.0 };
             Console.WriteLine("level  par  perfect   " + string.Join("  ", skills.Select(s => $"skill {s:0.0} (x perfect)")));
             foreach (int act in new[] { 1, 2, 3, 4, 5 })
-            foreach (int n in new[] { 1, 5, 10 })
+            foreach (int n in new[] { 1, 3, 5 })
             {
-                var id = new LevelId(act, n);
+                var id = new LevelId(Difficulty.Normal, act, n);
                 var pars = new List<int>();
                 var perfect = new List<int>();
                 var ratios = skills.Select(_ => new List<double>()).ToArray();

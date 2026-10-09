@@ -16,6 +16,7 @@ namespace MummyEscape.Tests
         static readonly Dictionary<int, ulong> Recorded = new Dictionary<int, ulong>
         {
             { 11, 0xD323AB4665867852UL },
+            { 12, 0x50A7922A87EB7AB5UL },
         };
 
         /// <summary>Variant 0 of every level, plus a few duel and 2v2 relay arenas, with their par.</summary>
