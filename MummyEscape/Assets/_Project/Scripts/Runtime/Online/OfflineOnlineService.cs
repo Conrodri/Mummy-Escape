@@ -43,12 +43,12 @@ namespace MummyEscape.Online
             return Task.FromResult(PlayerName);
         }
 
-        public Task SubmitScoreAsync(LevelResult result)
+        public Task<bool> SubmitScoreAsync(LevelResult result)
         {
-            if (!result.Won) return Task.CompletedTask;
+            if (!result.Won) return Task.FromResult(false);
             string key = result.Level.Key;
             if (!_best.TryGetValue(key, out var prev) || result.LeaderboardScore < prev.LeaderboardScore) _best[key] = result;
-            return Task.CompletedTask;
+            return Task.FromResult(false); // never reached a server
         }
 
         public Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit)

@@ -152,7 +152,8 @@ namespace MummyEscape.Online
         Task InitializeAsync();
         Task<string> SetPlayerNameAsync(string name);
 
-        Task SubmitScoreAsync(LevelResult result);
+        /// <summary>Sends a won run to its level's board (the board keeps the best). True once the server has it.</summary>
+        Task<bool> SubmitScoreAsync(LevelResult result);
         /// <summary>Top <paramref name="limit"/> of a level. Country scope uses <see cref="Country"/>.</summary>
         Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit);
 

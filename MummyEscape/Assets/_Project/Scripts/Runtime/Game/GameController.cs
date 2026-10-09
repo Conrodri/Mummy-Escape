@@ -889,7 +889,7 @@ namespace MummyEscape.Game
             }
             var outcome = _app.Save.Apply(result);
             // Faster than the game's animations allow: a modified game, kept off the leaderboard.
-            if (result.Pace != (int)PaceVerdict.Impossible) _ = _app.Online.SubmitScoreAsync(result);
+            if (result.Pace != (int)PaceVerdict.Impossible) _ = _app.SubmitScore(result);
             else Debug.LogWarning($"[Game] {result.Level} run of {result.TimeMs} ms under the perfect {result.PerfectMs} ms: not submitted");
             if (result.Won)
             {

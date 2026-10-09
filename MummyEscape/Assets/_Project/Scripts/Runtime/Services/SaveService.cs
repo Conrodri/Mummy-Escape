@@ -35,6 +35,8 @@ namespace MummyEscape.Services
         public bool ProfileDone;
         /// <summary>The tutorial corridor was walked to its exit once.</summary>
         public bool TutorialDone;
+        /// <summary>Best scores the leaderboards confirmed ("level_f1_1:score"): any other record is sent again when online.</summary>
+        public List<string> SubmittedScores = new List<string>();
 
         // ---- Real-money economy (see Monetization): golden scarabs, solo energy, season pass.
         /// <summary>Golden scarabs: the copy of the wallet the PvP server keeps (bought in the store, earned on the pass).</summary>
@@ -128,6 +130,7 @@ namespace MummyEscape.Services
             d.Records.RemoveAll(r => r == null || !LevelId.TryParseKey(r.Key, out _));
             d.OwnedSkins ??= new List<string>();
             d.OwnedSkins.RemoveAll(string.IsNullOrEmpty);
+            d.SubmittedScores ??= new List<string>();
             d.PassesOwned ??= new List<string>();
             d.PassesOwned.RemoveAll(string.IsNullOrEmpty);
             d.PassFreeClaimed ??= new List<int>();

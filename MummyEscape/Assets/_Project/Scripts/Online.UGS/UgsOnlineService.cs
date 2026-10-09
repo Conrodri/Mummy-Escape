@@ -86,15 +86,16 @@ namespace MummyEscape.Online
             return PlayerName;
         }
 
-        public async Task SubmitScoreAsync(LevelResult result)
+        public async Task<bool> SubmitScoreAsync(LevelResult result)
         {
-            if (!IsAvailable || !result.Won) return;
+            if (!IsAvailable || !result.Won) return false;
             try
             {
                 await LeaderboardsService.Instance.AddPlayerScoreAsync(OnlineServiceFactory.LeaderboardId(result.Level), result.LeaderboardScore,
                     new AddPlayerScoreOptions { Metadata = new ScoreMeta { c = Country ?? "", s = result.Pace == 1 ? 1 : 0 } });
+                return true;
             }
-            catch (Exception e) { Debug.LogWarning("[Online] score not submitted: " + e.Message); }
+            catch (Exception e) { Debug.LogWarning("[Online] score not submitted: " + e.Message); return false; }
         }
 
         /// <summary>Score metadata stored with each entry (kept tiny: it is returned for every row).</summary>
@@ -132,12 +133,17 @@ namespace MummyEscape.Online
                 }
                 else
                 {
-                    var ids = new List<string> { PlayerId };
+                    var ids = new HashSet<string> { PlayerId };
                     foreach (var f in Friends) ids.Add(f.Member.Id);
-                    var res = await lb.GetScoresByPlayerIdsAsync(id, ids, new GetScoresByPlayerIdsOptions { IncludeMetadata = true });
-                    var entries = res.Results;
-                    entries.Sort((a, b) => a.Score.CompareTo(b.Score));
-                    for (int i = 0; i < entries.Count && i < limit; i++) page.Rows.Add(ToRow(entries[i], i + 1));
+                    // GetScoresByPlayerIdsAsync throws inside the SDK (it reads the answer with the wrong model): the friends
+                    // are picked from the global board instead, like the country scope.
+                    for (int p = 0; p < CountryMaxPages && page.Rows.Count < limit; p++)
+                    {
+                        var res = await lb.GetScoresAsync(id, new GetScoresOptions { Offset = p * CountryPageSize, Limit = CountryPageSize, IncludeMetadata = true });
+                        foreach (var e in res.Results)
+                            if (ids.Contains(e.PlayerId) && page.Rows.Count < limit) page.Rows.Add(ToRow(e, page.Rows.Count + 1));
+                        if (res.Results.Count < CountryPageSize) break;
+                    }
                 }
 
                 page.Me = page.Rows.Find(r => r.IsMe);

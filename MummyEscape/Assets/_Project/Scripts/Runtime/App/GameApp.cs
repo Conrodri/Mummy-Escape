@@ -217,6 +217,33 @@ namespace MummyEscape.App
             if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
             Online = service;
             await AfterAccountChange();
+            await SubmitRecords();
+        }
+
+        /// <summary>Sends a won run to the leaderboards and remembers that the server has this score.</summary>
+        public async Task SubmitScore(LevelResult result)
+        {
+            if (!await Online.SubmitScoreAsync(result)) return;
+            string sent = result.Level.Key + ":" + result.LeaderboardScore;
+            if (!Save.Data.SubmittedScores.Contains(sent)) { Save.Data.SubmittedScores.Add(sent); Save.Save(); }
+        }
+
+        /// <summary>
+        /// The best record of each level that never reached its board (played offline, or while the boards failed) goes up
+        /// now; the board keeps the best, so sending again is harmless.
+        /// </summary>
+        async Task SubmitRecords()
+        {
+            if (!Online.IsAvailable || Online.IsDemo) return;
+            foreach (var rec in Save.Data.Records.ToArray())
+            {
+                if (!rec.HasBest || !LevelId.TryParseKey(rec.Key, out var id)) continue;
+                // Par 0: the moves are the gap to the optimal route, which is all the score keeps of them.
+                var best = new LevelResult { Level = id, Won = true, Moves = rec.BestOverPar, Par = 0, TimeMs = rec.BestTimeMs, HpLeft = rec.BestHpLeft };
+                if (Save.Data.SubmittedScores.Contains(rec.Key + ":" + best.LeaderboardScore)) continue;
+                await SubmitScore(best);
+                if (!Online.IsAvailable) return;
+            }
         }
 
         /// <summary>Stops every online exchange; the session stays on the device so turning it back on resumes it.</summary>
