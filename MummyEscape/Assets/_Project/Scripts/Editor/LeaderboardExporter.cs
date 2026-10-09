@@ -20,7 +20,8 @@ namespace MummyEscape.EditorTools
         [MenuItem("Mummy Rush/Online/Export leaderboard configs (.lb)")]
         public static void Export()
         {
-            int count = Export(DifficultyTable.GeneratorVersion) + Export(DifficultyTable.GeneratorVersion - 1);
+            // Older versions keep the configs already written: their level ids may differ from today's (v12 added the modes).
+            int count = Export(DifficultyTable.GeneratorVersion);
             AssetDatabase.Refresh();
             Debug.Log($"[Leaderboards] {count} configs written to {Folder}. Deploy them via Services > Deployment.");
         }
