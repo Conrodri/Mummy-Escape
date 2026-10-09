@@ -122,7 +122,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_spin, -1, -1, 1);
             _spinLabel = _spin.GetComponentInChildren<Text>();
             UIKit.FitText(_spinLabel, 20);
-            _spin10 = UIKit.Button(buttons.transform, "", () => OnSpin(Casino.MultiSpins), 36, ButtonStyle.Primary);
+            // A label is needed for the button to get its Text (Refresh writes the real one with the price).
+            _spin10 = UIKit.Button(buttons.transform, "×10", () => OnSpin(Casino.MultiSpins), 36, ButtonStyle.Primary); // noloc
             UIKit.Size(_spin10, -1, -1, 1);
             _spin10Label = _spin10.GetComponentInChildren<Text>();
             UIKit.FitText(_spin10Label, 20);
