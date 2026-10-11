@@ -24,7 +24,6 @@ namespace MummyEscape.UI.Screens
         Text _actNumber, _actTitle, _actInfo, _actStars;
         Button _prev, _next, _continue;
         RectTransform _grid, _dots;
-        Text _plays;
 
         protected override void Build()
         {
@@ -70,8 +69,7 @@ namespace MummyEscape.UI.Screens
             _continue = UIKit.Button(row, "JOUER", ContinueRun, 42, ButtonStyle.Primary); // a label now: an empty one has no Text
             UIKit.Place((RectTransform)_continue.transform, 0.5f, 0.5f, 700, 120);
             UIKit.FitText(_continue.GetComponentInChildren<Text>(), 24);
-            _plays = UIKit.Label(body, "", 26, UIKit.Dim);
-            UIKit.Size(_plays, 36);
+            EnergyBadge.Create(body, Monetization.PlayMode.Solo);
         }
 
         UIKit.Segmented _sections;
@@ -129,7 +127,6 @@ namespace MummyEscape.UI.Screens
             App.Audio.PlayMusic(0);
             var furthest = App.Save.FurthestUnlocked();
             if (!_modeChosen) _mode = furthest.Mode;
-            _plays.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
             SetMode(_mode);
             _sections.Select(0);
             App.Audio.PrefetchMusic(furthest.Act); // its theme is ready when the level starts

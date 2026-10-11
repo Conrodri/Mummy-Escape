@@ -28,7 +28,7 @@ namespace MummyEscape.UI.Screens
 
         RectTransform _list;
         ScrollRect _scroll;
-        Text _info, _plays;
+        Text _info;
         TeamsResponse _teams;
         IReadOnlyList<FriendInfo> _friends;
         string _duoId;
@@ -50,8 +50,7 @@ namespace MummyEscape.UI.Screens
             _info = UIKit.Label(body, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 64);
-            _plays = UIKit.Label(body, "", 24, UIKit.Dim);
-            UIKit.Size(_plays, 34);
+            EnergyBadge.Create(body, Monetization.PlayMode.Solo);
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 14;
@@ -77,7 +76,6 @@ namespace MummyEscape.UI.Screens
             _sections.Select(1);
             ProfileSetupScreen.AskIfNeeded(Router, App);
             App.Lighting.SetMood(false);
-            _plays.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
             _busy = false;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;

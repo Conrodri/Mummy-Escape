@@ -69,7 +69,7 @@ namespace MummyEscape.UI
         static void Offer(GameApp app, PlayMode mode, Action retry)
         {
             bool solo = mode == PlayMode.Solo, endless = mode == PlayMode.Endless;
-            long next = endless ? app.Save.EndlessEnergyNextInMs : solo ? app.Save.SoloEnergyNextInMs : PvpMeter(app) is EnergyMeter m ? Energy.NextInMs(m, NowMs) : 0;
+            long next = Meter(app, mode).NextMs;
             int adsLeft = endless ? app.Save.EndlessAdsLeft : solo ? app.Save.SoloAdsLeft : PvpMeter(app) is EnergyMeter p ? Energy.AdsLeft(p, NowMs) : EnergyConfig.AdRefillsPerDay;
             int refill = endless ? EnergyConfig.EndlessAdRefill : solo ? EnergyConfig.SoloAdRefill : EnergyConfig.PvpAdRefill;
             string text = (endless ? Loc.T("Plus d'énergie pour le mode sans fin : un point par tombeau.")
@@ -121,17 +121,12 @@ namespace MummyEscape.UI
             retry?.Invoke();
         }
 
-        /// <summary>"Énergie : 7/10 · +1 dans 4:12", or unlimited with the pass.</summary>
-        public static string Status(GameApp app, PlayMode mode)
+        /// <summary>The energy of a mode: points left, the most it holds, and the time before the next point (0: full).</summary>
+        public static (int Left, int Max, long NextMs) Meter(GameApp app, PlayMode mode)
         {
-            if (app.Save.Unlimited) return Loc.T("Pass actif : parties illimitées");
-            bool solo = mode == PlayMode.Solo, endless = mode == PlayMode.Endless;
-            int left = endless ? app.Save.EndlessEnergyLeft : solo ? app.Save.SoloEnergyLeft : PvpLeft(app);
-            int max = endless ? EnergyConfig.EndlessMax : solo ? EnergyConfig.SoloMax : EnergyConfig.PvpMax;
-            long next = endless ? app.Save.EndlessEnergyNextInMs : solo ? app.Save.SoloEnergyNextInMs : PvpMeter(app) is EnergyMeter m ? Energy.NextInMs(m, NowMs) : 0;
-            string count = endless ? Loc.F("Énergie sans fin : {0}", left + "/" + max)
-                         : solo ? Loc.F("Énergie : {0}", left + "/" + max) : Loc.F("Énergie de combat : {0}", left + "/" + max);
-            return next > 0 ? count + " · " + Loc.F("+1 dans {0}", Energy.Clock(next)) : count;
+            if (mode == PlayMode.Endless) return (app.Save.EndlessEnergyLeft, EnergyConfig.EndlessMax, app.Save.EndlessEnergyNextInMs);
+            if (mode == PlayMode.Solo) return (app.Save.SoloEnergyLeft, EnergyConfig.SoloMax, app.Save.SoloEnergyNextInMs);
+            return (PvpLeft(app), EnergyConfig.PvpMax, PvpMeter(app) is EnergyMeter m ? Energy.NextInMs(m, NowMs) : 0);
         }
     }
 }

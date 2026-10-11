@@ -1041,6 +1041,8 @@ namespace MummyEscape
             ["Pleine"] = "Full",
             ["Tombeau"] = "Tomb",
             ["Tombeaux franchis"] = "Tombs escaped",
+            ["Tombeau franchi"] = "Tomb escaped",
+            ["Chutes"] = "Falls",
             ["Temps cumulé"] = "Total time",
             ["Même tombeau, nouvel essai."] = "Same tomb, another try.",
             ["Tous les tombeaux franchis : d'autres arrivent bientôt."] = "Every tomb escaped: more are coming soon.",

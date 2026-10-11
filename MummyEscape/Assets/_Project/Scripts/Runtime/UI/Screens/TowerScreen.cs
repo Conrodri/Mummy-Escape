@@ -21,6 +21,7 @@ namespace MummyEscape.UI.Screens
             Header("Tour de défi");
             var body = Body(180, 40, 40);
             UIKit.Column(body, 16);
+            EnergyBadge.Create(body, Monetization.PlayMode.Endless); // a run costs a point of the endless energy
             _content = UIKit.Scroll(body, out var scroll);
             UIKit.Size(scroll, -1, -1, -1, 1);
             _content.GetComponent<VerticalLayoutGroup>().spacing = 16;

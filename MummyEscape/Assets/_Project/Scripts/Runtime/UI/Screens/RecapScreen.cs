@@ -14,6 +14,7 @@ namespace MummyEscape.UI.Screens
     public sealed class RecapScreen : UIScreen, IBackHandler
     {
         public override bool IsModal => true;
+        const float Width = 940;
 
         Text _title, _subtitle, _verdict;
         RectTransform _starsSlot, _verdictRow, _rewards, _lifeSlot;
@@ -24,79 +25,35 @@ namespace MummyEscape.UI.Screens
 
         protected override void Build()
         {
-            var shade = UIKit.Image(Root, UIKit.Art.White, UIKit.Shade, true);
-            UIKit.Stretch(shade.rectTransform, -600, -600, -600, -600);
+            var panel = ModalKit.Frame(Root, Width, null, 22);
+            _title = ModalKit.Header(panel, "", 84, out _subtitle);
 
-            var panel = UIKit.Panel(Root);
-            var rt = panel.rectTransform;
-            UIKit.FitInParent(UIKit.Place(rt, 0.5f, 0.5f, 940, 0));
-            var col = UIKit.Column(panel.transform, 22, 44);
-            col.padding = new RectOffset(44, 44, 40, 44);
-            panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            _title = UIKit.Title(panel.transform, "", 84);
-            UIKit.FitText(_title, 48);
-            UIKit.Size(_title, 110);
-            _subtitle = UIKit.Label(panel.transform, "", 28, UIKit.Dim);
-            UIKit.Size(_subtitle, 36);
-
-            _starsSlot = UIKit.Rect("StarsSlot", panel.transform);
+            _starsSlot = UIKit.Rect("StarsSlot", panel);
             UIKit.Size(_starsSlot, 130);
 
-            _verdictRow = UIKit.Rect("Verdict", panel.transform);
+            _verdictRow = UIKit.Rect("Verdict", panel);
             UIKit.Size(_verdictRow, 64);
             _verdict = UIKit.Label(_verdictRow, "", 30, UIKit.Sand);
             UIKit.Stretch(_verdict.rectTransform);
 
-            // 2 × 2 stat tiles.
-            var grid = UIKit.Rect("Stats", panel.transform);
-            UIKit.Size(grid, 2 * 150 + 18);
-            var g = grid.gameObject.AddComponent<GridLayoutGroup>();
-            g.cellSize = new Vector2(417, 150);
-            g.spacing = new Vector2(18, 18);
-            g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            g.constraintCount = 2;
-            _moves = Tile(grid, UISprites.Steps, "Coups", out _movesCaption);
-            _time = Tile(grid, UISprites.Clock, "Temps", out _);
-            _interactions = Tile(grid, UISprites.Hand, "Interactions", out _);
-            Tile(grid, null, "Vie", out _);
+            var grid = ModalKit.Tiles(panel, 2, Width);
+            _moves = ModalKit.Tile(grid, UISprites.Steps, "Coups", out _movesCaption);
+            _time = ModalKit.Tile(grid, UISprites.Clock, "Temps", out _);
+            _interactions = ModalKit.Tile(grid, UISprites.Hand, "Interactions", out _);
+            ModalKit.Tile(grid, null, "Vie", out _);
             _lifeSlot = (RectTransform)grid.GetChild(3).Find("Values/Value");
 
             // Rewards: chips on as many lines as they need (a record and the expert's time rarely fit side by side).
-            _rewards = UIKit.Rect("Rewards", panel.transform); // noloc
-            UIKit.Column(_rewards, RewardGap, 0);
+            _rewards = ModalKit.Chips(panel);
 
-            _primary = UIKit.Button(panel.transform, "Niveau suivant", OnPrimary, 40, ButtonStyle.Primary);
+            _primary = UIKit.Button(panel, "Niveau suivant", OnPrimary, 40, ButtonStyle.Primary);
             UIKit.Size(_primary, 112);
 
-            var actions = UIKit.Row(panel.transform, 160, 40);
-            _retry = UIKit.IconAction(actions.transform, UISprites.Retry, "Rejouer", Retry, 96);
-            UIKit.IconAction(actions.transform, UISprites.Podium, "Classement", Leaderboard, 96);
-            UIKit.IconAction(actions.transform, UISprites.Share, "Partager", Share, 96);
-            UIKit.IconAction(actions.transform, UISprites.Home, "Menu", Menu, 96);
-        }
-
-        /// <summary>Stat tile: icon on the left, big value over its caption.</summary>
-        static Text Tile(Transform parent, Sprite icon, string caption, out Text captionText)
-        {
-            var plate = UIKit.Plate(parent, UIKit.SurfaceHi, 24, null, false, "Tile " + caption); // noloc
-            var h = plate.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.padding = new RectOffset(26, 20, 16, 16);
-            h.spacing = 20;
-            h.childAlignment = TextAnchor.MiddleLeft;
-            h.childControlWidth = h.childControlHeight = true;
-            h.childForceExpandWidth = h.childForceExpandHeight = false;
-            if (icon != null) UIKit.Size(UIKit.Image(plate.transform, icon, UIKit.Gold, false, "Icon"), 56, 56);
-            var values = UIKit.Rect("Values", plate.transform);
-            UIKit.Size(values, 118, -1, 1);
-            UIKit.Column(values, 0, 0, TextAnchor.MiddleLeft);
-            var value = UIKit.Label(values, "", 50, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-            value.name = "Value"; // noloc
-            UIKit.Size(value, 66);
-            captionText = UIKit.Label(values, caption, 24, UIKit.Dim, TextAnchor.UpperLeft);
-            UIKit.FitText(captionText, 18);
-            UIKit.Size(captionText, 40);
-            return value;
+            var actions = ModalKit.Actions(panel);
+            _retry = UIKit.IconAction(actions, UISprites.Retry, "Rejouer", Retry, 96);
+            UIKit.IconAction(actions, UISprites.Podium, "Classement", Leaderboard, 96);
+            UIKit.IconAction(actions, UISprites.Share, "Partager", Share, 96);
+            UIKit.IconAction(actions, UISprites.Home, "Menu", Menu, 96);
         }
 
         public void Show(LevelResult result, RecordOutcome outcome)
@@ -171,7 +128,7 @@ namespace MummyEscape.UI.Screens
                            : Loc.F("Momie experte : {0}", LevelResult.FormatTime(result.TargetMs)),
                     beaten ? UIKit.Turquoise : UIKit.Dim));
             }
-            LayOutRewards(rewards);
+            ModalKit.LayOutChips(_rewards, rewards, Width);
 
             var next = Progression.Next(result.Level);
             _primaryIsNext = result.Won && next.HasValue;
@@ -180,50 +137,6 @@ namespace MummyEscape.UI.Screens
             // Get the next tombs generating while the player reads the recap.
             App.Game.Prefetch(result.Level);
             if (_primaryIsNext) App.Game.Prefetch(next.Value);
-        }
-
-        const float RewardHeight = 60;
-        const float RewardGap = 12;
-        const float RewardSpacing = 16;
-        /// <summary>Inside width of the panel (940 wide, 44 of padding on each side).</summary>
-        const float RewardWidth = 940 - 2 * 44;
-
-        /// <summary>
-        /// Fills the rewards line after line: a chip goes on the current line while it fits, else starts a new one; a chip
-        /// wider than the panel gets the whole line and its text shrinks.
-        /// </summary>
-        void LayOutRewards(List<(Sprite icon, string text, Color tint)> rewards)
-        {
-            UIKit.ClearChildren(_rewards);
-            _rewards.gameObject.SetActive(rewards.Count > 0);
-            HorizontalLayoutGroup line = null;
-            float used = 0;
-            int lines = 0;
-            foreach (var (icon, text, tint) in rewards)
-            {
-                if (line == null) { line = UIKit.Row(_rewards, RewardHeight, RewardSpacing); lines++; }
-                var label = UIKit.Chip(line.transform, icon, text, tint, RewardHeight);
-                var chip = (RectTransform)label.transform.parent;
-                LayoutRebuilder.ForceRebuildLayoutImmediate(chip);
-                float w = LayoutUtility.GetPreferredWidth(chip);
-                if (w > RewardWidth)
-                {
-                    label.horizontalOverflow = HorizontalWrapMode.Wrap;
-                    UIKit.FitText(label, 16);
-                    UIKit.Size(label, RewardHeight - 16, 0, 1);
-                    UIKit.Size(chip, RewardHeight, RewardWidth);
-                    w = RewardWidth;
-                }
-                if (used > 0 && used + RewardSpacing + w > RewardWidth)
-                {
-                    line = UIKit.Row(_rewards, RewardHeight, RewardSpacing);
-                    lines++;
-                    chip.SetParent(line.transform, false);
-                    used = w;
-                }
-                else used += (used > 0 ? RewardSpacing : 0) + w;
-            }
-            UIKit.Size(_rewards, lines == 0 ? 0 : lines * RewardHeight + (lines - 1) * RewardGap);
         }
 
         IEnumerator PopStars(RectTransform row, int count)

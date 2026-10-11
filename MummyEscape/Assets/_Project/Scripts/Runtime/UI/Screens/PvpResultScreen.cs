@@ -28,39 +28,26 @@ namespace MummyEscape.UI.Screens
 
         protected override void Build()
         {
-            var shade = UIKit.Image(Root, UIKit.Art.White, UIKit.Shade, true);
-            UIKit.Stretch(shade.rectTransform, -600, -600, -600, -600);
+            var panel = ModalKit.Frame(Root, 940);
+            _title = ModalKit.Header(panel, "", 84, out _subtitle);
 
-            var panel = UIKit.Panel(Root);
-            UIKit.FitInParent(UIKit.Place(panel.rectTransform, 0.5f, 0.5f, 940, 0));
-            var col = UIKit.Column(panel.transform, 20, 44);
-            col.padding = new RectOffset(44, 44, 40, 44);
-            panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            _me = Line(panel, UIKit.Gold);
+            _rival = Line(panel, UIKit.Turquoise);
 
-            _title = UIKit.Title(panel.transform, "", 84);
-            UIKit.FitText(_title, 48);
-            UIKit.Size(_title, 110);
-            _subtitle = UIKit.Label(panel.transform, "", 28, UIKit.Dim);
-            UIKit.FitText(_subtitle, 20);
-            UIKit.Size(_subtitle, 40);
-
-            _me = Line(panel.transform, UIKit.Gold);
-            _rival = Line(panel.transform, UIKit.Turquoise);
-
-            _elo = UIKit.Label(panel.transform, "", 40, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            _elo = UIKit.Label(panel, "", 40, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.Size(_elo, 64);
-            _rewards = UIKit.Row(panel.transform, 64, 16).GetComponent<RectTransform>();
-            _note = UIKit.Label(panel.transform, "", 26, UIKit.Dim);
+            _rewards = UIKit.Row(panel, 64, 16).GetComponent<RectTransform>();
+            _note = UIKit.Label(panel, "", 26, UIKit.Dim);
             UIKit.FitText(_note, 18);
             UIKit.Size(_note, 76);
 
-            _retry = UIKit.Button(panel.transform, "Renvoyer la course", Send, 36, ButtonStyle.Primary);
+            _retry = UIKit.Button(panel, "Renvoyer la course", Send, 36, ButtonStyle.Primary);
             UIKit.Size(_retry, 100);
-            _again = UIKit.Button(panel.transform, "Nouveau duel", Again, 40, ButtonStyle.Primary);
+            _again = UIKit.Button(panel, "Nouveau duel", Again, 40, ButtonStyle.Primary);
             UIKit.Size(_again, 112);
-            _watch = UIKit.Button(panel.transform, "Revoir le duel", Watch, 34);
+            _watch = UIKit.Button(panel, "Revoir le duel", Watch, 34);
             UIKit.Size(_watch, 92);
-            _menu = UIKit.Button(panel.transform, "Retour aux duels", Menu, UIKit.TextSize, ButtonStyle.Ghost);
+            _menu = UIKit.Button(panel, "Retour aux duels", Menu, UIKit.TextSize, ButtonStyle.Ghost);
             UIKit.Size(_menu, 76);
         }
 

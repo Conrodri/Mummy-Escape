@@ -77,12 +77,22 @@ namespace MummyEscape.UI.Screens
             // The home backdrop, picked among the open acts (in the stage's corner: the top bar is full on narrow phones).
             var theme = UIKit.IconAction(_stage, UISprites.Palette, "Thème", () => Router.Open<HomeThemeDialog>().OnPicked(ApplyTheme), 84);
             UIKit.Place((RectTransform)theme.transform.parent.parent, 1f, 1f, 134, 144); // button → its slot → the action column
+            // A dark plate under the button and its caption, so the word reads over the carved wall.
+            var themeBack = UIKit.Plate(theme.transform.parent.parent, new Color(0.1f, 0.07f, 0.05f, 0.8f), 22, UIKit.Rim, false, "Back"); // noloc
+            themeBack.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Stretch(themeBack.rectTransform, -6, -6, -6, -6);
+            themeBack.transform.SetAsFirstSibling();
+
+            // The dock: the pass, the next goal, the play button and the account line, framed together over the floor.
+            var dock = UIKit.Panel(column, "Dock").transform; // noloc
+            var dockLayout = UIKit.Column(dock, 12, 0);
+            dockLayout.padding = new RectOffset(22, 22, 22, 18);
 
             // The season pass, with what is waiting to be collected.
-            _pass = new PassBanner(column, 150, () => Router.Open<PassScreen>());
+            _pass = new PassBanner(dock, 150, () => Router.Open<PassScreen>());
 
             // What to aim for next, one tap away.
-            var goal = UIKit.ListItem(column, 116, () => _goalAction?.Invoke(), out var gh);
+            var goal = UIKit.ListItem(dock, 116, () => _goalAction?.Invoke(), out var gh);
             var flag = UIKit.Image(gh.transform, UISprites.Flag, UIKit.Gold, false, "Icon"); // noloc
             flag.preserveAspect = true;
             UIKit.Size(flag, 56, 56);
@@ -96,15 +106,15 @@ namespace MummyEscape.UI.Screens
             var arrow = UIKit.Image(gh.transform, UISprites.Next, UIKit.Dim, false, "Arrow"); // noloc
             UIKit.Size(arrow, 40, 40);
 
-            var play = UIKit.Rect("PlayRow", column);
+            var play = UIKit.Rect("PlayRow", dock);
             UIKit.Size(play, 124);
             var playBtn = UIKit.Button(play, Loc.T("JOUER"), () => Router.Open<LevelSelectScreen>(), 50, ButtonStyle.Primary);
             UIKit.Place((RectTransform)playBtn.transform, 0.5f, 0.5f, 620, 124);
 
             // Duel, solo, rankings, friends and the shop are in the bottom bar (NavBar).
 
-            _online = UIKit.Label(Root, "", 24, UIKit.Dim, TextAnchor.MiddleCenter);
-            UIKit.BottomBand(_online.rectTransform, 50, 36);
+            _online = UIKit.Label(dock, "", 22, UIKit.Dim, TextAnchor.MiddleCenter);
+            UIKit.Size(_online, 40);
             UIKit.FitText(_online, 16);
             // A guest's progress lives on this phone only: the line leads to the account screen.
             _online.raycastTarget = true;

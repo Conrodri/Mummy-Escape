@@ -35,8 +35,7 @@ namespace MummyEscape.UI.Screens
             panel.GetComponent<Image>().raycastTarget = true; // swallow taps inside the panel
             panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            _title = UIKit.Title(panel, "", 46);
-            UIKit.Size(_title, 80);
+            _title = ModalKit.Header(panel, "", 52);
             _hint = UIKit.Label(panel, "", 34, UIKit.Sand);
             UIKit.Size(_hint, 100);
             _input = UIKit.Input(panel, "", 40);

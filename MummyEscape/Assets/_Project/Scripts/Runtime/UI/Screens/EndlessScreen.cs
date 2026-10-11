@@ -23,6 +23,7 @@ namespace MummyEscape.UI.Screens
             Header("Sans fin");
             var body = Body(180, 40, 40);
             UIKit.Column(body, 16);
+            EnergyBadge.Create(body, Monetization.PlayMode.Endless); // above the list: always in sight
             _content = UIKit.Scroll(body, out var scroll);
             UIKit.Size(scroll, -1, -1, -1, 1);
             _content.GetComponent<VerticalLayoutGroup>().spacing = 22;
@@ -44,7 +45,7 @@ namespace MummyEscape.UI.Screens
         {
             var card = UIKit.Plate(_content, Color.white, 30, new Color(1f, 0.85f, 0.4f, 0.45f), false, "Rules"); // noloc
             UIFx.Gradient(card, new Color32(66, 50, 32, 255), new Color32(30, 22, 14, 255));
-            UIKit.Size(card, 330);
+            UIKit.Size(card, 290);
             var row = card.gameObject.AddComponent<HorizontalLayoutGroup>();
             row.padding = new RectOffset(28, 28, 22, 22);
             row.spacing = 26;
@@ -64,9 +65,6 @@ namespace MummyEscape.UI.Screens
             Line(lines, UISprites.Steps, Loc.T("Chaque tombeau franchi ouvre le suivant, plus dur."));
             Line(lines, UISprites.Retry, Loc.T("Une chute : le même tombeau, nouvel essai."));
             Line(lines, UISprites.Podium, Loc.T("Classement : les tombeaux, puis le temps."));
-            var energy = UIKit.Label(lines, PlayGate.Status(App, Monetization.PlayMode.Endless), 24, UIKit.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.FitText(energy, 16);
-            UIKit.Size(energy, 40);
         }
 
         static void Line(Transform parent, Sprite sprite, string text)

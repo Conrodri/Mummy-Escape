@@ -1,19 +1,27 @@
+using System.Collections.Generic;
 using MummyEscape.Core;
 using MummyEscape.Game;
+using MummyEscape.Monetization;
 using UnityEngine;
 using UnityEngine.UI;
+using PlayMode = MummyEscape.Monetization.PlayMode;
 
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// End of an endless tomb: "Tombeau n atteint" and on to the next one, or fallen and the same tomb again (each costs a
-    /// point of the endless energy). No stars: only getting out counts, the time adds up for the board.
+    /// End of an endless tomb, a Halloween tomb or a tower floor, in the look of the level recap: the outcome as the
+    /// title, the run in stat tiles, what it earned in chips, the energy the next run spends, then on (or again).
     /// </summary>
-    public sealed class EndlessResultScreen : UIScreen
+    public sealed class EndlessResultScreen : UIScreen, IBackHandler
     {
         public override bool IsModal => true;
+        const float Width = 940;
+        static readonly string[] ModeNames = { "Facile", "Normal", "Extrême" };
 
-        Text _title, _text, _energy;
+        Text _title, _subtitle, _note;
+        RectTransform _grid, _chips;
+        readonly Text[] _values = new Text[4], _captions = new Text[4];
+        EnergyBadge _energy;
         Button _main, _ranking;
         Difficulty _mode;
         /// <summary>The Halloween tomb to play on "Main", 0 on an endless ladder.</summary>
@@ -23,26 +31,20 @@ namespace MummyEscape.UI.Screens
 
         protected override void Build()
         {
-            var shade = UIKit.Image(Root, UIKit.Art.White, UIKit.Shade, true);
-            UIKit.Stretch(shade.rectTransform, -600, -600, -600, -600);
-
-            var panel = UIKit.Card(Root, 44, 22);
-            UIKit.FitInParent(UIKit.Place(panel, 0.5f, 0.5f, 860, 0));
-            panel.GetComponent<Image>().raycastTarget = true;
-            panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            _title = UIKit.Title(panel, "", 60);
-            UIKit.FitText(_title, 34);
-            UIKit.Size(_title, 100);
-            _text = UIKit.Label(panel, "", 32, UIKit.Sand);
-            UIKit.Size(_text, 150);
-            _energy = UIKit.Label(panel, "", 26, UIKit.Dim);
-            UIKit.Size(_energy, 40);
-            _main = UIKit.Button(panel, "Tombeau suivant", Main, 38, ButtonStyle.Primary); // a label now: an empty one has no Text
-            UIKit.Size(_main, UIKit.ButtonHeight + 8);
-            _ranking = UIKit.Button(panel, "Classement", Ranking);
-            UIKit.Size(_ranking, UIKit.ButtonHeight);
-            UIKit.Size(UIKit.Button(panel, "Menu principal", Menu, UIKit.TextSize, ButtonStyle.Ghost), 72);
+            var panel = ModalKit.Frame(Root, Width, null, 22);
+            _title = ModalKit.Header(panel, "", 76, out _subtitle);
+            _grid = ModalKit.Tiles(panel, 2, Width);
+            for (int i = 0; i < 4; i++) _values[i] = ModalKit.Tile(_grid, null, "", out _captions[i]);
+            _chips = ModalKit.Chips(panel);
+            _note = UIKit.Label(panel, "", 28, UIKit.Sand);
+            UIKit.FitText(_note, 18);
+            UIKit.Size(_note, 44);
+            _energy = EnergyBadge.Create(panel, PlayMode.Endless, 80);
+            _main = UIKit.Button(panel, "Tombeau suivant", Main, 40, ButtonStyle.Primary); // a label now: an empty one has no Text
+            UIKit.Size(_main, 112);
+            var actions = ModalKit.Actions(panel);
+            _ranking = UIKit.IconAction(actions, UISprites.Podium, "Classement", Ranking, 96);
+            UIKit.IconAction(actions, UISprites.Home, "Menu", Menu, 96);
         }
 
         /// <param name="tomb">Number of the tomb just played; <paramref name="progress"/> already counts the run.</param>
@@ -51,16 +53,24 @@ namespace MummyEscape.UI.Screens
             _mode = mode;
             _halloweenNext = 0;
             _tower = false;
-            _ranking.gameObject.SetActive(true);
             bool more = progress.Cleared < GameController.EndlessTombCount(mode);
-            _title.text = result.Won ? Loc.F("Tombeau {0} atteint !", progress.Reached) : Loc.T("La momie est tombée…");
-            _text.text = result.Won
-                ? Loc.F("Tombeau {0} franchi en {1}.", tomb, LevelResult.FormatTime(result.TimeMs)) + "\n"
-                  + Loc.F("+{0} scarabées · +{1} XP de pass", Monetization.BattlePass.EndlessScarabs, Monetization.BattlePass.EndlessXp) + "\n"
-                  + Loc.F("Temps cumulé : {0}", LevelResult.FormatTime(progress.TimeMs))
-                  + (more ? "" : "\n" + Loc.T("Tu as franchi tous les tombeaux : d'autres arrivent avec les mises à jour."))
-                : Loc.F("Le tombeau {0} t'attend toujours : même carte, nouvel essai.", tomb);
-            _energy.text = PlayGate.Status(App, Monetization.PlayMode.Endless);
+            Title(result.Won ? Loc.F("Tombeau {0} atteint !", progress.Reached) : Loc.T("La momie est tombée…"), result.Won);
+            _subtitle.text = Loc.T("Sans fin") + " · " + Loc.T(ModeNames[(int)mode]);
+            Tiles((UISprites.Infinity, tomb.ToString(), Loc.T(result.Won ? "Tombeau franchi" : "Tombeau")),
+                  (UISprites.Clock, LevelResult.FormatTime(result.TimeMs), Loc.T("Temps")),
+                  (UISprites.Retry, progress.Deaths.ToString(), Loc.T("Chutes")),
+                  (UISprites.Clock, LevelResult.FormatTime(progress.TimeMs), Loc.T("Temps cumulé")));
+            var chips = new List<(Sprite, string, Color)>();
+            if (result.Won)
+            {
+                chips.Add((UIKit.Art.Scarab, "+" + BattlePass.EndlessScarabs, UIKit.Gold));
+                chips.Add((UISprites.Crown, Loc.F("+{0} XP", BattlePass.EndlessXp), UIKit.Turquoise));
+            }
+            ModalKit.LayOutChips(_chips, chips, Width);
+            Note(!result.Won ? Loc.T("Même tombeau, nouvel essai.")
+               : more ? "" : Loc.T("Tous les tombeaux franchis : d'autres arrivent bientôt."));
+            Energy(PlayMode.Endless);
+            _ranking.transform.parent.parent.gameObject.SetActive(true);
             _main.gameObject.SetActive(more);
             UIKit.SetLabel(_main, result.Won ? "Tombeau suivant" : "Réessayer");
         }
@@ -70,13 +80,22 @@ namespace MummyEscape.UI.Screens
         {
             _halloweenNext = !result.Won ? tomb : App.Save.HalloweenDone ? tomb % Halloween.TombCount + 1 : App.Save.HalloweenNext;
             _tower = false;
-            _ranking.gameObject.SetActive(false);
-            _title.text = finished ? Loc.T("Acte Halloween terminé !") : result.Won ? Loc.F("Tombeau {0} franchi !", tomb) : Loc.T("La momie est tombée…");
-            _text.text = finished ? Loc.F("Tu gagnes « {0} » et le thème d'accueil Halloween.", Loc.T(Visual.HalloweenSkins.Resolve(Halloween.RewardSkin).Name))
-                       : result.Won ? Loc.F("Tombeau {0} franchi en {1}.", tomb, LevelResult.FormatTime(result.TimeMs))
-                         + (App.Save.HalloweenDone ? "" : "\n" + Loc.F("{0} / {1} tombeaux", App.Save.Data.HalloweenCleared, Halloween.TombCount))
-                       : Loc.F("Le tombeau {0} t'attend toujours : même carte, nouvel essai.", tomb);
-            _energy.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
+            Title(finished ? Loc.T("Acte Halloween terminé !") : result.Won ? Loc.F("Tombeau {0} franchi !", tomb) : Loc.T("La momie est tombée…"), result.Won);
+            _subtitle.text = Loc.T("Halloween");
+            Tiles((UISprites.Map, tomb.ToString(), Loc.T("Tombeau")),
+                  (UISprites.Clock, LevelResult.FormatTime(result.TimeMs), Loc.T("Temps")),
+                  (UISprites.Flag, App.Save.Data.HalloweenCleared + " / " + Halloween.TombCount, Loc.T("Tombeaux franchis")),
+                  (UISprites.Steps, result.Moves.ToString(), Loc.T("Coups")));
+            var chips = new List<(Sprite, string, Color)>();
+            if (finished)
+            {
+                chips.Add((UISprites.Check, Loc.T(Visual.HalloweenSkins.Resolve(Halloween.RewardSkin).Name), UIKit.Turquoise));
+                chips.Add((UISprites.Palette, Loc.T("Thème d'accueil Halloween"), UIKit.Gold));
+            }
+            ModalKit.LayOutChips(_chips, chips, Width);
+            Note(result.Won ? "" : Loc.T("Même tombeau, nouvel essai."));
+            Energy(PlayMode.Solo);
+            _ranking.transform.parent.parent.gameObject.SetActive(false);
             // The event may close while a tomb is played: that run counts, no new one starts.
             _main.gameObject.SetActive(Halloween.IsOpen(System.DateTime.UtcNow));
             UIKit.SetLabel(_main, result.Won ? "Tombeau suivant" : "Réessayer");
@@ -88,21 +107,56 @@ namespace MummyEscape.UI.Screens
             _tower = true;
             _towerClimbs = outcome.Continues;
             _halloweenNext = 0;
-            _ranking.gameObject.SetActive(true);
-            _title.text = outcome.Continues ? Loc.F("Étage {0} franchi !", floor)
-                        : result.Won ? Loc.T("Moins de 2 étoiles : la course s'arrête")
-                        : Loc.T("La momie est tombée…");
-            string text = outcome.Continues
-                ? Loc.F("Étage {0} franchi en {1}.", floor, LevelResult.FormatTime(result.TimeMs))
-                  + "\n" + (run.CurseDue ? Loc.T("Choisis un malus pour continuer.") : Loc.F("L'étage {0} t'attend.", run.Floor))
-                : Loc.F("Course terminée : {0} étages franchis.", run.Cleared);
-            if (outcome.RewardSkin != null) text += "\n" + Loc.F("Tu gagnes « {0} » !", Loc.T(Visual.TowerSkins.Resolve(outcome.RewardSkin).Name));
-            else if (outcome.Record) text += "\n" + Loc.T("Nouveau record !");
-            _text.text = text;
-            _energy.text = outcome.Continues ? "" : PlayGate.Status(App, Monetization.PlayMode.Endless);
+            Title(outcome.Continues ? Loc.F("Étage {0} franchi !", floor)
+                : result.Won ? Loc.T("Moins de 2 étoiles : la course s'arrête")
+                : Loc.T("La momie est tombée…"), outcome.Continues);
+            _subtitle.text = Loc.T("Tour de défi");
+            Tiles((UISprites.Tower, floor.ToString(), Loc.T("Étage")),
+                  (UISprites.Clock, LevelResult.FormatTime(result.TimeMs), Loc.T("Temps")),
+                  (UIKit.Art.Star, result.Won ? result.Stars + " / 3" : "–", Loc.T("Étoiles")), // noloc
+                  (UISprites.Flag, run.Cleared.ToString(), Loc.T("Étages franchis")));
+            var chips = new List<(Sprite, string, Color)>();
+            if (outcome.RewardSkin != null) chips.Add((UISprites.Check, Loc.T(Visual.TowerSkins.Resolve(outcome.RewardSkin).Name), UIKit.Turquoise));
+            else if (outcome.Record) chips.Add((UISprites.Podium, Loc.T("Nouveau record !"), UIKit.Turquoise));
+            ModalKit.LayOutChips(_chips, chips, Width);
+            Note(outcome.Continues && run.CurseDue ? Loc.T("Choisis un malus pour continuer.") : "");
+            Energy(outcome.Continues ? (PlayMode?)null : PlayMode.Endless);
+            _ranking.transform.parent.parent.gameObject.SetActive(true);
             _main.gameObject.SetActive(true);
             UIKit.SetLabel(_main, !outcome.Continues ? "Nouvelle course" : run.CurseDue ? "Choisir un malus" : "Étage suivant");
         }
+
+        void Title(string text, bool good)
+        {
+            _title.text = text.ToUpperInvariant();
+            ModalKit.Tint(_title, good);
+        }
+
+        /// <summary>Fills the tiles in order (two or four of them).</summary>
+        void Tiles(params (Sprite icon, string value, string caption)[] tiles)
+        {
+            for (int i = 0; i < _values.Length; i++)
+            {
+                bool shown = i < tiles.Length;
+                _values[i].transform.parent.parent.gameObject.SetActive(shown);
+                if (shown) ModalKit.SetTile(_values[i], _captions[i], tiles[i].icon, tiles[i].value, tiles[i].caption);
+            }
+        }
+
+        void Note(string text)
+        {
+            _note.text = text;
+            _note.gameObject.SetActive(text.Length > 0);
+        }
+
+        /// <summary>The energy the next run spends (none in the middle of a tower run: its floors are paid).</summary>
+        void Energy(PlayMode? mode)
+        {
+            _energy.gameObject.SetActive(mode.HasValue);
+            if (mode.HasValue) _energy.Mode = mode.Value;
+        }
+
+        public void OnBack() => Menu();
 
         void Main()
         {

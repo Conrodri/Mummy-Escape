@@ -12,16 +12,8 @@ namespace MummyEscape.UI.Screens
 
         protected override void Build()
         {
-            var shade = UIKit.Image(Root, UIKit.Art.White, UIKit.Shade, true);
-            UIKit.Stretch(shade.rectTransform, -600, -600, -600, -600);
-            shade.gameObject.AddComponent<Button>().onClick.AddListener(Resume); // tap outside = resume
-
-            var panel = UIKit.Card(Root, 44, 18);
-            UIKit.FitInParent(UIKit.Place(panel, 0.5f, 0.5f, 760, 0));
-            panel.GetComponent<Image>().raycastTarget = true;
-            panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            UIKit.Size(UIKit.Title(panel, "Pause", 68), 100);
+            var panel = ModalKit.Frame(Root, 760, Resume, 18); // tap outside = resume
+            ModalKit.Header(panel, "Pause", 68);
             _duelNote = UIKit.Label(panel, "Duel : le chrono continue de tourner !", 30, UIKit.Danger, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(_duelNote, 20);
             UIKit.Size(_duelNote, 50);

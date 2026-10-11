@@ -26,8 +26,7 @@ namespace MummyEscape.UI.Screens
             UIKit.FitInParent(panel);
             panel.GetComponent<Image>().raycastTarget = true;
             panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            _title = UIKit.Label(panel, "", 48, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.Size(_title, 110);
+            _title = ModalKit.Header(panel, "", 56);
             _text = UIKit.Label(panel, "", 32, UIKit.Sand);
             _text.lineSpacing = 1.1f;
             _buttons = UIKit.Rect("Buttons", panel); // noloc
