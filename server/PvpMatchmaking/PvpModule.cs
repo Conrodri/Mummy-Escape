@@ -99,6 +99,16 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("GetDuoBoard")]
         public Task<DuoBoardResponse> GetDuoBoard(IExecutionContext ctx, int limit) => Server(ctx).GetDuoBoardAsync(limit);
 
+        /// <summary>Campagne 2v2 : un passage du duo, rejoué ; progression du duo et étoiles 2v2 du joueur.</summary>
+        [CloudCodeFunction("SubmitCoop")]
+        public Task<CoopClearResponse> SubmitCoop(IExecutionContext ctx, string duoId, int tomb,
+                                                  System.Collections.Generic.List<CoopRunInput> inputs, int timeMs) =>
+            Server(ctx).SubmitCoopAsync(ctx.PlayerId, duoId, tomb, inputs, timeMs);
+
+        /// <summary>Classement de la campagne 2v2 (les duos, par étoiles puis temps cumulé).</summary>
+        [CloudCodeFunction("GetCoopBoard")]
+        public Task<DuoBoardResponse> GetCoopBoard(IExecutionContext ctx, int limit) => Server(ctx).GetCoopBoardAsync(limit);
+
         /// <summary>Démarre la manche du joueur dans un combat d'équipe ; la course revient par SubmitRun.</summary>
         [CloudCodeFunction("StartBattleRun")]
         public Task<FindDuelResponse> StartBattleRun(IExecutionContext ctx, string battleId, int generatorVersion) =>

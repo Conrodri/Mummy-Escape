@@ -40,6 +40,10 @@ namespace MummyEscape.Online
         /// <summary>Starts a 2v2 battle; <paramref name="meFirst"/>: the player runs rounds 1 and 3, the partner round 2.</summary>
         Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst);
         Task<DuoBoardResponse> GetDuoBoardAsync(int limit);
+        /// <summary>2v2 campaign: a clear of the duo (the actions in the host's order), replayed by the server.</summary>
+        Task<CoopClearResponse> SubmitCoopAsync(string duoId, int tomb, List<CoopRunInput> inputs, int timeMs);
+        /// <summary>2v2 campaign ranking: the same duos, by stars then total time.</summary>
+        Task<DuoBoardResponse> GetCoopBoardAsync(int limit);
         /// <summary>Starts the player's round in a team battle (2v2 or guild war); the run goes back through SubmitRun.</summary>
         Task<FindDuelResponse> StartBattleRunAsync(string battleId);
         /// <summary>A battle as this player may see it (undecided rival runs hidden), null on failure.</summary>

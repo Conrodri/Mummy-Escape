@@ -145,6 +145,8 @@ namespace MummyEscape.Pvp
         public string ActiveBattle;
         /// <summary>Derniers combats terminés (les plus récents d'abord).</summary>
         public List<string> RecentBattles = new List<string>();
+        /// <summary>Campagne 2v2 : le meilleur passage de chaque tombeau passé par le duo.</summary>
+        public List<CoopRecord> Coop = new List<CoopRecord>();
 
         public string Name => Names.Count >= 2 ? Names[0] + " & " + Names[1] : Id;
     }
@@ -167,6 +169,8 @@ namespace MummyEscape.Pvp
         public List<string> Members = new List<string>();
         public int Elo;
         public int Wins, Losses, Draws;
+        /// <summary>Campagne 2v2 : tombeaux passés, leurs meilleures étoiles et la somme de leurs meilleurs temps.</summary>
+        public int CoopCleared, CoopStars, CoopTimeMs;
     }
 
     // ------------------------------------------------------------------ guildes

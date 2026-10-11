@@ -162,6 +162,7 @@ namespace MummyEscape.Pvp
             {
                 Id = duo.Id, Name = duo.Name, Members = duo.Members, Elo = duo.Elo,
                 Wins = duo.Wins, Losses = duo.Losses, Draws = duo.Draws,
+                CoopCleared = duo.Coop?.Count ?? 0, CoopStars = duo.Coop?.Sum(r => r.Stars) ?? 0, CoopTimeMs = duo.Coop?.Sum(r => r.TimeMs) ?? 0,
             }, s => s.Id);
 
         /// <summary>

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using MummyEscape.Core;
+using MummyEscape.Pvp;
 using NUnit.Framework;
 
 namespace MummyEscape.Tests
@@ -167,6 +168,68 @@ namespace MummyEscape.Tests
                 Assert.LessOrEqual(t.Level.ChannelCount, Solver.MaxChannels, t.Name);
                 Assert.IsTrue(Solver.CanPack(t.Level), t.Name);
             }
+        }
+
+        // ------------------------------------------------------------------ server: duo progress, stars, board
+
+        static (PvpServer server, string duo) ServerWithDuo()
+        {
+            var now = new System.DateTime(2026, 10, 11, 12, 0, 0, System.DateTimeKind.Utc);
+            var server = new PvpServer(new MemoryPvpStore(), () => now);
+            Assert.IsTrue(server.InviteDuoAsync("a", "Ana", "b").Result.Ok);
+            var invite = server.GetTeamsAsync("b").Result.Invites[0];
+            Assert.IsTrue(server.RespondDuoAsync("b", "Bob", invite.Id, true).Result.Ok);
+            return (server, server.GetTeamsAsync("a").Result.Duos[0].Id);
+        }
+
+        static List<CoopRunInput> Inputs(CoopTomb tomb)
+        {
+            var rules = new CoopRules(tomb.Level);
+            var sol = CoopSolver.Solve(rules, rules.Initial(tomb.Starts[0], tomb.Starts[1]));
+            return sol.Actions.ConvertAll(x => new CoopRunInput { Mummy = x.mummy, Direction = RunActions.Encode(x.action) });
+        }
+
+        [Test]
+        public void Server_RecordsTheDuoProgressAndEachPlayersStars()
+        {
+            var (server, duo) = ServerWithDuo();
+            var tomb = CoopCampaign.Get(1);
+            Assert.AreEqual("LOCKED", server.SubmitCoopAsync("a", duo, 2, Inputs(CoopCampaign.Get(2)), 20_000).Result.Error, "tomb 2 waits for tomb 1");
+
+            var a = server.SubmitCoopAsync("a", duo, 1, Inputs(tomb), tomb.TargetMs).Result;
+            Assert.IsNull(a.Error);
+            Assert.AreEqual(3, a.Stars);
+            Assert.IsTrue(a.FirstClear);
+            Assert.AreEqual(3, a.TotalStars);
+            Assert.AreEqual(1, CoopLogic.Cleared(a.Duo));
+            Assert.IsTrue(CoopLogic.IsOpen(a.Duo, 2));
+
+            // The partner's phone sends the same run: his stars, his first reward; the duo's record does not double.
+            var b = server.SubmitCoopAsync("b", duo, 1, Inputs(tomb), tomb.TargetMs + 300).Result;
+            Assert.IsTrue(b.FirstClear);
+            Assert.AreEqual(1, b.Duo.Coop.Count);
+            Assert.AreEqual(tomb.TargetMs, b.Duo.Coop[0].TimeMs, "the best time stays");
+
+            var again = server.SubmitCoopAsync("a", duo, 1, Inputs(tomb), tomb.TargetMs).Result;
+            Assert.IsFalse(again.FirstClear, "rewards only on the first success");
+            Assert.AreEqual(0, again.NewStars);
+
+            var board = server.GetCoopBoardAsync(10).Result.Rows;
+            Assert.AreEqual(1, board.Count);
+            Assert.AreEqual(3, board[0].CoopStars);
+            Assert.AreEqual(1, board[0].CoopCleared);
+        }
+
+        [Test]
+        public void Server_RefusesRunsThatDoNotGetBothOutOrAreTooFast()
+        {
+            var (server, duo) = ServerWithDuo();
+            var tomb = CoopCampaign.Get(1);
+            var inputs = Inputs(tomb);
+            var cut = inputs.GetRange(0, inputs.Count - 1);
+            Assert.AreEqual("INVALID", server.SubmitCoopAsync("a", duo, 1, cut, 20_000).Result.Error, "one mummy short of the exit");
+            Assert.AreEqual("INVALID", server.SubmitCoopAsync("a", duo, 1, inputs, 10).Result.Error, "faster than the game animates");
+            Assert.AreEqual("UNKNOWN", server.SubmitCoopAsync("c", duo, 1, inputs, 20_000).Result.Error, "not a member");
         }
 
         [Test]

@@ -156,6 +156,8 @@ namespace MummyEscape.Pvp
         public string DirectoryName;
         /// <summary>Invitations à rejoindre une guilde.</summary>
         public List<GuildInvite> GuildInvites = new List<GuildInvite>();
+        /// <summary>Étoiles 2v2 du joueur, tombeau par tombeau de la campagne 2v2 (les siennes, quel que soit le duo).</summary>
+        public List<CoopStar> CoopStars = new List<CoopStar>();
         /// <summary>Guildes où le joueur a postulé (pour l'affichage ; la guilde garde la vraie liste).</summary>
         public List<string> GuildApplications = new List<string>();
     }
