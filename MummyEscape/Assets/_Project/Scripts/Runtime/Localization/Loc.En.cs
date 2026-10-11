@@ -972,7 +972,7 @@ namespace MummyEscape
             ["Disque lunaire"] = "Lunar Disc",
             ["Plus d'énergie pour les parties solo (l'acte 1 reste libre)."] = "Out of energy for solo games (act 1 stays free).",
             ["Plus d'énergie de combat pour les duels et les matchs 2v2."] = "Out of combat energy for duels and 2v2 matches.",
-            ["Un point revient toutes les 6 minutes (le prochain dans {0})."] = "A point comes back every 6 minutes (next in {0}).",
+            ["Un point revient toutes les 2 minutes (le prochain dans {0})."] = "A point comes back every 2 minutes (next in {0}).",
             ["Regarde une courte pub pour +{0} d'énergie, ou prends le Pass : plus aucune limite."] = "Watch a short ad for +{0} energy, or get the Pass: no more limits.",
             ["Plus de pubs aujourd'hui"] = "No more ads today",
             ["Mise à jour"] = "Update",
@@ -987,7 +987,7 @@ namespace MummyEscape
             ["Il faut le pass premium."] = "You need the premium pass.",
             ["Connexion impossible : réessaie plus tard."] = "Can't connect: try again later.",
             ["Connecte ton compte Google Play Jeux avant un achat : tes scarabées dorés y restent attachés."] = "Connect your Google Play Games account before buying: your golden scarabs stay tied to it.",
-            ["Plus d'énergie de combat : un point revient toutes les 6 minutes."] = "Out of combat energy: a point comes back every 6 minutes.",
+            ["Plus d'énergie de combat : un point revient toutes les 2 minutes."] = "Out of combat energy: a point comes back every 2 minutes.",
             ["Regarder une pub (+{0})"] = "Watch an ad (+{0})",
             ["Choix publicitaires"] = "Ad choices",
             ["Pub indisponible pour le moment"] = "No ad available right now",
@@ -1225,6 +1225,7 @@ namespace MummyEscape
             ["Normal"] = "Normal",
             ["Extrême"] = "Extreme",
             ["Termine le mode {0} pour l'ouvrir"] = "Finish {0} mode to open it",
+            ["Touche pour revenir à la roue"] = "Tap to go back to the wheel",
         };
     }
 }

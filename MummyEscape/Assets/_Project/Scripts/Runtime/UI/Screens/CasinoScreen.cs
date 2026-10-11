@@ -11,7 +11,7 @@ namespace MummyEscape.UI.Screens
     /// The casino, a tab of its own: two wheels, one paid in scarabs (drawn here, the scarabs live in the save), one in
     /// seals (drawn by the server). Each turn has a 0.5 % chance of an exclusive animated legendary colour; the odds are
     /// shown in full. The wheel sits under blinking bulbs and a turning glow; a legendary opens in the zoom. Ten turns at
-    /// once cost nine (<see cref="Casino.MultiSpins"/>): the wheel lands on the best of them, the note adds them all up.
+    /// once cost nine (<see cref="Casino.MultiSpins"/>): no wheel, their prizes drop in as tiles, the note adds them all up.
     /// </summary>
     public sealed class CasinoScreen : UIScreen
     {
@@ -21,11 +21,15 @@ namespace MummyEscape.UI.Screens
         const float WheelSize = 620;
         const float SpinSeconds = 4f;
         const int Bulbs = 20;
+        const float Tile = 156, TileGap = 14;
 
         Text _coins, _seals, _title, _caption, _legend, _odds, _result;
         UIKit.Segmented _tabs;
-        RectTransform _disc, _legendaries, _resultPop;
-        Image _glow;
+        RectTransform _disc, _legendaries, _resultPop, _stage, _tileGrid;
+        Image _glow, _tiles;
+        Text _tilesHint;
+        /// <summary>The ×10 tiles are dropping in; a tap shows them all at once.</summary>
+        bool _revealing, _skipReveal;
         Button _spin, _spin10;
         Text _spinLabel, _spin10Label;
         int _tab;
@@ -61,6 +65,7 @@ namespace MummyEscape.UI.Screens
             {
                 if (_spinning) { _tabs.Select(_tab); return; }
                 _tab = i;
+                CloseTiles();
                 Refresh();
             }, 88);
 
@@ -71,7 +76,7 @@ namespace MummyEscape.UI.Screens
             // The wheel takes the room left; FitInParent shrinks it on short screens.
             var holder = UIKit.Rect("Holder", body); // noloc
             UIKit.Size(holder, WheelSize * 0.6f, -1, -1, 1);
-            var stage = UIKit.Place(UIKit.Rect("Stage", holder), 0.5f, 0.5f, WheelSize + 90, WheelSize + 90); // noloc
+            var stage = _stage = UIKit.Place(UIKit.Rect("Stage", holder), 0.5f, 0.5f, WheelSize + 90, WheelSize + 90); // noloc
             UIKit.FitInParent(stage, 0);
             _glow = UIKit.Image(stage, UISprites.RadialGlow, new Color(1f, 0.75f, 0.35f, 0.5f), false, "Glow"); // noloc
             _glow.preserveAspect = false;
@@ -92,6 +97,20 @@ namespace MummyEscape.UI.Screens
             UIKit.Place(pointer.rectTransform, 0.5f, 1f, 50, 50, 0, -30);
             pointer.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
             UIKit.DropShadow(pointer, 4, 0.5f);
+
+            // The ×10 turns show here instead of the wheel, one tile per turn; a tap goes back to the wheel.
+            _tiles = UIKit.Plate(holder, new Color(0, 0, 0, 0.35f), 24, UIKit.Rim, false, "Tiles"); // noloc
+            UIKit.Place(_tiles.rectTransform, 0.5f, 0.5f, 5 * Tile + 4 * TileGap + 60, 2 * Tile + TileGap + 130);
+            UIKit.FitInParent(_tiles.rectTransform, 0);
+            _tiles.raycastTarget = true;
+            var tap = _tiles.gameObject.AddComponent<Button>();
+            tap.targetGraphic = _tiles;
+            tap.onClick.AddListener(OnTilesTap);
+            _tileGrid = UIKit.Place(UIKit.Rect("Grid", _tiles.transform), 0.5f, 0.5f, 0, 0, 0, 25); // noloc
+            _tilesHint = UIKit.Label(_tiles.transform, "", 24, UIKit.Dim, TextAnchor.MiddleCenter);
+            UIKit.FitText(_tilesHint, 16);
+            UIKit.Place(_tilesHint.rectTransform, 0.5f, 0f, 5 * Tile + 4 * TileGap, 44, 0, 18);
+            _tiles.gameObject.SetActive(false);
 
             // The legendaries of the wheel (a check on those already won); a tap shows one up close.
             _caption = UIKit.Label(body, "À gagner", 24, LegendaryColor, TextAnchor.MiddleCenter, FontStyle.Bold);
@@ -132,6 +151,8 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             _spinning = false; // a spin cut short by leaving the screen was already paid and cashed in
+            _revealing = false;
+            CloseTiles();
             // Where paid random draws are banned (Belgium), only the seal wheel: seals are won, never bought.
             bool banned = CountryService.LootBoxesBanned(App.Save.Country);
             _tabs.Root.SetActive(!banned);
@@ -316,8 +337,8 @@ namespace MummyEscape.UI.Screens
             Started();
             // The price leaves the wallet now, the prizes land when the wheel stops.
             _coins.text = (App.Save.Data.Coins - Casino.Winnings(results)).ToString();
-            var best = Casino.Best(results);
-            StartCoroutine(Turn(wheel, best, () => Landed(wheel, results, false)));
+            if (results.Count > 1) StartCoroutine(Reveal(wheel, results, () => Landed(wheel, results, false)));
+            else StartCoroutine(Turn(wheel, results[0], () => Landed(wheel, results, false)));
         }
 
         async void SpinSeals(WheelDef wheel, int count)
@@ -338,7 +359,8 @@ namespace MummyEscape.UI.Screens
             // An older server answers a single turn without the list.
             var results = r.Results != null && r.Results.Count > 0 ? r.Results : new List<SpinResult> { r.Result };
             _seals.text = (r.Seals - Casino.Winnings(results)).ToString();
-            StartCoroutine(Turn(wheel, r.Result, () => Landed(wheel, results, true)));
+            if (results.Count > 1) StartCoroutine(Reveal(wheel, results, () => Landed(wheel, results, true)));
+            else StartCoroutine(Turn(wheel, r.Result, () => Landed(wheel, results, true)));
         }
 
         void Started()
@@ -347,6 +369,75 @@ namespace MummyEscape.UI.Screens
             _spin.interactable = false;
             _spin10.interactable = false;
             _result.text = "";
+            CloseTiles();
+        }
+
+        void CloseTiles()
+        {
+            if (_revealing) return;
+            _tiles.gameObject.SetActive(false);
+            _stage.gameObject.SetActive(true);
+        }
+
+        void OnTilesTap()
+        {
+            if (_revealing) _skipReveal = true;
+            else CloseTiles();
+        }
+
+        /// <summary>The ×10 turns drop in as tiles one after the other, in the order they were drawn.</summary>
+        System.Collections.IEnumerator Reveal(WheelDef wheel, List<SpinResult> results, System.Action done)
+        {
+            _revealing = true;
+            _skipReveal = false;
+            _stage.gameObject.SetActive(false);
+            _tiles.gameObject.SetActive(true);
+            UIFx.PopIn(_tiles, 0f, 0.92f);
+            UIKit.ClearChildren(_tileGrid);
+            _tilesHint.text = Loc.T("Touche pour passer");
+            int cols = (results.Count + 1) / 2, rows = (results.Count + cols - 1) / cols;
+            for (int i = 0; i < results.Count; i++)
+            {
+                var r = results[i];
+                var slot = new Vector2((i % cols - (cols - 1) / 2f) * (Tile + TileGap), ((rows - 1) / 2f - i / cols) * (Tile + TileGap));
+                var tile = BuildTile(_tileGrid, wheel, r);
+                UIFx.PopIn(tile, 0f, 0.5f);
+                if (!_skipReveal) App.Audio.Play(r.Legendary != null ? Sfx.Win : Sfx.Click);
+                for (float t = 0f; t < 0.22f && !_skipReveal; t += Time.unscaledDeltaTime)
+                {
+                    float k = t / 0.22f;
+                    tile.anchoredPosition = slot + new Vector2(0, 90f * (1f - k) * (1f - k));
+                    yield return null;
+                }
+                tile.anchoredPosition = slot;
+                for (float t = 0f; t < 0.08f && !_skipReveal; t += Time.unscaledDeltaTime) yield return null;
+            }
+            _revealing = false;
+            _tilesHint.text = Loc.T("Touche pour revenir à la roue");
+            done();
+        }
+
+        /// <summary>One ×10 turn: nothing, the amount won, or a legendary standing out in pink.</summary>
+        static RectTransform BuildTile(RectTransform parent, WheelDef wheel, SpinResult r)
+        {
+            bool legendary = r.Legendary != null;
+            var holder = UIKit.Place(UIKit.Rect("Turn", parent), 0.5f, 0.5f, Tile, Tile); // noloc
+            if (legendary) UIFx.Halo(holder, new Color(1f, 0.4f, 0.85f, 0.7f), Tile * 1.9f, 40f);
+            var color = legendary ? LegendaryColor : WedgeColor(wheel.Segments[r.Segment], r.Segment);
+            var plate = UIKit.Plate(holder, color, 24, legendary ? Color.white : UIKit.Rim, legendary, "Plate"); // noloc
+            UIKit.Stretch(plate.rectTransform);
+            string text = legendary ? Loc.T("Légendaire") : r.Kind == PrizeKind.Nothing ? Loc.T("Rien") : "+" + r.Amount;
+            var label = UIKit.Label(plate.transform, text, legendary ? 30 : 42, legendary ? Color.white : r.Kind == PrizeKind.Nothing ? UIKit.Dim : UIKit.Sand,
+                                    TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(label, 16);
+            UIKit.Stretch(label.rectTransform, 8, 8, 8, 8);
+            UIKit.DropShadow(label, 3, 0.6f);
+            if (legendary)
+            {
+                UIFx.Shine(plate.rectTransform, 1.6f, 0.35f);
+                UIFx.Pulse(plate, 0.06f, 0.9f);
+            }
+            return holder;
         }
 
         /// <summary>Spins the disc several turns and slows it down onto the drawn wedge, ticking at every wedge.</summary>
