@@ -41,6 +41,9 @@ namespace MummyEscape.EditorTools
                 Write(EndlessPath(mode), $"Mummy Rush endless {mode.Letter()}");
                 count++;
             }
+            // The tower draws its tombs with the generator: its board carries the version.
+            Write(TowerPath, $"Mummy Rush tower v{version}");
+            count++;
             return count;
         }
 
@@ -57,16 +60,19 @@ namespace MummyEscape.EditorTools
             File.WriteAllText(path, json);
         }
 
-        /// <summary>Configs of the current generator version, one per level, and the endless boards.</summary>
+        /// <summary>Configs of the current generator version, one per level, the endless boards and the tower's.</summary>
         public static List<string> Current()
         {
             var paths = new List<string>();
             foreach (var id in DifficultyTable.AllLevels()) paths.Add(PathOf(id, DifficultyTable.GeneratorVersion));
             foreach (var mode in DifficultyExt.All) paths.Add(EndlessPath(mode));
+            paths.Add(TowerPath);
             return paths;
         }
 
         static string EndlessPath(Difficulty mode) => Path.Combine(Folder, Endless.BoardId(mode) + ".lb").Replace('\\', '/');
+
+        static string TowerPath => Path.Combine(Folder, Tower.BoardId + ".lb").Replace('\\', '/');
 
         /// <summary>Levels of the current generator version without a config: the build refuses to go out without them.</summary>
         public static List<string> Missing() => Current().FindAll(p => !File.Exists(p));

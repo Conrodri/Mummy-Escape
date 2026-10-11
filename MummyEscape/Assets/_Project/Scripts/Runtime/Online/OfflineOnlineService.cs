@@ -79,19 +79,19 @@ namespace MummyEscape.Online
             return Task.FromResult(page);
         }
 
-        readonly Dictionary<Difficulty, long> _endless = new Dictionary<Difficulty, long>();
+        readonly Dictionary<string, long> _boards = new Dictionary<string, long>();
 
-        public Task<bool> SubmitEndlessAsync(Difficulty mode, long score)
+        public Task<bool> SubmitBoardAsync(string board, long score)
         {
-            if (!_endless.TryGetValue(mode, out long prev) || score < prev) _endless[mode] = score;
+            if (!_boards.TryGetValue(board, out long prev) || score < prev) _boards[board] = score;
             return Task.FromResult(false); // never reached a server
         }
 
-        /// <summary>Only the player's own ladder (sent this session): the screen shows the saved one otherwise.</summary>
-        public Task<LeaderboardPage> GetEndlessLeaderboardAsync(Difficulty mode, LeaderboardScope scope, int limit)
+        /// <summary>Only the player's own score (sent this session): the screen shows the saved one otherwise.</summary>
+        public Task<LeaderboardPage> GetBoardLeaderboardAsync(string board, LeaderboardScope scope, int limit)
         {
             var page = new LeaderboardPage();
-            if (_endless.TryGetValue(mode, out long score))
+            if (_boards.TryGetValue(board, out long score))
             {
                 var (overPar, timeMs) = LevelResult.DecodeScore(score);
                 page.Me = new LeaderboardRow { Rank = 1, PlayerId = PlayerId, PlayerName = PlayerName, OverPar = overPar, TimeMs = timeMs, IsMe = true, Country = Country };

@@ -157,10 +157,10 @@ namespace MummyEscape.Online
         Task<bool> SubmitScoreAsync(LevelResult result);
         /// <summary>Top <paramref name="limit"/> of a level. Country scope uses <see cref="Country"/>.</summary>
         Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit);
-        /// <summary>Sends an endless ladder's <see cref="Endless.EncodeScore"/> to its board (<see cref="Endless.BoardId"/>). True once the server has it.</summary>
-        Task<bool> SubmitEndlessAsync(Difficulty mode, long score);
-        /// <summary>Top of an endless ladder: rows hold the score as levels do, <see cref="Endless.ReachedOf"/> reads the tomb back.</summary>
-        Task<LeaderboardPage> GetEndlessLeaderboardAsync(Difficulty mode, LeaderboardScope scope, int limit);
+        /// <summary>Sends a score to a mode board (<see cref="Endless.BoardId"/>, <see cref="Tower.BoardId"/>; the board keeps the best). True once the server has it.</summary>
+        Task<bool> SubmitBoardAsync(string board, long score);
+        /// <summary>Top of a mode board: rows hold the score as levels do (<see cref="Endless.ReachedOf"/> reads a tomb back).</summary>
+        Task<LeaderboardPage> GetBoardLeaderboardAsync(string board, LeaderboardScope scope, int limit);
 
         Task<IReadOnlyList<FriendInfo>> GetFriendsAsync();
         Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync();

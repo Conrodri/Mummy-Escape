@@ -134,6 +134,7 @@ namespace MummyEscape.Game
             InTutorial = false;
             EndlessMode = null;
             HalloweenTomb = 0;
+            TowerFloor = 0;
             StopAllCoroutines();
             EndPreviewVisuals();
             _busy = false;
@@ -390,7 +391,7 @@ namespace MummyEscape.Game
         {
             // A duel's tomb is drawn by the server and shared with the rival: it cannot be swapped.
             // An endless tomb is the same for everyone and stored for good: it cannot be swapped either.
-            if (!Previewing || Session == null || Match != null || InEndless || InCoop || InHalloween) return;
+            if (!Previewing || Session == null || Match != null || InEndless || InCoop || InHalloween || InTower) return;
             _ = RedrawAfterScreenshot();
         }
 
@@ -423,6 +424,7 @@ namespace MummyEscape.Game
             if (InTutorial) StartTutorial();
             else if (InEndless) _ = StartEndless(EndlessMode.Value);
             else if (InHalloween) _ = StartHalloween(HalloweenTomb);
+            else if (InTower) _ = StartTower();
             else if (Match == null && !InCoop) _ = StartLevel(CurrentLevel);
         }
 
@@ -437,6 +439,7 @@ namespace MummyEscape.Game
             InTutorial = false;
             EndlessMode = null;
             HalloweenTomb = 0;
+            TowerFloor = 0;
             Session = null;
             Match = null;
             _ghost.Hide();
@@ -915,6 +918,11 @@ namespace MummyEscape.Game
             if (InHalloween)
             {
                 FinishHalloween(result);
+                yield break;
+            }
+            if (InTower)
+            {
+                FinishTower(result);
                 yield break;
             }
             var outcome = _app.Save.Apply(result);

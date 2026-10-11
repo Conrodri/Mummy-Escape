@@ -251,22 +251,33 @@ namespace MummyEscape.App
             }
             foreach (var mode in DifficultyExt.All)
             {
-                var p = Save.EndlessOf(mode);
-                if (p.Cleared <= 0 || Save.Data.SubmittedScores.Contains(Endless.BoardId(mode) + ":" + p.Score)) continue;
                 await SubmitEndless(mode);
                 if (!Online.IsAvailable) return;
             }
+            await SubmitTower();
         }
 
         /// <summary>Sends the furthest tomb of an endless ladder (and its time) to that ladder's board.</summary>
-        public async Task SubmitEndless(Difficulty mode)
+        public Task SubmitEndless(Difficulty mode)
         {
             var p = Save.EndlessOf(mode);
-            if (p.Cleared <= 0 || !await Online.SubmitEndlessAsync(mode, p.Score)) return;
-            // One entry per ladder: the board keeps the best, only the last score sent matters.
-            string board = Endless.BoardId(mode) + ":";
-            Save.Data.SubmittedScores.RemoveAll(s => s.StartsWith(board));
-            Save.Data.SubmittedScores.Add(board + p.Score);
+            return p.Cleared > 0 ? SubmitBoard(Endless.BoardId(mode), p.Score) : Task.CompletedTask;
+        }
+
+        /// <summary>Sends the best tower run (points, then time) to the tower's board.</summary>
+        public Task SubmitTower()
+        {
+            var best = Save.Data.TowerBest;
+            return best.BestPoints > 0 ? SubmitBoard(Tower.BoardId, best.Score) : Task.CompletedTask;
+        }
+
+        async Task SubmitBoard(string board, long score)
+        {
+            // One entry per board: it keeps the best, only the last score sent matters.
+            string key = board + ":";
+            if (Save.Data.SubmittedScores.Contains(key + score) || !await Online.SubmitBoardAsync(board, score)) return;
+            Save.Data.SubmittedScores.RemoveAll(s => s.StartsWith(key));
+            Save.Data.SubmittedScores.Add(key + score);
             Save.Save();
         }
 

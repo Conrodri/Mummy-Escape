@@ -61,6 +61,11 @@ namespace MummyEscape.Services
 
         // ---- Halloween event: tombs escaped in a row (the act is finished at Core.Halloween.TombCount), kept between events.
         public int HalloweenCleared;
+
+        // ---- Challenge tower (solo): the run in progress (when TowerActive) and the best one.
+        public bool TowerActive;
+        public TowerRun Tower = new TowerRun();
+        public TowerRecord TowerBest = new TowerRecord();
     }
 
     /// <summary>A spend asked to the server: <see cref="Offer"/> is a scarab offer id or <see cref="SaveService.TiersSpend"/>.</summary>
@@ -164,6 +169,8 @@ namespace MummyEscape.Services
             for (int i = 0; i < d.Endless.Count; i++) d.Endless[i] ??= new EndlessProgress();
             while (d.Endless.Count < DifficultyExt.All.Length) d.Endless.Add(new EndlessProgress());
             d.EndlessEnergy ??= new MummyEscape.Pvp.EnergyMeter();
+            d.Tower ??= new TowerRun();
+            d.TowerBest ??= new TowerRecord();
         }
 
         public bool MergeFrom(SaveData other)
@@ -188,6 +195,7 @@ namespace MummyEscape.Services
             Data.TutorialDone |= other.TutorialDone;
             MergeEconomy(other);
             Data.HalloweenCleared = Math.Max(Data.HalloweenCleared, other.HalloweenCleared);
+            Data.TowerBest.MergeWith(other.TowerBest); // the run in progress stays on its device
             // The endless ladders never go back: the further copy wins (the version reset above leaves them alone).
             for (int i = 0; i < Data.Endless.Count; i++) Data.Endless[i].MergeWith(other.Endless[i]);
             bool changed = JsonUtility.ToJson(Data) != before;

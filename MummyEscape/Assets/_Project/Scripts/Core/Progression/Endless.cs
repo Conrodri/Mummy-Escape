@@ -36,7 +36,7 @@ namespace MummyEscape.Core
         }
 
         /// <summary>Level numbers of an act from the easiest to the hardest (the act's sawtooth, sorted).</summary>
-        static int[] ByDifficulty()
+        internal static int[] ByDifficulty()
         {
             var saw = DifficultyTable.Sawtooth;
             var order = new int[saw.Length];

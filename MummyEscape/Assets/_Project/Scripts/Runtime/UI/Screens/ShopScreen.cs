@@ -36,6 +36,7 @@ namespace MummyEscape.UI.Screens
         internal static readonly Color WornRim = new Color(0.25f, 0.88f, 0.8f, 0.6f);
         static Color LegendaryColor => CasinoScreen.LegendaryColor;
         internal static readonly Color HalloweenColor = new Color32(255, 140, 40, 255);
+        internal static readonly Color TowerColor = new Color32(170, 140, 255, 255);
 
         Text _coins, _stars, _seals, _gold, _note;
         PassBanner _pass;
@@ -236,6 +237,7 @@ namespace MummyEscape.UI.Screens
             foreach (var s in Monetization.PremiumSkins.All)
                 if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
             items.AddRange(HalloweenSkins.InShop(slot, save.Data.OwnedSkins, DateTime.UtcNow));
+            foreach (var s in TowerSkins.All) if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
             Grid(items.Count, (parent, i) => ItemCard(parent, items[i]));
         }
 
@@ -262,6 +264,7 @@ namespace MummyEscape.UI.Screens
         {
             if (item.Legendary) return (Loc.T("Légendaire"), LegendaryColor);
             if (item.Badge == HalloweenSkins.Badge) return (Loc.T(item.Badge), HalloweenColor);
+            if (item.Badge == TowerSkins.Badge) return (Loc.T(item.Badge), TowerColor);
             if (item.Badge != null) return (Loc.T(item.Badge), TreasureScreen.GoldColor);
             if (item.Pvp) return (Loc.T("Duel"), UIKit.Turquoise);
             if (item.Theme == 0) return (Loc.T("Classique"), new Color32(200, 186, 160, 255));
@@ -272,6 +275,7 @@ namespace MummyEscape.UI.Screens
         {
             if (item.Legendary) return Loc.T("Exclusivité du casino ou du pass : bandages animés.");
             if (item.Badge == HalloweenSkins.Badge) return Loc.T("Événement Halloween, du 24 octobre au 7 novembre.");
+            if (item.Badge == TowerSkins.Badge) return Loc.F("Récompense de l'étage {0} de la tour de défi.", TowerSkins.FloorOf(item.Id));
             if (item.Badge != null) return Loc.T("Exclusivité du Trésor et du Pass de saison.");
             if (item.Pvp) return Loc.T("Récompense des duels.");
             if (item.Theme == 0) return Loc.T("Pièce classique, toujours en vente.");

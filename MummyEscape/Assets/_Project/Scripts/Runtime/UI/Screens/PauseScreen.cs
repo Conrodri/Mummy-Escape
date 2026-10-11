@@ -35,11 +35,11 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
-            bool duel = App.Game.InDuel, relay = App.Game.InRelay, coop = App.Game.InCoop;
+            bool duel = App.Game.InDuel, relay = App.Game.InRelay, coop = App.Game.InCoop, tower = App.Game.InTower;
             _duelNote.gameObject.SetActive(duel || relay || coop);
             _duelNote.text = Loc.T(relay || coop ? "2v2 : le chrono continue de tourner !" : "Duel : le chrono continue de tourner !");
-            _restart.gameObject.SetActive(!duel && !relay && !coop);
-            UIKit.SetLabel(_quit, coop ? "Quitter (la partie s'arrête pour vous deux)" : relay ? "Quitter le match (défaite du duo)" : duel ? "Abandonner le duel (défaite)" : "Quitter le niveau");
+            _restart.gameObject.SetActive(!duel && !relay && !coop && !tower); // a tower floor is played once: its preview is already seen
+            UIKit.SetLabel(_quit, tower ? "Abandonner la course (fin de la tour)" : coop ? "Quitter (la partie s'arrête pour vous deux)" : relay ? "Quitter le match (défaite du duo)" : duel ? "Abandonner le duel (défaite)" : "Quitter le niveau");
             App.Game.SetPaused(true);
         }
 
@@ -75,6 +75,7 @@ namespace MummyEscape.UI.Screens
                 App.Game.ForfeitDuel();
                 return;
             }
+            if (App.Game.InTower) App.Save.EndTower(); // leaving a floor ends the run where it stands
             App.Game.Abandon();
             Router.Reset<MainMenuScreen>();
         }

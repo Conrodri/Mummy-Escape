@@ -18,6 +18,8 @@ namespace MummyEscape.UI.Screens
         Difficulty _mode;
         /// <summary>The Halloween tomb to play on "Main", 0 on an endless ladder.</summary>
         int _halloweenNext;
+        /// <summary>A tower floor's end: "Main" climbs on, or opens the tower for a new run.</summary>
+        bool _tower, _towerClimbs;
 
         protected override void Build()
         {
@@ -48,6 +50,7 @@ namespace MummyEscape.UI.Screens
         {
             _mode = mode;
             _halloweenNext = 0;
+            _tower = false;
             _ranking.gameObject.SetActive(true);
             bool more = progress.Cleared < GameController.EndlessTombCount(mode);
             _title.text = result.Won ? Loc.F("Tombeau {0} atteint !", progress.Reached) : Loc.T("La momie est tombée…");
@@ -66,6 +69,7 @@ namespace MummyEscape.UI.Screens
         public void ShowHalloween(int tomb, LevelResult result, bool finished)
         {
             _halloweenNext = !result.Won ? tomb : App.Save.HalloweenDone ? tomb % Halloween.TombCount + 1 : App.Save.HalloweenNext;
+            _tower = false;
             _ranking.gameObject.SetActive(false);
             _title.text = finished ? Loc.T("Acte Halloween terminé !") : result.Won ? Loc.F("Tombeau {0} franchi !", tomb) : Loc.T("La momie est tombée…");
             _text.text = finished ? Loc.F("Tu gagnes « {0} » et le thème d'accueil Halloween.", Loc.T(Visual.HalloweenSkins.Resolve(Halloween.RewardSkin).Name))
@@ -78,8 +82,41 @@ namespace MummyEscape.UI.Screens
             UIKit.SetLabel(_main, result.Won ? "Tombeau suivant" : "Réessayer");
         }
 
+        /// <summary>End of a tower floor: on to the next one, or the run is over (a death, or under 2 stars).</summary>
+        public void ShowTower(int floor, LevelResult result, Services.TowerOutcome outcome, TowerRun run)
+        {
+            _tower = true;
+            _towerClimbs = outcome.Continues;
+            _halloweenNext = 0;
+            _ranking.gameObject.SetActive(true);
+            _title.text = outcome.Continues ? Loc.F("Étage {0} franchi !", floor)
+                        : result.Won ? Loc.T("Moins de 2 étoiles : la course s'arrête")
+                        : Loc.T("La momie est tombée…");
+            string text = outcome.Continues
+                ? Loc.F("Étage {0} franchi en {1}.", floor, LevelResult.FormatTime(result.TimeMs)) + "\n" + Loc.F("{0} pts · l'étage {1} t'attend.", run.Points, run.Floor)
+                : Loc.F("Course terminée : {0} étages, {1} pts.", run.Cleared, run.Points);
+            if (outcome.RewardSkin != null) text += "\n" + Loc.F("Tu gagnes « {0} » !", Loc.T(Visual.TowerSkins.Resolve(outcome.RewardSkin).Name));
+            else if (outcome.Record) text += "\n" + Loc.T("Nouveau record !");
+            _text.text = text;
+            _energy.text = outcome.Continues ? "" : PlayGate.Status(App, Monetization.PlayMode.Endless);
+            _main.gameObject.SetActive(true);
+            UIKit.SetLabel(_main, outcome.Continues ? "Étage suivant" : "Nouvelle course");
+        }
+
         void Main()
         {
+            if (_tower)
+            {
+                Router.Close(this);
+                if (_towerClimbs) _ = App.Game.StartTower();
+                else
+                {
+                    App.Game.Abandon();
+                    Router.Reset<MainMenuScreen>();
+                    Router.Open<TowerScreen>();
+                }
+                return;
+            }
             if (_halloweenNext > 0)
             {
                 int tomb = _halloweenNext;
@@ -100,7 +137,9 @@ namespace MummyEscape.UI.Screens
 
         void Ranking()
         {
-            Router.Get<LeaderboardScreen>().FocusEndless(_mode); // before it opens: it loads the board it shows
+            // Before it opens: it loads the board it shows.
+            if (_tower) Router.Get<LeaderboardScreen>().FocusTower();
+            else Router.Get<LeaderboardScreen>().FocusEndless(_mode);
             App.Game.Abandon();
             Router.Reset<MainMenuScreen>();
             Router.Open<LeaderboardScreen>();

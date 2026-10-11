@@ -54,9 +54,21 @@ namespace MummyEscape.UI.Screens
         /// <summary>The endless ladders' boards come after the levels in the picker.</summary>
         public void FocusEndless(Difficulty mode) => _index = _levels.Count + (int)mode;
 
-        int Boards => _levels.Count + DifficultyExt.All.Length;
+        /// <summary>The tower's board comes last, after the endless ladders.</summary>
+        public void FocusTower() => _index = TowerIndex;
 
-        Difficulty? EndlessAt(int index) => index >= _levels.Count ? (Difficulty)(index - _levels.Count) : (Difficulty?)null;
+        int TowerIndex => _levels.Count + DifficultyExt.All.Length;
+
+        int Boards => TowerIndex + 1;
+
+        Difficulty? EndlessAt(int index) => index >= _levels.Count && index < TowerIndex ? (Difficulty)(index - _levels.Count) : (Difficulty?)null;
+
+        bool AtTower => _index == TowerIndex;
+
+        /// <summary>What a board's score counts: the gap to the optimal route, the furthest tomb, or the tower's points.</summary>
+        enum BoardKind { Level, Endless, Tower }
+
+        BoardKind Kind => AtTower ? BoardKind.Tower : EndlessAt(_index).HasValue ? BoardKind.Endless : BoardKind.Level;
 
         protected override void Build()
         {
@@ -113,10 +125,12 @@ namespace MummyEscape.UI.Screens
             return v;
         }
 
-        /// <summary>Gap to the optimal route (endless: the furthest tomb), with the play time (the tie breaker) underneath.</summary>
-        static string ScoreText(LeaderboardRow row, bool endless)
+        /// <summary>Gap to the optimal route (endless: the furthest tomb, tower: the points), with the play time (the tie breaker) underneath.</summary>
+        static string ScoreText(LeaderboardRow row, BoardKind kind)
         {
-            string main = endless ? Loc.F("Tombeau {0}", Endless.ReachedOf(row.OverPar)) : LevelResult.FormatOverPar(row.OverPar);
+            string main = kind == BoardKind.Endless ? Loc.F("Tombeau {0}", Endless.ReachedOf(row.OverPar))
+                        : kind == BoardKind.Tower ? Loc.F("{0} pts", Tower.PointsOf(row.OverPar))
+                        : LevelResult.FormatOverPar(row.OverPar);
             return row.TimeMs > 0
                 ? $"{main}\n<size=22><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color>{(row.Suspicious ? " <b><color=#E0903A>?</color></b>" : "")}</size>" // noloc
                 : main;
@@ -168,10 +182,12 @@ namespace MummyEscape.UI.Screens
         async void Reload()
         {
             var endless = EndlessAt(_index);
-            var id = endless.HasValue ? default : _levels[_index];
+            bool tower = AtTower;
+            var id = endless.HasValue || tower ? default : _levels[_index];
             var scope = Scopes[_scope];
-            _levelLabel.text = endless.HasValue ? Loc.F("Sans fin · {0}", LevelNames.Mode(endless.Value)) : Loc.F("Niveau {0}", LevelNames.Of(id));
-            _actLabel.text = endless.HasValue ? Loc.T("Le tombeau le plus loin, puis le temps")
+            _levelLabel.text = tower ? Loc.T("Tour de défi") : endless.HasValue ? Loc.F("Sans fin · {0}", LevelNames.Mode(endless.Value)) : Loc.F("Niveau {0}", LevelNames.Of(id));
+            _actLabel.text = tower ? Loc.T("Le plus de points en une course, puis le temps")
+                           : endless.HasValue ? Loc.T("Le tombeau le plus loin, puis le temps")
                            : Loc.F("Acte {0}", id.Act) + " · " + Loc.T(DifficultyTable.GetAct(id.Act).Name);
             _info.text = Loc.T("Chargement…");
             _scroll.verticalNormalizedPosition = 1f;
@@ -186,8 +202,9 @@ namespace MummyEscape.UI.Screens
             }
 
             int request = ++_requestId;
-            var page = endless.HasValue ? await App.Online.GetEndlessLeaderboardAsync(endless.Value, scope, Top)
-                                        : await App.Online.GetLeaderboardAsync(id, scope, Top);
+            var page = tower ? await App.Online.GetBoardLeaderboardAsync(Tower.BoardId, scope, Top)
+                     : endless.HasValue ? await App.Online.GetBoardLeaderboardAsync(Endless.BoardId(endless.Value), scope, Top)
+                     : await App.Online.GetLeaderboardAsync(id, scope, Top);
             if (request != _requestId || this == null) return; // superseded by a newer request
 
             string title = scope == LeaderboardScope.Global ? Loc.T("Top 100 mondial")
@@ -219,7 +236,7 @@ namespace MummyEscape.UI.Screens
             v.Name.text = row.IsMe ? Loc.F("{0}  (toi)", row.PlayerName) : row.PlayerName;
             v.Name.color = row.IsMe ? UIKit.Turquoise : UIKit.Sand;
             v.Country.text = row.Country;
-            v.Score.text = ScoreText(row, EndlessAt(_index).HasValue);
+            v.Score.text = ScoreText(row, Kind);
             v.Background.color = row.IsMe ? new Color(0.13f, 0.4f, 0.4f, 0.65f)
                                : rank <= 3 ? new Color(1f, 0.85f, 0.4f, 0.12f)
                                : new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.04f : 0.07f);
@@ -230,6 +247,14 @@ namespace MummyEscape.UI.Screens
             _me.Root.SetActive(me != null);
             _meEmpty.gameObject.SetActive(me == null);
             var endless = EndlessAt(_index);
+            if (me == null && AtTower)
+            {
+                var best = App.Save.Data.TowerBest;
+                _meEmpty.text = !loaded ? ""
+                    : best.BestPoints > 0 ? Loc.F("Ton record : {0} (pas encore classé)", Loc.F("{0} pts", best.BestPoints))
+                    : Loc.T("Franchis un étage de la tour pour entrer au classement");
+                return;
+            }
             if (me == null && endless.HasValue)
             {
                 var p = App.Save.EndlessOf(endless.Value);
@@ -252,7 +277,7 @@ namespace MummyEscape.UI.Screens
             _me.Name.text = Loc.F("{0}  (toi)", me.PlayerName);
             _me.Name.color = UIKit.Sand;
             _me.Country.text = me.Country;
-            _me.Score.text = ScoreText(me, endless.HasValue);
+            _me.Score.text = ScoreText(me, Kind);
         }
     }
 }

@@ -88,7 +88,16 @@ namespace MummyEscape.UI.Screens
             _halloween = UIKit.Button(_endlessRow.transform, "Halloween", PlayHalloween, 28, ButtonStyle.Primary);
             UIKit.FitText(_halloween.GetComponentInChildren<Text>(), 18);
             UIKit.Size(_halloween, 110, -1, 1);
+            // The challenge tower, opened with the Facile ladder.
+            _tower = UIKit.Button(body, "Tour de défi", () => Router.Open<TowerScreen>(), 30, ButtonStyle.Secondary);
+            UIKit.FitText(_tower.GetComponentInChildren<Text>(), 20);
+            UIKit.Size(_tower, 96);
         }
+
+        Button _tower;
+
+        /// <summary>"Finis F5-10": what opens a locked mode, on its greyed button.</summary>
+        static string Unlocks(Difficulty mode) => Loc.F("Finis {0}", LevelNames.Of(Progression.Last(mode)));
 
         Button _halloween;
 
@@ -107,21 +116,26 @@ namespace MummyEscape.UI.Screens
 
         void RefreshEndless()
         {
-            bool any = false;
+            // Locked ladders stay in sight, greyed, with what opens them.
             foreach (var m in DifficultyExt.All)
             {
                 bool open = App.Save.IsEndlessUnlocked(m);
-                any |= open;
                 var b = _endless[(int)m];
-                b.gameObject.SetActive(open);
-                if (open) UIKit.SetLabel(b, Loc.F("Sans fin · {0}", LevelNames.Mode(m)) + "\n" + Loc.F("Tombeau {0}", App.Save.EndlessOf(m).Reached));
+                b.interactable = open;
+                UIKit.SetLabel(b, Loc.F("Sans fin · {0}", LevelNames.Mode(m)) + "\n" + (open ? Loc.F("Tombeau {0}", App.Save.EndlessOf(m).Reached) : Unlocks(m)));
             }
+            bool tower = App.Save.IsTowerUnlocked;
+            var run = App.Save.ActiveTower;
+            _tower.interactable = tower;
+            UIKit.SetLabel(_tower, Loc.T("Tour de défi") + " · " + (!tower ? Unlocks(Difficulty.Easy)
+                                   : run != null ? Loc.F("Étage {0}", run.Floor)
+                                   : App.Save.Data.TowerBest.BestPoints > 0 ? Loc.F("Record : {0} pts", App.Save.Data.TowerBest.BestPoints)
+                                   : Loc.T("des skins exclusifs à gagner")));
             bool halloween = Halloween.IsOpen(System.DateTime.UtcNow);
             _halloween.gameObject.SetActive(halloween);
             if (halloween)
                 UIKit.SetLabel(_halloween, Loc.T("Halloween") + " · " + (App.Save.HalloweenDone ? Loc.T("terminé") : App.Save.Data.HalloweenCleared + " / " + Halloween.TombCount)
                                            + "\n" + Loc.T("jusqu'au 7 novembre"));
-            _endlessRow.gameObject.SetActive(any || halloween);
         }
 
         void PlayEndless(Difficulty mode)
