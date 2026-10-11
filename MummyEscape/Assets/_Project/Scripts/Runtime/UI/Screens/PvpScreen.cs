@@ -443,7 +443,7 @@ namespace MummyEscape.UI.Screens
                 case "LEAGUE": return Loc.T("Atteins d'abord la ligue demandée."); // noloc
                 case "OWNED": return Loc.T("Tu l'as déjà."); // noloc
                 case "NOTHING_TO_CLAIM": return Loc.T("Rien à récupérer pour le moment.");
-                case "ENERGY": return Loc.T("Plus d'énergie de combat : un point revient toutes les 6 minutes."); // noloc
+                case "ENERGY": return Loc.T("Plus d'énergie de combat : un point revient toutes les 2 minutes."); // noloc
                 case "ADS_LIMIT": return Loc.T("Plus de pubs aujourd'hui"); // noloc
                 case "INVALID_RUN": return Loc.T("Course refusée par le serveur : comptée comme un abandon.");
                 case "NO_PENDING_DUEL": return Loc.T("Ce duel a expiré (plus de 10 minutes) : il compte comme un abandon.");

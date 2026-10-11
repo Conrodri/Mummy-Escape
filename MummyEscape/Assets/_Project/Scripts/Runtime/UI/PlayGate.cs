@@ -10,7 +10,7 @@ namespace MummyEscape.UI
     /// <summary>
     /// The combat energy at the doors of the game modes. Solo: act 1 is free, then a run costs a point of the solo energy
     /// (10, kept by the device). Online: a duel or a 2v2 match costs a point of the combat energy (3, kept by the server).
-    /// A point comes back every 6 minutes; when none is left, a rewarded ad gives some back, and the pass lifts every limit.
+    /// A point comes back every 2 minutes; when none is left, a rewarded ad gives some back, and the pass lifts every limit.
     /// </summary>
     public static class PlayGate
     {
@@ -59,7 +59,7 @@ namespace MummyEscape.UI
             int refill = solo ? EnergyConfig.SoloAdRefill : EnergyConfig.PvpAdRefill;
             string text = (solo ? Loc.T("Plus d'énergie pour les parties solo (l'acte 1 reste libre).")
                                 : Loc.T("Plus d'énergie de combat pour les duels et les matchs 2v2."))
-                        + " " + Loc.F("Un point revient toutes les 6 minutes (le prochain dans {0}).", Energy.Clock(next)) + "\n\n"
+                        + " " + Loc.F("Un point revient toutes les 2 minutes (le prochain dans {0}).", Energy.Clock(next)) + "\n\n"
                         + Loc.F("Regarde une courte pub pour +{0} d'énergie, ou prends le Pass : plus aucune limite.", refill);
             var ad = adsLeft <= 0 ? (Loc.T("Plus de pubs aujourd'hui"), ButtonStyle.Ghost, (Action)null)
                    : Ads.Available ? (Loc.F("Regarder une pub (+{0})", refill), ButtonStyle.Primary, (Action)(() => WatchAd(app, mode, retry)))

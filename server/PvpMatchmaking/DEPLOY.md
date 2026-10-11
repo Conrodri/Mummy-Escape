@@ -87,7 +87,7 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
 Le premier acte solo est libre. Ensuite, chaque partie solo coûte 1 énergie (10 au plus, gardée sur le téléphone) et chaque
 duel ou combat 2v2 1 énergie de combat (3 au plus, gardée par le serveur, dépensée par `FindDuel`, `StartLiveDuel`,
 `StartLiveBotDuel`, `StartRelayMatch`, `StartRelayBots` et `FindDuoMatch`, qui renvoient `ENERGY` quand il n'y en a plus).
-Un point revient toutes les 6 minutes. Une pub rend 3 énergies solo (côté jeu) ou 1 de combat (`RefillPvpEnergy`), 5 fois par jour chacune.
+Un point revient toutes les 2 minutes. Une pub rend 3 énergies solo (côté jeu) ou 3 de combat (`RefillPvpEnergy`), 5 fois par jour chacune.
 Le pass premium de la saison lève la limite. Réglages : `Pvp/Energy.cs` (`EnergyConfig`).
 
 ## Signalements de triche

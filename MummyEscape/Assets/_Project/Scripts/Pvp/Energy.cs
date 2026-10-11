@@ -1,4 +1,4 @@
-// Mummy Rush — l'énergie de combat : une partie la dépense, elle revient d'un point toutes les 6 minutes.
+// Mummy Rush — l'énergie de combat : une partie la dépense, elle revient d'un point toutes les 2 minutes.
 using System;
 
 namespace MummyEscape.Pvp
@@ -8,11 +8,11 @@ namespace MummyEscape.Pvp
         /// <summary>Partie solo (à partir de l'acte 2 ; l'acte 1 est libre). Gardée par l'appareil.</summary>
         public const int SoloMax = 10;
         /// <summary>Match en ligne (duel 1v1 ou 2v2, une seule réserve). Gardée par le serveur.</summary>
-        public const int PvpMax = 3;
-        /// <summary>Un point revient toutes les 6 minutes : 10 points en une heure.</summary>
-        public const long RegenMs = 6 * 60_000L;
+        public const int PvpMax = 10;
+        /// <summary>Un point revient toutes les 2 minutes : 30 points en une heure.</summary>
+        public const long RegenMs = 2 * 60_000L;
         public const int SoloAdRefill = 3;
-        public const int PvpAdRefill = 1;
+        public const int PvpAdRefill = 3;
         /// <summary>Pubs qui rendent de l'énergie, par jour (UTC) et par réserve.</summary>
         public const int AdRefillsPerDay = 5;
     }
