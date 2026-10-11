@@ -80,13 +80,21 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(t, 44);
         }
 
+        /// <summary>"act2_crue_du_nil" → "Crue du nil": the file name without its theme prefix.</summary>
+        static string Title(string resource)
+        {
+            int cut = resource.IndexOf('_');
+            string s = cut < 0 ? resource : resource.Substring(cut + 1).Replace('_', ' ');
+            return s.Length == 0 ? resource : char.ToUpperInvariant(s[0]) + s.Substring(1);
+        }
+
         void Item(MusicTrack track, string scope)
         {
             bool playing = App.Audio.Current == track;
             UIKit.ListItem(_list, 100, () => App.Audio.PlayTrack(track), out var h, playing);
             UIKit.Size(UIKit.Image(h.transform, playing ? UISprites.Note : UISprites.Play, playing ? UIKit.Turquoise : UIKit.Gold), 40, 40);
             var name = UIKit.Label(h.transform, "", 32, UIKit.Sand, TextAnchor.MiddleLeft, playing ? FontStyle.Bold : FontStyle.Normal);
-            name.text = !track.Composed ? track.Resource
+            name.text = !track.Composed ? Title(track.Resource)
                 : track.Theme == 0 ? Loc.T("Boucle d'ambiance intégrée")
                 : Loc.T("Thème composé par le jeu");
             UIKit.FitText(name, 22);
