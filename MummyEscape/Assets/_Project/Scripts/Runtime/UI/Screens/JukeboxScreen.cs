@@ -58,6 +58,12 @@ namespace MummyEscape.UI.Screens
                     foreach (var t in MusicCatalog.For(act, f)) Item(t, t.Floor > 0 ? Loc.T("propre à l'étage") : Loc.T("tout l'acte"));
                 }
             }
+            var halloween = MusicCatalog.For(Halloween.Theme, 0); // Resources/Music/act6*, no composed theme
+            if (halloween.Count > 0)
+            {
+                Section(Loc.T("Halloween"));
+                foreach (var t in halloween) Item(t, null);
+            }
         }
 
         void Section(string title)

@@ -467,7 +467,7 @@ namespace MummyEscape.Game
             RepeatHeld();
             // A floor may have its own music (Resources/Music/act{n}_f{floor}); no-op while the track playing fits.
             if (Session != null && Session.Status == SessionStatus.Playing && !Previewing)
-                _app.Audio.PlayLevelMusic(CurrentLevel.Act, Session.Position.Floor + 1);
+                _app.Audio.PlayLevelMusic(MusicTheme, Session.Position.Floor + 1);
         }
 
         void LateUpdate()

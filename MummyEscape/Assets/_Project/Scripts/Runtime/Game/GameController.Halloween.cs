@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MummyEscape.Core;
 using MummyEscape.Pvp;
+using MummyEscape.Services;
 using MummyEscape.UI.Screens;
 using UnityEngine;
 
@@ -17,6 +18,9 @@ namespace MummyEscape.Game
         /// <summary>Number of the Halloween tomb being played (1-based), 0 outside the event's act.</summary>
         public int HalloweenTomb { get; private set; }
         public bool InHalloween => HalloweenTomb > 0;
+
+        /// <summary>Music of the tomb played: the Halloween track (Resources/Music/act6) when there is one, else the act's.</summary>
+        int MusicTheme => InHalloween && MusicCatalog.For(Halloween.Theme, 0).Count > 0 ? Halloween.Theme : CurrentLevel.Act;
 
         static List<string> _halloweenLines;
 
@@ -45,7 +49,7 @@ namespace MummyEscape.Game
                 var id = TombArchive.Read(line).Id;
                 HalloweenTomb = tomb;
                 CurrentLevel = id;
-                _app.Audio.PlayMusic(id.Act);
+                _app.Audio.PlayMusic(MusicTheme);
                 LevelLoading?.Invoke(id);
                 level = await Task.Run(() => TombArchive.Load(line));
             }
