@@ -1358,6 +1358,7 @@ namespace MummyEscape
             ["Momie de minuit"] = "Midnight Mummy",
             ["Chapeau de sorcière"] = "Witch Hat",
             ["Feux de Samhain"] = "Samhain Fires",
+            ["La nuit d'Halloween : citrouilles, toiles d'araignée et feux follets."] = "Halloween night: pumpkins, cobwebs and will-o'-the-wisps.",
         };
     }
 }
