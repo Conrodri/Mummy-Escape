@@ -41,8 +41,8 @@ namespace MummyEscape.UI.Screens
 
         // The collections by what pays for them; the sets that are won, not sold, last.
         static readonly string[] SetCategories = { "Scarabées", "Scarabées dorés", "Sceaux", "Récompenses" };
-        static readonly string[] QualityNames = { "Commun", "Rare", "Épique", "Légendaire" };
-        static readonly Color[] QualityColors =
+        internal static readonly string[] QualityNames = { "Commun", "Rare", "Épique", "Légendaire" };
+        internal static readonly Color[] QualityColors =
         {
             new Color32(190, 182, 168, 255), new Color32(90, 170, 255, 255), new Color32(200, 120, 255, 255), CasinoScreen.LegendaryColor,
         };
@@ -96,7 +96,13 @@ namespace MummyEscape.UI.Screens
             // The slot categories of the Skins section: large icon chips.
             _categories = UIKit.Row(body, 112, 10).GetComponent<RectTransform>();
             for (int i = 0; i < Categories.Length; i++) CategoryChip(i);
-            SortChip();
+            _sortChip = SortChip(_categories, () =>
+            {
+                _byQuality = !_byQuality;
+                Refresh();
+                _scroll.verticalNormalizedPosition = 1f;
+            });
+            UIKit.Size(_sortChip.plate, -1, 0, 1);
 
             _setTabs = new UIKit.Segmented(body, SetCategories, i =>
             {
@@ -191,28 +197,21 @@ namespace MummyEscape.UI.Screens
             _chipCounts.Add(CountBadge(plate.transform));
         }
 
-        /// <summary>The last chip of the row: toggles the sort by quality (lit when on).</summary>
-        void SortChip()
+        /// <summary>A chip that toggles the sort by quality (lit with <see cref="Light"/> when on); also on the mummy screen.</summary>
+        internal static (Image plate, Image icon, Text label) SortChip(Transform parent, Action onTap)
         {
-            var plate = UIKit.Plate(_categories, UIKit.SurfaceHi, 24, UIKit.Rim, false, "Sort"); // noloc
-            UIKit.Size(plate, -1, 0, 1);
+            var plate = UIKit.Plate(parent, UIKit.SurfaceHi, 24, UIKit.Rim, false, "Sort"); // noloc
             plate.raycastTarget = true;
             var btn = plate.gameObject.AddComponent<Button>();
             btn.targetGraphic = plate;
-            btn.onClick.AddListener(() =>
-            {
-                App.Audio.Play(Sfx.Click, 0f);
-                _byQuality = !_byQuality;
-                Refresh();
-                _scroll.verticalNormalizedPosition = 1f;
-            });
+            btn.onClick.AddListener(() => { MummyEscape.App.GameApp.I.Audio.Play(Sfx.Click, 0f); onTap(); });
             plate.gameObject.AddComponent<PressScale>();
             var icon = UIKit.Image(plate.transform, UIKit.Art.Star, UIKit.Dim, false, "Icon"); // noloc
             UIKit.Place(icon.rectTransform, 0.5f, 1f, 50, 50, 0, -12);
             var label = UIKit.Label(plate.transform, "Qualité", 24, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(label, 14);
             UIKit.BottomBand(label.rectTransform, 38, 8);
-            _sortChip = (plate, icon, label);
+            return (plate, icon, label);
         }
 
         /// <summary>A gold disc on a corner with a count: how many items can be bought right now.</summary>
@@ -226,7 +225,7 @@ namespace MummyEscape.UI.Screens
             return text;
         }
 
-        static void Light((Image plate, Image icon, Text label) chip, bool on)
+        internal static void Light((Image plate, Image icon, Text label) chip, bool on)
         {
             chip.plate.color = on ? new Color32(84, 64, 30, 255) : UIKit.SurfaceHi;
             var rim = chip.plate.transform.Find("Rim")?.GetComponent<Image>();
@@ -382,9 +381,9 @@ namespace MummyEscape.UI.Screens
             }
         }
 
-        static string ThemeName(int act) => Loc.F("Acte {0} — {1}", act, Loc.T(DifficultyTable.GetAct(act).Name));
+        internal static string ThemeName(int act) => Loc.F("Acte {0} — {1}", act, Loc.T(DifficultyTable.GetAct(act).Name));
 
-        static Color ThemeColor(int act) => Color.Lerp(TombTheme.ForAct(act).Accent, UIKit.Sand, 0.25f);
+        internal static Color ThemeColor(int act) => Color.Lerp(TombTheme.ForAct(act).Accent, UIKit.Sand, 0.25f);
 
         internal static (string tag, Color color) TagOf(SkinDef item)
         {
@@ -717,9 +716,9 @@ namespace MummyEscape.UI.Screens
             if (error != null && _note != null) _note.text = error;
         }
 
-        bool Worn(IEnumerable<SkinDef> set)
+        internal static bool Worn(IEnumerable<SkinDef> set)
         {
-            foreach (var s in set) if (!App.Save.IsWorn(s.Id)) return false;
+            foreach (var s in set) if (!MummyEscape.App.GameApp.I.Save.IsWorn(s.Id)) return false;
             return true;
         }
 
@@ -740,15 +739,22 @@ namespace MummyEscape.UI.Screens
                     false, label, !worn && owned == set.Count, () => Wear(set), index);
         }
 
+        void SetCard(string name, IReadOnlyList<SkinDef> set, Color accent, Color top, Color bottom, bool locked, string label, bool usable, Action onTap, int index) =>
+            SetCard(_list, name, set, accent, top, bottom, locked, label, usable, onTap, piece =>
+            {
+                var (tag, color) = TagOf(piece);
+                Router.Open<ItemZoomScreen>().Show(piece, tag, color, Origin(piece), Loc.T("Fermer"), () => { });
+            }, index);
+
         /// <summary>A set's card: the set alone on a mummy, its pieces (each opens up close), and one button.</summary>
-        void SetCard(string name, IReadOnlyList<SkinDef> set, Color accent, Color top, Color bottom, bool locked, string label, bool usable, Action onTap, int index)
+        internal static void SetCard(Transform list, string name, IReadOnlyList<SkinDef> set, Color accent, Color top, Color bottom, bool locked, string label, bool usable, Action onTap, Action<SkinDef> zoom, int index)
         {
-            var save = App.Save;
+            var save = MummyEscape.App.GameApp.I.Save;
             var look = SkinCatalog.Classic; // the set alone, not over the current outfit
             foreach (var s in set) look = look.With(s);
             bool worn = Worn(set);
 
-            var card = UIKit.Plate(_list, Color.white, 30, worn ? WornRim : new Color(accent.r, accent.g, accent.b, 0.5f), false, "Set" + index); // noloc
+            var card = UIKit.Plate(list, Color.white, 30, worn ? WornRim : new Color(accent.r, accent.g, accent.b, 0.5f), false, "Set" + index); // noloc
             UIFx.Gradient(card, top, bottom);
             UIKit.Size(card, 300);
             var row = card.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -764,7 +770,7 @@ namespace MummyEscape.UI.Screens
             var preview = UIKit.Image(stage, null, Color.white);
             preview.preserveAspect = true;
             UIKit.Stretch(preview.rectTransform);
-            MummyAnimator.Show(preview, App.Art, look);
+            MummyAnimator.Show(preview, MummyEscape.App.GameApp.I.Art, look);
             if (locked) Lock(preview, 80);
 
             var info = UIKit.Rect("Info", card.transform); // noloc
@@ -786,11 +792,7 @@ namespace MummyEscape.UI.Screens
                 UIKit.Stretch(icon.rectTransform, 6, 6, 6, 6);
                 var piece = s;
                 chip.raycastTarget = true;
-                chip.gameObject.AddComponent<Button>().onClick.AddListener(() =>
-                {
-                    var (tag, color) = TagOf(piece);
-                    Router.Open<ItemZoomScreen>().Show(piece, tag, color, Origin(piece), Loc.T("Fermer"), () => { });
-                });
+                chip.gameObject.AddComponent<Button>().onClick.AddListener(() => zoom(piece));
             }
 
             var btn = UIKit.Button(info, label, onTap, 26, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);

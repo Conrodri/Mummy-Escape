@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using MummyEscape.Pvp;
 using MummyEscape.Services;
 using MummyEscape.Visual;
@@ -9,7 +10,7 @@ namespace MummyEscape.UI.Screens
 {
     /// <summary>
     /// The player's mummy: what it wears, one tab per slot with every item owned (bought, won in duels, from the guild
-    /// or the casino), and the titles, each with what earns it. The outfit and the chosen title show to the rivals of
+    /// or the casino) with its quality and a sort by quality, the collections it holds pieces of, and the titles, each with what earns it. The outfit and the chosen title show to the rivals of
     /// the duels (VS screen, race, replays); buying is done in the Boutique.
     /// </summary>
     public sealed class MummyScreen : UIScreen
@@ -17,10 +18,11 @@ namespace MummyEscape.UI.Screens
         public override NavTab Tab => NavTab.Mummy;
 
         const int Columns = 4;
-        const float CardHeight = 300;
-        static readonly string[] Tabs = { "Momies", "Couleurs", "Torches", "Chapeaux", "Pieds", "Titres" };
+        const float CardHeight = 330;
+        static readonly string[] Tabs = { "Momies", "Couleurs", "Torches", "Chapeaux", "Pieds", "Collections", "Titres" };
         static readonly CosmeticSlot[] TabSlots = { CosmeticSlot.Mummy, CosmeticSlot.Color, CosmeticSlot.Torch, CosmeticSlot.Hat, CosmeticSlot.Shoes };
-        public const int TitlesTab = 5;
+        const int CollectionsTab = 5;
+        public const int TitlesTab = 6;
 
         Image _portrait;
         Text _name, _title;
@@ -28,6 +30,10 @@ namespace MummyEscape.UI.Screens
         RectTransform _list;
         ScrollRect _scroll;
         int _tab;
+        bool _byQuality;
+        RectTransform _toolbar;
+        Text _count;
+        (Image plate, Image icon, Text label) _sortChip;
         int _request;
 
         protected override void Build()
@@ -63,6 +69,17 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(shop, 76);
 
             _tabs = new UIKit.Segmented(body, Tabs, i => { _tab = i; Refresh(); _scroll.verticalNormalizedPosition = 1f; }, 80);
+            // The slot tabs: how many pieces, and the sort by quality (the shop's chip).
+            _toolbar = UIKit.Row(body, 100, 16).GetComponent<RectTransform>();
+            _count = UIKit.Label(_toolbar, "", 28, UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.Size(_count, -1, -1, 1);
+            _sortChip = ShopScreen.SortChip(_toolbar, () =>
+            {
+                _byQuality = !_byQuality;
+                Refresh();
+                _scroll.verticalNormalizedPosition = 1f;
+            });
+            UIKit.Size(_sortChip.plate, -1, 170);
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 14;
@@ -102,7 +119,10 @@ namespace MummyEscape.UI.Screens
             string equipped = TitleBook.Equipped(App);
             _title.text = equipped == null ? Loc.T("Aucun titre affiché") : TitleBook.Line(equipped);
             UIKit.ClearChildren(_list);
+            _toolbar.gameObject.SetActive(_tab < CollectionsTab);
+            ShopScreen.Light(_sortChip, _byQuality);
             if (_tab == TitlesTab) FillTitles(equipped);
+            else if (_tab == CollectionsTab) FillCollections();
             else FillSlot(TabSlots[_tab]);
         }
 
@@ -125,6 +145,8 @@ namespace MummyEscape.UI.Screens
         void FillSlot(CosmeticSlot slot)
         {
             var items = Owned(slot);
+            if (_byQuality) items = items.OrderByDescending(ShopScreen.Quality).ToList(); // stable: the usual order within a quality
+            _count.text = Loc.P(items.Count, "{0} pièce", "{0} pièces");
             for (int i = 0; i < items.Count; i += Columns)
             {
                 var cards = UIKit.Row(_list, CardHeight, 14);
@@ -158,6 +180,12 @@ namespace MummyEscape.UI.Screens
             card.gameObject.AddComponent<PressScale>();
             UIKit.Column(card.transform, 2, 12, TextAnchor.MiddleCenter);
 
+            // The quality in its colour, as in the shop.
+            int quality = ShopScreen.Quality(item);
+            var tag = UIKit.Label(card.transform, Loc.T(ShopScreen.QualityNames[quality]).ToUpperInvariant(), 20, ShopScreen.QualityColors[quality], TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(tag, 14);
+            UIKit.Size(tag, 28, 0);
+
             var preview = UIKit.Image(card.transform, null, Color.white);
             preview.raycastTarget = false;
             preview.preserveAspect = true;
@@ -175,6 +203,59 @@ namespace MummyEscape.UI.Screens
         {
             if (App.Save.IsWorn(item.Id)) return;
             App.Save.SelectSkin(item.Id);
+            App.Audio.Play(Sfx.Click);
+            float scroll = _scroll.verticalNormalizedPosition;
+            Refresh();
+            _scroll.verticalNormalizedPosition = scroll;
+        }
+
+        // ------------------------------------------------------------------ collections
+
+        /// <summary>
+        /// The sets the player holds a piece of, as in the shop: complete, worn in one tap; otherwise how many pieces are
+        /// there, and the shop to finish the ones that are sold.
+        /// </summary>
+        void FillCollections()
+        {
+            int index = 0;
+            for (int act = 1; act <= Core.DifficultyTable.ActCount; act++)
+                Collection(ShopScreen.ThemeName(act), SkinCatalog.ThemeSet(act), ShopScreen.ThemeColor(act), true, ref index);
+            foreach (var gold in Monetization.GoldShop.Sets)
+                Collection(Loc.T(gold.Name), SkinSets.Pieces(gold.SkinIds), TreasureScreen.GoldColor, true, ref index);
+            Collection(Loc.T("Nuit d'Halloween"), SkinSets.Halloween, ShopScreen.HalloweenColor, false, ref index);
+            Collection(Loc.T("Tour de défi"), TowerSkins.All, ShopScreen.TowerColor, false, ref index);
+            Collection(Loc.T("Équipe de Mummy Rush"), SkinSets.Team, new Color32(90, 255, 190, 255), false, ref index);
+            var more = UIKit.Label(_list, index == 0 ? "Aucune collection commencée : les ensembles apparaissent ici dès leur première pièce."
+                                                     : "Les ensembles apparaissent ici dès leur première pièce.", 26, UIKit.Dim);
+            UIKit.FitText(more, 18);
+            UIKit.Size(more, 84);
+        }
+
+        void Collection(string name, IReadOnlyList<SkinDef> set, Color accent, bool sold, ref int index)
+        {
+            var owned = App.Save.Data.OwnedSkins;
+            int have = set.Count(s => owned.Contains(s.Id));
+            if (have == 0) return;
+            bool complete = have == set.Count, worn = ShopScreen.Worn(set);
+            string label = worn ? Loc.T("Équipé") : complete ? Loc.T("Tout équiper")
+                         : Loc.F("{0} / {1} pièces", have, set.Count) + (sold ? " · " + Loc.T("Boutique") : ""); // noloc
+            System.Action onTap = complete ? () => WearSet(set)
+                                : () => { Router.Reset<MainMenuScreen>(); Router.Open<ShopScreen>(); };
+            ShopScreen.SetCard(_list, name, set, accent, Color.Lerp(accent, Color.black, 0.75f), Color.Lerp(accent, Color.black, 0.9f),
+                               false, label, !worn && (complete || sold), onTap, Zoom, index++);
+        }
+
+        void Zoom(SkinDef piece)
+        {
+            bool has = App.Save.Data.OwnedSkins.Contains(piece.Id), worn = App.Save.IsWorn(piece.Id);
+            var (tag, color) = ShopScreen.TagOf(piece);
+            Router.Open<ItemZoomScreen>().Show(piece, tag, color, ShopScreen.Origin(piece),
+                Loc.T(worn ? "Équipé" : has ? "Équiper" : "Fermer"), has && !worn ? () => Wear(piece) : (System.Action)(() => { }));
+        }
+
+        void WearSet(IEnumerable<SkinDef> set)
+        {
+            foreach (var s in set) App.Save.SelectSkin(s.Id);
             App.Audio.Play(Sfx.Click);
             float scroll = _scroll.verticalNormalizedPosition;
             Refresh();
