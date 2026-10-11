@@ -105,123 +105,134 @@ namespace MummyEscape.Visual
         public const string NoHatId = "hat_none";
         public const string NoShoesId = "shoes_none";
 
-        /// <summary>An act's collection unlocks with 25 stars per act: 25 for the first, 125 for the fifth (150 in the game).</summary>
-        public const int StarsPerTheme = 50;
+        /// <summary>An act's collection unlocks with 50 stars per act (the scarab shop's rule, checked by the server).</summary>
+        public const int StarsPerTheme = Monetization.ScarabShop.StarsPerTheme;
 
-        static SkinDef Mummy(string id, string name, int price, int theme, MummyShape shape, BandagePattern pattern) =>
-            new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Mummy, Theme = theme, Shape = shape, Pattern = pattern };
+        static SkinDef Mummy(string id, string name, MummyShape shape, BandagePattern pattern) =>
+            new SkinDef { Id = id, Name = name, Slot = CosmeticSlot.Mummy, Shape = shape, Pattern = pattern };
 
-        static SkinDef Torch(string id, string name, int price, int theme, TorchStyle style, Color light) =>
-            new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Torch, Theme = theme, TorchStyle = style, Torch = light };
+        static SkinDef Torch(string id, string name, TorchStyle style, Color light) =>
+            new SkinDef { Id = id, Name = name, Slot = CosmeticSlot.Torch, TorchStyle = style, Torch = light };
 
-        static SkinDef Hat(string id, string name, int price, int theme, HatStyle hat) =>
-            new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Hat, Theme = theme, Hat = hat };
+        static SkinDef Hat(string id, string name, HatStyle hat) =>
+            new SkinDef { Id = id, Name = name, Slot = CosmeticSlot.Hat, Hat = hat };
 
-        static SkinDef Colour(string id, string name, int price, Color32 bandage, Color32 shadow, Color32 eyes, Color torch) =>
-            new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Color, Bandage = bandage, Shadow = shadow, Eyes = eyes, Torch = torch };
+        static SkinDef Colour(string id, string name, Color32 bandage, Color32 shadow, Color32 eyes, Color torch) =>
+            new SkinDef { Id = id, Name = name, Slot = CosmeticSlot.Color, Bandage = bandage, Shadow = shadow, Eyes = eyes, Torch = torch };
 
-        static SkinDef Shoes(string id, string name, int price, int theme, ShoeStyle shoes) =>
-            new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Shoes, Theme = theme, Shoes = shoes };
+        static SkinDef Shoes(string id, string name, ShoeStyle shoes) =>
+            new SkinDef { Id = id, Name = name, Slot = CosmeticSlot.Shoes, Shoes = shoes };
 
-        public static readonly IReadOnlyList<SkinDef> All = new[]
+        /// <summary>Prices and acts come from the scarab shop's table, which the server charges by.</summary>
+        static SkinDef[] Priced(SkinDef[] all)
+        {
+            foreach (var s in all)
+            {
+                s.Price = Monetization.ScarabShop.PriceOf(s.Id);
+                s.Theme = Monetization.ScarabShop.ThemeOf(s.Id);
+            }
+            return all;
+        }
+
+        public static readonly IReadOnlyList<SkinDef> All = Priced(new[]
         {
             // ---- Mummies: silhouettes, then the textured mummy of each act.
-            Mummy(DefaultMummyId, "Momie classique", 0, 0, MummyShape.Classic, BandagePattern.Plain),
-            Mummy("mummy_cat", "Momie de Bastet", 150, 0, MummyShape.Cat, BandagePattern.Plain),
-            Mummy("mummy_jackal", "Momie chacal", 200, 0, MummyShape.Jackal, BandagePattern.Plain),
-            Mummy("mummy_glyphs", "Momie aux hiéroglyphes", 120, 1, MummyShape.Classic, BandagePattern.Hieroglyphs),
-            Mummy("mummy_moss", "Momie des marais", 160, 2, MummyShape.Classic, BandagePattern.Moss),
-            Mummy("mummy_stone", "Momie de pierre", 200, 3, MummyShape.Classic, BandagePattern.Stone),
-            Mummy("mummy_circuit", "Momie cybernétique", 240, 4, MummyShape.Classic, BandagePattern.Circuit),
-            Mummy("mummy_lava", "Momie de braise", 280, 5, MummyShape.Classic, BandagePattern.Lava),
+            Mummy(DefaultMummyId, "Momie classique", MummyShape.Classic, BandagePattern.Plain),
+            Mummy("mummy_cat", "Momie de Bastet", MummyShape.Cat, BandagePattern.Plain),
+            Mummy("mummy_jackal", "Momie chacal", MummyShape.Jackal, BandagePattern.Plain),
+            Mummy("mummy_glyphs", "Momie aux hiéroglyphes", MummyShape.Classic, BandagePattern.Hieroglyphs),
+            Mummy("mummy_moss", "Momie des marais", MummyShape.Classic, BandagePattern.Moss),
+            Mummy("mummy_stone", "Momie de pierre", MummyShape.Classic, BandagePattern.Stone),
+            Mummy("mummy_circuit", "Momie cybernétique", MummyShape.Classic, BandagePattern.Circuit),
+            Mummy("mummy_lava", "Momie de braise", MummyShape.Classic, BandagePattern.Lava),
             // Silhouettes wearing the act textures (Jackal + Lava and Cat + Circuit are duel rewards).
-            Mummy("mummy_cat_glyphs", "Bastet aux hiéroglyphes", 220, 0, MummyShape.Cat, BandagePattern.Hieroglyphs),
-            Mummy("mummy_jackal_glyphs", "Chacal aux hiéroglyphes", 240, 0, MummyShape.Jackal, BandagePattern.Hieroglyphs),
-            Mummy("mummy_cat_moss", "Bastet des marais", 260, 0, MummyShape.Cat, BandagePattern.Moss),
-            Mummy("mummy_jackal_moss", "Chacal des marais", 280, 0, MummyShape.Jackal, BandagePattern.Moss),
-            Mummy("mummy_cat_stone", "Bastet de pierre", 300, 0, MummyShape.Cat, BandagePattern.Stone),
-            Mummy("mummy_jackal_stone", "Chacal de pierre", 320, 0, MummyShape.Jackal, BandagePattern.Stone),
-            Mummy("mummy_jackal_circuit", "Chacal cybernétique", 360, 0, MummyShape.Jackal, BandagePattern.Circuit),
-            Mummy("mummy_cat_lava", "Bastet de braise", 400, 0, MummyShape.Cat, BandagePattern.Lava),
+            Mummy("mummy_cat_glyphs", "Bastet aux hiéroglyphes", MummyShape.Cat, BandagePattern.Hieroglyphs),
+            Mummy("mummy_jackal_glyphs", "Chacal aux hiéroglyphes", MummyShape.Jackal, BandagePattern.Hieroglyphs),
+            Mummy("mummy_cat_moss", "Bastet des marais", MummyShape.Cat, BandagePattern.Moss),
+            Mummy("mummy_jackal_moss", "Chacal des marais", MummyShape.Jackal, BandagePattern.Moss),
+            Mummy("mummy_cat_stone", "Bastet de pierre", MummyShape.Cat, BandagePattern.Stone),
+            Mummy("mummy_jackal_stone", "Chacal de pierre", MummyShape.Jackal, BandagePattern.Stone),
+            Mummy("mummy_jackal_circuit", "Chacal cybernétique", MummyShape.Jackal, BandagePattern.Circuit),
+            Mummy("mummy_cat_lava", "Bastet de braise", MummyShape.Cat, BandagePattern.Lava),
 
             // ---- Colours (the original skins): they recolour any mummy.
-            new SkinDef { Id = DefaultSkinId, Name = "Momie du Nil", Price = 0,
+            new SkinDef { Id = DefaultSkinId, Name = "Momie du Nil",
                 Bandage = new Color32(232, 220, 192, 255), Shadow = new Color32(168, 149, 122, 255), Eyes = new Color32(124, 240, 255, 255), Torch = new Color(1f, 0.72f, 0.42f) },
-            new SkinDef { Id = "gold", Name = "Pharaon doré", Price = 120,
+            new SkinDef { Id = "gold", Name = "Pharaon doré",
                 Bandage = new Color32(242, 201, 76, 255), Shadow = new Color32(184, 134, 43, 255), Eyes = new Color32(255, 255, 255, 255), Torch = new Color(1f, 0.82f, 0.45f) },
-            new SkinDef { Id = "anubis", Name = "Ombre d'Anubis", Price = 180,
+            new SkinDef { Id = "anubis", Name = "Ombre d'Anubis",
                 Bandage = new Color32(54, 52, 64, 255), Shadow = new Color32(22, 22, 28, 255), Eyes = new Color32(255, 201, 60, 255), Torch = new Color(1f, 0.6f, 0.3f) },
-            new SkinDef { Id = "jade", Name = "Momie de jade", Price = 240,
+            new SkinDef { Id = "jade", Name = "Momie de jade",
                 Bandage = new Color32(111, 207, 151, 255), Shadow = new Color32(46, 125, 91, 255), Eyes = new Color32(224, 255, 240, 255), Torch = new Color(0.6f, 1f, 0.75f) },
-            new SkinDef { Id = "lapis", Name = "Gardien lapis", Price = 300,
+            new SkinDef { Id = "lapis", Name = "Gardien lapis",
                 Bandage = new Color32(59, 91, 169, 255), Shadow = new Color32(30, 47, 94, 255), Eyes = new Color32(255, 211, 110, 255), Torch = new Color(0.55f, 0.7f, 1f) },
-            new SkinDef { Id = "scarab", Name = "Scarabée sacré", Price = 400,
+            new SkinDef { Id = "scarab", Name = "Scarabée sacré",
                 Bandage = new Color32(31, 111, 107, 255), Shadow = new Color32(14, 59, 57, 255), Eyes = new Color32(155, 255, 92, 255), Torch = new Color(0.7f, 1f, 0.5f) },
-            Colour("sand", "Momie des sables", 80, new Color32(214, 178, 120, 255), new Color32(160, 124, 76, 255), new Color32(255, 240, 180, 255), new Color(1f, 0.75f, 0.45f)),
-            Colour("rose", "Rose du désert", 140, new Color32(226, 150, 160, 255), new Color32(160, 90, 104, 255), new Color32(255, 255, 255, 255), new Color(1f, 0.6f, 0.7f)),
-            Colour("copper", "Cuivre ancien", 160, new Color32(184, 110, 64, 255), new Color32(116, 64, 36, 255), new Color32(120, 240, 210, 255), new Color(1f, 0.6f, 0.35f)),
-            Colour("ivory", "Ivoire royal", 180, new Color32(246, 240, 224, 255), new Color32(196, 184, 160, 255), new Color32(80, 140, 255, 255), new Color(1f, 0.9f, 0.7f)),
-            Colour("amethyst", "Améthyste", 200, new Color32(150, 100, 200, 255), new Color32(90, 56, 130, 255), new Color32(255, 220, 120, 255), new Color(0.8f, 0.55f, 1f)),
-            Colour("turquoise", "Turquoise du Sinaï", 220, new Color32(64, 200, 190, 255), new Color32(28, 120, 120, 255), new Color32(255, 250, 200, 255), new Color(0.5f, 1f, 0.95f)),
-            Colour("crimson", "Sang de Seth", 260, new Color32(170, 40, 48, 255), new Color32(96, 18, 26, 255), new Color32(255, 200, 80, 255), new Color(1f, 0.4f, 0.3f)),
-            Colour("frost", "Givre du Nil", 280, new Color32(200, 228, 246, 255), new Color32(130, 166, 200, 255), new Color32(60, 120, 255, 255), new Color(0.7f, 0.85f, 1f)),
-            Colour("silver", "Argent lunaire", 320, new Color32(190, 196, 206, 255), new Color32(120, 126, 138, 255), new Color32(150, 220, 255, 255), new Color(0.8f, 0.9f, 1f)),
-            Colour("ebony", "Ébène et or", 450, new Color32(40, 34, 30, 255), new Color32(16, 12, 10, 255), new Color32(242, 201, 76, 255), new Color(1f, 0.8f, 0.4f)),
+            Colour("sand", "Momie des sables", new Color32(214, 178, 120, 255), new Color32(160, 124, 76, 255), new Color32(255, 240, 180, 255), new Color(1f, 0.75f, 0.45f)),
+            Colour("rose", "Rose du désert", new Color32(226, 150, 160, 255), new Color32(160, 90, 104, 255), new Color32(255, 255, 255, 255), new Color(1f, 0.6f, 0.7f)),
+            Colour("copper", "Cuivre ancien", new Color32(184, 110, 64, 255), new Color32(116, 64, 36, 255), new Color32(120, 240, 210, 255), new Color(1f, 0.6f, 0.35f)),
+            Colour("ivory", "Ivoire royal", new Color32(246, 240, 224, 255), new Color32(196, 184, 160, 255), new Color32(80, 140, 255, 255), new Color(1f, 0.9f, 0.7f)),
+            Colour("amethyst", "Améthyste", new Color32(150, 100, 200, 255), new Color32(90, 56, 130, 255), new Color32(255, 220, 120, 255), new Color(0.8f, 0.55f, 1f)),
+            Colour("turquoise", "Turquoise du Sinaï", new Color32(64, 200, 190, 255), new Color32(28, 120, 120, 255), new Color32(255, 250, 200, 255), new Color(0.5f, 1f, 0.95f)),
+            Colour("crimson", "Sang de Seth", new Color32(170, 40, 48, 255), new Color32(96, 18, 26, 255), new Color32(255, 200, 80, 255), new Color(1f, 0.4f, 0.3f)),
+            Colour("frost", "Givre du Nil", new Color32(200, 228, 246, 255), new Color32(130, 166, 200, 255), new Color32(60, 120, 255, 255), new Color(0.7f, 0.85f, 1f)),
+            Colour("silver", "Argent lunaire", new Color32(190, 196, 206, 255), new Color32(120, 126, 138, 255), new Color32(150, 220, 255, 255), new Color(0.8f, 0.9f, 1f)),
+            Colour("ebony", "Ébène et or", new Color32(40, 34, 30, 255), new Color32(16, 12, 10, 255), new Color32(242, 201, 76, 255), new Color(1f, 0.8f, 0.4f)),
 
             // ---- Torches.
-            Torch(DefaultTorchId, "Torche de bois", 0, 0, TorchStyle.Classic, new Color(1f, 0.72f, 0.42f)),
-            Torch("torch_scepter", "Sceptre d'or", 100, 1, TorchStyle.Scepter, new Color(1f, 0.85f, 0.5f)),
-            Torch("torch_lantern", "Lanterne de nacre", 150, 2, TorchStyle.Lantern, new Color(0.55f, 0.95f, 1f)),
-            Torch("torch_bone", "Torche d'os", 200, 3, TorchStyle.Bone, new Color(0.75f, 1f, 0.6f)),
-            Torch("torch_plasma", "Torche à plasma", 250, 4, TorchStyle.Plasma, new Color(0.45f, 0.95f, 1f)),
-            Torch("torch_obsidian", "Torche d'obsidienne", 300, 5, TorchStyle.Obsidian, new Color(1f, 0.4f, 0.2f)),
-            Torch("torch_lamp", "Lampe à huile", 120, 0, TorchStyle.OilLamp, new Color(1f, 0.7f, 0.35f)),
-            Torch("torch_papyrus", "Gerbe de papyrus", 150, 0, TorchStyle.Papyrus, new Color(0.75f, 1f, 0.55f)),
-            Torch("torch_crook", "Crosse du pharaon", 180, 0, TorchStyle.Crook, new Color(1f, 0.85f, 0.5f)),
-            Torch("torch_ankh", "Ankh de vie", 200, 0, TorchStyle.Ankh, new Color(0.5f, 1f, 0.9f)),
-            Torch("torch_was", "Sceptre ouas", 220, 0, TorchStyle.Was, new Color(0.6f, 0.75f, 1f)),
-            Torch("torch_feather", "Bâton à plume", 240, 0, TorchStyle.Feather, new Color(1f, 0.95f, 0.8f)),
-            Torch("torch_sistrum", "Sistre d'Hathor", 260, 0, TorchStyle.Sistrum, new Color(1f, 0.8f, 0.55f)),
-            Torch("torch_cobra", "Bâton du cobra", 300, 0, TorchStyle.Cobra, new Color(0.6f, 1f, 0.4f)),
-            Torch("torch_moon", "Croissant de Khonsou", 340, 0, TorchStyle.Moon, new Color(0.75f, 0.85f, 1f)),
-            Torch("torch_crystal", "Cristal d'améthyste", 400, 0, TorchStyle.Crystal, new Color(0.95f, 0.55f, 1f)),
+            Torch(DefaultTorchId, "Torche de bois", TorchStyle.Classic, new Color(1f, 0.72f, 0.42f)),
+            Torch("torch_scepter", "Sceptre d'or", TorchStyle.Scepter, new Color(1f, 0.85f, 0.5f)),
+            Torch("torch_lantern", "Lanterne de nacre", TorchStyle.Lantern, new Color(0.55f, 0.95f, 1f)),
+            Torch("torch_bone", "Torche d'os", TorchStyle.Bone, new Color(0.75f, 1f, 0.6f)),
+            Torch("torch_plasma", "Torche à plasma", TorchStyle.Plasma, new Color(0.45f, 0.95f, 1f)),
+            Torch("torch_obsidian", "Torche d'obsidienne", TorchStyle.Obsidian, new Color(1f, 0.4f, 0.2f)),
+            Torch("torch_lamp", "Lampe à huile", TorchStyle.OilLamp, new Color(1f, 0.7f, 0.35f)),
+            Torch("torch_papyrus", "Gerbe de papyrus", TorchStyle.Papyrus, new Color(0.75f, 1f, 0.55f)),
+            Torch("torch_crook", "Crosse du pharaon", TorchStyle.Crook, new Color(1f, 0.85f, 0.5f)),
+            Torch("torch_ankh", "Ankh de vie", TorchStyle.Ankh, new Color(0.5f, 1f, 0.9f)),
+            Torch("torch_was", "Sceptre ouas", TorchStyle.Was, new Color(0.6f, 0.75f, 1f)),
+            Torch("torch_feather", "Bâton à plume", TorchStyle.Feather, new Color(1f, 0.95f, 0.8f)),
+            Torch("torch_sistrum", "Sistre d'Hathor", TorchStyle.Sistrum, new Color(1f, 0.8f, 0.55f)),
+            Torch("torch_cobra", "Bâton du cobra", TorchStyle.Cobra, new Color(0.6f, 1f, 0.4f)),
+            Torch("torch_moon", "Croissant de Khonsou", TorchStyle.Moon, new Color(0.75f, 0.85f, 1f)),
+            Torch("torch_crystal", "Cristal d'améthyste", TorchStyle.Crystal, new Color(0.95f, 0.55f, 1f)),
 
             // ---- Hats.
-            Hat(NoHatId, "Tête nue", 0, 0, HatStyle.None),
-            Hat("hat_explorer", "Casque d'explorateur", 120, 0, HatStyle.Explorer),
-            Hat("hat_nemes", "Némès du pharaon", 100, 1, HatStyle.Nemes),
-            Hat("hat_lotus", "Couronne de lotus", 150, 2, HatStyle.Lotus),
-            Hat("hat_helm", "Heaume de bronze brisé", 200, 3, HatStyle.BrokenHelm),
-            Hat("hat_cyber", "Oreilles d'Anubis", 250, 4, HatStyle.CyberEars),
-            Hat("hat_sun", "Disque de Râ", 300, 5, HatStyle.SunDisk),
-            Hat("hat_feather", "Coiffe de Maât", 120, 0, HatStyle.MaatFeather),
-            Hat("hat_turban", "Turban du désert", 140, 0, HatStyle.Turban),
-            Hat("hat_scarab", "Diadème du scarabée", 180, 0, HatStyle.ScarabCirclet),
-            Hat("hat_horns", "Cornes d'Hathor", 220, 0, HatStyle.HathorHorns),
-            Hat("hat_khepresh", "Couronne bleue", 260, 0, HatStyle.Khepresh),
-            Hat("hat_vulture", "Coiffe du vautour", 300, 0, HatStyle.Vulture),
-            Hat("hat_atef", "Couronne atef", 340, 0, HatStyle.Atef),
-            Hat("hat_nefertiti", "Couronne de Néfertiti", 380, 0, HatStyle.Nefertiti),
-            Hat("hat_pschent", "Pschent des Deux Terres", 450, 0, HatStyle.Pschent),
+            Hat(NoHatId, "Tête nue", HatStyle.None),
+            Hat("hat_explorer", "Casque d'explorateur", HatStyle.Explorer),
+            Hat("hat_nemes", "Némès du pharaon", HatStyle.Nemes),
+            Hat("hat_lotus", "Couronne de lotus", HatStyle.Lotus),
+            Hat("hat_helm", "Heaume de bronze brisé", HatStyle.BrokenHelm),
+            Hat("hat_cyber", "Oreilles d'Anubis", HatStyle.CyberEars),
+            Hat("hat_sun", "Disque de Râ", HatStyle.SunDisk),
+            Hat("hat_feather", "Coiffe de Maât", HatStyle.MaatFeather),
+            Hat("hat_turban", "Turban du désert", HatStyle.Turban),
+            Hat("hat_scarab", "Diadème du scarabée", HatStyle.ScarabCirclet),
+            Hat("hat_horns", "Cornes d'Hathor", HatStyle.HathorHorns),
+            Hat("hat_khepresh", "Couronne bleue", HatStyle.Khepresh),
+            Hat("hat_vulture", "Coiffe du vautour", HatStyle.Vulture),
+            Hat("hat_atef", "Couronne atef", HatStyle.Atef),
+            Hat("hat_nefertiti", "Couronne de Néfertiti", HatStyle.Nefertiti),
+            Hat("hat_pschent", "Pschent des Deux Terres", HatStyle.Pschent),
 
             // ---- Shoes.
-            Shoes(NoShoesId, "Pieds bandés", 0, 0, ShoeStyle.None),
-            Shoes("shoes_slippers", "Babouches", 80, 0, ShoeStyle.Slippers),
-            Shoes("shoes_sandals", "Sandales dorées", 100, 1, ShoeStyle.GoldSandals),
-            Shoes("shoes_mud", "Bottes de vase", 150, 2, ShoeStyle.MudBoots),
-            Shoes("shoes_stone", "Bottes de pierre", 200, 3, ShoeStyle.StoneBoots),
-            Shoes("shoes_jet", "Bottes à réacteurs", 250, 4, ShoeStyle.JetBoots),
-            Shoes("shoes_hooves", "Sabots d'obsidienne", 300, 5, ShoeStyle.ObsidianHooves),
-            Shoes("shoes_papyrus", "Sandales de papyrus", 90, 0, ShoeStyle.PapyrusSandals),
-            Shoes("shoes_desert", "Bottes du désert", 120, 0, ShoeStyle.DesertBoots),
-            Shoes("shoes_lotus", "Chaussons de lotus", 150, 0, ShoeStyle.LotusSlippers),
-            Shoes("shoes_lapis", "Sandales de lapis", 180, 0, ShoeStyle.LapisSandals),
-            Shoes("shoes_scarab", "Sabots du scarabée", 220, 0, ShoeStyle.ScarabClogs),
-            Shoes("shoes_ruby", "Babouches de rubis", 260, 0, ShoeStyle.RubyPointed),
-            Shoes("shoes_croc", "Bottes de Sobek", 300, 0, ShoeStyle.CrocBoots),
-            Shoes("shoes_greaves", "Jambières d'argent", 340, 0, ShoeStyle.SilverGreaves),
-            Shoes("shoes_winged", "Sandales ailées d'Horus", 400, 0, ShoeStyle.WingedSandals),
-        };
+            Shoes(NoShoesId, "Pieds bandés", ShoeStyle.None),
+            Shoes("shoes_slippers", "Babouches", ShoeStyle.Slippers),
+            Shoes("shoes_sandals", "Sandales dorées", ShoeStyle.GoldSandals),
+            Shoes("shoes_mud", "Bottes de vase", ShoeStyle.MudBoots),
+            Shoes("shoes_stone", "Bottes de pierre", ShoeStyle.StoneBoots),
+            Shoes("shoes_jet", "Bottes à réacteurs", ShoeStyle.JetBoots),
+            Shoes("shoes_hooves", "Sabots d'obsidienne", ShoeStyle.ObsidianHooves),
+            Shoes("shoes_papyrus", "Sandales de papyrus", ShoeStyle.PapyrusSandals),
+            Shoes("shoes_desert", "Bottes du désert", ShoeStyle.DesertBoots),
+            Shoes("shoes_lotus", "Chaussons de lotus", ShoeStyle.LotusSlippers),
+            Shoes("shoes_lapis", "Sandales de lapis", ShoeStyle.LapisSandals),
+            Shoes("shoes_scarab", "Sabots du scarabée", ShoeStyle.ScarabClogs),
+            Shoes("shoes_ruby", "Babouches de rubis", ShoeStyle.RubyPointed),
+            Shoes("shoes_croc", "Bottes de Sobek", ShoeStyle.CrocBoots),
+            Shoes("shoes_greaves", "Jambières d'argent", ShoeStyle.SilverGreaves),
+            Shoes("shoes_winged", "Sandales ailées d'Horus", ShoeStyle.WingedSandals),
+        });
 
         /// <summary>Items every player owns from the start: one per slot.</summary>
         public static readonly string[] Defaults = { DefaultMummyId, DefaultSkinId, DefaultTorchId, NoHatId, NoShoesId };
@@ -256,7 +267,7 @@ namespace MummyEscape.Visual
         }
 
         /// <summary>A whole collection costs a fifth less than its pieces bought one by one.</summary>
-        public static int SetPrice(int piecesPrice) => piecesPrice * 4 / 5 / 10 * 10;
+        public static int SetPrice(int piecesPrice) => Monetization.ScarabShop.SetPrice(piecesPrice);
 
         /// <summary>The classic outfit (store icon, previews).</summary>
         public static Loadout Classic => new Loadout(Get(DefaultMummyId, CosmeticSlot.Mummy), Get(DefaultSkinId, CosmeticSlot.Color),

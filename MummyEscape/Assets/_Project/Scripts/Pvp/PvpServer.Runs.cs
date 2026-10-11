@@ -31,7 +31,7 @@ namespace MummyEscape.Pvp
         const int MaxRunInputs = 4000;
 
         /// <summary>
-        /// Replays the runs and adds their XP to the pass held here: a campaign escape 40 + 10 per star (stars on the moves
+        /// Replays the runs and adds their XP to the pass held here (and their scarabs, see <see cref="ScarabsOf"/>): a campaign escape 40 + 10 per star (stars on the moves
         /// alone: the expert time would need a solver per run), a death 10, an endless tomb 70. A run that the rules refuse,
         /// or played faster than the game's animations allow, gives nothing.
         /// </summary>
@@ -39,31 +39,38 @@ namespace MummyEscape.Pvp
         {
             if (runs == null || runs.Count > SoloRunsPerCall) return new WalletResponse { Error = "UNKNOWN_PRODUCT" };
             var season = BattlePass.At(_utcNow());
-            var xp = new List<(string id, int xp)>();
+            var replays = new List<(SoloRunReport run, int xp, LevelResult result)>();
             foreach (var run in runs)
             {
                 if (string.IsNullOrEmpty(run?.Id) || run.Id.Length > 64 || run.Inputs == null || run.Inputs.Count > MaxRunInputs) continue;
-                xp.Add(("run:" + run.Id, SoloXpOf(run))); // noloc
+                var result = Replay(run, out int xp);
+                replays.Add((run, xp, result));
             }
             var data = await Update(me, d =>
             {
                 var w = WalletOf(d);
-                foreach (var (id, amount) in xp) AddXp(w, season, id, amount);
+                // A run counts once: its XP, and its scarabs (see ScarabsOf).
+                foreach (var (run, xp, result) in replays)
+                    if (AddXp(w, season, "run:" + run.Id, xp)) w.Scarabs += ScarabsOf(w, run, result); // noloc
             });
             return new WalletResponse { Wallet = WalletOf(data) };
         }
 
-        /// <summary>The XP a run earns once replayed here (0 when the tomb is unknown or the run impossible).</summary>
-        int SoloXpOf(SoloRunReport run)
+        /// <summary>
+        /// A run replayed here: its result, and the XP it earns (null and 0 when the tomb is unknown, the run impossible or
+        /// unfinished).
+        /// </summary>
+        LevelResult Replay(SoloRunReport run, out int xp)
         {
+            xp = 0;
             var level = SoloLevel(run);
-            if (level == null) return 0;
+            if (level == null) return null;
             var replay = new RunReplay(level, run.Inputs);
             replay.AdvanceTo(int.MaxValue);
-            if (replay.Invalid || replay.TooFast) return 0;
+            if (replay.Invalid || replay.TooFast || !replay.IsOver && run.EndlessMode < 0) return null;
             var result = replay.Session.BuildResult();
-            if (run.EndlessMode >= 0) return result.Won ? BattlePass.EndlessXp : 0;
-            return replay.IsOver ? BattlePass.SoloXp(result.Won, result.Stars) : 0;
+            xp = run.EndlessMode >= 0 ? result.Won ? BattlePass.EndlessXp : 0 : BattlePass.SoloXp(result.Won, result.Stars);
+            return result;
         }
 
         // Generating a tomb costs far more than replaying it: the last ones are kept (a warm module serves many players

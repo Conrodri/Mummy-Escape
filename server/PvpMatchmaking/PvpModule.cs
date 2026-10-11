@@ -281,6 +281,21 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("BuyGoldItem")]
         public Task<WalletResponse> BuyGoldItem(IExecutionContext ctx, string skinId) => Server(ctx).BuyGoldItemAsync(ctx.PlayerId, skinId);
 
+        [CloudCodeFunction("OpenScarabs")]
+        public Task<WalletResponse> OpenScarabs(IExecutionContext ctx, ScarabSeed seed) => Server(ctx).OpenScarabsAsync(ctx.PlayerId, seed);
+
+        [CloudCodeFunction("BuyScarabPiece")]
+        public Task<WalletResponse> BuyScarabPiece(IExecutionContext ctx, string id) => Server(ctx).BuyScarabPieceAsync(ctx.PlayerId, id);
+
+        [CloudCodeFunction("BuyScarabSet")]
+        public Task<WalletResponse> BuyScarabSet(IExecutionContext ctx, int act) => Server(ctx).BuyScarabSetAsync(ctx.PlayerId, act);
+
+        [CloudCodeFunction("BuyWheelLegendary")]
+        public Task<WalletResponse> BuyWheelLegendary(IExecutionContext ctx, string id) => Server(ctx).BuyWheelLegendaryAsync(ctx.PlayerId, id);
+
+        [CloudCodeFunction("SpinScarabWheel")]
+        public Task<WheelSpinResponse> SpinScarabWheel(IExecutionContext ctx, int count) => Server(ctx).SpinScarabWheelAsync(ctx.PlayerId, count);
+
         [CloudCodeFunction("ClaimPassRewards")]
         public Task<WalletResponse> ClaimPassRewards(IExecutionContext ctx, string season, List<int> freeTiers, List<int> premiumTiers) =>
             Server(ctx).ClaimPassRewardsAsync(ctx.PlayerId, season, freeTiers, premiumTiers);

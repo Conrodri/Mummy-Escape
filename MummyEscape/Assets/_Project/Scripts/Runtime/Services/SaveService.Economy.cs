@@ -29,6 +29,13 @@ namespace MummyEscape.Services
             var skins = wallet.Skins ?? new List<string>();
             Data.OwnedSkins.RemoveAll(s => GoldShop.IsPaid(s) && !skins.Contains(s));
             foreach (var s in skins) if (!Data.OwnedSkins.Contains(s)) Data.OwnedSkins.Add(s);
+            // Once carried over, the scarabs are the server's (plus the runs it has not replayed), and so are its pieces.
+            Data.ScarabsHeld = wallet.ScarabsOpen; // another account on this phone may not have carried its scarabs over yet
+            if (wallet.ScarabsOpen)
+            {
+                Data.Coins = wallet.Scarabs + PendingScarabs;
+                foreach (var s in wallet.Owned ?? new List<string>()) if (!Data.OwnedSkins.Contains(s)) Data.OwnedSkins.Add(s);
+            }
             string Worn(string id, string fallback) => GoldShop.IsPaid(id) && !Data.OwnedSkins.Contains(id) ? fallback : id;
             Data.SelectedMummy = Worn(Data.SelectedMummy, Visual.SkinCatalog.DefaultMummyId);
             Data.SelectedSkin = Worn(Data.SelectedSkin, Visual.SkinCatalog.DefaultSkinId);
@@ -80,7 +87,7 @@ namespace MummyEscape.Services
         {
             Data.GoldSpends.Remove(spend);
             var offer = GoldShop.Offer(spend.Offer);
-            if (offer != null) Data.Coins += offer.Scarabs;
+            if (offer != null) { if (!Data.ScarabsHeld) Data.Coins += offer.Scarabs; } // held: the server credited them
             else if (spend.Offer == TiersSpend)
             {
                 RollPass();
@@ -163,15 +170,40 @@ namespace MummyEscape.Services
         /// A finished solo run for the server to replay: its XP shows at once, and stays only if the server's replay grants
         /// it (see <see cref="ApplyWallet"/>).
         /// </summary>
-        public void QueueRun(SoloRunReport run, int xp)
+        public void QueueRun(SoloRunReport run, int xp, int scarabs)
         {
-            Data.PendingRuns.Add(new PendingRun { Run = run, Xp = xp });
+            Data.PendingRuns.Add(new PendingRun { Run = run, Xp = xp, Scarabs = scarabs });
             if (Data.PendingRuns.Count > PendingRunsKept) Data.PendingRuns.RemoveAt(0); // long offline: the oldest runs give up their XP
             AddPassXp(xp, false);
             Save();
         }
 
         public int PendingRunCount => Data.PendingRuns.Count;
+
+        /// <summary>The scarabs of the runs the server has not replayed yet (already in <see cref="SaveData.Coins"/>).</summary>
+        int PendingScarabs
+        {
+            get
+            {
+                int n = 0;
+                foreach (var p in Data.PendingRuns) n += p.Scarabs;
+                return n;
+            }
+        }
+
+        /// <summary>
+        /// The scarab economy to carry over to the server, once: the balance without the runs it will pay itself, the best
+        /// stars, the endless tombs escaped and the pieces it sells.
+        /// </summary>
+        public ScarabSeed ScarabSeed()
+        {
+            var seed = new ScarabSeed { Scarabs = Math.Max(0, Data.Coins - PendingScarabs) };
+            foreach (var r in Data.Records) if (r.BestStars > 0) seed.Stars.Add(r.Key + "=" + r.BestStars);
+            foreach (var e in Data.Endless) seed.EndlessCleared.Add(e.Cleared);
+            foreach (var s in Data.OwnedSkins)
+                if (ScarabShop.Get(s) != null || Array.IndexOf(Casino.Scarabs.Legendaries, s) >= 0 || s == Halloween.WheelLegendary) seed.Owned.Add(s);
+            return seed;
+        }
 
         /// <summary>The next runs to send, oldest first.</summary>
         public List<SoloRunReport> NextRuns(int count)
@@ -195,8 +227,9 @@ namespace MummyEscape.Services
 
         public static PassReward RewardOf(int tier, bool premium) => premium ? BattlePass.Premium(BattlePass.Current, tier) : BattlePass.Free(tier);
 
-        /// <summary>Golden scarabs and skins of the pass are given by the server (the wallet); scarabs by the device.</summary>
-        public static bool FromServer(PassReward reward) => reward.Kind == PassRewardKind.Gold || reward.Kind == PassRewardKind.Skin;
+        /// <summary>Golden scarabs and skins of the pass are given by the server (the wallet); scarabs too once it holds them.</summary>
+        public bool FromServer(PassReward reward) =>
+            reward.Kind == PassRewardKind.Gold || reward.Kind == PassRewardKind.Skin || reward.Kind == PassRewardKind.Scarabs && Data.ScarabsHeld;
 
         /// <summary>Collects one scarab reward of the pass; returns it, or a None reward when it cannot be collected here.</summary>
         public PassReward Claim(int tier, bool premium)

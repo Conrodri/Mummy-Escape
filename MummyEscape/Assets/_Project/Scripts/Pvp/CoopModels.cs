@@ -53,6 +53,8 @@ namespace MummyEscape.Pvp
         /// <summary>Total des étoiles 2v2 du joueur.</summary>
         public int TotalStars;
         public Duo Duo;
+        /// <summary>Le portefeuille après ce passage (les scarabées du premier passage, une fois tenus par le serveur).</summary>
+        public Wallet Wallet;
         public string Error;   // "UNKNOWN", "LOCKED", "INVALID", "OUTDATED"
     }
 

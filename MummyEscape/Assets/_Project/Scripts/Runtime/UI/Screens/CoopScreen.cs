@@ -315,9 +315,10 @@ namespace MummyEscape.UI.Screens
             if (r?.Duo != null) o.Info.Duo = r.Duo;
             if (r != null && r.Error == null)
             {
+                if (r.Wallet != null) app.Save.ApplyWallet(r.Wallet); // the server paid the first clear once it holds the scarabs
                 if (r.FirstClear)
                 {
-                    app.Save.EarnCoins(CoopConfig.FirstClearScarabs);
+                    if (!app.Save.Data.ScarabsHeld) app.Save.EarnCoins(CoopConfig.FirstClearScarabs);
                     app.Audio.Play(Sfx.Coin);
                     summary += "\n" + Loc.F("Premier passage : +{0} scarabées", CoopConfig.FirstClearScarabs);
                 }

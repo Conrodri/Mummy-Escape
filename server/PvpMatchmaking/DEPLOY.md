@@ -12,6 +12,7 @@ générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne 
   `StartWar`, `StartRelayMatch`, `StartRelayBots`, `SubmitRelay`, `GetRelayResult`, `ReportRelayQuit`, `GetRelayHistory`,
   `GetChat`, `SendChat`, `GetChatInbox`, `BlockChat`, `SyncChatProfile`, `ReportChat`, `ShareReplay`, `GetSharedReplay`,
   `RefillPvpEnergy`, `GetWallet`, `VerifyPurchase`, `BuyPass`, `BuyTiers`, `BuyScarabs`, `BuyGoldItem`, `ClaimPassRewards`,
+  `OpenScarabs`, `BuyScarabPiece`, `BuyScarabSet`, `SpinScarabWheel`, `BuyWheelLegendary`,
   `ExportPvpData`, `DeletePvpData` ;
 - `CloudSavePvpStore.cs` : le stockage (Cloud Save, Leaderboards) ;
 - `GooglePlayVerifier.cs` : la vérification des achats Google Play (API Android Publisher).
@@ -97,6 +98,18 @@ lancement), et l'oublie s'il ne la liste toujours pas après 5 minutes.
 
 Aucune migration : avant ce porte-monnaie, l'or du téléphone ne venait d'aucun achat réel (aucune boutique n'existait) ; il
 n'est pas recrédité, la valeur du serveur le remplace.
+
+## Scarabées
+
+Les scarabées (la monnaie du jeu) sont gardés par le serveur une fois reportés. Au premier portefeuille d'un compte, le
+téléphone envoie `OpenScarabs` : son solde (plafonné à 20 000, `PvpServer.ScarabsCarriedMax`), ses meilleures étoiles par
+niveau, les tombeaux sans fin déjà franchis et les pièces de boutique ou de la roue qu'il possède (les autres sont ignorées).
+Ce report n'a lieu qu'une fois (`Wallet.ScarabsOpen`). Ensuite, le serveur crédite lui-même les courses rejouées par
+`SubmitSoloRuns` (un niveau paie ses nouvelles étoiles, 10 chacune + 2, comptées sur les coups ; un tombeau sans fin paie
+une fois), le pass (`ClaimPassRewards`), le premier passage d'un tombeau 2v2 (`SubmitCoop`) et les offres en or
+(`BuyScarabs`). Toute dépense passe par lui : `BuyScarabPiece`, `BuyScarabSet` (collection d'un acte à -20 %),
+`SpinScarabWheel`, `BuyWheelLegendary` et `CreateGuild` (500). Les prix sont ceux de `Pvp/ScarabShop.cs`, que le catalogue
+du jeu lit aussi. Erreurs : `CLOSED` (pas encore reporté), `SCARABS` (il en manque), `STARS` (étoiles de l'acte manquantes).
 
 ## Énergie
 

@@ -525,32 +525,16 @@ namespace MummyEscape.UI.Screens
 
         // ------------------------------------------------------------------ sale
 
-        static List<SkinDef> _commons, _rares, _scarabSale;
-        static int _scarabSaleDay = -1;
-
-        /// <summary>The scarab pieces the sale deals from: the classics (common) and the act pieces (rare).</summary>
-        static List<SkinDef> Pool(bool acts)
+        /// <summary>Today's scarab pieces on sale (the classics then the act pieces), as the server prices them.</summary>
+        static List<SkinDef> ScarabSale()
         {
             var list = new List<SkinDef>();
-            foreach (var s in SkinCatalog.All)
-                if (s.Price > 0 && s.Badge == null && !s.Pvp && !s.Legendary && (s.Theme > 0) == acts) list.Add(s);
+            foreach (var i in Monetization.ScarabShop.Sale(DateTime.UtcNow)) list.Add(SkinCatalog.Get(i.Id));
             return list;
         }
 
-        /// <summary>Today's scarab pieces on sale: the commons then the rares.</summary>
-        static List<SkinDef> ScarabSale()
-        {
-            int day = Monetization.ShopSale.Day(DateTime.UtcNow);
-            if (day == _scarabSaleDay) return _scarabSale;
-            _commons ??= Pool(false);
-            _rares ??= Pool(true);
-            _scarabSale = Monetization.ShopSale.Deal(_commons, Monetization.ShopSale.Commons, day, Monetization.ShopSale.CommonSalt);
-            _scarabSale.AddRange(Monetization.ShopSale.Deal(_rares, Monetization.ShopSale.Rares, day, Monetization.ShopSale.RareSalt));
-            _scarabSaleDay = day;
-            return _scarabSale;
-        }
-
-        internal static int ScarabPrice(SkinDef item) => ScarabSale().Contains(item) ? Monetization.ShopSale.Price(item.Price) : item.Price;
+        internal static int ScarabPrice(SkinDef item) =>
+            Monetization.ScarabShop.Get(item.Id) is Monetization.ScarabItem i ? Monetization.ScarabShop.PriceNow(i, DateTime.UtcNow) : item.Price;
 
         /// <summary>The Promos tab: today's 7 pieces at -25 %, the rarest first, and when the next ones come.</summary>
         void FillSale()
@@ -587,16 +571,30 @@ namespace MummyEscape.UI.Screens
             UIKit.Place(padlock.rectTransform, 0.5f, 0.5f, size, size);
         }
 
-        void OnItem(SkinDef item)
+        async void OnItem(SkinDef item)
         {
-            var save = App.Save;
-            if (!save.Data.OwnedSkins.Contains(item.Id))
+            if (!App.Save.Data.OwnedSkins.Contains(item.Id))
             {
-                if (!save.TryBuySkin(item.Id, ScarabPrice(item))) return;
-                App.Audio.Play(Sfx.Coin);
+                // The server takes the scarabs and gives the piece (the wallet it sends back lists it).
+                if (!await BuyScarabs(item.Name, p => p.BuyScarabPieceAsync(item.Id), () => App.Save.Data.OwnedSkins.Contains(item.Id))) return;
             }
-            save.SelectSkin(item.Id);
+            App.Save.SelectSkin(item.Id);
             Refresh();
+        }
+
+        /// <summary>A scarab purchase asked to the server: true once <paramref name="done"/>, otherwise its error in a dialog.</summary>
+        async System.Threading.Tasks.Task<bool> BuyScarabs(string name, Func<Online.IPvpService, System.Threading.Tasks.Task<WalletResponse>> call, Func<bool> done)
+        {
+            string error = await Monetization.ScarabWallet.RunAsync(App, call);
+            if (this == null) return false;
+            if (error != null && !done())
+            {
+                Router.Open<OfferDialog>().Configure(Loc.T(name), Monetization.ScarabWallet.ErrorText(error), ("OK", ButtonStyle.Primary, null)); // noloc
+                Refresh();
+                return false;
+            }
+            App.Audio.Play(Sfx.Coin);
+            return true;
         }
 
         // ------------------------------------------------------------------ collections
@@ -809,17 +807,12 @@ namespace MummyEscape.UI.Screens
             Refresh();
         }
 
-        void OnSet(int act, int price)
+        async void OnSet(int act, int price)
         {
-            var save = App.Save;
+            var owned = App.Save.Data.OwnedSkins;
             var set = SkinCatalog.ThemeSet(act);
-            bool missing = false;
-            foreach (var s in set) if (!save.Data.OwnedSkins.Contains(s.Id)) missing = true;
-            if (missing)
-            {
-                if (!save.TryBuyAll(set, price)) return;
-                App.Audio.Play(Sfx.Coin);
-            }
+            bool Complete() => set.TrueForAll(s => owned.Contains(s.Id));
+            if (!Complete() && !await BuyScarabs(ThemeName(act), p => p.BuyScarabSetAsync(act), Complete)) return;
             Wear(set);
         }
 

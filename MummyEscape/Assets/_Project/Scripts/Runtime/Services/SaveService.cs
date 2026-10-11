@@ -19,6 +19,8 @@ namespace MummyEscape.Services
         public int Version = CurrentVersion;
         public List<LevelRecord> Records = new List<LevelRecord>();
         public int Coins;
+        /// <summary>The server holds the scarabs (carried over once): <see cref="Coins"/> is then its balance plus the runs it has not replayed.</summary>
+        public bool ScarabsHeld;
         /// <summary>Every shop item owned, whatever its slot (mummy, colour, torch, hat, shoes).</summary>
         public List<string> OwnedSkins = new List<string>(SkinCatalog.Defaults);
         /// <summary>Selected colour (the name predates the other slots, kept for old saves).</summary>
@@ -76,6 +78,8 @@ namespace MummyEscape.Services
     {
         public MummyEscape.Pvp.SoloRunReport Run;
         public int Xp;
+        /// <summary>The scarabs the phone counted for it (shown until the server's replay pays its own).</summary>
+        public int Scarabs;
     }
 
     /// <summary>A spend asked to the server: <see cref="Offer"/> is a scarab offer id or <see cref="SaveService.TiersSpend"/>.</summary>
@@ -199,7 +203,7 @@ namespace MummyEscape.Services
                 if (mine == null) Data.Records.Add(JsonUtility.FromJson<LevelRecord>(JsonUtility.ToJson(theirs)));
                 else mine.MergeWith(theirs);
             }
-            Data.Coins = Math.Max(Data.Coins, other.Coins);
+            if (!Data.ScarabsHeld) Data.Coins = Math.Max(Data.Coins, other.Coins); // held: the server's balance, not a copy's
             // Paid skins come from the server's wallet only (ApplyWallet), never from a copy.
             foreach (var s in other.OwnedSkins) if (!Data.OwnedSkins.Contains(s) && !Monetization.GoldShop.IsPaid(s)) Data.OwnedSkins.Add(s);
             if (string.IsNullOrEmpty(Data.Country)) Data.Country = other.Country ?? "";
@@ -273,15 +277,6 @@ namespace MummyEscape.Services
             return new RecordOutcome { NewBest = improved && result.Won, CoinsEarned = coins, PreviousBestOverPar = previousBest, PreviousBestTimeMs = previousTime };
         }
 
-        public bool TryBuySkin(string id, int price)
-        {
-            if (Data.OwnedSkins.Contains(id) || Data.Coins < price || TotalStars < SkinCatalog.Get(id).MinStars) return false;
-            Data.Coins -= price;
-            Data.OwnedSkins.Add(id);
-            Save();
-            return true;
-        }
-
         /// <summary>Adds duel rewards the server granted (season skins, seal shop); returns true when one was new.</summary>
         public bool GrantSkins(IEnumerable<string> ids)
         {
@@ -297,36 +292,11 @@ namespace MummyEscape.Services
             return added;
         }
 
-        /// <summary>Pays scarabs for something outside the shop (founding a guild); false when the player can't afford it.</summary>
-        public bool SpendCoins(int amount)
-        {
-            if (amount < 0 || Data.Coins < amount) return false;
-            Data.Coins -= amount;
-            Save();
-            return true;
-        }
-
         /// <summary>Scarabs won outside a level (first clear of a 2v2 campaign tomb).</summary>
         public void EarnCoins(int amount)
         {
             Data.Coins += Math.Max(0, amount);
             Save();
-        }
-
-        /// <summary>Buys every missing piece of a collection at once, for the given price.</summary>
-        public bool TryBuyAll(IEnumerable<SkinDef> items, int price)
-        {
-            var missing = new List<string>();
-            foreach (var s in items)
-            {
-                if (TotalStars < s.MinStars) return false;
-                if (!Data.OwnedSkins.Contains(s.Id)) missing.Add(s.Id);
-            }
-            if (missing.Count == 0 || Data.Coins < price) return false;
-            Data.Coins -= price;
-            Data.OwnedSkins.AddRange(missing);
-            Save();
-            return true;
         }
 
         /// <summary>Wears an owned item in its slot.</summary>
@@ -350,43 +320,6 @@ namespace MummyEscape.Services
         {
             Data.SelectedTitle = Pvp.Titles.Get(id)?.Id ?? "";
             Save();
-        }
-
-        /// <summary>
-        /// One turn of the casino's scarab wheel: pays, draws, cashes in the prize (scarabs or a legendary colour).
-        /// Null when the player cannot pay.
-        /// </summary>
-        /// <summary>
-        /// <paramref name="count"/> tours de la roue des scarabées (1, ou <see cref="Pvp.Casino.MultiSpins"/> au prix de
-        /// <see cref="Pvp.Casino.MultiSpinsPaid"/>). Null si le joueur n'a pas de quoi payer.
-        /// </summary>
-        public System.Collections.Generic.List<Pvp.SpinResult> SpinScarabWheel(System.Random rng, int count = 1)
-        {
-            var wheel = Pvp.Casino.ScarabsAt(DateTime.UtcNow);
-            int price = Pvp.Casino.PriceOf(wheel, count);
-            if (Data.Coins < price) return null;
-            Data.Coins -= price;
-            var results = Pvp.Casino.SpinMany(wheel, count, rng.NextDouble, Data.OwnedSkins);
-            foreach (var result in results)
-            {
-                if (result.Kind == Pvp.PrizeKind.Currency) Data.Coins += result.Amount;
-                else if (result.Legendary != null && !Data.OwnedSkins.Contains(result.Legendary)) Data.OwnedSkins.Add(result.Legendary);
-            }
-            Data.WheelSpins += count;
-            Save();
-            return results;
-        }
-
-        /// <summary>Buys a legendary of the scarab wheel outright, without the draw. False when it is not for sale, owned or too dear.</summary>
-        public bool BuyWheelLegendary(string id)
-        {
-            var wheel = Pvp.Casino.ScarabsAt(DateTime.UtcNow);
-            if (wheel.DirectPrice <= 0 || System.Array.IndexOf(wheel.Legendaries, id) < 0) return false;
-            if (Data.OwnedSkins.Contains(id) || Data.Coins < wheel.DirectPrice) return false;
-            Data.Coins -= wheel.DirectPrice;
-            Data.OwnedSkins.Add(id);
-            Save();
-            return true;
         }
 
         public bool IsWorn(string id) =>

@@ -8,7 +8,7 @@ namespace MummyEscape.Monetization
     /// The daily sale, the same on every device and on the server: each UTC day, 3 commons, 2 rares, 1 epic and 1 legendary
     /// at -25 %. Each pool is dealt like a shuffled deck: an item comes back only once all the others of its pool have been
     /// on sale, and never two days running across two decks. The server only prices the golden scarab items (epic and
-    /// legendary Treasure exclusives); the scarab ones are bought on the device.
+    /// legendary Treasure exclusives); the scarab pieces are priced by <see cref="ScarabShop"/>.
     /// </summary>
     public static class ShopSale
     {

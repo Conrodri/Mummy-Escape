@@ -55,6 +55,8 @@ namespace MummyEscape.Pvp
         public int Seals;
         public List<string> UnlockedRewards = new List<string>();
         public string Error;   // "SEALS"
+        /// <summary>The scarab wheel: the wallet after the spins (scarabs and pieces held by the server).</summary>
+        public Wallet Wallet;
     }
 
     public static class Casino

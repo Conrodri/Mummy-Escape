@@ -116,6 +116,12 @@ namespace MummyEscape.Online
         Task<WalletResponse> BuyTiersAsync(string requestId);
         Task<WalletResponse> BuyScarabsAsync(string offerId, string requestId);
         Task<WalletResponse> BuyGoldItemAsync(string skinId);
+        /// <summary>Carries the phone's scarabs over to the server, once per account (then they are held there).</summary>
+        Task<WalletResponse> OpenScarabsAsync(ScarabSeed seed);
+        Task<WalletResponse> BuyScarabPieceAsync(string id);
+        Task<WalletResponse> BuyScarabSetAsync(int act);
+        Task<WalletResponse> BuyWheelLegendaryAsync(string id);
+        Task<WheelSpinResponse> SpinScarabWheelAsync(int count);
         /// <summary>The pass rewards that give golden scarabs or a skin (the scarab ones stay on the device).</summary>
         Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers);
         /// <summary>Solo runs (actions and times) the server replays to grant their pass XP, in batches.</summary>

@@ -84,6 +84,7 @@ namespace MummyEscape.Monetization
             await RecoverAsync(app);
             // A spend the fresh wallet does not list was never taken (the server answers within a minute or gives up).
             if (await RunAsync(app, p => p.GetWalletAsync()) == null) app.Save.DropStaleGoldSpends(5 * 60 * 1000, InFlight);
+            await ScarabWallet.OpenAsync(app); // once per account: the scarabs move to the server
         }
 
         /// <summary>The error of <see cref="SpendAsync"/>: without an answer, the spend may still have happened.</summary>

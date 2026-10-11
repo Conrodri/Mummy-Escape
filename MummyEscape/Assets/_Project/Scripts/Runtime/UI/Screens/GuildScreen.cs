@@ -226,16 +226,24 @@ namespace MummyEscape.UI.Screens
             if (App.Save.Data.Coins < TeamConfig.GuildCreationScarabs) return;
             _busy = true;
             _info.text = Loc.T("Fondation…");
+            // The server takes the scarabs: they are carried over to it first.
+            string unpaid = await Monetization.ScarabWallet.OpenAsync(App);
+            if (this == null) return;
+            if (unpaid != null)
+            {
+                _busy = false;
+                _info.text = Monetization.ScarabWallet.ErrorText(unpaid);
+                return;
+            }
             var r = await App.Pvp.CreateGuildAsync(_name.text.Trim(), _tag.text.Trim(), App.Online.PlayerName);
             if (this == null) return;
             _busy = false;
             if (r?.Guild == null)
             {
-                _info.text = TeamView.ErrorText(r?.Error);
+                _info.text = r?.Error == "SCARABS" ? Monetization.ScarabWallet.ErrorText(r.Error) : TeamView.ErrorText(r?.Error); // noloc
                 return;
             }
-            // The scarabs live in the save: paid once the server has the guild.
-            App.Save.SpendCoins(TeamConfig.GuildCreationScarabs);
+            _ = Monetization.GoldWallet.RunAsync(App, p => p.GetWalletAsync()); // the balance after the server took the price
             _info.text = Loc.F("Guilde {0} fondée !", r.Guild.Name);
             App.Audio.Play(Services.Sfx.Win);
             Take(r);

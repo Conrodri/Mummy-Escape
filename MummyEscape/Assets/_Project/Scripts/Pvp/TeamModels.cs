@@ -24,7 +24,7 @@ namespace MummyEscape.Pvp
 
         // --- Guildes ---
         public const int GuildMaxMembers = 30;
-        public const int GuildCreationScarabs = 500;   // payés dans le jeu (les scarabées sont locaux)
+        public const int GuildCreationScarabs = 500;   // pris par le serveur une fois les scarabées tenus là-bas
         public const int GuildNameMin = 3, GuildNameMax = 20;
         public const int GuildTagMin = 2, GuildTagMax = 4;
         public static readonly int[] WarSizes = { 3, 5, 10 };

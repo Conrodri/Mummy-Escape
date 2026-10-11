@@ -34,7 +34,6 @@ namespace MummyEscape.UI.Screens
         Text _spinLabel, _spin10Label;
         int _tab;
         int _request;
-        readonly System.Random _rng = new System.Random();
         /// <summary>A wheel is turning: no other spin until it stops.</summary>
         bool _spinning;
         /// <summary>Last outcome of each wheel, kept across rebuilds.</summary>
@@ -252,9 +251,16 @@ namespace MummyEscape.UI.Screens
                 afford ? () => BuyLegendary(def) : (System.Action)null);
         }
 
-        void BuyLegendary(SkinDef def)
+        async void BuyLegendary(SkinDef def)
         {
-            if (!App.Save.BuyWheelLegendary(def.Id)) return;
+            string error = await Monetization.ScarabWallet.RunAsync(App, p => p.BuyWheelLegendaryAsync(def.Id));
+            if (this == null) return;
+            if (error != null && !App.Save.Data.OwnedSkins.Contains(def.Id))
+            {
+                Router.Open<OfferDialog>().Configure(Loc.T(def.Name), Monetization.ScarabWallet.ErrorText(error), ("OK", ButtonStyle.Primary, null)); // noloc
+                Refresh();
+                return;
+            }
             App.Save.SelectSkin(def.Id);
             App.Audio.Play(Services.Sfx.Coin);
             Refresh();
@@ -332,10 +338,23 @@ namespace MummyEscape.UI.Screens
             if (_spinning) return;
             var wheel = Wheel;
             if (Seals) { SpinSeals(wheel, count); return; }
-            var results = App.Save.SpinScarabWheel(_rng, count);
-            if (results == null) return;
+            SpinScarabs(wheel, count);
+        }
+
+        /// <summary>The scarab wheel, drawn by the server like the seal wheel.</summary>
+        async void SpinScarabs(WheelDef wheel, int count)
+        {
             Started();
-            // The price leaves the wallet now, the prizes land when the wheel stops.
+            var (error, results) = await Monetization.ScarabWallet.SpinAsync(App, count);
+            if (this == null) return;
+            if (error != null || results == null || results.Count == 0)
+            {
+                _spinning = false;
+                _wheelNote[wheel.Id] = Monetization.ScarabWallet.ErrorText(error);
+                Refresh();
+                return;
+            }
+            // The price left the wallet, the prizes land when the wheel stops.
             _coins.text = (App.Save.Data.Coins - Casino.Winnings(results)).ToString();
             if (results.Count > 1) StartCoroutine(Reveal(wheel, results, () => Landed(wheel, results, false)));
             else StartCoroutine(Turn(wheel, results[0], () => Landed(wheel, results, false)));

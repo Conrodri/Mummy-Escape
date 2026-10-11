@@ -858,14 +858,14 @@ namespace MummyEscape.Game
         RunRecorder _soloRun;
 
         /// <summary>Hands the finished run to the save, which sends it to the server with the next batch.</summary>
-        void QueueSoloRun(LevelResult result, Difficulty? endless, int depth, int xp)
+        void QueueSoloRun(LevelResult result, Difficulty? endless, int depth, int xp, int scarabs)
         {
             if (_soloRun == null || xp <= 0) return; // an endless death earns nothing: no call for it
             var run = new SoloRunReport { Id = Guid.NewGuid().ToString("N"), Inputs = _soloRun.Inputs, Depth = depth }; // noloc
             if (endless.HasValue) run.EndlessMode = (int)endless.Value;
             else { run.Level = result.Level.Key; run.Variant = Session.Level.Variant; }
             _soloRun = null;
-            _app.Save.QueueRun(run, xp);
+            _app.Save.QueueRun(run, xp, scarabs);
             _ = _app.SendSoloRuns(false);
         }
 
@@ -943,7 +943,7 @@ namespace MummyEscape.Game
                 yield break;
             }
             var outcome = _app.Save.Apply(result);
-            QueueSoloRun(result, null, 0, Monetization.BattlePass.SoloXp(result.Won, result.Stars));
+            QueueSoloRun(result, null, 0, Monetization.BattlePass.SoloXp(result.Won, result.Stars), outcome.CoinsEarned);
             // Faster than the game's animations allow: a modified game, kept off the leaderboard.
             if (result.Pace != (int)PaceVerdict.Impossible) _ = _app.SubmitScore(result);
             else Debug.LogWarning($"[Game] {result.Level} run of {result.TimeMs} ms under the perfect {result.PerfectMs} ms: not submitted");

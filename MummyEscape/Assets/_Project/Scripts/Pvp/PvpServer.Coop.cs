@@ -53,6 +53,9 @@ namespace MummyEscape.Pvp
                 response.NewStars = Math.Max(0, stars - mine.Stars);
                 mine.Stars = Math.Max(mine.Stars, stars);
                 response.TotalStars = CoopLogic.TotalStars(d.CoopStars);
+                var w = WalletOf(d);
+                if (response.FirstClear && w.ScarabsOpen) w.Scarabs += CoopConfig.FirstClearScarabs;
+                response.Wallet = w;
             });
             return response;
         }

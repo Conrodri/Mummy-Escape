@@ -17,7 +17,7 @@ namespace MummyEscape.Visual
         public static readonly IReadOnlyList<SkinDef> All = new[]
         {
             new SkinDef { Id = Halloween.RewardSkin, Name = "Citrouille d'Halloween", Slot = CosmeticSlot.Hat, Hat = HatStyle.Pumpkin, Badge = Badge },
-            new SkinDef { Id = Halloween.ShopSkin, Name = "Momie de minuit", Price = 350, Slot = CosmeticSlot.Color, Badge = Badge,
+            new SkinDef { Id = Halloween.ShopSkin, Name = "Momie de minuit", Price = Monetization.ScarabShop.HalloweenItem.Price, Slot = CosmeticSlot.Color, Badge = Badge,
                 Bandage = new Color32(92, 56, 128, 255), Shadow = new Color32(48, 26, 72, 255), Eyes = new Color32(255, 150, 40, 255), Torch = new Color(1f, 0.55f, 0.2f) },
             new SkinDef { Id = Halloween.GoldSkin, Name = "Chapeau de sorcière", Slot = CosmeticSlot.Hat, Hat = HatStyle.Witch, Badge = Badge },
         };

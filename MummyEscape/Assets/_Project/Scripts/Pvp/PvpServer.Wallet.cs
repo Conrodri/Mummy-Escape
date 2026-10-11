@@ -35,6 +35,31 @@ namespace MummyEscape.Pvp
         /// demande ne débite pas deux fois, et un téléphone qui a perdu la réponse retrouve ici ce qu'il doit livrer.
         /// </summary>
         public List<string> Requests = new List<string>();
+
+        /// <summary>
+        /// The scarabs are held here once <see cref="ScarabsOpen"/>: the phone's balance was carried over once (capped), then
+        /// they are earned by replayed runs, the pass, the 2v2 first clears and the gold offers, and spent only here.
+        /// </summary>
+        public bool ScarabsOpen;
+        public int Scarabs;
+        /// <summary>Best stars per campaign level ("1-6=3"): a level pays for its new stars only.</summary>
+        public List<string> Stars = new List<string>();
+        /// <summary>Per endless ladder, the tombs already paid (each escape pays once).</summary>
+        public List<int> EndlessPaid = new List<int>();
+        /// <summary>Pieces bought with scarabs or won at the scarab wheel (and those carried over).</summary>
+        public List<string> Owned = new List<string>();
+    }
+
+    /// <summary>The phone's scarab economy, carried over once to the server (<see cref="PvpServer.OpenScarabsAsync"/>).</summary>
+    [Serializable]
+    public class ScarabSeed
+    {
+        public int Scarabs;
+        /// <summary>Best stars per level, "key=stars".</summary>
+        public List<string> Stars = new List<string>();
+        /// <summary>Tombs escaped on each endless ladder.</summary>
+        public List<int> EndlessCleared = new List<int>();
+        public List<string> Owned = new List<string>();
     }
 
     [Serializable]
@@ -205,7 +230,8 @@ namespace MummyEscape.Pvp
             SpendAsync(me, _ => price, grant, requestId);
 
         /// <summary>Le prix lu dans le portefeuille même (un ensemble ne coûte que ses pièces manquantes).</summary>
-        async Task<WalletResponse> SpendAsync(string me, Func<Wallet, int> priceOf, Func<Wallet, string> grant, string requestId = null)
+        /// With <paramref name="scarabs"/>, the price is in scarabs ("SCARABS" when short, "CLOSED" before they are held here).
+        async Task<WalletResponse> SpendAsync(string me, Func<Wallet, int> priceOf, Func<Wallet, string> grant, string requestId = null, bool scarabs = false)
         {
             if (requestId != null && (requestId.Length == 0 || requestId.Length > 64)) return new WalletResponse { Error = "UNKNOWN_PRODUCT" };
             string error = null;
@@ -215,9 +241,12 @@ namespace MummyEscape.Pvp
                 w.Requests ??= new List<string>();
                 if (requestId != null && w.Requests.Contains(requestId)) return;
                 int price = priceOf(w); // avant le don : ce qui manque au joueur maintenant
-                error = w.Gold < price ? "GOLD" : grant(w);
+                if (scarabs && !w.ScarabsOpen) error = "CLOSED";
+                else if ((scarabs ? w.Scarabs : w.Gold) < price) error = scarabs ? "SCARABS" : "GOLD";
+                else error = grant(w);
                 if (error != null) return;
-                w.Gold -= price;
+                if (scarabs) w.Scarabs -= price;
+                else w.Gold -= price;
                 if (requestId == null) return;
                 w.Requests.Add(requestId);
                 if (w.Requests.Count > RequestsKept) w.Requests.RemoveRange(0, w.Requests.Count - RequestsKept);
@@ -277,11 +306,15 @@ namespace MummyEscape.Pvp
         /// <summary>The highest tier that can be claimed: the one the server's XP reaches (the team has them all).</summary>
         static int ClaimableTiers(Wallet w, string me) => Developers.Is(me) ? BattlePass.Tiers : BattlePass.TierOf(w.PassXp);
 
-        /// <summary>Des scarabées contre de l'or : le jeu crédite les scarabées (monnaie de l'appareil) quand le serveur a pris l'or.</summary>
+        /// <summary>Des scarabées contre de l'or : crédités ici une fois les scarabées tenus par le serveur, sinon par le jeu.</summary>
         public Task<WalletResponse> BuyScarabsAsync(string me, string offerId, string requestId = null)
         {
             var offer = GoldShop.Offer(offerId);
-            return offer == null ? Task.FromResult(new WalletResponse { Error = "UNKNOWN_PRODUCT" }) : SpendAsync(me, offer.Gold, _ => null, requestId);
+            return offer == null ? Task.FromResult(new WalletResponse { Error = "UNKNOWN_PRODUCT" }) : SpendAsync(me, offer.Gold, w =>
+                {
+                    if (w.ScarabsOpen) w.Scarabs += offer.Scarabs; // held here: credited at once (before, the phone credited them)
+                    return null;
+                }, requestId);
         }
 
         public Task<WalletResponse> BuyGoldItemAsync(string me, string skinId)
@@ -306,7 +339,7 @@ namespace MummyEscape.Pvp
         }
 
         /// <summary>
-        /// Récupère les récompenses du pass qui donnent de l'or ou un skin (les scarabées restent sur l'appareil). La progression
+        /// Récupère les récompenses du pass (or, skins, et scarabées une fois ceux-ci tenus ici). La progression
         /// est celle du jeu : le serveur ne donne que ce que la saison en cours contient, une fois, et la piste premium avec le pass.
         /// </summary>
         public async Task<WalletResponse> ClaimPassRewardsAsync(string me, string seasonId, List<int> freeTiers, List<int> premiumTiers)
@@ -338,6 +371,10 @@ namespace MummyEscape.Pvp
                 case PassRewardKind.Gold: w.Gold += reward.Amount; return true;
                 case PassRewardKind.Skin:
                     if (!w.Skins.Contains(reward.SkinId)) w.Skins.Add(reward.SkinId);
+                    return true;
+                case PassRewardKind.Scarabs:
+                    if (!w.ScarabsOpen) return false; // not held here yet: the phone collects them
+                    w.Scarabs += reward.Amount;
                     return true;
                 default: return false;
             }

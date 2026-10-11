@@ -213,7 +213,7 @@ namespace MummyEscape.Tests
         }
 
         /// <summary>The optimal route of a tomb, timed like a quick player (each action when the previous animation ends).</summary>
-        static SoloRunReport SolvedRun(string id, Core.LevelId level, int variant, bool cheatFast = false)
+        internal static SoloRunReport SolvedRun(string id, Core.LevelId level, int variant, bool cheatFast = false)
         {
             var run = SolvedRun(id, Core.LevelGenerator.Generate(level, variant), cheatFast);
             run.Level = level.Key;
@@ -221,7 +221,7 @@ namespace MummyEscape.Tests
             return run;
         }
 
-        static SoloRunReport SolvedRun(string id, Core.Level maze, bool cheatFast = false)
+        internal static SoloRunReport SolvedRun(string id, Core.Level maze, bool cheatFast = false)
         {
             var recorder = new RunRecorder(maze);
             var session = new Core.GameSession(maze);

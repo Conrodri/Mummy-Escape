@@ -269,7 +269,7 @@ namespace MummyEscape.UI.Screens
             if (picks.Count > 0) _ = ClaimAsync(picks);
         }
 
-        /// <summary>Scarab rewards are collected here; golden scarabs and skins come from the server's wallet.</summary>
+        /// <summary>Golden scarabs and skins come from the server's wallet, scarabs too once it holds them; otherwise here.</summary>
         async System.Threading.Tasks.Task ClaimAsync(List<(int tier, bool premium)> picks)
         {
             if (_busy) return;
@@ -280,7 +280,7 @@ namespace MummyEscape.UI.Screens
             {
                 if (!App.Save.CanClaim(tier, premium)) continue;
                 var reward = SaveService.RewardOf(tier, premium);
-                if (SaveService.FromServer(reward)) (premium ? paid : free).Add(tier);
+                if (App.Save.FromServer(reward)) (premium ? paid : free).Add(tier);
                 else rewards.Add(App.Save.Claim(tier, premium));
             }
             string error = null;

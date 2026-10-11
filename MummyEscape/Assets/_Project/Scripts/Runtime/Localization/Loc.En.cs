@@ -1107,6 +1107,9 @@ namespace MummyEscape
             ["Échanger {0} scarabées dorés contre {1} scarabées ?"] = "Trade {0} golden scarabs for {1} scarabs?",
             ["Échanger · {0} dorés"] = "Trade · {0} gold",
             ["Pas assez de scarabées dorés"] = "Not enough golden scarabs",
+            ["Pas assez de scarabées."] = "Not enough scarabs.",
+            ["Il te faut plus d'étoiles pour cette pièce."] = "You need more stars for this piece.",
+            ["Les scarabées sont gardés en ligne : connecte-toi pour les dépenser."] = "Scarabs are kept online: connect to spend them.",
             ["Il t'en manque {0}."] = "You need {0} more.",
             ["Voir les packs"] = "See the packs",
 

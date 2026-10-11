@@ -512,6 +512,8 @@ namespace MummyEscape.Pvp
             var index = await ReadGuildIndexAsync();
             if (index.Any(g => string.Equals(g.Name, name, StringComparison.OrdinalIgnoreCase) || string.Equals(g.Tag, tag, StringComparison.OrdinalIgnoreCase)))
                 return new GuildResponse { Error = "TAKEN" };
+            string unpaid = await PayGuildAsync(me);
+            if (unpaid != null) return new GuildResponse { Error = unpaid };
 
             var guild = new Guild { Id = NewId(), Name = name, Tag = tag, CreatedAtUnixMs = NowMs };
             guild.Members.Add(new GuildMember { PlayerId = me, Name = myName ?? "", Role = GuildRole.Leader, JoinedAtUnixMs = NowMs });

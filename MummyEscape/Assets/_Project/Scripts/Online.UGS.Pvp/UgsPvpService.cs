@@ -179,6 +179,11 @@ namespace MummyEscape.Online
         public Task<WalletResponse> BuyScarabsAsync(string offerId, string requestId) =>
             Call("BuyScarabs", Args("offerId", offerId, "requestId", requestId), e => new WalletResponse { Error = e });
         public Task<WalletResponse> BuyGoldItemAsync(string skinId) => Call("BuyGoldItem", Args("skinId", skinId), e => new WalletResponse { Error = e });
+        public Task<WalletResponse> OpenScarabsAsync(ScarabSeed seed) => Call("OpenScarabs", Args("seed", seed), e => new WalletResponse { Error = e });
+        public Task<WalletResponse> BuyScarabPieceAsync(string id) => Call("BuyScarabPiece", Args("id", id), e => new WalletResponse { Error = e });
+        public Task<WalletResponse> BuyScarabSetAsync(int act) => Call("BuyScarabSet", Args("act", act), e => new WalletResponse { Error = e });
+        public Task<WalletResponse> BuyWheelLegendaryAsync(string id) => Call("BuyWheelLegendary", Args("id", id), e => new WalletResponse { Error = e });
+        public Task<WheelSpinResponse> SpinScarabWheelAsync(int count) => Call("SpinScarabWheel", Args("count", count), e => new WheelSpinResponse { Error = e });
 
         public Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers) =>
             Call("ClaimPassRewards", Args("season", season, "freeTiers", freeTiers ?? new List<int>(), "premiumTiers", premiumTiers ?? new List<int>()),
