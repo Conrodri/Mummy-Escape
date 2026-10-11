@@ -53,9 +53,13 @@ namespace MummyEscape.Core
             return list;
         }
 
-        /// <summary>Open from 24 October 00:00 to 7 November 23:59:59, Paris time.</summary>
+        /// <summary>Opens the event whatever the date: set by the game in the editor and test builds, never by the server.</summary>
+        public static bool TestOpen;
+
+        /// <summary>Open from 24 October 00:00 to 7 November 23:59:59, Paris time (always with <see cref="TestOpen"/>).</summary>
         public static bool IsOpen(DateTime utc)
         {
+            if (TestOpen) return true;
             var paris = ParisTime(utc);
             return paris.Month == 10 && paris.Day >= 24 || paris.Month == 11 && paris.Day <= 7;
         }

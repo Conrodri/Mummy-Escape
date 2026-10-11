@@ -118,6 +118,8 @@ namespace MummyEscape.App
                 // (Replaced on every start: without a domain reload the old ones would still point at the last router.)
                 if (Monetization.Ads.Provider == null || Monetization.Ads.Provider is SimulatedAds) Monetization.Ads.Provider = new SimulatedAds(UI);
                 if (Monetization.Store.Provider == null || Monetization.Store.Provider is SimulatedStore) Monetization.Store.Provider = new SimulatedStore(UI);
+                // The seasonal act playable for testing, whatever the date (the server still sells its items on the real dates).
+                Halloween.TestOpen = true;
             }
             PvpServiceFactory.UpdateRequired = AskForUpdate;
             Monetization.Store.UnfinishedFound = () => _ = Monetization.GoldWallet.RecoverAsync(this);

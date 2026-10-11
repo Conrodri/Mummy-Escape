@@ -57,9 +57,7 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(title, 64);
             var tle = UIKit.Size(title, 360);
             tle.minHeight = 190;
-            var outline = title.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.22f, 0.12f, 0.03f, 0.9f);
-            outline.effectDistance = new Vector2(3, -3);
+            Destroy(title.GetComponent<Shadow>()); // a clean title, no halo around the letters
 
             var subtitle = UIKit.Label(column, Loc.T("Échappe-toi du tombeau… à l'aveugle."), 36, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Italic);
             UIKit.FitText(subtitle, 24);
@@ -80,6 +78,9 @@ namespace MummyEscape.UI.Screens
             var theme = UIKit.IconAction(_stage, UISprites.Palette, "Thème", () => Router.Open<HomeThemeDialog>().OnPicked(ApplyTheme), 84);
             UIKit.Place((RectTransform)theme.transform.parent.parent, 1f, 1f, 134, 144); // button → its slot → the action column
 
+            // The season pass, with what is waiting to be collected.
+            _pass = new PassBanner(column, 150, () => Router.Open<PassScreen>());
+
             // What to aim for next, one tap away.
             var goal = UIKit.ListItem(column, 116, () => _goalAction?.Invoke(), out var gh);
             var flag = UIKit.Image(gh.transform, UISprites.Flag, UIKit.Gold, false, "Icon"); // noloc
@@ -99,9 +100,6 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(play, 124);
             var playBtn = UIKit.Button(play, Loc.T("JOUER"), () => Router.Open<LevelSelectScreen>(), 50, ButtonStyle.Primary);
             UIKit.Place((RectTransform)playBtn.transform, 0.5f, 0.5f, 620, 124);
-
-            // The season pass, with what is waiting to be collected.
-            _pass = new PassBanner(column, 150, () => Router.Open<PassScreen>());
 
             // Duel, solo, rankings, friends and the shop are in the bottom bar (NavBar).
 
