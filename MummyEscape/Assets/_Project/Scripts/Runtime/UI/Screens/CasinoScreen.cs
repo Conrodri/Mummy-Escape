@@ -42,7 +42,7 @@ namespace MummyEscape.UI.Screens
         /// <summary>Where each wheel stopped, so it still shows its last prize.</summary>
         readonly Dictionary<string, float> _wheelAngle = new Dictionary<string, float>();
 
-        WheelDef Wheel => _tab == 0 ? Casino.Scarabs : Casino.Seals;
+        WheelDef Wheel => _tab == 0 ? Casino.ScarabsAt(System.DateTime.UtcNow) : Casino.Seals;
         bool Seals => _tab == 1;
 
         protected override void Build()

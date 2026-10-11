@@ -14,8 +14,10 @@ namespace MummyEscape.UI.Screens
         public override bool IsModal => true;
 
         Text _title, _text, _energy;
-        Button _main;
+        Button _main, _ranking;
         Difficulty _mode;
+        /// <summary>The Halloween tomb to play on "Main", 0 on an endless ladder.</summary>
+        int _halloweenNext;
 
         protected override void Build()
         {
@@ -36,7 +38,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_energy, 40);
             _main = UIKit.Button(panel, "Tombeau suivant", Main, 38, ButtonStyle.Primary); // a label now: an empty one has no Text
             UIKit.Size(_main, UIKit.ButtonHeight + 8);
-            UIKit.Size(UIKit.Button(panel, "Classement", Ranking), UIKit.ButtonHeight);
+            _ranking = UIKit.Button(panel, "Classement", Ranking);
+            UIKit.Size(_ranking, UIKit.ButtonHeight);
             UIKit.Size(UIKit.Button(panel, "Menu principal", Menu, UIKit.TextSize, ButtonStyle.Ghost), 72);
         }
 
@@ -44,6 +47,8 @@ namespace MummyEscape.UI.Screens
         public void Show(Difficulty mode, int tomb, LevelResult result, EndlessProgress progress)
         {
             _mode = mode;
+            _halloweenNext = 0;
+            _ranking.gameObject.SetActive(true);
             bool more = progress.Cleared < GameController.EndlessTombCount(mode);
             _title.text = result.Won ? Loc.F("Tombeau {0} atteint !", progress.Reached) : Loc.T("La momie est tombée…");
             _text.text = result.Won
@@ -57,8 +62,34 @@ namespace MummyEscape.UI.Screens
             UIKit.SetLabel(_main, result.Won ? "Tombeau suivant" : "Réessayer");
         }
 
+        /// <summary>End of a Halloween tomb: on to the next one (the first again once the act is finished), or the same one.</summary>
+        public void ShowHalloween(int tomb, LevelResult result, bool finished)
+        {
+            _halloweenNext = !result.Won ? tomb : App.Save.HalloweenDone ? tomb % Halloween.TombCount + 1 : App.Save.HalloweenNext;
+            _ranking.gameObject.SetActive(false);
+            _title.text = finished ? Loc.T("Acte Halloween terminé !") : result.Won ? Loc.F("Tombeau {0} franchi !", tomb) : Loc.T("La momie est tombée…");
+            _text.text = finished ? Loc.F("Tu gagnes « {0} » et le thème d'accueil Halloween.", Loc.T(Visual.HalloweenSkins.Resolve(Halloween.RewardSkin).Name))
+                       : result.Won ? Loc.F("Tombeau {0} franchi en {1}.", tomb, LevelResult.FormatTime(result.TimeMs))
+                         + (App.Save.HalloweenDone ? "" : "\n" + Loc.F("{0} / {1} tombeaux", App.Save.Data.HalloweenCleared, Halloween.TombCount))
+                       : Loc.F("Le tombeau {0} t'attend toujours : même carte, nouvel essai.", tomb);
+            _energy.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
+            // The event may close while a tomb is played: that run counts, no new one starts.
+            _main.gameObject.SetActive(Halloween.IsOpen(System.DateTime.UtcNow));
+            UIKit.SetLabel(_main, result.Won ? "Tombeau suivant" : "Réessayer");
+        }
+
         void Main()
         {
+            if (_halloweenNext > 0)
+            {
+                int tomb = _halloweenNext;
+                PlayGate.HalloweenRun(App, () =>
+                {
+                    Router.Close(this);
+                    _ = App.Game.StartHalloween(tomb);
+                });
+                return;
+            }
             var mode = _mode;
             PlayGate.EndlessRun(App, () =>
             {

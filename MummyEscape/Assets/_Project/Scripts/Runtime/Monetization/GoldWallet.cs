@@ -104,6 +104,7 @@ namespace MummyEscape.Monetization
                 case "STORE_UNAVAILABLE": return Loc.T("Vérification impossible pour le moment : ton achat n'est pas perdu, réessaie plus tard."); // noloc
                 case "SEASON": return Loc.T("La saison du pass a changé : rouvre le pass."); // noloc
                 case "NO_PASS": return Loc.T("Il faut le pass premium."); // noloc
+                case "EVENT": return Loc.T("L'événement Halloween est terminé : cet objet n'est plus en vente."); // noloc
                 default: return Loc.T("Connexion impossible : réessaie plus tard.");
             }
         }

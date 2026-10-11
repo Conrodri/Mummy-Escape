@@ -58,6 +58,9 @@ namespace MummyEscape.Services
         // ---- Endless mode (solo): the place on each ladder (Facile, Normal, Extrême, in that order) and its own energy.
         public List<EndlessProgress> Endless = new List<EndlessProgress> { new EndlessProgress(), new EndlessProgress(), new EndlessProgress() };
         public MummyEscape.Pvp.EnergyMeter EndlessEnergy = new MummyEscape.Pvp.EnergyMeter();
+
+        // ---- Halloween event: tombs escaped in a row (the act is finished at Core.Halloween.TombCount), kept between events.
+        public int HalloweenCleared;
     }
 
     /// <summary>A spend asked to the server: <see cref="Offer"/> is a scarab offer id or <see cref="SaveService.TiersSpend"/>.</summary>
@@ -184,6 +187,7 @@ namespace MummyEscape.Services
             Data.ProfileDone |= other.ProfileDone;
             Data.TutorialDone |= other.TutorialDone;
             MergeEconomy(other);
+            Data.HalloweenCleared = Math.Max(Data.HalloweenCleared, other.HalloweenCleared);
             // The endless ladders never go back: the further copy wins (the version reset above leaves them alone).
             for (int i = 0; i < Data.Endless.Count; i++) Data.Endless[i].MergeWith(other.Endless[i]);
             bool changed = JsonUtility.ToJson(Data) != before;
@@ -339,7 +343,7 @@ namespace MummyEscape.Services
         /// </summary>
         public System.Collections.Generic.List<Pvp.SpinResult> SpinScarabWheel(System.Random rng, int count = 1)
         {
-            var wheel = Pvp.Casino.Scarabs;
+            var wheel = Pvp.Casino.ScarabsAt(DateTime.UtcNow);
             int price = Pvp.Casino.PriceOf(wheel, count);
             if (Data.Coins < price) return null;
             Data.Coins -= price;
@@ -357,7 +361,7 @@ namespace MummyEscape.Services
         /// <summary>Buys a legendary of the scarab wheel outright, without the draw. False when it is not for sale, owned or too dear.</summary>
         public bool BuyWheelLegendary(string id)
         {
-            var wheel = Pvp.Casino.Scarabs;
+            var wheel = Pvp.Casino.ScarabsAt(DateTime.UtcNow);
             if (wheel.DirectPrice <= 0 || System.Array.IndexOf(wheel.Legendaries, id) < 0) return false;
             if (Data.OwnedSkins.Contains(id) || Data.Coins < wheel.DirectPrice) return false;
             Data.Coins -= wheel.DirectPrice;

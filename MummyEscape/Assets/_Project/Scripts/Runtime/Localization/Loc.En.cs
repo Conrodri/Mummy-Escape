@@ -1344,6 +1344,20 @@ namespace MummyEscape
             ["Tout ce que vous avez appris : dalles, boutons et dalle fragile."] = "Everything you've learned: slabs, buttons and weak floor.",
             ["La dernière chambre"] = "The last chamber",
             ["La dernière chambre : leviers, barrières, pics et dalles, ensemble."] = "The last chamber: levers, barriers, spikes and slabs, together.",
+            // ---------------------------------------------------------------- Halloween event
+            ["Halloween"] = "Halloween",
+            ["terminé"] = "done",
+            ["jusqu'au 7 novembre"] = "until 7 November",
+            ["Acte Halloween terminé !"] = "Halloween act complete!",
+            ["Tombeau {0} franchi !"] = "Tomb {0} escaped!",
+            ["Tu gagnes « {0} » et le thème d'accueil Halloween."] = "You win “{0}” and the Halloween home theme.",
+            ["{0} / {1} tombeaux"] = "{0} / {1} tombs",
+            ["Événement Halloween, du 24 octobre au 7 novembre."] = "Halloween event, 24 October to 7 November.",
+            ["L'événement Halloween est terminé : cet objet n'est plus en vente."] = "The Halloween event is over: this item is no longer for sale.",
+            ["Citrouille d'Halloween"] = "Halloween Pumpkin",
+            ["Momie de minuit"] = "Midnight Mummy",
+            ["Chapeau de sorcière"] = "Witch Hat",
+            ["Feux de Samhain"] = "Samhain Fires",
         };
     }
 }

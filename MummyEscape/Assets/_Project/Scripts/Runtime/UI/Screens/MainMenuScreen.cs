@@ -219,10 +219,7 @@ namespace MummyEscape.UI.Screens
             public System.Func<Services.SaveService, bool> IsUnlocked;
         }
 
-        /// <summary>
-        /// The campaign acts, in order. Halloween: once its act and its TombTheme exist, add its entry here with its own
-        /// name and unlock rule (e.g. new Entry { Act = 6, Name = "Halloween", IsUnlocked = s => ... }).
-        /// </summary>
+        /// <summary>The campaign acts, in order, then Halloween (once its act is finished; kept after the event).</summary>
         public static readonly System.Collections.Generic.List<Entry> All = Acts();
 
         static System.Collections.Generic.List<Entry> Acts()
@@ -233,6 +230,7 @@ namespace MummyEscape.UI.Screens
                 var first = new LevelId(Difficulty.Easy, act, 1); // modes open in order: an act open in any mode is open in Facile
                 list.Add(new Entry { Act = act, IsUnlocked = s => s.IsUnlocked(first) });
             }
+            list.Add(new Entry { Act = Halloween.Theme, Name = "Halloween", IsUnlocked = s => s.HalloweenDone });
             return list;
         }
 

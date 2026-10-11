@@ -35,6 +35,7 @@ namespace MummyEscape.UI.Screens
         internal static readonly Color WornFill = new Color32(30, 92, 84, 255);
         internal static readonly Color WornRim = new Color(0.25f, 0.88f, 0.8f, 0.6f);
         static Color LegendaryColor => CasinoScreen.LegendaryColor;
+        internal static readonly Color HalloweenColor = new Color32(255, 140, 40, 255);
 
         Text _coins, _stars, _seals, _gold, _note;
         PassBanner _pass;
@@ -92,7 +93,7 @@ namespace MummyEscape.UI.Screens
         {
             TreasureStrip(_list);
             Intro("Les exclusivités du Trésor, introuvables ailleurs. Elles s'achètent en scarabées dorés.");
-            var items = Monetization.GoldShop.Exclusives;
+            var items = TreasureScreen.Exclusives(App);
             Grid(items.Count, (parent, i) => GoldCard(parent, items[i]));
         }
 
@@ -234,6 +235,7 @@ namespace MummyEscape.UI.Screens
             if (slot == CosmeticSlot.Color) items.AddRange(LegendarySkins.OwnedScarabLegendaries(save.Data.OwnedSkins));
             foreach (var s in Monetization.PremiumSkins.All)
                 if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
+            items.AddRange(HalloweenSkins.InShop(slot, save.Data.OwnedSkins, DateTime.UtcNow));
             Grid(items.Count, (parent, i) => ItemCard(parent, items[i]));
         }
 
@@ -259,6 +261,7 @@ namespace MummyEscape.UI.Screens
         static (string tag, Color color) TagOf(SkinDef item)
         {
             if (item.Legendary) return (Loc.T("Légendaire"), LegendaryColor);
+            if (item.Badge == HalloweenSkins.Badge) return (Loc.T(item.Badge), HalloweenColor);
             if (item.Badge != null) return (Loc.T(item.Badge), TreasureScreen.GoldColor);
             if (item.Pvp) return (Loc.T("Duel"), UIKit.Turquoise);
             if (item.Theme == 0) return (Loc.T("Classique"), new Color32(200, 186, 160, 255));
@@ -268,6 +271,7 @@ namespace MummyEscape.UI.Screens
         static string Origin(SkinDef item)
         {
             if (item.Legendary) return Loc.T("Exclusivité du casino ou du pass : bandages animés.");
+            if (item.Badge == HalloweenSkins.Badge) return Loc.T("Événement Halloween, du 24 octobre au 7 novembre.");
             if (item.Badge != null) return Loc.T("Exclusivité du Trésor et du Pass de saison.");
             if (item.Pvp) return Loc.T("Récompense des duels.");
             if (item.Theme == 0) return Loc.T("Pièce classique, toujours en vente.");

@@ -133,6 +133,7 @@ namespace MummyEscape.Game
         {
             InTutorial = false;
             EndlessMode = null;
+            HalloweenTomb = 0;
             StopAllCoroutines();
             EndPreviewVisuals();
             _busy = false;
@@ -246,7 +247,7 @@ namespace MummyEscape.Game
         void Setup(Level level, GameSession session = null)
         {
             Session = session ?? new GameSession(level);
-            ApplyTheme(TombTheme.ForAct(level.Id.Act));
+            ApplyTheme(TombTheme.ForAct(InHalloween ? Halloween.Theme : level.Id.Act));
             IndexMechanisms(level);
             _maze.Build(Session);
             _player.gameObject.SetActive(true);
@@ -389,7 +390,7 @@ namespace MummyEscape.Game
         {
             // A duel's tomb is drawn by the server and shared with the rival: it cannot be swapped.
             // An endless tomb is the same for everyone and stored for good: it cannot be swapped either.
-            if (!Previewing || Session == null || Match != null || InEndless || InCoop) return;
+            if (!Previewing || Session == null || Match != null || InEndless || InCoop || InHalloween) return;
             _ = RedrawAfterScreenshot();
         }
 
@@ -421,6 +422,7 @@ namespace MummyEscape.Game
         {
             if (InTutorial) StartTutorial();
             else if (InEndless) _ = StartEndless(EndlessMode.Value);
+            else if (InHalloween) _ = StartHalloween(HalloweenTomb);
             else if (Match == null && !InCoop) _ = StartLevel(CurrentLevel);
         }
 
@@ -434,6 +436,7 @@ namespace MummyEscape.Game
             StopAllCoroutines();
             InTutorial = false;
             EndlessMode = null;
+            HalloweenTomb = 0;
             Session = null;
             Match = null;
             _ghost.Hide();
@@ -907,6 +910,11 @@ namespace MummyEscape.Game
             if (InEndless)
             {
                 FinishEndless(result);
+                yield break;
+            }
+            if (InHalloween)
+            {
+                FinishHalloween(result);
                 yield break;
             }
             var outcome = _app.Save.Apply(result);

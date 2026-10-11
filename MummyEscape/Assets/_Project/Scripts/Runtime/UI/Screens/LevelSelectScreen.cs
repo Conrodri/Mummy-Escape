@@ -84,6 +84,22 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(b, 110, -1, 1);
                 _endless[(int)m] = b;
             }
+            // The Halloween event (24 October - 7 November), only while it is open.
+            _halloween = UIKit.Button(_endlessRow.transform, "Halloween", PlayHalloween, 28, ButtonStyle.Primary);
+            UIKit.FitText(_halloween.GetComponentInChildren<Text>(), 18);
+            UIKit.Size(_halloween, 110, -1, 1);
+        }
+
+        Button _halloween;
+
+        void PlayHalloween()
+        {
+            int tomb = App.Save.HalloweenNext;
+            PlayGate.HalloweenRun(App, () =>
+            {
+                Router.Open<HudScreen>();
+                _ = App.Game.StartHalloween(tomb);
+            });
         }
 
         readonly Button[] _endless = new Button[3];
@@ -100,7 +116,12 @@ namespace MummyEscape.UI.Screens
                 b.gameObject.SetActive(open);
                 if (open) UIKit.SetLabel(b, Loc.F("Sans fin · {0}", LevelNames.Mode(m)) + "\n" + Loc.F("Tombeau {0}", App.Save.EndlessOf(m).Reached));
             }
-            _endlessRow.gameObject.SetActive(any);
+            bool halloween = Halloween.IsOpen(System.DateTime.UtcNow);
+            _halloween.gameObject.SetActive(halloween);
+            if (halloween)
+                UIKit.SetLabel(_halloween, Loc.T("Halloween") + " · " + (App.Save.HalloweenDone ? Loc.T("terminé") : App.Save.Data.HalloweenCleared + " / " + Halloween.TombCount)
+                                           + "\n" + Loc.T("jusqu'au 7 novembre"));
+            _endlessRow.gameObject.SetActive(any || halloween);
         }
 
         void PlayEndless(Difficulty mode)

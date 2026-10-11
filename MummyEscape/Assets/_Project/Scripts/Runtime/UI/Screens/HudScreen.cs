@@ -398,6 +398,7 @@ namespace MummyEscape.UI.Screens
             var match = App.Game.Match;
             string title = App.Game.InTutorial ? Loc.T("Tutoriel")
                          : App.Game.InEndless ? Loc.F("Sans fin · {0}", LevelNames.Mode(App.Game.EndlessMode.Value)) + " · " + Loc.F("Tombeau {0}", App.Game.EndlessTomb)
+                         : App.Game.InHalloween ? Loc.T("Halloween") + " · " + Loc.F("Tombeau {0}", App.Game.HalloweenTomb)
                          : match == null ? Loc.F("Niveau {0}", LevelNames.Of(id))
                          : match.HasGhost ? Loc.F("Duel contre {0}", match.Ghost.PlayerName)
                          : Loc.T("Duel");
@@ -474,7 +475,7 @@ namespace MummyEscape.UI.Screens
             var level = s.Level;
             var coopTomb = App.Game.InCoop ? App.Game.Coop?.Tomb : null;
             _level.text = coopTomb != null ? "2v2 · " + Loc.T(coopTomb.Name) : App.Game.InRelay ? "2v2" : App.Game.InTutorial ? Loc.T("Tutoriel") : App.Game.InDuel ? Loc.T("Duel")
-                        : App.Game.InEndless ? Loc.F("Tombeau {0}", App.Game.EndlessTomb) : Loc.F("Niveau {0}", level.Id); // noloc
+                        : App.Game.InEndless ? Loc.F("Tombeau {0}", App.Game.EndlessTomb) : App.Game.InHalloween ? Loc.F("Tombeau {0}", App.Game.HalloweenTomb) : Loc.F("Niveau {0}", level.Id); // noloc
             UpdateCounter(s);
             UpdateLesson(s);
             _floor.text = level.Floors > 1 && !App.Game.Previewing ? Loc.F("Étage {0} / {1}", s.Position.Floor + 1, level.Floors) : "";
@@ -484,7 +485,7 @@ namespace MummyEscape.UI.Screens
             if (preview)
             {
                 var act = DifficultyTable.GetAct(level.Id.Act);
-                string sub = level.Floors > 1 ? Loc.F("Étage {0} / {1}", App.Game.PreviewFloor + 1, level.Floors) + "  ·  " + Loc.T("glisse pour changer d'étage") : Loc.F("Acte {0} — {1}", level.Id.Act, Loc.T(act.Name));
+                string sub = level.Floors > 1 ? Loc.F("Étage {0} / {1}", App.Game.PreviewFloor + 1, level.Floors) + "  ·  " + Loc.T("glisse pour changer d'étage") : App.Game.InHalloween ? Loc.T("Halloween") : Loc.F("Acte {0} — {1}", level.Id.Act, Loc.T(act.Name));
                 if (App.Game.InRelay)
                 {
                     // Both mazes, every floor, nothing to skip: the four phones keep in step.

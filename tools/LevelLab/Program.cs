@@ -128,6 +128,12 @@ if (args.Length >= 1 && args[0] == "--compact")
     return;
 }
 
+if (args.Length >= 1 && args[0] == "--halloween")
+{
+    LevelLab.EndlessTool.RunHalloween();
+    return;
+}
+
 if (args.Length >= 1 && args[0] == "--endless")
 {
     LevelLab.EndlessTool.Run(args);

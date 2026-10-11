@@ -28,6 +28,9 @@ namespace MummyEscape.UI
             start();
         }
 
+        /// <summary>A Halloween tomb costs a solo point like a campaign tomb past act 1 (its stored tombs all are, see HalloweenTests).</summary>
+        public static void HalloweenRun(GameApp app, Action start) => Solo(app, new LevelId(Difficulty.Easy, 2, 1), start);
+
         /// <summary>Spends the point of one endless tomb and starts it; when none is left, offers more (then starts).</summary>
         public static void EndlessRun(GameApp app, Action start)
         {

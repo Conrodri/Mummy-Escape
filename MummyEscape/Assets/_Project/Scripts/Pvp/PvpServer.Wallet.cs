@@ -197,6 +197,7 @@ namespace MummyEscape.Pvp
         {
             var item = GoldShop.Exclusive(skinId);
             if (item == null) return Task.FromResult(new WalletResponse { Error = "UNKNOWN_PRODUCT" });
+            if (!GoldShop.OnSale(item, _utcNow())) return Task.FromResult(new WalletResponse { Error = "EVENT" });
             return SpendAsync(me, item.Gold, w =>
             {
                 if (w.Skins.Contains(item.SkinId)) return "OWNED";
