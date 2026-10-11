@@ -268,7 +268,7 @@ namespace MummyEscape.App
         public Task SubmitTower()
         {
             var best = Save.Data.TowerBest;
-            return best.BestPoints > 0 ? SubmitBoard(Tower.BoardId, best.Score) : Task.CompletedTask;
+            return best.BestFloors > 0 ? SubmitBoard(Tower.BoardId, best.Score) : Task.CompletedTask;
         }
 
         async Task SubmitBoard(string board, long score)

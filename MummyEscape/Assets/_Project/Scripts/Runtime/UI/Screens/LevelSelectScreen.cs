@@ -129,7 +129,7 @@ namespace MummyEscape.UI.Screens
             _tower.interactable = tower;
             UIKit.SetLabel(_tower, Loc.T("Tour de défi") + " · " + (!tower ? Unlocks(Difficulty.Easy)
                                    : run != null ? Loc.F("Étage {0}", run.Floor)
-                                   : App.Save.Data.TowerBest.BestPoints > 0 ? Loc.F("Record : {0} pts", App.Save.Data.TowerBest.BestPoints)
+                                   : App.Save.Data.TowerBest.BestFloors > 0 ? Loc.F("Record : {0} étages", App.Save.Data.TowerBest.BestFloors)
                                    : Loc.T("des skins exclusifs à gagner")));
             bool halloween = Halloween.IsOpen(System.DateTime.UtcNow);
             _halloween.gameObject.SetActive(halloween);

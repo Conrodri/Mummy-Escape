@@ -18,13 +18,13 @@ namespace MummyEscape.Game
         public int TowerFloor { get; private set; }
         public bool InTower => TowerFloor > 0;
 
-        (int seed, int floor, TowerCurse curses, Task<Level> level) _towerNext;
+        (int seed, int floor, TowerCurses curses, Task<Level> level) _towerNext;
 
         /// <summary>Plays the next floor of the run in progress (the run's energy point was spent when it started).</summary>
         public async Task StartTower()
         {
             var run = _app.Save.ActiveTower;
-            if (run == null) return;
+            if (run == null || run.CurseDue) return; // the tower screen asks for the handicap first
             int token = ++_loadToken;
             ResetForLoad();
             DetachDuelLink();
@@ -43,7 +43,7 @@ namespace MummyEscape.Game
             }
             catch (Exception e)
             {
-                Debug.LogError($"[Game] Could not draw tower floor {floor} ({run.Curses}): {e}");
+                Debug.LogError($"[Game] Could not draw tower floor {floor} (handicaps {run.Curses.Traps}/{run.Curses.Bigger}/{run.Curses.Storeys}): {e}");
                 TowerFloor = 0;
                 return;
             }
@@ -57,14 +57,14 @@ namespace MummyEscape.Game
         }
 
         /// <summary>The floor drawn ahead when it is that one, else a new draw.</summary>
-        Task<Level> TowerLevel(int seed, int floor, TowerCurse curses)
+        Task<Level> TowerLevel(int seed, int floor, TowerCurses curses)
         {
             var next = _towerNext;
             _towerNext = default;
-            return next.level != null && next.seed == seed && next.floor == floor && next.curses == curses ? next.level : DrawTower(seed, floor, curses);
+            return next.level != null && next.seed == seed && next.floor == floor && next.curses.Equals(curses) ? next.level : DrawTower(seed, floor, curses);
         }
 
-        static Task<Level> DrawTower(int seed, int floor, TowerCurse curses) => Task.Run(() => Tower.Generate(floor, curses, seed));
+        static Task<Level> DrawTower(int seed, int floor, TowerCurses curses) => Task.Run(() => Tower.Generate(floor, curses, seed));
 
         /// <summary>End of a floor: the run climbs on or stops, the board gets a new best, then the result.</summary>
         void FinishTower(LevelResult result)

@@ -6,15 +6,14 @@ using UnityEngine.UI;
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// The challenge tower (<see cref="Tower"/>): the run in progress (go on, or leave it), or a new run with the handicaps
-    /// chosen; the record and the floors that give an exclusive skin. A run costs one point of the endless energy.
+    /// The challenge tower (<see cref="Tower"/>): the run in progress (the handicap to pick when one is due, go on, or leave
+    /// it), or a new run; the record and the floors that give an exclusive skin. A run costs one point of the endless energy.
     /// </summary>
     public sealed class TowerScreen : UIScreen
     {
         public override NavTab Tab => NavTab.Solo;
 
         RectTransform _content;
-        TowerCurse _curses;
 
         protected override void Build()
         {
@@ -37,10 +36,9 @@ namespace MummyEscape.UI.Screens
 
             var rules = UIKit.Card(_content);
             Paragraph(rules, Loc.T("Enchaîne les tombeaux, de plus en plus durs. La course s'arrête à la première chute, ou si tu sors avec moins de 2 étoiles."), 30, UIKit.Sand);
+            Paragraph(rules, Loc.F("Tous les {0} étages, choisis un malus : il reste jusqu'à la fin de la course.", Tower.CurseEvery), 28, UIKit.Sand);
             Paragraph(rules, Loc.T("Chaque course tire de nouveaux tombeaux et coûte un point d'énergie du mode sans fin."), 26, UIKit.Dim);
-            Paragraph(rules, best.BestPoints > 0
-                ? Loc.F("Record : {0} pts en {1} étages · plus haut étage franchi : {2}", best.BestPoints, best.BestFloor, best.HighestCleared)
-                : Loc.T("Pas encore de record."), 28, UIKit.Gold);
+            Paragraph(rules, best.BestFloors > 0 ? Loc.F("Record : {0} étages", best.BestFloors) : Loc.T("Pas encore de record."), 28, UIKit.Gold);
 
             var rewards = UIKit.Card(_content);
             UIKit.SectionTitle(rewards, "Récompenses exclusives");
@@ -56,19 +54,23 @@ namespace MummyEscape.UI.Screens
             if (run != null)
             {
                 UIKit.SectionTitle(play, "Course en cours");
-                Paragraph(play, Loc.F("Étage {0} · {1} pts", run.Floor, run.Points) + (run.Curses != TowerCurse.None ? "\n" + CurseNames(run.Curses) : ""), 30, UIKit.Sand);
-                UIKit.Size(UIKit.Button(play, Loc.F("Étage {0}", run.Floor), Continue, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
+                Paragraph(play, Loc.F("Étage {0}", run.Floor) + (run.Curses.Count > 0 ? "\n" + CurseNames(run.Curses) : ""), 30, UIKit.Sand);
+                if (run.CurseDue)
+                {
+                    // Mandatory: the next floor waits for the pick.
+                    Paragraph(play, Loc.T("Choisis un malus pour continuer :"), 28, UIKit.Gold);
+                    foreach (var curse in Tower.Curses)
+                    {
+                        var c = curse;
+                        var b = UIKit.Button(play, Loc.F("{0} ({1}/{2})", Loc.T(NameOf(c)), run.Curses.Of(c), Tower.Cap(c)), () => Take(c), 32, ButtonStyle.Primary);
+                        b.interactable = run.Curses.CanTake(c);
+                        UIKit.Size(b, UIKit.ButtonHeight);
+                    }
+                }
+                else UIKit.Size(UIKit.Button(play, Loc.F("Étage {0}", run.Floor), Continue, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
                 UIKit.Size(UIKit.Button(play, "Abandonner la course", () => { save.EndTower(); Fill(); }, UIKit.TextSize, ButtonStyle.Ghost), 72);
             }
-            else
-            {
-                UIKit.SectionTitle(play, "Malus");
-                Paragraph(play, Loc.T("Chaque malus rapporte 1 point de plus par étage (2 sans malus)."), 26, UIKit.Dim);
-                Curse(play, "Plus de pièges", TowerCurse.Traps);
-                Curse(play, "Tombeaux plus grands", TowerCurse.Bigger);
-                Curse(play, "Un étage de plus par tombeau", TowerCurse.Storeys);
-                UIKit.Size(UIKit.Button(play, Loc.F("Commencer · {0} pts par étage", Tower.PointsPerFloor(_curses)), StartRun, 36, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
-            }
+            else UIKit.Size(UIKit.Button(play, "Commencer", StartRun, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
             UIKit.Size(UIKit.Button(_content, "Classement", Ranking), UIKit.ButtonHeight);
         }
 
@@ -79,31 +81,33 @@ namespace MummyEscape.UI.Screens
             label.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
-        void Curse(Transform parent, string label, TowerCurse curse) =>
-            UIKit.Toggle(parent, label, (_curses & curse) != 0, on =>
-            {
-                _curses = on ? _curses | curse : _curses & ~curse;
-                Fill();
-            });
+        static string NameOf(TowerCurse curse) =>
+            curse == TowerCurse.Traps ? "Plus de pièges" : curse == TowerCurse.Bigger ? "Tombeaux plus grands" : "Un étage de plus par tombeau";
 
-        static string CurseNames(TowerCurse curses)
+        /// <summary>"Plus de pièges ×2 · Tombeaux plus grands": the handicaps taken so far.</summary>
+        static string CurseNames(TowerCurses curses)
         {
             var names = new System.Collections.Generic.List<string>();
-            if ((curses & TowerCurse.Traps) != 0) names.Add(Loc.T("Plus de pièges"));
-            if ((curses & TowerCurse.Bigger) != 0) names.Add(Loc.T("Tombeaux plus grands"));
-            if ((curses & TowerCurse.Storeys) != 0) names.Add(Loc.T("Un étage de plus par tombeau"));
-            return string.Join(" · ", names);
+            foreach (var c in Tower.Curses)
+            {
+                int n = curses.Of(c);
+                if (n > 0) names.Add(Loc.T(NameOf(c)) + (n > 1 ? " ×" + n : "")); // noloc
+            }
+            return Loc.F("Malus : {0}", string.Join(" · ", names));
         }
 
-        void StartRun()
+        void Take(TowerCurse curse)
         {
-            var curses = _curses;
+            App.Save.TakeTowerCurse(curse);
+            Continue();
+        }
+
+        void StartRun() =>
             PlayGate.EndlessRun(App, () =>
             {
-                App.Save.StartTower(curses);
+                App.Save.StartTower();
                 Continue();
             });
-        }
 
         void Continue()
         {

@@ -93,14 +93,15 @@ namespace MummyEscape.UI.Screens
                         : result.Won ? Loc.T("Moins de 2 étoiles : la course s'arrête")
                         : Loc.T("La momie est tombée…");
             string text = outcome.Continues
-                ? Loc.F("Étage {0} franchi en {1}.", floor, LevelResult.FormatTime(result.TimeMs)) + "\n" + Loc.F("{0} pts · l'étage {1} t'attend.", run.Points, run.Floor)
-                : Loc.F("Course terminée : {0} étages, {1} pts.", run.Cleared, run.Points);
+                ? Loc.F("Étage {0} franchi en {1}.", floor, LevelResult.FormatTime(result.TimeMs))
+                  + "\n" + (run.CurseDue ? Loc.T("Choisis un malus pour continuer.") : Loc.F("L'étage {0} t'attend.", run.Floor))
+                : Loc.F("Course terminée : {0} étages franchis.", run.Cleared);
             if (outcome.RewardSkin != null) text += "\n" + Loc.F("Tu gagnes « {0} » !", Loc.T(Visual.TowerSkins.Resolve(outcome.RewardSkin).Name));
             else if (outcome.Record) text += "\n" + Loc.T("Nouveau record !");
             _text.text = text;
             _energy.text = outcome.Continues ? "" : PlayGate.Status(App, Monetization.PlayMode.Endless);
             _main.gameObject.SetActive(true);
-            UIKit.SetLabel(_main, outcome.Continues ? "Étage suivant" : "Nouvelle course");
+            UIKit.SetLabel(_main, !outcome.Continues ? "Nouvelle course" : run.CurseDue ? "Choisir un malus" : "Étage suivant");
         }
 
         void Main()
@@ -108,8 +109,8 @@ namespace MummyEscape.UI.Screens
             if (_tower)
             {
                 Router.Close(this);
-                if (_towerClimbs) _ = App.Game.StartTower();
-                else
+                if (_towerClimbs && App.Save.ActiveTower?.CurseDue == false) _ = App.Game.StartTower();
+                else // a new run, or the handicap to pick: both on the tower screen
                 {
                     App.Game.Abandon();
                     Router.Reset<MainMenuScreen>();

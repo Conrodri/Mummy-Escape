@@ -1,41 +1,55 @@
-using System;
 using MummyEscape.Core;
 using NUnit.Framework;
 
 namespace MummyEscape.Tests
 {
-    /// <summary>The challenge tower: its climb, its handicaps, what ends a run and how runs rank.</summary>
+    /// <summary>The challenge tower: its Facile climb, the handicap every 3 floors, what ends a run and how runs rank.</summary>
     public class TowerTests
     {
         [Test]
-        public void Source_ClimbsThroughTheModes_AndTurnsTheActs()
+        public void Source_StaysFacile_TurnsTheActs_AndGetsHarder()
         {
-            Assert.AreEqual(Difficulty.Easy, Tower.Source(1).Mode);
-            Assert.AreEqual(Difficulty.Easy, Tower.Source(Tower.EasyFloors).Mode);
-            Assert.AreEqual(Difficulty.Normal, Tower.Source(Tower.EasyFloors + 1).Mode);
-            Assert.AreEqual(Difficulty.Extreme, Tower.Source(Tower.NormalFloors + 1).Mode);
-            Assert.AreEqual(Difficulty.Extreme, Tower.Source(500).Mode);
+            for (int floor = 1; floor <= 80; floor++) Assert.AreEqual(Difficulty.Easy, Tower.Source(floor).Mode);
             Assert.AreNotEqual(Tower.Source(1).Act, Tower.Source(2).Act);
-            Assert.That(DifficultyTable.Target(Tower.Source(Tower.EasyFloors)), Is.GreaterThan(DifficultyTable.Target(Tower.Source(1))));
+            Assert.That(DifficultyTable.Target(Tower.Source(Tower.RampFloors)), Is.GreaterThan(DifficultyTable.Target(Tower.Source(1))));
         }
 
         [Test]
         public void Curses_MakeTheTombHarder()
         {
-            var plain = Tower.Spec(15, TowerCurse.None);
-            var cursed = Tower.Spec(15, TowerCurse.Traps | TowerCurse.Bigger | TowerCurse.Storeys);
-            Assert.AreEqual(plain.SpikeTraps + 1, cursed.SpikeTraps);
-            Assert.That(cursed.Floors, Is.GreaterThan(plain.Floors));
-            Assert.AreEqual(5, Tower.PointsPerFloor(TowerCurse.Traps | TowerCurse.Bigger | TowerCurse.Storeys));
-            Assert.AreEqual(2, Tower.PointsPerFloor(TowerCurse.None));
+            var plain = Tower.Spec(15, default);
+            var cursed = Tower.Spec(15, new TowerCurses { Traps = 2, Bigger = 1, Storeys = 1 });
+            Assert.AreEqual(plain.SpikeTraps + plain.DarknessTraps + 2, cursed.SpikeTraps + cursed.DarknessTraps);
+            Assert.AreEqual(plain.Floors + 1, cursed.Floors);
+        }
+
+        [Test]
+        public void ACurse_IsDueEveryThreeFloors_UntilEveryCapIsReached()
+        {
+            var run = new TowerRun();
+            for (int i = 0; i < 2; i++) run.Escaped(100);
+            Assert.IsFalse(run.CurseDue);
+            run.Escaped(100);
+            Assert.IsTrue(run.CurseDue, "after floor 3");
+            run.Take(TowerCurse.Storeys);
+            Assert.IsFalse(run.CurseDue);
+            run.Take(TowerCurse.Traps);
+            Assert.AreEqual(1, run.Curses.Count, "one per 3 floors, no more");
+
+            var full = new TowerRun { Cleared = 60, Curses = new TowerCurses { Traps = 3, Bigger = 2, Storeys = 2 } };
+            Assert.IsFalse(full.CurseDue, "every handicap at its cap");
+            var capped = new TowerRun { Cleared = 9, Curses = new TowerCurses { Storeys = 2 } };
+            Assert.IsTrue(capped.CurseDue);
+            capped.Take(TowerCurse.Storeys);
+            Assert.AreEqual(2, capped.Curses.Storeys, "past its cap: refused");
         }
 
         [Test]
         public void Floors_AreTheSameForTheSameRun_AndNewForAnother()
         {
-            var a = Tower.Generate(3, TowerCurse.None, 42);
-            var b = Tower.Generate(3, TowerCurse.None, 42);
-            var c = Tower.Generate(3, TowerCurse.None, 43);
+            var a = Tower.Generate(3, default, 42);
+            var b = Tower.Generate(3, default, 42);
+            var c = Tower.Generate(3, default, 43);
             Assert.AreEqual(TombArchive.Write(a), TombArchive.Write(b));
             Assert.AreNotEqual(TombArchive.Write(a), TombArchive.Write(c));
         }
@@ -49,31 +63,35 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void Record_KeepsTheMostPoints_ThenTheFastest()
+        public void Record_KeepsTheMostFloors_ThenTheFastest()
         {
             var record = new TowerRecord();
-            var run = new TowerRun { Curses = TowerCurse.Traps };
-            run.Escaped(1000);
-            run.Escaped(1000);
+            var run = new TowerRun();
+            for (int i = 0; i < 3; i++) run.Escaped(1000);
             Assert.IsTrue(record.Offer(run));
-            Assert.AreEqual(6, record.BestPoints);
-            var plain = new TowerRun();
-            for (int i = 0; i < 3; i++) plain.Escaped(100);
-            Assert.IsTrue(record.Offer(plain), "as many points, faster");
-            Assert.AreEqual(300, record.BestTimeMs);
-            var slow = new TowerRun();
-            for (int i = 0; i < 3; i++) slow.Escaped(5000);
-            Assert.IsFalse(record.Offer(slow), "as many points, slower");
-            Assert.AreEqual(3, record.HighestCleared);
-            Assert.That(Tower.EncodeScore(7, 5000), Is.LessThan(Tower.EncodeScore(6, 10)), "more points rank first");
-            Assert.AreEqual((6, 300), Tower.DecodeScore(record.Score));
+            var faster = new TowerRun();
+            for (int i = 0; i < 3; i++) faster.Escaped(100);
+            Assert.IsTrue(record.Offer(faster), "as many floors, faster");
+            var slower = new TowerRun();
+            for (int i = 0; i < 3; i++) slower.Escaped(5000);
+            Assert.IsFalse(record.Offer(slower), "as many floors, slower");
+            Assert.That(Tower.EncodeScore(4, 50000), Is.LessThan(Tower.EncodeScore(3, 10)), "more floors rank first");
+            Assert.AreEqual((3, 300), Tower.DecodeScore(record.Score));
         }
 
         [Test, Category("Slow")]
-        public void EveryFloor_IsGenerated_WithEveryHandicap([Values(0, 1, 2, 3, 4, 5, 6, 7)] int curses)
+        public void EveryFloor_IsGenerated_UpToEveryCap([Values(0, 1, 2, 3, 4)] int set)
         {
-            for (int floor = 1; floor <= 60; floor += curses == 0 ? 1 : 3)
-                Assert.DoesNotThrow(() => Tower.Generate(floor, (TowerCurse)curses, floor * 977), $"floor {floor} curses {(TowerCurse)curses}");
+            var curses = set switch
+            {
+                0 => default,
+                1 => new TowerCurses { Traps = 3 },
+                2 => new TowerCurses { Bigger = 2 },
+                3 => new TowerCurses { Storeys = 2 },
+                _ => new TowerCurses { Traps = 3, Bigger = 2, Storeys = 2 },
+            };
+            for (int floor = 1; floor <= 40; floor += set == 0 ? 1 : 2)
+                Assert.DoesNotThrow(() => Tower.Generate(floor, curses, floor * 977), $"floor {floor} curses {curses.Traps}/{curses.Bigger}/{curses.Storeys}");
         }
     }
 }

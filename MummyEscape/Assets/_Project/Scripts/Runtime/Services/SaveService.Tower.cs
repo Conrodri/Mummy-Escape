@@ -26,14 +26,22 @@ namespace MummyEscape.Services
         /// <summary>The run being climbed, null between runs.</summary>
         public TowerRun ActiveTower => Data.TowerActive ? Data.Tower : null;
 
-        /// <summary>A new run (its energy point is spent by the caller, see PlayGate): new tombs, the handicaps chosen.</summary>
-        public TowerRun StartTower(TowerCurse curses)
+        /// <summary>A new run (its energy point is spent by the caller, see PlayGate): new tombs, no handicap yet.</summary>
+        public TowerRun StartTower()
         {
-            Data.Tower = new TowerRun { Seed = new Random().Next(1, int.MaxValue), Curses = curses };
+            Data.Tower = new TowerRun { Seed = new Random().Next(1, int.MaxValue) };
             Data.TowerActive = true;
             Data.TowerBest.Runs++;
             Save();
             return Data.Tower;
+        }
+
+        /// <summary>The handicap picked when one is due (<see cref="TowerRun.CurseDue"/>), kept for the rest of the run.</summary>
+        public void TakeTowerCurse(TowerCurse curse)
+        {
+            if (!Data.TowerActive) return;
+            Data.Tower.Take(curse);
+            Save();
         }
 
         /// <summary>

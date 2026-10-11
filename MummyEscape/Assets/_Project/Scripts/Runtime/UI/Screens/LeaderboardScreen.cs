@@ -129,7 +129,7 @@ namespace MummyEscape.UI.Screens
         static string ScoreText(LeaderboardRow row, BoardKind kind)
         {
             string main = kind == BoardKind.Endless ? Loc.F("Tombeau {0}", Endless.ReachedOf(row.OverPar))
-                        : kind == BoardKind.Tower ? Loc.F("{0} pts", Tower.PointsOf(row.OverPar))
+                        : kind == BoardKind.Tower ? Loc.F("{0} étages", Tower.FloorsOf(row.OverPar))
                         : LevelResult.FormatOverPar(row.OverPar);
             return row.TimeMs > 0
                 ? $"{main}\n<size=22><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color>{(row.Suspicious ? " <b><color=#E0903A>?</color></b>" : "")}</size>" // noloc
@@ -186,7 +186,7 @@ namespace MummyEscape.UI.Screens
             var id = endless.HasValue || tower ? default : _levels[_index];
             var scope = Scopes[_scope];
             _levelLabel.text = tower ? Loc.T("Tour de défi") : endless.HasValue ? Loc.F("Sans fin · {0}", LevelNames.Mode(endless.Value)) : Loc.F("Niveau {0}", LevelNames.Of(id));
-            _actLabel.text = tower ? Loc.T("Le plus de points en une course, puis le temps")
+            _actLabel.text = tower ? Loc.T("Le plus d'étages en une course, puis le temps")
                            : endless.HasValue ? Loc.T("Le tombeau le plus loin, puis le temps")
                            : Loc.F("Acte {0}", id.Act) + " · " + Loc.T(DifficultyTable.GetAct(id.Act).Name);
             _info.text = Loc.T("Chargement…");
@@ -251,7 +251,7 @@ namespace MummyEscape.UI.Screens
             {
                 var best = App.Save.Data.TowerBest;
                 _meEmpty.text = !loaded ? ""
-                    : best.BestPoints > 0 ? Loc.F("Ton record : {0} (pas encore classé)", Loc.F("{0} pts", best.BestPoints))
+                    : best.BestFloors > 0 ? Loc.F("Ton record : {0} (pas encore classé)", Loc.F("{0} étages", best.BestFloors))
                     : Loc.T("Franchis un étage de la tour pour entrer au classement");
                 return;
             }
