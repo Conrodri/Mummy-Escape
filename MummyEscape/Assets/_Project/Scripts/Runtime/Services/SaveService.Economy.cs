@@ -35,9 +35,13 @@ namespace MummyEscape.Services
             Data.SelectedTorch = Worn(Data.SelectedTorch, Visual.SkinCatalog.DefaultTorchId);
             Data.SelectedHat = Worn(Data.SelectedHat, Visual.SkinCatalog.NoHatId);
             Data.SelectedShoes = Worn(Data.SelectedShoes, Visual.SkinCatalog.NoShoesId);
+            // The pass XP is the server's (replayed runs, matches, tiers bought), plus the runs it has not replayed yet.
+            RollPass();
+            int xp = wallet.ClaimsSeason == BattlePass.Current.Id ? wallet.PassXp : 0;
+            foreach (var p in Data.PendingRuns) xp += p.Xp;
+            Data.PassXp = Math.Min(BattlePass.Tiers * BattlePass.XpPerTier, xp);
             if (wallet.ClaimsSeason == BattlePass.Current.Id)
             {
-                RollPass();
                 foreach (int t in wallet.FreeClaimed) if (!Data.PassFreeClaimed.Contains(t)) Data.PassFreeClaimed.Add(t);
                 foreach (int t in wallet.PremiumClaimed) if (!Data.PassPremiumClaimed.Contains(t)) Data.PassPremiumClaimed.Add(t);
             }
@@ -151,6 +155,37 @@ namespace MummyEscape.Services
             RollPass();
             Data.PassXp = Math.Min(BattlePass.Tiers * BattlePass.XpPerTier, Data.PassXp + xp);
             if (save) Save();
+        }
+
+        const int PendingRunsKept = 50; // they ride in the cloud copy: kept small (sent by fives when online)
+
+        /// <summary>
+        /// A finished solo run for the server to replay: its XP shows at once, and stays only if the server's replay grants
+        /// it (see <see cref="ApplyWallet"/>).
+        /// </summary>
+        public void QueueRun(SoloRunReport run, int xp)
+        {
+            Data.PendingRuns.Add(new PendingRun { Run = run, Xp = xp });
+            if (Data.PendingRuns.Count > PendingRunsKept) Data.PendingRuns.RemoveAt(0); // long offline: the oldest runs give up their XP
+            AddPassXp(xp, false);
+            Save();
+        }
+
+        public int PendingRunCount => Data.PendingRuns.Count;
+
+        /// <summary>The next runs to send, oldest first.</summary>
+        public List<SoloRunReport> NextRuns(int count)
+        {
+            var runs = new List<SoloRunReport>();
+            for (int i = 0; i < Data.PendingRuns.Count && runs.Count < count; i++) runs.Add(Data.PendingRuns[i].Run);
+            return runs;
+        }
+
+        /// <summary>The server replayed these runs (granted or not): they leave the queue, before its wallet is applied.</summary>
+        public void RunsSent(List<SoloRunReport> runs)
+        {
+            Data.PendingRuns.RemoveAll(p => runs.Contains(p.Run));
+            Save();
         }
 
         public bool IsClaimed(int tier, bool premium) => premium ? Data.PassPremiumClaimed.Contains(tier) : Data.PassFreeClaimed.Contains(tier);

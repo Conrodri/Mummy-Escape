@@ -248,6 +248,7 @@ namespace MummyEscape.Game
         void Setup(Level level, GameSession session = null)
         {
             Session = session ?? new GameSession(level);
+            _soloRun = session == null && Match == null && !InTutorial ? new RunRecorder(level) : null;
             ApplyTheme(TombTheme.ForAct(InHalloween ? Halloween.Theme : level.Id.Act));
             IndexMechanisms(level);
             _maze.Build(Session);
@@ -608,6 +609,7 @@ namespace MummyEscape.Game
             }
             // Duel: every accepted action is recorded with its time, for the server's replay and the rival's ghost.
             Match?.Record(action, Session.ElapsedMs, before, Session);
+            _soloRun?.Record(action, Session.ElapsedMs, before);
             SendDuelInput();
             yield return Present(before, from, action, r);
         }
@@ -852,6 +854,21 @@ namespace MummyEscape.Game
             if (any) _app.Audio.Play(Sfx.Fire, 0.2f);
         }
 
+        /// <summary>The solo run's timed actions, for the server's replay (it grants the pass XP); null in a duel or a 2v2.</summary>
+        RunRecorder _soloRun;
+
+        /// <summary>Hands the finished run to the save, which sends it to the server with the next batch.</summary>
+        void QueueSoloRun(LevelResult result, Difficulty? endless, int depth, int xp)
+        {
+            if (_soloRun == null || xp <= 0) return; // an endless death earns nothing: no call for it
+            var run = new SoloRunReport { Id = Guid.NewGuid().ToString("N"), Inputs = _soloRun.Inputs, Depth = depth }; // noloc
+            if (endless.HasValue) run.EndlessMode = (int)endless.Value;
+            else { run.Level = result.Level.Key; run.Variant = Session.Level.Variant; }
+            _soloRun = null;
+            _app.Save.QueueRun(run, xp);
+            _ = _app.SendSoloRuns(false);
+        }
+
         IEnumerator Finish()
         {
             _input.Enabled = false;
@@ -926,6 +943,7 @@ namespace MummyEscape.Game
                 yield break;
             }
             var outcome = _app.Save.Apply(result);
+            QueueSoloRun(result, null, 0, Monetization.BattlePass.SoloXp(result.Won, result.Stars));
             // Faster than the game's animations allow: a modified game, kept off the leaderboard.
             if (result.Pace != (int)PaceVerdict.Impossible) _ = _app.SubmitScore(result);
             else Debug.LogWarning($"[Game] {result.Level} run of {result.TimeMs} ms under the perfect {result.PerfectMs} ms: not submitted");

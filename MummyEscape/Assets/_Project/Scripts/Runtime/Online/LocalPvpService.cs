@@ -447,6 +447,8 @@ namespace MummyEscape.Online
         public Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers) =>
             Run(() => _server.ClaimPassRewardsAsync(Me, season, freeTiers, premiumTiers));
 
+        public Task<WalletResponse> SubmitSoloRunsAsync(List<SoloRunReport> runs) => Run(() => _server.SubmitSoloRunsAsync(Me, runs));
+
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Run(() => _server.StartLiveDuelAsync(Me, Gen, matchKey, a, b));
 

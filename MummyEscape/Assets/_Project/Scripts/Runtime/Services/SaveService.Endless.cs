@@ -20,7 +20,6 @@ namespace MummyEscape.Services
             {
                 p.Escaped(result.TimeMs);
                 Data.Coins += Monetization.BattlePass.EndlessScarabs; // a death retries the same tomb: each tomb pays once
-                AddPassXp(Monetization.BattlePass.EndlessXp, false);
             }
             else p.Deaths++;
             Save();

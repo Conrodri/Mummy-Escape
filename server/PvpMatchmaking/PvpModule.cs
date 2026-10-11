@@ -28,9 +28,18 @@ namespace MummyEscape.Pvp.Server
             _logger = logger;
         }
 
+        static string ReadEndlessArchive()
+        {
+            using var stream = typeof(PvpModule).Assembly.GetManifestResourceStream("endless.txt");
+            if (stream == null) return null;
+            using var reader = new System.IO.StreamReader(stream);
+            return reader.ReadToEnd();
+        }
+
         PvpServer Server(IExecutionContext ctx) => new PvpServer(new CloudSavePvpStore(_api, ctx, _logger))
         {
             Purchases = new GooglePlayVerifier(_api, ctx, _logger),
+            EndlessArchive = ReadEndlessArchive,
         };
 
         /// <summary>Trouve un adversaire de la ligue du joueur (fantôme proche en Elo), cherche encore (une minute), donne un
@@ -275,6 +284,10 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("ClaimPassRewards")]
         public Task<WalletResponse> ClaimPassRewards(IExecutionContext ctx, string season, List<int> freeTiers, List<int> premiumTiers) =>
             Server(ctx).ClaimPassRewardsAsync(ctx.PlayerId, season, freeTiers, premiumTiers);
+
+        [CloudCodeFunction("SubmitSoloRuns")]
+        public Task<WalletResponse> SubmitSoloRuns(IExecutionContext ctx, List<SoloRunReport> runs) =>
+            Server(ctx).SubmitSoloRunsAsync(ctx.PlayerId, runs);
 
         // --- Duel en direct
 

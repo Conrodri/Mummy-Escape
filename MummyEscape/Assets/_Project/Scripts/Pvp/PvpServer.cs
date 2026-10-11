@@ -188,6 +188,7 @@ namespace MummyEscape.Pvp
             await _store.SetPendingAsync(me, null);
             var response = pending.BattleId != null ? await ResolveBattleRunAsync(me, pending, verified, playerName)
                                                     : await ResolveAsync(me, pending, verified, playerName);
+            if (error == null) await GrantMatchXpAsync(me, pending.MatchId, response.Resolved && response.Result == DuelResult.Win);
             response.Error = error;
             return response;
         }

@@ -189,28 +189,91 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public async Task PassClaims_AreBoundedByTheSeasonsDays_PlusBoughtTiers()
+        public async Task PassClaims_FollowTheXpHeldByTheServer()
         {
-            var store = new MemoryPvpStore();
-            var day1 = BattlePass.Seasons[0].StartUtc.AddHours(12);
-            var server = new PvpServer(store, () => day1) { AllowTestPurchases = true };
+            var (server, store) = NewServer();
+            var season = BattlePass.At(Now);
             var all = new System.Collections.Generic.List<int>();
             for (int t = 1; t <= BattlePass.Tiers; t++) all.Add(t);
+            await store.UpdatePlayerAsync("alice", d => (d.Wallet ??= new Wallet()).Passes.Add(season.Id));
 
-            await store.UpdatePlayerAsync("alice", d => (d.Wallet ??= new Wallet()).Passes.Add(BattlePass.Seasons[0].Id));
-            var r = await server.ClaimPassRewardsAsync("alice", BattlePass.Seasons[0].Id, all, all);
+            var r = await server.ClaimPassRewardsAsync("alice", season.Id, all, all);
             Assert.IsNull(r.Error);
-            CollectionAssert.Contains(r.Wallet.PremiumClaimed, 20, "a set piece within the day's reach");
-            CollectionAssert.DoesNotContain(r.Wallet.PremiumClaimed, 30, "tiers out of reach on day 1 wait");
+            Assert.IsEmpty(r.Wallet.PremiumClaimed, "no XP held here, no tier");
 
-            await Give(store, "alice", GoldShop.TierBundlePrice);
+            await Give(store, "alice", GoldShop.TierBundlePrice * 2);
             await server.BuyTiersAsync("alice", "req-1");
-            r = await server.ClaimPassRewardsAsync("alice", BattlePass.Seasons[0].Id, all, all);
-            CollectionAssert.Contains(r.Wallet.PremiumClaimed, 30, "bought tiers add up");
-            CollectionAssert.DoesNotContain(r.Wallet.PremiumClaimed, 40);
+            await server.BuyTiersAsync("alice", "req-2");
+            r = await server.ClaimPassRewardsAsync("alice", season.Id, all, all);
+            CollectionAssert.Contains(r.Wallet.PremiumClaimed, 20, "bought tiers are XP held here");
+            CollectionAssert.DoesNotContain(r.Wallet.PremiumClaimed, 30);
 
             var huge = new System.Collections.Generic.List<int>(new int[BattlePass.Tiers + 1]);
-            Assert.AreEqual("UNKNOWN_PRODUCT", (await server.ClaimPassRewardsAsync("alice", BattlePass.Seasons[0].Id, huge, null)).Error);
+            Assert.AreEqual("UNKNOWN_PRODUCT", (await server.ClaimPassRewardsAsync("alice", season.Id, huge, null)).Error);
+        }
+
+        /// <summary>The optimal route of a tomb, timed like a quick player (each action when the previous animation ends).</summary>
+        static SoloRunReport SolvedRun(string id, Core.LevelId level, int variant, bool cheatFast = false)
+        {
+            var run = SolvedRun(id, Core.LevelGenerator.Generate(level, variant), cheatFast);
+            run.Level = level.Key;
+            run.Variant = variant;
+            return run;
+        }
+
+        static SoloRunReport SolvedRun(string id, Core.Level maze, bool cheatFast = false)
+        {
+            var recorder = new RunRecorder(maze);
+            var session = new Core.GameSession(maze);
+            int ms = 0;
+            foreach (var action in maze.Solution.Actions)
+            {
+                var before = session.State;
+                recorder.Record(action, ms, before);
+                session.Apply(action);
+                ms += cheatFast ? 0 : 2000;
+            }
+            if (cheatFast) foreach (var input in recorder.Inputs) input.Tick = 0;
+            return new SoloRunReport { Id = id, Inputs = recorder.Inputs };
+        }
+
+        [Test]
+        public async Task SoloRuns_AreReplayedHere_AndCountOnce()
+        {
+            var (server, _) = NewServer();
+            var level = Core.Progression.First(Core.Difficulty.Easy);
+            var good = SolvedRun("run-1", level, 0);
+            var r = await server.SubmitSoloRunsAsync("alice", new System.Collections.Generic.List<SoloRunReport> { good, good });
+            Assert.IsNull(r.Error);
+            Assert.AreEqual(BattlePass.SoloXp(true, 3), r.Wallet.PassXp, "the optimal route: three stars, counted once");
+
+            var fast = SolvedRun("run-2", level, 0, cheatFast: true);
+            var forged = new SoloRunReport { Id = "run-3", Level = level.Key, Variant = 0, Inputs = new System.Collections.Generic.List<RunInput>() };
+            var unknown = new SoloRunReport { Id = "run-4", Level = "level_z9_9", Variant = 0, Inputs = new System.Collections.Generic.List<RunInput>() };
+            r = await server.SubmitSoloRunsAsync("alice", new System.Collections.Generic.List<SoloRunReport> { fast, forged, unknown });
+            Assert.AreEqual(BattlePass.SoloXp(true, 3), r.Wallet.PassXp, "too fast, unfinished or unknown: nothing");
+
+            var many = new System.Collections.Generic.List<SoloRunReport>(new SoloRunReport[PvpServer.SoloRunsPerCall + 1]);
+            Assert.AreEqual("UNKNOWN_PRODUCT", (await server.SubmitSoloRunsAsync("alice", many)).Error);
+        }
+
+        [Test]
+        public async Task SoloRuns_EndlessTombs_AreReadFromTheArchive()
+        {
+            var (server, _) = NewServer();
+            string text = EndlessTests.StoredText();
+            server.EndlessArchive = () => text;
+            var lines = Core.TombArchive.Lines(text, Core.Difficulty.Normal);
+            var tomb = Core.TombArchive.Load(lines[3]);
+            SoloRunReport At(string id, int depth)
+            {
+                var run = SolvedRun(id, tomb);
+                run.EndlessMode = (int)Core.Difficulty.Normal;
+                run.Depth = depth;
+                return run;
+            }
+            var r = await server.SubmitSoloRunsAsync("alice", new System.Collections.Generic.List<SoloRunReport> { At("deep-3", 3), At("deep-4", 4), At("deep-far", lines.Count) });
+            Assert.AreEqual(BattlePass.EndlessXp, r.Wallet.PassXp, "only the run played on the tomb at its depth");
         }
 
         [Test]

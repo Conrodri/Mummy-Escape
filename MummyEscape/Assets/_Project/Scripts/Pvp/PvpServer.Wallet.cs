@@ -21,8 +21,13 @@ namespace MummyEscape.Pvp
         public string ClaimsSeason;
         public List<int> FreeClaimed = new List<int>();
         public List<int> PremiumClaimed = new List<int>();
-        /// <summary>Paliers achetés en or cette saison : ils s'ajoutent à ceux que le temps de jeu rend possibles.</summary>
-        public int TiersBought;
+        /// <summary>
+        /// XP du pass de la saison <see cref="ClaimsSeason"/>, tenue par le serveur : courses solo rejouées, matchs jugés,
+        /// paliers achetés. Les paliers réclamables en découlent.
+        /// </summary>
+        public int PassXp;
+        /// <summary>Dernières courses solo et derniers matchs déjà comptés dans l'XP (un renvoi ne compte pas deux fois).</summary>
+        public List<string> XpSeen = new List<string>();
         /// <summary>Derniers achats crédités (identifiants de commande), pour l'historique du joueur.</summary>
         public List<string> Orders = new List<string>();
         /// <summary>
@@ -232,41 +237,45 @@ namespace MummyEscape.Pvp
             });
         }
 
-        /// <summary>10 paliers du pass : le serveur prend l'or, le jeu avance la progression (gardée par l'appareil).</summary>
+        /// <summary>10 paliers du pass : le serveur prend l'or et avance l'XP qu'il tient jusqu'à 10 paliers plus haut.</summary>
         public Task<WalletResponse> BuyTiersAsync(string me, string requestId = null)
         {
             var season = BattlePass.At(_utcNow());
             return SpendAsync(me, GoldShop.TierBundlePrice, w =>
             {
                 OpenSeason(w, season);
-                w.TiersBought += GoldShop.TierBundleSize;
+                int target = Math.Min(BattlePass.Tiers, BattlePass.TierOf(w.PassXp) + GoldShop.TierBundleSize);
+                w.PassXp = Math.Max(w.PassXp, target * BattlePass.XpPerTier);
                 return null;
             }, requestId);
         }
 
-        /// <summary>Le portefeuille passe à la saison en cours : paliers récupérés et achetés repartent de zéro.</summary>
+        /// <summary>Le portefeuille passe à la saison en cours : XP et paliers récupérés repartent de zéro.</summary>
         static void OpenSeason(Wallet w, PassSeason season)
         {
             if (w.ClaimsSeason == season.Id) return;
             w.ClaimsSeason = season.Id;
             w.FreeClaimed.Clear();
             w.PremiumClaimed.Clear();
-            w.TiersBought = 0;
+            w.PassXp = 0;
         }
 
-        /// <summary>
-        /// Plus que ce qu'un joueur très assidu atteint en un jour (2 évasions par palier) : la progression du pass est tenue
-        /// par le téléphone, le serveur borne seulement ce qui est réclamable depuis le début de la saison.
-        /// </summary>
-        public const int MaxTiersPerDay = 25;
+        const int XpSeenKept = 300;
 
-        /// <summary>The highest tier that can be claimed now: the days played since the season began, plus the tiers bought.</summary>
-        int ClaimableTiers(Wallet w, PassSeason season, string me)
+        /// <summary>Adds pass XP once per id (a solo run, a match); false when that id was already counted.</summary>
+        static bool AddXp(Wallet w, PassSeason season, string id, int xp)
         {
-            if (Developers.Is(me)) return BattlePass.Tiers;
-            int days = Math.Max(0, (int)(_utcNow() - season.StartUtc).TotalDays) + 1;
-            return (int)Math.Min(BattlePass.Tiers, (long)days * MaxTiersPerDay + w.TiersBought);
+            OpenSeason(w, season);
+            w.XpSeen ??= new List<string>();
+            if (w.XpSeen.Contains(id)) return false;
+            w.XpSeen.Add(id);
+            if (w.XpSeen.Count > XpSeenKept) w.XpSeen.RemoveRange(0, w.XpSeen.Count - XpSeenKept);
+            w.PassXp = Math.Min(BattlePass.Tiers * BattlePass.XpPerTier, w.PassXp + Math.Max(0, xp));
+            return true;
         }
+
+        /// <summary>The highest tier that can be claimed: the one the server's XP reaches (the team has them all).</summary>
+        static int ClaimableTiers(Wallet w, string me) => Developers.Is(me) ? BattlePass.Tiers : BattlePass.TierOf(w.PassXp);
 
         /// <summary>Des scarabées contre de l'or : le jeu crédite les scarabées (monnaie de l'appareil) quand le serveur a pris l'or.</summary>
         public Task<WalletResponse> BuyScarabsAsync(string me, string offerId, string requestId = null)
@@ -310,7 +319,7 @@ namespace MummyEscape.Pvp
             {
                 var w = WalletOf(d);
                 OpenSeason(w, season);
-                int top = ClaimableTiers(w, season, me); // the tiers above wait for later days
+                int top = ClaimableTiers(w, me); // the tiers the XP held here reaches
                 foreach (int tier in (freeTiers ?? new List<int>()).Distinct())
                     if (tier >= 1 && tier <= top && !w.FreeClaimed.Contains(tier))
                         if (Grant(w, BattlePass.Free(tier))) w.FreeClaimed.Add(tier);

@@ -118,6 +118,8 @@ namespace MummyEscape.Online
         Task<WalletResponse> BuyGoldItemAsync(string skinId);
         /// <summary>The pass rewards that give golden scarabs or a skin (the scarab ones stay on the device).</summary>
         Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers);
+        /// <summary>Solo runs (actions and times) the server replays to grant their pass XP, in batches.</summary>
+        Task<WalletResponse> SubmitSoloRunsAsync(List<SoloRunReport> runs);
 
         // --- Guilds ---
         Task<GuildResponse> GetGuildAsync();

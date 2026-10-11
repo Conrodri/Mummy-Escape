@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MummyEscape.Core;
+using MummyEscape.Monetization;
 
 namespace MummyEscape.Pvp
 {
@@ -218,11 +219,19 @@ namespace MummyEscape.Pvp
             if (!duel.Settled)
                 return new SubmitRunResponse { Resolved = false, EloBefore = side.Elo, EloAfter = side.Elo, League = Leagues.FromElo(side.Elo) };
             bool isA = duel.A.PlayerId == me;
-            var data = await Update(me);
+            var mine = isA ? duel.Result : DuelResolver.Invert(duel.Result);
+            var season = BattlePass.At(_utcNow());
+            var data = await Update(me, d =>
+            {
+                // The pass XP of the match, in the write this verdict makes anyway (once, whatever the polls).
+                var w = WalletOf(d);
+                AddXp(w, season, "match:" + matchId, BattlePass.MatchXp); // noloc
+                if (mine == DuelResult.Win) AddXp(w, season, "win:" + matchId, BattlePass.WinBonusXp); // noloc
+            });
             return new SubmitRunResponse
             {
                 Resolved = true,
-                Result = isA ? duel.Result : DuelResolver.Invert(duel.Result),
+                Result = mine,
                 EloBefore = side.Elo,
                 EloAfter = side.EloAfter,
                 League = Leagues.FromElo(side.EloAfter),

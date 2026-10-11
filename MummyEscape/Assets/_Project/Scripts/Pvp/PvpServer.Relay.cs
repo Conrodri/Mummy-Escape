@@ -221,6 +221,7 @@ namespace MummyEscape.Pvp
             var mine = match.SideOf(me);
             bool isA = mine == match.A;
             var result = isA ? match.Result : DuelResolver.Invert(match.Result);
+            if (match.Settled) await GrantMatchXpAsync(me, matchId, result == DuelResult.Win);
             var duo = mine.Bot ? null : await Shared<Duo>(DuosCollection, mine.DuoId);
             return new RelayResultResponse
             {

@@ -184,6 +184,9 @@ namespace MummyEscape.Online
             Call("ClaimPassRewards", Args("season", season, "freeTiers", freeTiers ?? new List<int>(), "premiumTiers", premiumTiers ?? new List<int>()),
                  e => new WalletResponse { Error = e });
 
+        public Task<WalletResponse> SubmitSoloRunsAsync(List<SoloRunReport> runs) =>
+            Call("SubmitSoloRuns", Args("runs", runs), e => new WalletResponse { Error = e });
+
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b, "draftVersion", PvpDraft.Version), e => new LiveDuelResponse { Error = e });
 

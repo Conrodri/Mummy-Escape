@@ -116,7 +116,9 @@ namespace MummyEscape.UI.Screens
         /// <summary>The pass and its claims as the server has them (another phone may have bought or collected).</summary>
         async void SyncWallet()
         {
-            await GoldWallet.RefreshAsync(App);
+            // Waiting runs first: their answer carries the wallet (one call instead of two).
+            if (App.Save.PendingRunCount > 0) await App.SendSoloRuns(true);
+            else await GoldWallet.RefreshAsync(App);
             if (this != null && gameObject.activeInHierarchy) Refresh();
         }
 
@@ -285,10 +287,11 @@ namespace MummyEscape.UI.Screens
             if (free.Count + paid.Count > 0)
             {
                 _busy = true;
+                await App.SendSoloRuns(true); // the server grants tiers from the XP it holds: the last runs first
                 error = await GoldWallet.RunAsync(App, p => p.ClaimPassRewardsAsync(BattlePass.Current.Id, free, paid));
                 _busy = false;
                 if (this == null) return;
-                if (error == null) // only what the server granted (it holds back tiers out of reach for the season's days)
+                if (error == null) // only what the server granted (it holds back tiers its XP does not reach)
                 {
                     foreach (int t in free) if (App.Save.IsClaimed(t, false)) rewards.Add(SaveService.RewardOf(t, false));
                     foreach (int t in paid) if (App.Save.IsClaimed(t, true)) rewards.Add(SaveService.RewardOf(t, true));

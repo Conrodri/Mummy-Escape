@@ -360,8 +360,37 @@ namespace MummyEscape.App
             if (_cloudDirty && Time.unscaledTime >= _nextCloudPush) _ = PushCloudSave();
         }
 
+        bool _sendingRuns;
+        const int RunsPerBatch = 5;
+
+        /// <summary>
+        /// Sends the solo runs waiting for the server's replay, which grants their pass XP: by batches of
+        /// <see cref="RunsPerBatch"/> while playing (one call for several runs), everything when <paramref name="all"/>
+        /// (pause, pass screen). A failed call leaves them queued for the next time.
+        /// </summary>
+        public async Task SendSoloRuns(bool all)
+        {
+            if (_sendingRuns || Pvp == null) return;
+            _sendingRuns = true;
+            try
+            {
+                while (Save.PendingRunCount >= (all ? 1 : RunsPerBatch))
+                {
+                    var runs = Save.NextRuns(PvpServer.SoloRunsPerCall);
+                    WalletResponse r;
+                    try { r = await Pvp.SubmitSoloRunsAsync(runs); }
+                    catch (System.Exception e) { Debug.LogWarning("[Pass] Runs not sent: " + e.Message); return; }
+                    if (r == null || r.Error != null) { Debug.LogWarning("[Pass] Runs refused: " + r?.Error); return; }
+                    Save.RunsSent(runs);
+                    Save.ApplyWallet(r.Wallet);
+                }
+            }
+            finally { _sendingRuns = false; }
+        }
+
         void OnApplicationPause(bool paused)
         {
+            if (paused) _ = SendSoloRuns(true);
             if (paused && _cloudDirty && Online != null && Online.Account == AccountState.Account) _ = PushCloudSave();
         }
 

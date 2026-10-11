@@ -11,7 +11,7 @@ namespace MummyEscape.Tests
     public class EndlessTests
     {
         /// <summary>The stored file, from the Unity project (EditMode) or from tools/CoreTests' output folder.</summary>
-        static string StoredText()
+        internal static string StoredText()
         {
             const string rel = "Assets/_Project/Resources/Tombs/endless.txt";
             foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })

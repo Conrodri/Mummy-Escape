@@ -54,6 +54,8 @@ namespace MummyEscape.Services
         public List<int> PassPremiumClaimed = new List<int>();
         /// <summary>Golden-scarab spends the device delivers itself (scarabs, tiers), until the server's wallet confirms them.</summary>
         public List<GoldSpend> GoldSpends = new List<GoldSpend>();
+        /// <summary>Solo runs not yet replayed by the server (it grants their pass XP), with the XP the device expects.</summary>
+        public List<PendingRun> PendingRuns = new List<PendingRun>();
 
         // ---- Endless mode (solo): the place on each ladder (Facile, Normal, Extrême, in that order) and its own energy.
         public List<EndlessProgress> Endless = new List<EndlessProgress> { new EndlessProgress(), new EndlessProgress(), new EndlessProgress() };
@@ -66,6 +68,14 @@ namespace MummyEscape.Services
         public bool TowerActive;
         public TowerRun Tower = new TowerRun();
         public TowerRecord TowerBest = new TowerRecord();
+    }
+
+    /// <summary>A solo run waiting for the server's replay, and the pass XP the device expects from it meanwhile.</summary>
+    [Serializable]
+    public class PendingRun
+    {
+        public MummyEscape.Pvp.SoloRunReport Run;
+        public int Xp;
     }
 
     /// <summary>A spend asked to the server: <see cref="Offer"/> is a scarab offer id or <see cref="SaveService.TiersSpend"/>.</summary>
@@ -164,6 +174,8 @@ namespace MummyEscape.Services
             d.PassPremiumClaimed ??= new List<int>();
             d.GoldSpends ??= new List<GoldSpend>();
             d.GoldSpends.RemoveAll(s => s == null || string.IsNullOrEmpty(s.Id));
+            d.PendingRuns ??= new List<PendingRun>();
+            d.PendingRuns.RemoveAll(p => p?.Run == null || string.IsNullOrEmpty(p.Run.Id));
             d.SoloEnergy ??= new MummyEscape.Pvp.EnergyMeter();
             d.Endless ??= new List<EndlessProgress>();
             for (int i = 0; i < d.Endless.Count; i++) d.Endless[i] ??= new EndlessProgress();
@@ -257,7 +269,6 @@ namespace MummyEscape.Services
             bool improved = rec.Merge(result);
             int coins = Progression.CoinsFor(result, previousStars);
             Data.Coins += coins;
-            AddPassXp(Monetization.BattlePass.SoloXp(result.Won, result.Stars), false);
             Save();
             return new RecordOutcome { NewBest = improved && result.Won, CoinsEarned = coins, PreviousBestOverPar = previousBest, PreviousBestTimeMs = previousTime };
         }
