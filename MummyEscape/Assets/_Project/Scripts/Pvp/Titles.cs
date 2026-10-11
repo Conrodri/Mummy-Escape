@@ -2,6 +2,7 @@
 // C# pur, partagé avec le serveur : il vérifie les titres de duel avant de les montrer aux adversaires.
 using System;
 using System.Collections.Generic;
+using MummyEscape.Core;
 
 namespace MummyEscape.Pvp
 {
@@ -39,8 +40,8 @@ namespace MummyEscape.Pvp
 
     public static class Titles
     {
-        /// <summary>Un acte compte 5 niveaux de 3 étoiles par mode : 30, ce sont ses modes Facile et Normal parfaits.</summary>
-        public const int SoloStarsPerAct = 30;
+        /// <summary>Un acte compte 10 niveaux de 3 étoiles par mode : 60, ce sont ses modes Facile et Normal parfaits.</summary>
+        public const int SoloStarsPerAct = 2 * DifficultyTable.LevelsPerAct * 3;
         public const int SpeedLimitMs = 5_000;
 
         public static readonly IReadOnlyList<TitleDef> All = new[]

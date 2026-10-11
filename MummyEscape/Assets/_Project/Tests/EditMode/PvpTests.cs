@@ -187,7 +187,7 @@ namespace MummyEscape.Tests
             {
                 var id = PvpArena.LevelFor(seed);
                 Assert.That(id.Act, Is.InRange(1, 3));
-                Assert.That(id.Index, Is.InRange(2, 4));
+                Assert.That(id.Index, Is.InRange(3, 8));
                 Assert.AreEqual(Difficulty.Normal, id.Mode);
             }
             var a = PvpArena.Generate(4242);

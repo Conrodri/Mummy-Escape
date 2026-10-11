@@ -77,13 +77,13 @@ namespace MummyEscape.Pvp
 
         /// <summary>
         /// Niveau dont chaque labyrinthe reprend le contrat, parmi les actes ouverts au PvP (mode Normal) : aux actes 1 et 2,
-        /// un tombeau moyen (niveaux 2 à 4) et 2 étapes par coureur ; à l'acte 3, un grand (niveaux 4 et 5) et 3 étapes.
+        /// un tombeau moyen (niveaux 3 à 8) et 2 étapes par coureur ; à l'acte 3, un grand (niveaux 8 à 10) et 3 étapes.
         /// </summary>
         public static LevelId LevelFor(int seed)
         {
             uint u = (uint)seed;
             int act = 1 + (int)(u % 3);
-            return act < 3 ? new LevelId(Difficulty.Normal, act, 2 + (int)(u / 3 % 3)) : new LevelId(Difficulty.Normal, act, 4 + (int)(u / 3 % 2));
+            return act < 3 ? new LevelId(Difficulty.Normal, act, 3 + (int)(u / 3 % 6)) : new LevelId(Difficulty.Normal, act, 8 + (int)(u / 3 % 3));
         }
 
         /// <summary>Dalles de relais de chaque labyrinthe : une de moins que d'étapes par coureur.</summary>

@@ -334,24 +334,36 @@ namespace MummyEscape.Tests
                 Assert.That(DifficultyTable.GetAct(a).MinMoves, Is.GreaterThan(DifficultyTable.GetAct(a - 1).MinMoves));
         }
 
-        /// <summary>Each mode of an act climbs its band: scores never drop level after level and stay inside the band.</summary>
+        /// <summary>
+        /// Each mode of an act goes through its band along the sawtooth: every score inside the band, and the act ends on its
+        /// hardest tomb (within a point: the budget lands below its target on a tie).
+        /// </summary>
         [Test]
-        public void Acts_DifficultyClimbsWithinEachModeBand()
+        public void Acts_DifficultyFollowsTheSawtoothWithinEachModeBand()
         {
             foreach (var mode in DifficultyExt.All)
                 foreach (var act in Enumerable.Range(1, DifficultyTable.ActCount))
                 {
                     DifficultyTable.Band(mode, act, out int min, out int max);
-                    int levels = DifficultyTable.GetAct(act).Levels, previous = int.MinValue;
-                    for (int i = 1; i <= levels; i++)
-                    {
-                        var id = new LevelId(mode, act, i);
-                        int score = DifficultyScore.Of(DifficultyTable.Spec(id)).Score;
-                        Assert.That(score, Is.InRange(min, max), $"{id} out of its band");
-                        Assert.That(score, Is.GreaterThanOrEqualTo(previous), $"{id} lighter than the level before");
-                        previous = score;
-                    }
+                    int levels = DifficultyTable.GetAct(act).Levels;
+                    Assert.AreEqual(DifficultyTable.Sawtooth.Length, levels, "one sawtooth step per level");
+                    var scores = Enumerable.Range(1, levels).Select(i => DifficultyScore.Of(DifficultyTable.Spec(new LevelId(mode, act, i))).Score).ToList();
+                    for (int i = 0; i < levels; i++) Assert.That(scores[i], Is.InRange(min, max), $"{new LevelId(mode, act, i + 1)} out of its band");
+                    Assert.That(scores[levels - 1], Is.GreaterThanOrEqualTo(scores.Max() - 1), $"{mode} act {act} ends on its hardest tomb");
+                    Assert.That(scores[levels - 1], Is.GreaterThan(scores[0]), $"{mode} act {act} climbs");
                 }
+        }
+
+        /// <summary>Facile is discovery: past the first gate, at most 3 obstacles (spikes included), whatever the act's mechanics.</summary>
+        [Test]
+        public void Easy_AtMostThreeObstacles()
+        {
+            foreach (var id in DifficultyTable.Levels(Difficulty.Easy))
+            {
+                Assert.That(DifficultyScore.Of(DifficultyTable.Spec(id)).Obstacles, Is.LessThanOrEqualTo(3), id.ToString());
+                for (int v = 0; v < FastVariants; v++)
+                    Assert.That(DifficultyScore.Of(Get(id, v)).Obstacles, Is.LessThanOrEqualTo(3), $"{id} maze {v}");
+            }
         }
 
         /// <summary>The modes do not overlap: Normal starts where Facile ends, Extrême where Normal ends.</summary>
@@ -366,13 +378,13 @@ namespace MummyEscape.Tests
             }
         }
 
-        /// <summary>Acts 1-2 have one floor, acts 3-4 two, act 5 three, in every mode.</summary>
+        /// <summary>Facile keeps one floor; Normal and Extrême have one in acts 1-3 and two in acts 4-5.</summary>
         [Test]
         public void Acts_FloorsPerAct()
         {
-            var floors = new[] { 1, 1, 2, 2, 3 };
+            var floors = new[] { 1, 1, 1, 2, 2 };
             foreach (var id in DifficultyTable.AllLevels())
-                Assert.AreEqual(floors[id.Act - 1], DifficultyTable.Spec(id).Floors, id.ToString());
+                Assert.AreEqual(id.Mode == Difficulty.Easy ? 1 : floors[id.Act - 1], DifficultyTable.Spec(id).Floors, id.ToString());
         }
 
         /// <summary>Finishing a mode opens the next one, at its first level.</summary>

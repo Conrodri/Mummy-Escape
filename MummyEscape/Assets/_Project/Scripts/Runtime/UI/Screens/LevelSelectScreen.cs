@@ -60,7 +60,8 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(dot, 20, 20);
             }
 
-            _grid = (RectTransform)UIKit.FittedGrid(body, 3, new Vector2(290, 250), new Vector2(26, 26), out var slot).transform;
+            // Ten tombs per act: two rows of five.
+            _grid = (RectTransform)UIKit.FittedGrid(body, 5, new Vector2(200, 250), new Vector2(18, 26), out var slot).transform;
             UIKit.Size(slot, -1, -1, -1, 1);
 
             var row = UIKit.Rect("Continue", body); // noloc
@@ -150,7 +151,7 @@ namespace MummyEscape.UI.Screens
             _prev.gameObject.SetActive(_act > 1);
             _next.gameObject.SetActive(_act < DifficultyTable.ActCount);
             _actInfo.text = open
-                ? Loc.P(def.Floors, "{0} étage", "{0} étages") + "  ·  " + Loc.P(def.Levels, "{0} crypte", "{0} cryptes")
+                ? Loc.P(DifficultyTable.Floors(_mode, _act), "{0} étage", "{0} étages") + "  ·  " + Loc.P(def.Levels, "{0} crypte", "{0} cryptes")
                 : Loc.F("Termine le mode {0} pour l'ouvrir", LevelNames.Mode(_mode - 1));
             for (int i = 0; i < _dots.childCount; i++)
             {
@@ -229,6 +230,7 @@ namespace MummyEscape.UI.Screens
                        : done ? Loc.T("Évadé") : Loc.T("Inexploré");
             var best = UIKit.Label(col, "", 24, done ? UIKit.Sand : UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
             best.text = sub;
+            UIKit.FitText(best, 16); // "parfait · 1:05,3" on a card of five per row
             UIKit.Size(best, 34);
         }
 

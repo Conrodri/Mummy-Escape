@@ -145,8 +145,8 @@ namespace MummyEscape.Tests
         public void Titles_Progress()
         {
             var act = Titles.Get("title_act2");
-            Assert.AreEqual((30, 30), Titles.Progress(act, a => a == 2 ? 31 : 0, 0, 0, League.Bronze));
-            Assert.AreEqual((12, 30), Titles.Progress(act, a => a == 2 ? 12 : 30, 0, 0, League.Bronze));
+            Assert.AreEqual((60, 60), Titles.Progress(act, a => a == 2 ? 61 : 0, 0, 0, League.Bronze));
+            Assert.AreEqual((12, 60), Titles.Progress(act, a => a == 2 ? 12 : 60, 0, 0, League.Bronze));
             Assert.AreEqual((7, 15), Titles.Progress(Titles.Get("title_speed15"), _ => 0, 7, 0, League.Bronze));
             Assert.AreEqual((1, 1), Titles.Progress(Titles.Get("title_platine"), _ => 0, 0, 0, League.Diamant));
             Assert.AreEqual((0, 1), Titles.Progress(Titles.Get("title_platine"), _ => 0, 0, 0, League.Or));

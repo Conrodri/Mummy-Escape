@@ -12,9 +12,11 @@ namespace MummyEscape.Services
     {
         /// <summary>
         /// 2 = records compare runs by moves above the optimal route (every run is a new maze). 3 = the campaign in three
-        /// modes (Facile, Normal, Extrême) of 5 levels per act: the progress of the old campaign was reset.
+        /// modes (Facile, Normal, Extrême) of 5 levels per act: the progress of the old campaign was reset. 4 = generator
+        /// v13, 10 levels per act and lighter modes: the same keys hold other tombs, progress was reset again.
         /// </summary>
-        public int Version = 3;
+        public const int CurrentVersion = 4;
+        public int Version = CurrentVersion;
         public List<LevelRecord> Records = new List<LevelRecord>();
         public int Coins;
         /// <summary>Every shop item owned, whatever its slot (mummy, colour, torch, hat, shoes).</summary>
@@ -89,12 +91,14 @@ namespace MummyEscape.Services
             Data.SelectedTorch = SkinCatalog.Get(Data.SelectedTorch, CosmeticSlot.Torch).Id;
             Data.SelectedHat = SkinCatalog.Get(Data.SelectedHat, CosmeticSlot.Hat).Id;
             Data.SelectedShoes = SkinCatalog.Get(Data.SelectedShoes, CosmeticSlot.Shoes).Id;
-            if (Data.Version < 3)
+            if (Data.Version < SaveData.CurrentVersion)
             {
-                // The campaign became three modes of 5 levels per act: the old levels are gone, progress starts over
-                // (scarabs, skins and the tutorial are kept).
+                // v3: the campaign became three modes of 5 levels per act; v4: generator v13, 10 levels per act. The old
+                // tombs are gone, progress starts over (scarabs, skins and the tutorial are kept), and the scores the old
+                // leaderboards confirmed say nothing of the new ones.
                 Data.Records.Clear();
-                Data.Version = 3;
+                Data.SubmittedScores.Clear();
+                Data.Version = SaveData.CurrentVersion;
                 Save();
             }
         }
@@ -143,6 +147,8 @@ namespace MummyEscape.Services
             if (other == null) return false;
             Sanitize(other);
             string before = JsonUtility.ToJson(Data);
+            // A copy saved before the last reset holds the old campaign's records under the same keys: those stay out.
+            if (other.Version < SaveData.CurrentVersion) other.Records.Clear();
             foreach (var theirs in other.Records)
             {
                 if (theirs == null || string.IsNullOrEmpty(theirs.Key)) continue;

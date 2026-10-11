@@ -46,7 +46,7 @@ namespace MummyEscape.Core
     /// <summary>
     /// Difficulty points: every element of a tomb adds its weight. A level's score must stay inside the band of its act and
     /// mode (<see cref="DifficultyTable"/>): Facile below a threshold, Normal from there to the next, Extrême beyond.
-    /// Tune the game by changing these weights and the thresholds of the acts.
+    /// Tune the game by changing these weights, the <see cref="Combos"/> and the thresholds of the acts.
     /// </summary>
     public static class DifficultyScore
     {
@@ -74,6 +74,17 @@ namespace MummyEscape.Core
                 default: return 0;
             }
         }
+
+        /// <summary>
+        /// Combo penalties: two elements that hurt together cost more than their sum, once per tomb that holds both.
+        /// </summary>
+        public static readonly (Element a, Element b, int points)[] Combos =
+        {
+            (Element.Reverse, Element.Rotate, 3),     // two ways of losing one's bearings
+            (Element.Darkness, Element.Torch, 2),     // blinded twice
+            (Element.CursedPortal, Element.Floor, 3), // the curse wipes the memory of several floors
+            (Element.Rotate, Element.Floor, 2),       // a turned tomb over several floors
+        };
 
         public static bool IsTrap(Element e) => e >= Element.Spikes && e <= Element.Rotate;
         public static bool IsInteraction(Element e) => e >= Element.Door && e <= Element.Torch;
@@ -183,6 +194,8 @@ namespace MummyEscape.Core
             {
                 int s = 0;
                 for (int i = 0; i < _counts.Length; i++) s += _counts[i] * DifficultyScore.Weight((Element)i);
+                foreach (var (a, b, points) in DifficultyScore.Combos)
+                    if (this[a] > 0 && this[b] > 0) s += points;
                 return s;
             }
         }
@@ -210,6 +223,9 @@ namespace MummyEscape.Core
                 return n;
             }
         }
+
+        /// <summary>What Facile caps: traps (each spike), gates and torches, but the first gate every tomb has.</summary>
+        public int Obstacles => Math.Max(0, Traps + Interactions - 1);
 
         public int ActMechanics
         {

@@ -7,11 +7,11 @@ namespace MummyEscape.Core
     public sealed class ActDefinition
     {
         public string Name;
-        public int Levels = 5;
+        public int Levels = DifficultyTable.LevelsPerAct;
         /// <summary>Optimal move count window of a level with one gate on one floor; each extra gate and floor adds room.</summary>
         public int MinMoves;
         public int MaxMoves;
-        /// <summary>Floors of every tomb of the act, in every mode (acts 1-2: one, acts 3-4: two, act 5: three).</summary>
+        /// <summary>Floors of the act's tombs in Normal and Extrême (Facile keeps one: <see cref="ModeDefinition.MaxFloors"/>).</summary>
         public int Floors = 1;
         /// <summary>Maze cells per side on one floor, and once floors are stacked (smaller, to keep a level short).</summary>
         public int Cells = 6;
@@ -28,7 +28,7 @@ namespace MummyEscape.Core
         public int[] FireJets = { 0, 0, 0 };
         /// <summary>
         /// Difficulty thresholds of the act: Facile from [0] to [1], Normal from [1] to [2], Extrême from [2] to [3]. Each
-        /// mode's levels climb from its low threshold to its high one.
+        /// mode's levels climb through its band along <see cref="DifficultyTable.Sawtooth"/>.
         /// </summary>
         public int[] Thresholds;
         public int MinPoiSpacing = 3;
@@ -39,6 +39,13 @@ namespace MummyEscape.Core
     public sealed class ModeDefinition
     {
         public string Name;
+        /// <summary>Most floors of a tomb in this mode (below the act's own count).</summary>
+        public int MaxFloors = 3;
+        /// <summary>
+        /// Most obstacles a tomb holds besides its first gate and the act's mechanics: more gates, torches and traps, each
+        /// spike counted (<see cref="Composition.Obstacles"/>).
+        /// </summary>
+        public int MaxObstacles = int.MaxValue;
         /// <summary>Caps on what the budget may add: gates (the chain to the exit), torches, traps besides spikes.</summary>
         public int MaxGates;
         public int MaxTorches;
@@ -65,17 +72,27 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 12;
+        public const int GeneratorVersion = 13;
+
+        /// <summary>Levels of each act, in every mode.</summary>
+        public const int LevelsPerAct = 10;
 
         /// <summary>
-        /// One theme and one signature mechanic per act: the intact antechamber (doors, portals), the flooded galleries
-        /// (currents), the collapsed ruins (fragile slabs), the high-tech city of Anubis (laser barriers and switches)
-        /// and the burning sanctuary (flame jets on a beat, over crumbling ground).
+        /// Where each level of an act sits in its mode's band, in per mille: a sawtooth that climbs, eases off a little to
+        /// breathe, then climbs again, ending on the act's hardest tomb.
+        /// </summary>
+        public static readonly int[] Sawtooth = { 0, 200, 400, 250, 500, 700, 550, 750, 900, 1000 };
+
+        /// <summary>
+        /// One theme and one big novelty per act: the intact antechamber (doors, portals, shadows), the flooded galleries
+        /// (currents, and the wall torch), the collapsed ruins (fragile slabs, with mirrors and locked portals), the
+        /// high-tech city of Anubis (laser barriers and switches, with turning slabs and cursed portals) and the burning
+        /// sanctuary (flame jets on a beat, over crumbling ground).
         ///
         /// Each act is played in three modes (<see cref="Difficulty"/>). What a level holds comes from its difficulty budget:
         /// every element is worth points (<see cref="DifficultyScore"/>), each mode of an act has a band of points
-        /// (<see cref="ActDefinition.Thresholds"/>) and its levels climb through it. The game plays on memory and logic, not
-        /// on getting lost: every element serves the walk and no tomb can wall the player in for good.
+        /// (<see cref="ActDefinition.Thresholds"/>) and its levels go through it along <see cref="Sawtooth"/>. The game plays on
+        /// memory and logic, not on getting lost: every element serves the walk and no tomb can wall the player in for good.
         /// </summary>
         public static readonly IReadOnlyList<ActDefinition> Acts = new[]
         {
@@ -85,25 +102,25 @@ namespace MummyEscape.Core
                 MainGates = new[] { Element.Door, Element.Portal },
                 Interactions = new[] { Element.Door, Element.Portal },
                 Traps = new[] { Element.Darkness },
-                Thresholds = new[] { 7, 12, 18, 24 },
+                Thresholds = new[] { 3, 10, 17, 25 },
             },
             new ActDefinition
             {
                 Name = "Les Galeries inondées", MinMoves = 16, MaxMoves = 24, Cells = 6,
                 MainGates = new[] { Element.Door, Element.Portal },
                 Interactions = new[] { Element.Torch, Element.Door, Element.Portal },
-                Traps = new[] { Element.Reverse, Element.Darkness },
+                Traps = new[] { Element.Darkness },
                 Currents = new[] { 1, 1, 2 },
-                Thresholds = new[] { 9, 15, 22, 30 },
+                Thresholds = new[] { 5, 14, 21, 30 },
             },
             new ActDefinition
             {
-                Name = "Les Ruines effondrées", MinMoves = 18, MaxMoves = 26, Floors = 2, StackedCells = 5,
+                Name = "Les Ruines effondrées", MinMoves = 18, MaxMoves = 26, Cells = 6,
                 MainGates = new[] { Element.Portal, Element.Door, Element.LockedPortal },
                 Interactions = new[] { Element.LockedPortal, Element.Torch, Element.Door, Element.Portal },
-                Traps = new[] { Element.Rotate, Element.Reverse, Element.Darkness },
+                Traps = new[] { Element.Reverse, Element.Darkness },
                 CrumblingTiles = new[] { 1, 1, 2 },
-                Thresholds = new[] { 17, 25, 33, 42 },
+                Thresholds = new[] { 5, 16, 25, 36 },
             },
             new ActDefinition
             {
@@ -111,38 +128,44 @@ namespace MummyEscape.Core
                 // Every tomb has its laser.
                 MainGates = new[] { Element.Laser },
                 Interactions = new[] { Element.CursedPortal, Element.Laser, Element.Torch, Element.Door },
-                Traps = new[] { Element.Darkness, Element.Rotate, Element.Reverse },
-                Thresholds = new[] { 16, 25, 34, 44 },
+                Traps = new[] { Element.Rotate, Element.Darkness, Element.Reverse },
+                Thresholds = new[] { 4, 16, 28, 42 },
             },
             new ActDefinition
             {
-                Name = "Le Sanctuaire embrasé", MinMoves = 22, MaxMoves = 26, Floors = 3, StackedCells = 4,
+                Name = "Le Sanctuaire embrasé", MinMoves = 22, MaxMoves = 26, Floors = 2, StackedCells = 5,
                 MainGates = new[] { Element.Portal, Element.Door },
                 Interactions = new[] { Element.Laser, Element.Torch, Element.CursedPortal, Element.Door },
                 Traps = new[] { Element.Reverse, Element.Darkness, Element.Rotate },
                 FireJets = new[] { 1, 2, 2 }, CrumblingTiles = new[] { 1, 1, 1 },
-                Thresholds = new[] { 28, 36, 45, 55 },
+                Thresholds = new[] { 8, 22, 34, 46 },
             },
         };
 
         static readonly string[] EasyPatterns = { "pont", "long pont", "pont à torche", "long pont à torche" };
         static readonly string[] NormalPatterns = { "pont", "long pont", "pont profond", "pont à torche", "long pont à torche" };
 
+        /// <summary>
+        /// Facile = discovery: one floor, at most 3 obstacles past the first gate (no spike forced on top), finished quickly.
+        /// Normal = the same mechanics with more traps (2 spike traps per tomb, a shortcut), a second floor from act 4.
+        /// Extrême = the same floors as Normal, more interactions and their variants (blue barriers, decoy corridor, every
+        /// pattern, more gates and traps).
+        /// </summary>
         public static readonly IReadOnlyList<ModeDefinition> Modes = new[]
         {
             new ModeDefinition
             {
-                Name = "Facile", MaxGates = 2, MaxTorches = 1, MaxTraps = 2, MinSpikes = 2, MaxSpikes = 2, MaxShortcuts = 0, ExtraLoops = 2, MinFloorInterests = 1,
+                Name = "Facile", MaxFloors = 1, MaxObstacles = 3, MaxGates = 2, MaxTorches = 1, MaxTraps = 2, MinSpikes = 0, MaxSpikes = 2, MaxShortcuts = 0, ExtraLoops = 2, MinFloorInterests = 1,
                 Patterns = EasyPatterns, DecoyCorridor = false, BlueBarriers = false,
             },
             new ModeDefinition
             {
-                Name = "Normal", MaxGates = 3, MaxTorches = 1, MaxTraps = 3, MinSpikes = 2, MaxSpikes = 2, MaxShortcuts = 1, ExtraLoops = 3, MinFloorInterests = 1,
-                Patterns = NormalPatterns, DecoyCorridor = true, BlueBarriers = true,
+                Name = "Normal", MaxGates = 2, MaxTorches = 1, MaxTraps = 3, MinSpikes = 2, MaxSpikes = 2, MaxShortcuts = 1, ExtraLoops = 3, MinFloorInterests = 1,
+                Patterns = NormalPatterns, DecoyCorridor = false, BlueBarriers = false,
             },
             new ModeDefinition
             {
-                Name = "Extrême", MaxGates = 3, MaxTorches = 1, MaxTraps = 4, MinSpikes = 2, MaxSpikes = 2, MaxShortcuts = 1, ExtraLoops = 4,
+                Name = "Extrême", MaxGates = 3, MaxTorches = 1, MaxTraps = 3, MinSpikes = 2, MaxSpikes = 2, MaxShortcuts = 1, ExtraLoops = 4,
                 Patterns = null, DecoyCorridor = true, BlueBarriers = true,
             },
         };
@@ -187,14 +210,15 @@ namespace MummyEscape.Core
             max = t[(int)mode + 1];
         }
 
-        /// <summary>Points a level aims at: its mode's band climbed level after level, from the low threshold to the high one.</summary>
+        /// <summary>Points a level aims at: its place on the act's <see cref="Sawtooth"/>, inside its mode's band.</summary>
         public static int Target(LevelId id)
         {
             Band(id.Mode, id.Act, out int min, out int max);
-            int n = GetAct(id.Act).Levels;
-            if (n <= 1) return max;
-            return min + ((max - min) * (id.Index - 1) * 2 + (n - 1)) / ((n - 1) * 2);
+            return min + ((max - min) * Sawtooth[id.Index - 1] + 500) / 1000;
         }
+
+        /// <summary>Floors of a level: the act's, within what its mode allows.</summary>
+        public static int Floors(Difficulty mode, int act) => Math.Min(GetAct(act).Floors, GetMode(mode).MaxFloors);
 
         public static LevelSpec Spec(LevelId id)
         {
@@ -203,12 +227,13 @@ namespace MummyEscape.Core
             int m = (int)id.Mode, i = id.Index;
             if (i < 1 || i > act.Levels) throw new ArgumentOutOfRangeException(nameof(id));
 
-            int cells = act.Floors > 1 ? act.StackedCells : act.Cells;
+            int floors = Floors(id.Mode, id.Act);
+            int cells = floors > 1 ? act.StackedCells : act.Cells;
             Band(id.Mode, id.Act, out int min, out int max);
             var spec = new LevelSpec
             {
                 Id = id,
-                Floors = act.Floors,
+                Floors = floors,
                 CellsX = cells,
                 CellsY = cells,
                 ExtraLoops = mode.ExtraLoops,
@@ -240,7 +265,7 @@ namespace MummyEscape.Core
         /// <summary>
         /// Picks what the level holds on top of its first gate and its act mechanics: how many more gates, torches, traps and
         /// spikes, each kind taken in turn from the act's pools (from an offset that moves level after level, so neighbours
-        /// differ). Every mix within the mode's caps is tried; the one closest to the target wins (below it on a tie), then
+        /// differ). Every mix within the mode's caps (obstacles included) is tried; the one closest to the target wins (below it on a tie), then
         /// the one that balances interactions and traps best, then the one with fewer spikes.
         /// </summary>
         static void FillBudget(LevelSpec spec, ActDefinition act, ModeDefinition mode, int target, int min, int max, int index)
@@ -254,7 +279,7 @@ namespace MummyEscape.Core
             int maxTorches = torches ? mode.MaxTorches : 0;
             int maxTraps = traps.Count > 0 ? mode.MaxTraps : 0;
             // Spike shortcuts need room for their way round: single-floor tombs only (on stacked floors they rarely fit).
-            int maxShortcuts = act.Floors == 1 ? mode.MaxShortcuts : 0;
+            int maxShortcuts = spec.Floors == 1 ? mode.MaxShortcuts : 0;
 
             (int g, int t, int k, int s, int sc)? best = null;
             (int, int, int, int, int) bestKey = default;
@@ -268,8 +293,11 @@ namespace MummyEscape.Core
                                 if (t > 0 && sc > 0) continue;
                                 var trial = spec.WithMoreMoves(0);
                                 Lay(trial, gates, traps, index, g, t, k, s, sc);
-                                int score = DifficultyScore.Of(trial).Score;
-                                if (score < min || score > max) continue;
+                                // Nor beside more than two mechanics, a locked portal counting two (thousands of attempts, at times none).
+                                if (sc > 0 && trial.RequiredButtons + trial.RequiredPortals > 2) continue;
+                                var composition = DifficultyScore.Of(trial);
+                                int score = composition.Score;
+                                if (score < min || score > max || composition.Obstacles > mode.MaxObstacles) continue;
                                 var key = (Math.Abs(score - target) * 2 + (score > target ? 1 : 0), Math.Abs(g + t - k), s + sc, sc, g + t + k);
                                 if (best.HasValue && key.CompareTo(bestKey) >= 0) continue;
                                 best = (g, t, k, s, sc);

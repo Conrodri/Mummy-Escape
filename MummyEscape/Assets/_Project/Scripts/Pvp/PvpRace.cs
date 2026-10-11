@@ -10,13 +10,13 @@ namespace MummyEscape.Pvp
     public static class PvpArena
     {
         /// <summary>
-        /// Niveau dont le duel reprend le contrat : mode Normal, niveaux 2 à 4 des actes 1 à 3, assez courts pour une course
+        /// Niveau dont le duel reprend le contrat : mode Normal, niveaux 3 à 8 des actes 1 à 3, assez courts pour une course
         /// de 3 minutes.
         /// </summary>
         public static LevelId LevelFor(int seed)
         {
             uint u = (uint)seed;
-            return new LevelId(Difficulty.Normal, 1 + (int)(u % 3), 2 + (int)(u / 3 % 3));
+            return new LevelId(Difficulty.Normal, 1 + (int)(u % 3), 3 + (int)(u / 3 % 6));
         }
 
         /// <summary>Graine du générateur : jamais celle d'une partie solo, et liée à la version du générateur.</summary>
