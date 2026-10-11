@@ -1,12 +1,12 @@
 # Réponses aux déclarations de la Play Console
 
-Play Console › Règles et programmes › **Contenu de l'application**. Réponses cohérentes avec le code (version 0.1.0) et la politique de confidentialité. À revoir si on ajoute pubs, analytics ou achats.
+Play Console › Règles et programmes › **Contenu de l'application**. Réponses cohérentes avec le code (version 0.1.6 : pubs récompensées AdMob, achats intégrés Google Play, tchat, duels en ligne) et la politique de confidentialité. À revoir à chaque changement des données collectées.
 
 ## Politique de confidentialité
 URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
 
 ## Annonces
-**Non**, l'application ne contient pas d'annonces.
+**Oui** : publicités récompensées Google AdMob, affichées seulement quand le joueur choisit d'en regarder une pour récupérer de l'énergie.
 
 ## Accès à l'application
 **Toutes les fonctionnalités sont disponibles sans restrictions d'accès.** Le compte est facultatif et le jeu est entièrement jouable hors ligne : aucun identifiant de test n'est nécessaire.
@@ -16,8 +16,9 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
 - Violence : **pas de violence réaliste, pas de sang**. La momie (personnage fantastique en pixel art) peut perdre la partie sur des pièges (pics, flammes) : violence fantastique très légère, sans représentation de blessure.
 - Peur : **non** (ambiance sombre, pas de contenu effrayant).
 - Sexualité, langage grossier, drogues, alcool, tabac, jeux d'argent : **non**.
-- Interactions entre utilisateurs : **oui, limitées**. Pseudonymes publics dans les classements et ajout d'amis par code, **sans chat ni messagerie**. Les pseudonymes sont choisis par les joueurs.
-- Partage de la position : **non**. Achats numériques : **non**.
+- Interactions entre utilisateurs : **oui**. Pseudonymes publics (classements, duels), ajout d'amis par code et **tchat** (global, guilde, messages privés entre amis) avec filtre de mots, blocage et signalement. Canal global fermé aux mineurs.
+- Partage de la position : **non**. Achats numériques : **oui** (scarabées dorés, pass).
+- Objets aléatoires achetables : **oui** (roue des scarabées : les tours se paient en scarabées, monnaie qui s'obtient aussi avec de l'argent réel). Pas de mise ni de gain d'argent réel. La roue est désactivée en Belgique.
 - Résultat attendu : **PEGI 3 ou 7 / ESRB Everyone**.
 
 ## Public cible et contenu
@@ -28,7 +29,7 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
 **Non** pour toutes.
 
 ## Identifiant publicitaire
-**Non**, l'application n'utilise pas l'identifiant publicitaire. Le manifeste fusionné ne contient pas la permission `com.google.android.gms.permission.AD_ID` (vérifié sur le build 0.1.0).
+**Oui** : le SDK Google Mobile Ads (AdMob) utilise l'identifiant publicitaire pour les publicités récompensées. La permission `com.google.android.gms.permission.AD_ID` est présente dans le manifeste fusionné.
 
 ## Sécurité des données
 ### Collecte et partage
@@ -47,9 +48,19 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
 | Activité dans l'appli › **Interactions avec l'appli** | Liste d'amis, statut en ligne | Fonctionnement de l'appli | Non |
 | Infos sur l'appli et performances › **Journaux de plantage / Diagnostics** | Journaux techniques du prestataire | Fonctionnement de l'appli, Sécurité | Non |
 | Appareil ou autres identifiants | Identifiant de session Unity | Fonctionnement de l'appli, Sécurité | Non |
+| Achats › **Historique des achats** | Produit, identifiant de commande, jeton d'achat Google Play, date | Fonctionnement de l'appli, Prévention des fraudes et sécurité | Non |
+| Messages › **Autres messages intégrés à l'appli** | Messages du tchat (100 derniers par canal), blocages, signalements | Fonctionnement de l'appli, Sécurité (modération) | Non |
+
+Exceptions, **collectées et partagées** (SDK AdMob, seulement quand le joueur regarde une pub) :
+
+| Catégorie Play | Donnée | Finalités | Facultatif ? |
+|---|---|---|---|
+| Appareil ou autres identifiants | Identifiant publicitaire | Publicité ou marketing, Analyse, Prévention des fraudes | Oui |
+| Infos sur l'appli et performances › Diagnostics | Informations techniques sur l'appareil | Publicité ou marketing, Prévention des fraudes | Oui |
+| Position › Position approximative | Déduite de l'adresse IP par AdMob | Publicité ou marketing, Prévention des fraudes | Oui |
 
 « Partagées » = **non** : Unity agit comme sous-traitant pour notre compte, ce que Google n'assimile pas à un partage.
-Pas de localisation, de contacts, de photos, d'e-mail, de paiement ni de santé.
+Pas de position précise, de contacts, de photos, d'e-mail, de coordonnées bancaires (le paiement est traité par Google) ni de santé. Les données de l'acheteur restent chez Google Play.
 
 ## Fonctionnalités financières, VPN, accès à tous les fichiers, alarmes exactes
 **Non concerné.**
