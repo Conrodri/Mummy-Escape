@@ -48,6 +48,7 @@ namespace MummyEscape.UI.Screens
             _title.text = result.Won ? Loc.F("Tombeau {0} atteint !", progress.Reached) : Loc.T("La momie est tombée…");
             _text.text = result.Won
                 ? Loc.F("Tombeau {0} franchi en {1}.", tomb, LevelResult.FormatTime(result.TimeMs)) + "\n"
+                  + Loc.F("+{0} scarabées · +{1} XP de pass", Monetization.BattlePass.EndlessScarabs, Monetization.BattlePass.EndlessXp) + "\n"
                   + Loc.F("Temps cumulé : {0}", LevelResult.FormatTime(progress.TimeMs))
                   + (more ? "" : "\n" + Loc.T("Tu as franchi tous les tombeaux : d'autres arrivent avec les mises à jour."))
                 : Loc.F("Le tombeau {0} t'attend toujours : même carte, nouvel essai.", tomb);

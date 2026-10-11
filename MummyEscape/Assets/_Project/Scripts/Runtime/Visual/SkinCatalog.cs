@@ -106,7 +106,7 @@ namespace MummyEscape.Visual
         public const string NoShoesId = "shoes_none";
 
         /// <summary>An act's collection unlocks with 25 stars per act: 25 for the first, 125 for the fifth (150 in the game).</summary>
-        public const int StarsPerTheme = 25;
+        public const int StarsPerTheme = 50;
 
         static SkinDef Mummy(string id, string name, int price, int theme, MummyShape shape, BandagePattern pattern) =>
             new SkinDef { Id = id, Name = name, Price = price, Slot = CosmeticSlot.Mummy, Theme = theme, Shape = shape, Pattern = pattern };

@@ -25,7 +25,7 @@ Au début de chaque niveau, le tombeau s'affiche étage par étage, 10 secondes 
 UN NOUVEAU LABYRINTHE À CHAQUE PARTIE
 Chaque partie tire un tombeau différent, toujours vérifié par un solveur : il existe un chemin parfait, à toi de le trouver. Impossible d'apprendre les niveaux par cœur : il faut de la logique et de la mémoire.
 
-5 ACTES, 50 NIVEAUX, 5 MÉCANIQUES
+5 ACTES, 150 NIVEAUX, 5 MÉCANIQUES
 • L'Antichambre : portes, boutons, pièges et portails.
 • Les Galeries inondées : des courants t'emportent jusqu'au bout du couloir.
 • Les Ruines effondrées : les dalles fissurées s'effondrent dès que tu les quittes.

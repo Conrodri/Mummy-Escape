@@ -380,7 +380,7 @@ namespace MummyEscape.UI.Screens
         void FillSets()
         {
             var save = App.Save;
-            Intro("Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (25 par acte). L'ensemble complet coûte 20 % de moins.");
+            Intro("Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (50 par acte). L'ensemble complet coûte 20 % de moins.");
             for (int act = 1; act <= DifficultyTable.ActCount; act++)
             {
                 var set = SkinCatalog.ThemeSet(act);

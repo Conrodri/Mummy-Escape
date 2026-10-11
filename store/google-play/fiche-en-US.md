@@ -25,7 +25,7 @@ At the start of each level, the tomb is shown floor by floor, 10 seconds each (s
 A NEW MAZE EVERY GAME
 Every game draws a different tomb, always checked by a solver: there is a perfect path, and it is up to you to find it. You cannot learn the levels by heart: it takes logic and memory.
 
-5 ACTS, 50 LEVELS, 5 MECHANICS
+5 ACTS, 150 LEVELS, 5 MECHANICS
 • The Antechamber: doors, buttons, traps and portals.
 • The Flooded Galleries: currents carry you to the end of the corridor.
 • The Collapsed Ruins: cracked slabs collapse as soon as you step off them.

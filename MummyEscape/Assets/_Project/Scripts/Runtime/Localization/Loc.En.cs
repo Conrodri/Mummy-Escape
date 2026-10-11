@@ -213,8 +213,8 @@ namespace MummyEscape
             ["Classique"] = "Classic",
             ["Tout équiper"] = "Equip all",
             ["Ensemble : {0} scarabées"] = "Set: {0} scarabs",
-            ["Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (25 par acte). L'ensemble complet coûte 20 % de moins."] =
-                "Each act has its collection: mummy, torch, hat and shoes, unlocked by your stars (25 per act). The full set costs 20% less.",
+            ["Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (50 par acte). L'ensemble complet coûte 20 % de moins."] =
+                "Each act has its collection: mummy, torch, hat and shoes, unlocked by your stars (50 per act). The full set costs 20% less.",
             ["Les étoiles débloquent les collections des actes, les scarabées les paient."] = "Stars unlock the act collections, scarabs pay for them.",
             ["{0} étoiles requises"] = "{0} stars needed",
             ["Débloqué à {0} étoiles"] = "Unlocks at {0} stars",
@@ -1268,6 +1268,7 @@ namespace MummyEscape
             ["Franchis un tombeau sans fin pour entrer au classement"] = "Escape an endless tomb to enter the leaderboard",
             ["Plus d'énergie pour le mode sans fin : un point par tombeau."] = "More energy for endless mode: one point per tomb.",
             ["Énergie sans fin : {0}"] = "Endless energy: {0}",
+            ["+{0} scarabées · +{1} XP de pass"] = "+{0} scarabs · +{1} pass XP",
         };
     }
 }

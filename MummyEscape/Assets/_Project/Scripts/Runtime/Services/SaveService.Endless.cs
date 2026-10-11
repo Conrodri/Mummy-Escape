@@ -16,7 +16,12 @@ namespace MummyEscape.Services
         public EndlessProgress ApplyEndless(Difficulty mode, LevelResult result)
         {
             var p = EndlessOf(mode);
-            if (result.Won) p.Escaped(result.TimeMs);
+            if (result.Won)
+            {
+                p.Escaped(result.TimeMs);
+                Data.Coins += Monetization.BattlePass.EndlessScarabs; // a death retries the same tomb: each tomb pays once
+                AddPassXp(Monetization.BattlePass.EndlessXp, false);
+            }
             else p.Deaths++;
             Save();
             return p;
