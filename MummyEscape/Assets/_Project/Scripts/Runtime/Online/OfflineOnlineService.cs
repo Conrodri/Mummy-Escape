@@ -181,10 +181,10 @@ namespace MummyEscape.Online
 
         public Task<string> LoadCloudSaveAsync() => Task.FromResult(_demoCloudSave);
 
-        public Task SaveCloudSaveAsync(string json)
+        public Task<bool> SaveCloudSaveAsync(string json)
         {
             if (Account == AccountState.Account) _demoCloudSave = json;
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
 
         public Task ClearPublishedProgressAsync() => Task.CompletedTask;

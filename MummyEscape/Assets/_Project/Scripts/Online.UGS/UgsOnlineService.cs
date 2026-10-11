@@ -509,14 +509,14 @@ namespace MummyEscape.Online
                 var items = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { SaveKey });
                 return items.TryGetValue(SaveKey, out var item) ? item.Value.GetAsString() : null;
             }
-            catch (Exception e) { Debug.LogWarning("[Online] cloud save not loaded: " + e.Message); return null; }
+            catch (Exception e) { Debug.LogWarning("[Online] cloud save not loaded: " + e.Message); throw; } // not "no save": the caller must not overwrite it
         }
 
-        public async Task SaveCloudSaveAsync(string json)
+        public async Task<bool> SaveCloudSaveAsync(string json)
         {
-            if (Account != AccountState.Account) return; // guests keep everything on the device
-            try { await CloudSaveService.Instance.Data.Player.SaveAsync(new Dictionary<string, object> { { SaveKey, json } }); }
-            catch (Exception e) { Debug.LogWarning("[Online] cloud save not written: " + e.Message); }
+            if (Account != AccountState.Account) return true; // guests keep everything on the device
+            try { await CloudSaveService.Instance.Data.Player.SaveAsync(new Dictionary<string, object> { { SaveKey, json } }); return true; }
+            catch (Exception e) { Debug.LogWarning("[Online] cloud save not written: " + e.Message); return false; }
         }
 
         public Task ClearPublishedProgressAsync() => IsAvailable ? DeleteKey(ProgressKey, true) : Task.CompletedTask;

@@ -132,9 +132,10 @@ namespace MummyEscape.Online
         Task<string> ChangePasswordAsync(string current, string next);
         /// <summary>Erases the online account and all its data (GDPR art. 17, store requirements).</summary>
         Task<string> DeleteAccountAsync();
-        /// <summary>Private cloud copy of the local save (accounts only), null when none.</summary>
+        /// <summary>Private cloud copy of the local save (accounts only), null when none; throws when it could not be read.</summary>
         Task<string> LoadCloudSaveAsync();
-        Task SaveCloudSaveAsync(string json);
+        /// <summary>True once the copy is written (or there is nothing to write for a guest).</summary>
+        Task<bool> SaveCloudSaveAsync(string json);
         /// <summary>Removes the progression snapshot friends could read.</summary>
         Task ClearPublishedProgressAsync();
         /// <summary>Everything the server holds about the player, as JSON (GDPR art. 15 and 20).</summary>

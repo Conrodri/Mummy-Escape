@@ -105,6 +105,13 @@ namespace MummyEscape.UI.Screens
 
             _online = UIKit.Label(Root, "", 24, UIKit.Dim, TextAnchor.MiddleCenter);
             UIKit.BottomBand(_online.rectTransform, 50, 36);
+            UIKit.FitText(_online, 16);
+            // A guest's progress lives on this phone only: the line leads to the account screen.
+            _online.raycastTarget = true;
+            _online.gameObject.AddComponent<Button>().onClick.AddListener(() =>
+            {
+                if (App.Online.Account == Online.AccountState.Guest) Router.Open<AccountScreen>();
+            });
         }
 
         public override void OnShow()
@@ -121,7 +128,9 @@ namespace MummyEscape.UI.Screens
             MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)
-                : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName) : Loc.F("Invité : {0}", online.PlayerName);
+                : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName)
+                : Loc.T("Invité : ta progression n'est que sur ce téléphone. Crée un compte pour ne rien perdre ›");
+            _online.color = online.IsAvailable && online.Account == Online.AccountState.Guest ? UIKit.Gold : UIKit.Dim;
             _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId);
             _ = Online.ChatState.RefreshAsync(App.Pvp);
             _ = Online.ChatState.SyncProfileAsync(App);

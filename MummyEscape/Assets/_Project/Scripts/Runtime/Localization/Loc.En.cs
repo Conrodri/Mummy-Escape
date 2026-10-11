@@ -1428,6 +1428,7 @@ namespace MummyEscape
             ["Épique"] = "Epic",
             ["Qualité"] = "Quality",
             ["Promos"] = "Deals",
+            ["Invité : ta progression n'est que sur ce téléphone. Crée un compte pour ne rien perdre ›"] = "Guest: your progress is only on this phone. Create an account to keep it all ›",
             ["Chaque jour, 3 pièces communes, 2 rares, 1 épique et 1 légendaire à -25 %. Une pièce ne revient qu'une fois toutes les autres passées."] = "Every day, 3 common pieces, 2 rare, 1 epic and 1 legendary at 25% off. A piece only comes back once all the others have been on sale.",
             ["Nouvelles promos dans {0} h {1:00} min"] = "New deals in {0} h {1:00} min",
             ["Les parures du Trésor, en scarabées dorés : les pièces qui te manquent à -20 %."] = "The Treasure's regalia, for golden scarabs: the pieces you're missing at 20% off.",

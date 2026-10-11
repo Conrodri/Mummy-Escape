@@ -297,17 +297,8 @@ namespace MummyEscape.App
             if (Developers.Is(Online.PlayerId)) Save.GrantSkins(Developers.Skins);
             // Purchases paid while the game was stopped get credited; the team gets its season pass with the wallet.
             _ = Monetization.GoldWallet.RefreshAsync(this);
-            if (Online.Account == AccountState.Account)
-            {
-                // The cloud copy (another device) is folded into this one, then the union goes back up.
-                var json = await Online.LoadCloudSaveAsync();
-                if (!string.IsNullOrEmpty(json))
-                {
-                    try { Save.MergeFrom(JsonUtility.FromJson<SaveData>(json)); }
-                    catch (System.Exception e) { Debug.LogWarning("[Save] Unreadable cloud save: " + e.Message); }
-                }
-                await PushCloudSave();
-            }
+            _cloudLoaded = false;
+            if (Online.Account == AccountState.Account) await LoadCloudSave();
             _syncedStars = -1;
             await SyncSoloStars();
             await PublishProgress();
@@ -328,20 +319,45 @@ namespace MummyEscape.App
             return Online.PublishProgressAsync(BuildProgressSnapshot());
         }
 
-        // Cloud save: written at most every 20 s while dirty, and when the app goes to the background.
-        bool _cloudDirty;
-        float _nextCloudPush;
+        // Cloud save: written at most every 20 s while dirty, and when the app goes to the background; never before the
+        // cloud copy was read (a failed read is not "no save": writing then would erase another device's progress).
+        bool _cloudDirty, _cloudLoaded, _cloudLoading;
+        float _nextCloudPush, _nextCloudLoad;
 
-        Task PushCloudSave()
+        /// <summary>The cloud copy (another device) is folded into this one, then the union goes back up; retried on failure.</summary>
+        async Task LoadCloudSave()
         {
+            if (_cloudLoading) return;
+            _cloudLoading = true;
+            try
+            {
+                string json;
+                try { json = await Online.LoadCloudSaveAsync(); }
+                catch (System.Exception) { _nextCloudLoad = Time.unscaledTime + 60f; return; }
+                if (!string.IsNullOrEmpty(json))
+                {
+                    try { Save.MergeFrom(JsonUtility.FromJson<SaveData>(json)); }
+                    catch (System.Exception e) { Debug.LogWarning("[Save] Unreadable cloud save: " + e.Message); }
+                }
+                _cloudLoaded = true;
+                await PushCloudSave();
+            }
+            finally { _cloudLoading = false; }
+        }
+
+        async Task PushCloudSave()
+        {
+            if (!_cloudLoaded) return;
             _cloudDirty = false;
             _nextCloudPush = Time.unscaledTime + 20f;
-            return Online.SaveCloudSaveAsync(JsonUtility.ToJson(Save.Data));
+            if (!await Online.SaveCloudSaveAsync(JsonUtility.ToJson(Save.Data))) _cloudDirty = true; // tried again in 20 s
         }
 
         void Update()
         {
-            if (_cloudDirty && Time.unscaledTime >= _nextCloudPush && Online.Account == AccountState.Account) _ = PushCloudSave();
+            if (Online == null || Online.Account != AccountState.Account) return;
+            if (!_cloudLoaded) { if (_nextCloudLoad > 0f && Time.unscaledTime >= _nextCloudLoad) _ = LoadCloudSave(); return; } // retry a failed read
+            if (_cloudDirty && Time.unscaledTime >= _nextCloudPush) _ = PushCloudSave();
         }
 
         void OnApplicationPause(bool paused)
