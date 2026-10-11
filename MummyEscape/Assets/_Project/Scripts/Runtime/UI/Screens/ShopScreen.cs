@@ -25,8 +25,8 @@ namespace MummyEscape.UI.Screens
         const int Columns = 3;
         const float CardHeight = 380;
 
-        static readonly string[] Sections = { "Trésor", "Skins", "Collections", "Sceaux" };
-        const int TreasureSection = 0, SkinsSection = 1, SetsSection = 2, SealsSection = 3;
+        static readonly string[] Sections = { "Promos", "Trésor", "Skins", "Collections", "Sceaux" };
+        const int SaleSection = 0, TreasureSection = 1, SkinsSection = 2, SetsSection = 3, SealsSection = 4;
         static readonly (string name, CosmeticSlot slot)[] Categories =
         {
             ("Momies", CosmeticSlot.Mummy), ("Couleurs", CosmeticSlot.Color), ("Torches", CosmeticSlot.Torch),
@@ -126,13 +126,15 @@ namespace MummyEscape.UI.Screens
             bool owned = save.Data.OwnedSkins.Contains(item.Id);
             bool worn = save.IsWorn(item.Id);
             var (tag, color) = item.Legendary ? (Loc.T("Légendaire"), LegendaryColor) : (Loc.T("Trésor"), TreasureScreen.GoldColor);
+            int cost = Monetization.ShopSale.GoldPrice(gold, DateTime.UtcNow);
             Sprite icon; string price; Color priceColor;
             if (worn) { icon = UISprites.Check; price = Loc.T("Équipé"); priceColor = UIKit.Turquoise; }
             else if (owned) { icon = null; price = Loc.T("Possédé"); priceColor = UIKit.Sand; }
-            else { icon = UIKit.Art.GoldScarab; price = gold.Gold.ToString(); priceColor = save.Gold >= gold.Gold ? TreasureScreen.GoldColor : UIKit.Danger; }
+            else { icon = UIKit.Art.GoldScarab; price = cost.ToString(); priceColor = save.Gold >= cost ? TreasureScreen.GoldColor : UIKit.Danger; }
             var card = Card(parent, item, tag, color, worn, false, icon, price, priceColor,
                 () => TreasureScreen.Zoom(App, Router, gold, () => Router.Open<TreasureScreen>(), _ => Refresh()));
             if (GoldBuyable(gold)) BuyDot(card);
+            if (!owned && cost < gold.Gold) SaleBadge(card);
             UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
         }
 
@@ -237,7 +239,7 @@ namespace MummyEscape.UI.Screens
         bool Buyable(SkinDef s)
         {
             var save = App.Save;
-            return s.Price > 0 && !save.Data.OwnedSkins.Contains(s.Id) && save.TotalStars >= s.MinStars && save.Data.Coins >= s.Price;
+            return s.Price > 0 && !save.Data.OwnedSkins.Contains(s.Id) && save.TotalStars >= s.MinStars && save.Data.Coins >= ScarabPrice(s);
         }
 
         int BuyableIn(CosmeticSlot slot)
@@ -248,7 +250,7 @@ namespace MummyEscape.UI.Screens
             return n;
         }
 
-        bool GoldBuyable(Monetization.GoldItem g) => !App.Save.Data.OwnedSkins.Contains(g.SkinId) && App.Save.Gold >= g.Gold;
+        bool GoldBuyable(Monetization.GoldItem g) => !App.Save.Data.OwnedSkins.Contains(g.SkinId) && App.Save.Gold >= Monetization.ShopSale.GoldPrice(g, DateTime.UtcNow);
 
         static bool SealBuyable(SealItem item, PlayerPvpData d, ICollection<string> owned) =>
             d != null && !owned.Contains(item.Id) && !d.UnlockedRewards.Contains(item.Id) && d.HighestLeague >= item.MinLeague && d.Seals >= item.Price;
@@ -270,6 +272,10 @@ namespace MummyEscape.UI.Screens
             foreach (var g in TreasureScreen.Exclusives(App)) if (GoldBuyable(g)) treasure++;
             int seals = 0;
             foreach (var s in SealShop.Items) if (SealBuyable(s, d, App.Save.Data.OwnedSkins)) seals++;
+            int sale = 0;
+            foreach (var s in ScarabSale()) if (Buyable(s)) sale++;
+            foreach (var g in Monetization.ShopSale.GoldOnSale(DateTime.UtcNow)) if (GoldBuyable(g)) sale++;
+            _sections.SetLabel(SaleSection, Counted(Sections[SaleSection], sale));
             _sections.SetLabel(TreasureSection, Counted(Sections[TreasureSection], treasure));
             _sections.SetLabel(SkinsSection, Counted(Sections[SkinsSection], skins));
             _sections.SetLabel(SealsSection, Counted(Sections[SealsSection], seals));
@@ -330,6 +336,7 @@ namespace MummyEscape.UI.Screens
             UIKit.ClearChildren(_list);
             _note = null;
             _cardIndex = 0;
+            if (_section == SaleSection) { FillSale(); return; }
             if (_section == TreasureSection) { FillTreasure(); return; }
             if (_section == SetsSection) { FillSets(pvp); return; }
             if (_section == SealsSection) { FillSeals(pvp); return; }
@@ -482,26 +489,83 @@ namespace MummyEscape.UI.Screens
             bool owned = save.Data.OwnedSkins.Contains(item.Id);
             bool worn = save.IsWorn(item.Id);
             bool locked = !owned && save.TotalStars < item.MinStars;
-            bool affordable = !locked && save.Data.Coins >= item.Price;
+            bool affordable = !locked && save.Data.Coins >= ScarabPrice(item);
             var (tag, color) = TagOf(item);
 
             Sprite icon; string price; Color priceColor;
             if (worn) { icon = UISprites.Check; price = Loc.T("Équipé"); priceColor = UIKit.Turquoise; }
             else if (owned) { icon = null; price = Loc.T("Possédé"); priceColor = UIKit.Sand; }
             else if (locked) { icon = UIKit.Art.Star; price = item.MinStars.ToString(); priceColor = UIKit.Dim; }
-            else { icon = UIKit.Art.Scarab; price = item.Price.ToString(); priceColor = affordable ? UIKit.Gold : UIKit.Danger; }
+            else { icon = UIKit.Art.Scarab; price = ScarabPrice(item).ToString(); priceColor = affordable ? UIKit.Gold : UIKit.Danger; }
 
             var card = Card(parent, item, tag, color, worn, locked, icon, price, priceColor, () =>
             {
                 string action = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper")
                               : locked ? Loc.F("{0} étoiles requises", item.MinStars)
-                              : affordable ? Loc.F("Acheter · {0} scarabées", item.Price) : Loc.F("Il te faut {0} scarabées", item.Price);
+                              : affordable ? Loc.F("Acheter · {0} scarabées", ScarabPrice(item)) : Loc.F("Il te faut {0} scarabées", ScarabPrice(item));
                 string detail = Origin(item) + (locked ? "\n" + Loc.F("Débloqué à {0} étoiles (tu en as {1}).", item.MinStars, save.TotalStars) : "");
                 Router.Open<ItemZoomScreen>().Show(item, tag, color, detail, action,
                     !worn && (owned || affordable) ? () => OnItem(item) : (Action)null);
             });
             if (!owned && affordable) BuyDot(card);
+            if (!owned && ScarabPrice(item) < item.Price) SaleBadge(card);
             UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
+        }
+
+        /// <summary>A red "-25 %" tab on the top left of the item.</summary>
+        static void SaleBadge(Image card)
+        {
+            var badge = UIKit.Plate(card.transform, UIKit.Danger, 14, null, false, "Sale"); // noloc
+            badge.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Place(badge.rectTransform, 0f, 1f, 96, 40, 62, -66);
+            var text = UIKit.Label(badge.transform, "", 24, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+            text.text = "-" + Monetization.ShopSale.PercentOff + " %"; // noloc
+            UIKit.Stretch(text.rectTransform);
+        }
+
+        // ------------------------------------------------------------------ sale
+
+        static List<SkinDef> _commons, _rares, _scarabSale;
+        static int _scarabSaleDay = -1;
+
+        /// <summary>The scarab pieces the sale deals from: the classics (common) and the act pieces (rare).</summary>
+        static List<SkinDef> Pool(bool acts)
+        {
+            var list = new List<SkinDef>();
+            foreach (var s in SkinCatalog.All)
+                if (s.Price > 0 && s.Badge == null && !s.Pvp && !s.Legendary && (s.Theme > 0) == acts) list.Add(s);
+            return list;
+        }
+
+        /// <summary>Today's scarab pieces on sale: the commons then the rares.</summary>
+        static List<SkinDef> ScarabSale()
+        {
+            int day = Monetization.ShopSale.Day(DateTime.UtcNow);
+            if (day == _scarabSaleDay) return _scarabSale;
+            _commons ??= Pool(false);
+            _rares ??= Pool(true);
+            _scarabSale = Monetization.ShopSale.Deal(_commons, Monetization.ShopSale.Commons, day, Monetization.ShopSale.CommonSalt);
+            _scarabSale.AddRange(Monetization.ShopSale.Deal(_rares, Monetization.ShopSale.Rares, day, Monetization.ShopSale.RareSalt));
+            _scarabSaleDay = day;
+            return _scarabSale;
+        }
+
+        internal static int ScarabPrice(SkinDef item) => ScarabSale().Contains(item) ? Monetization.ShopSale.Price(item.Price) : item.Price;
+
+        /// <summary>The Promos tab: today's 7 pieces at -25 %, the rarest first, and when the next ones come.</summary>
+        void FillSale()
+        {
+            Intro("Chaque jour, 3 pièces communes, 2 rares, 1 épique et 1 légendaire à -25 %. Une pièce ne revient qu'une fois toutes les autres passées.");
+            var left = Monetization.ShopSale.Ends(DateTime.UtcNow) - DateTime.UtcNow;
+            var countdown = UIKit.Label(_list, Loc.F("Nouvelles promos dans {0} h {1:00} min", (int)left.TotalHours, left.Minutes), 28, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Size(countdown, 44);
+
+            var cards = new List<Action<Transform>>();
+            var gold = Monetization.ShopSale.GoldOnSale(DateTime.UtcNow);
+            for (int i = gold.Count - 1; i >= 0; i--) { var g = gold[i]; cards.Add(p => GoldCard(p, g)); } // legendary, then epic
+            var scarab = ScarabSale();
+            for (int i = scarab.Count - 1; i >= 0; i--) { var s = scarab[i]; cards.Add(p => ItemCard(p, s)); } // rares, then commons
+            Grid(cards.Count, (parent, i) => cards[i](parent));
         }
 
         /// <summary>A pulsing gold disc on the card's corner: this one can be bought right now.</summary>
@@ -528,7 +592,7 @@ namespace MummyEscape.UI.Screens
             var save = App.Save;
             if (!save.Data.OwnedSkins.Contains(item.Id))
             {
-                if (!save.TryBuySkin(item.Id, item.Price)) return;
+                if (!save.TryBuySkin(item.Id, ScarabPrice(item))) return;
                 App.Audio.Play(Sfx.Coin);
             }
             save.SelectSkin(item.Id);

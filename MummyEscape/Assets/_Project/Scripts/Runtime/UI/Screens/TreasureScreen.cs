@@ -193,7 +193,7 @@ namespace MummyEscape.UI.Screens
             var name = UIKit.Label(card.transform, def.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(name, 15);
             UIKit.Size(name, 58, 0);
-            string label = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("{0} dorés", item.Gold);
+            string label = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("{0} dorés", ShopSale.GoldPrice(item, System.DateTime.UtcNow));
             var btn = UIKit.Button(card.transform, label, () => OnItem(item), 22, !worn ? ButtonStyle.Primary : ButtonStyle.Secondary);
             btn.interactable = !worn && !_busy;
             UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
@@ -274,7 +274,7 @@ namespace MummyEscape.UI.Screens
             bool worn = save.IsWorn(item.SkinId);
             string tag = def.Legendary ? Loc.T("Légendaire") : Loc.T("Trésor");
             Color color = def.Legendary ? CasinoScreen.LegendaryColor : GoldColor;
-            string action = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("Acheter · {0} dorés", item.Gold);
+            string action = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("Acheter · {0} dorés", ShopSale.GoldPrice(item, System.DateTime.UtcNow));
             router.Open<ItemZoomScreen>().Show(def, tag, color, Loc.T("Exclusivité du Trésor : introuvable ailleurs, ni en boutique, ni au casino."),
                 action, worn ? (System.Action)null : () => BuyOrWear(app, router, item, showPacks, done));
         }
@@ -290,9 +290,10 @@ namespace MummyEscape.UI.Screens
                 done?.Invoke(false);
                 return;
             }
-            if (!EnoughGold(app, router, item.Gold, showPacks)) return;
-            router.Open<OfferDialog>().Configure(Loc.T(def.Name), Loc.F("L'acheter pour {0} scarabées dorés ?", item.Gold),
-                (Loc.F("Acheter · {0} dorés", item.Gold), ButtonStyle.Primary, async () =>
+            int price = ShopSale.GoldPrice(item, System.DateTime.UtcNow);
+            if (!EnoughGold(app, router, price, showPacks)) return;
+            router.Open<OfferDialog>().Configure(Loc.T(def.Name), Loc.F("L'acheter pour {0} scarabées dorés ?", price),
+                (Loc.F("Acheter · {0} dorés", price), ButtonStyle.Primary, async () =>
                 {
                     string error = await GoldWallet.RunAsync(app, p => p.BuyGoldItemAsync(item.SkinId));
                     if (error != null && !save.Data.OwnedSkins.Contains(item.SkinId))

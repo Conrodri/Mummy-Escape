@@ -151,13 +151,51 @@ namespace MummyEscape.Tests
 
             var r = await server.BuyGoldItemAsync("alice", set.Id);
             Assert.IsNull(r.Error);
-            Assert.AreEqual(500 - first.Gold - expected, r.Wallet.Gold, "the piece already owned is not paid again");
+            Assert.AreEqual(500 - ShopSale.GoldPrice(first, Now) - expected, r.Wallet.Gold, "the piece already owned is not paid again");
             foreach (var id in set.SkinIds) CollectionAssert.Contains(r.Wallet.Skins, id);
             Assert.AreEqual("OWNED", (await server.BuyGoldItemAsync("alice", set.Id)).Error);
 
             await Give(store, "bob", 1);
             Assert.AreEqual("GOLD", (await server.BuyGoldItemAsync("bob", set.Id)).Error);
             Assert.AreEqual(0, (await server.GetWalletAsync("bob")).Wallet.Skins.Count, "nothing given without the gold");
+        }
+
+        [Test]
+        public void Sale_DealsEachItemOncePerDeck_NeverTwiceADay()
+        {
+            var pool = new[] { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j" }; // noloc
+            const int perDay = 3;
+            var shown = new System.Collections.Generic.List<string>();
+            for (int day = 0; day < 400; day++)
+            {
+                var today = ShopSale.Deal(pool, perDay, day, 7);
+                Assert.AreEqual(perDay, today.Count);
+                CollectionAssert.AllItemsAreUnique(today, $"day {day}");
+                CollectionAssert.AreEqual(today, ShopSale.Deal(pool, perDay, day, 7), "the same sale everywhere");
+                shown.AddRange(today);
+            }
+            for (int deck = 0; (deck + 1) * pool.Length <= shown.Count; deck++)
+                CollectionAssert.AreEquivalent(pool, shown.GetRange(deck * pool.Length, pool.Length), $"deck {deck}: every item once");
+            for (int p = 1; p < shown.Count; p++)
+                Assert.AreNotEqual(shown[p - 1], shown[p], "no item dealt twice in a row across decks");
+        }
+
+        [Test]
+        public async Task Sale_TreasureItemOnSale_CostsAQuarterLess()
+        {
+            var (server, store) = NewServer();
+            var sale = ShopSale.GoldOnSale(Now);
+            Assert.AreEqual(2, sale.Count, "one epic, one legendary");
+            GoldItem full = null;
+            foreach (var g in ShopSale.GoldEpics) if (!sale.Contains(g)) full = g;
+
+            await Give(store, "alice", 500);
+            var r = await server.BuyGoldItemAsync("alice", sale[1].SkinId);
+            Assert.IsNull(r.Error);
+            Assert.AreEqual(500 - ShopSale.Price(sale[1].Gold), r.Wallet.Gold);
+            Assert.Less(ShopSale.Price(sale[1].Gold), sale[1].Gold);
+            r = await server.BuyGoldItemAsync("alice", full.SkinId);
+            Assert.AreEqual(500 - ShopSale.Price(sale[1].Gold) - full.Gold, r.Wallet.Gold, "off the sale, full price");
         }
 
         [Test]
