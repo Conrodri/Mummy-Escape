@@ -8,6 +8,10 @@ namespace MummyEscape.Pvp
     {
         /// <summary>Le skin légendaire animé de l'équipe (couleur de bandelettes).</summary>
         public const string SkinId = "dev_leg";
+        /// <summary>Le chapeau, la torche et les chaussures assortis au skin de l'équipe.</summary>
+        public const string HatId = "dev_hat", TorchId = "dev_torch", ShoesId = "dev_shoes";
+        /// <summary>Tout ce que l'équipe reçoit sur chacun de ses comptes.</summary>
+        public static readonly string[] Skins = { SkinId, HatId, TorchId, ShoesId };
         /// <summary>Le titre légendaire animé de l'équipe.</summary>
         public const string TitleId = "title_dev";
 
@@ -27,6 +31,9 @@ namespace MummyEscape.Pvp
         {
             if (look == null || Is(playerId)) return look;
             if (look.Color == SkinId) look.Color = null;
+            if (look.Hat == HatId) look.Hat = null;
+            if (look.Torch == TorchId) look.Torch = null;
+            if (look.Shoes == ShoesId) look.Shoes = null;
             if (look.Title == TitleId) look.Title = null;
             return look;
         }

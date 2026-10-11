@@ -26,6 +26,8 @@ namespace MummyEscape.Services
         public bool PvpBots { get; private set; }
         /// <summary>Swipes, an on-screen directional pad, or a joystick that keeps moving while held.</summary>
         public MoveControl Controls { get; private set; }
+        /// <summary>Home screen backdrop: the act whose tomb is drawn behind it (see HomeThemes), 0 = the plain dark one.</summary>
+        public int HomeTheme { get; private set; }
 
         public event Action Changed;
 
@@ -41,6 +43,7 @@ namespace MummyEscape.Services
             Language = PlayerPrefs.GetString("lang", "");
             PvpBots = PlayerPrefs.GetInt("pvp_bots", 1) == 1;
             Controls = (MoveControl)Mathf.Clamp(PlayerPrefs.GetInt("controls", 0), 0, 2);
+            HomeTheme = PlayerPrefs.GetInt("home_theme", 0);
         }
 
         public void SetMusicVolume(float v) { MusicVolume = Mathf.Clamp01(v); PlayerPrefs.SetFloat("music", MusicVolume); Commit(); }
@@ -52,6 +55,7 @@ namespace MummyEscape.Services
         public void SetPvpBots(bool on) { PvpBots = on; PlayerPrefs.SetInt("pvp_bots", on ? 1 : 0); Commit(); }
         public void SetControls(MoveControl c) { Controls = c; PlayerPrefs.SetInt("controls", (int)c); Commit(); }
         public void SetShowPreview(bool on) { ShowPreview = on; PlayerPrefs.SetInt("preview", on ? 1 : 0); Commit(); }
+        public void SetHomeTheme(int act) { HomeTheme = act; PlayerPrefs.SetInt("home_theme", act); Commit(); }
         public void SetLanguage(string code) { Language = code ?? ""; PlayerPrefs.SetString("lang", Language); Commit(); Loc.Apply(Language); }
 
         void Commit()

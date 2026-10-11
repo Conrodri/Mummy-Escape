@@ -256,8 +256,8 @@ namespace MummyEscape.App
         /// <summary>After a sign-in, an account creation or a startup: syncs the save and the shared progression.</summary>
         public async Task AfterAccountChange()
         {
-            // The game's team gets its legendary skin on every account it signs in with (the title follows from it).
-            if (Developers.Is(Online.PlayerId)) Save.GrantSkins(new[] { Developers.SkinId });
+            // The game's team gets its legendary skin and its matching set on every account it signs in with (the title follows from it).
+            if (Developers.Is(Online.PlayerId)) Save.GrantSkins(Developers.Skins);
             // Purchases paid while the game was stopped get credited; the team gets its season pass with the wallet.
             _ = Monetization.GoldWallet.RefreshAsync(this);
             if (Online.Account == AccountState.Account)
