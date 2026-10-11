@@ -518,7 +518,8 @@ namespace MummyEscape.Online
 
             static int ParseInt(string s) => int.TryParse(s, out int v) ? v : PvpConfig.StartingElo;
 
-            static string DifficultyGen() => "v" + Core.DifficultyTable.GeneratorVersion; // noloc
+            /// <summary>Only games with the same tombs and the same map draft meet.</summary>
+            static string DifficultyGen() => "v" + Core.DifficultyTable.GeneratorVersion + "d" + PvpDraft.Version; // noloc
 
             static string EncodeLook(PlayerLook look) => look == null ? "" :
                 string.Join("|", look.Mummy, look.Color, look.Torch, look.Hat, look.Shoes, look.Title); // noloc

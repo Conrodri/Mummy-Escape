@@ -41,9 +41,12 @@ namespace MummyEscape.Pvp
     public class LiveDuel
     {
         public string Id;
+        /// <summary>Le tombeau joué : 0 tant que le tirage (<see cref="Draft"/>) est ouvert.</summary>
         public int Seed;
         public int GeneratorVersion;
         public LiveDuelist A, B;
+        /// <summary>Les trois cartes proposées et les bannissements.</summary>
+        public MapDraft Draft;
         /// <summary>Contre un bot (personne de la ligue en une minute) : sa course, jouée d'avance et rejouée comme un rival.</summary>
         public GhostRun BotRun;
         public long CreatedAtUnixMs;
@@ -54,7 +57,7 @@ namespace MummyEscape.Pvp
 
         public LiveDuelist SideOf(string playerId) => A?.PlayerId == playerId ? A : B?.PlayerId == playerId ? B : null;
         public LiveDuelist OtherSide(string playerId) => A?.PlayerId == playerId ? B : B?.PlayerId == playerId ? A : null;
-        public bool VsBot => BotRun != null;
+        public bool VsBot => BotRun != null || B?.Bot == true;
     }
 
     [Serializable]

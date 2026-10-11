@@ -81,6 +81,7 @@ namespace MummyEscape.Pvp
         /// </summary>
         public static LevelId LevelFor(int seed)
         {
+            if (PvpDraft.TryDecode(seed, out var drafted)) return drafted; // une carte du tirage
             uint u = (uint)seed;
             int act = 1 + (int)(u % 3);
             return act < 3 ? new LevelId(Difficulty.Normal, act, 3 + (int)(u / 3 % 6)) : new LevelId(Difficulty.Normal, act, 8 + (int)(u / 3 % 3));

@@ -160,14 +160,19 @@ namespace MummyEscape.Pvp.Server
         // ------------------------------------------------------------------ 2v2 relay (live)
 
         /// <summary>L'hôte du salon crée le match des deux duos qui se sont trouvés (même salon = même match).</summary>
+        /// <remarks><c>draftVersion</c> : absent chez un jeu sans tirage des cartes (0), qui reçoit « OUTDATED ».</remarks>
         [CloudCodeFunction("StartRelayMatch")]
-        public Task<RelayMatchResponse> StartRelayMatch(IExecutionContext ctx, int generatorVersion, string matchKey, RelaySide a, RelaySide b) =>
-            Server(ctx).StartRelayMatchAsync(ctx.PlayerId, generatorVersion, matchKey, a, b);
+        public Task<RelayMatchResponse> StartRelayMatch(IExecutionContext ctx, int generatorVersion, string matchKey, RelaySide a, RelaySide b, int draftVersion) =>
+            Server(ctx).StartRelayMatchAsync(ctx.PlayerId, generatorVersion, matchKey, a, b, draftVersion);
 
-        /// <summary>Aucun duo en vue : un match contre un duo de bots, couru d'avance par le serveur.</summary>
+        /// <summary>Aucun duo en vue : un match contre un duo de bots, qui votent au tirage puis courent d'avance.</summary>
         [CloudCodeFunction("StartRelayBots")]
-        public Task<RelayMatchResponse> StartRelayBots(IExecutionContext ctx, int generatorVersion, string matchKey, RelaySide mine) =>
-            Server(ctx).StartRelayBotsAsync(ctx.PlayerId, generatorVersion, matchKey, mine);
+        public Task<RelayMatchResponse> StartRelayBots(IExecutionContext ctx, int generatorVersion, string matchKey, RelaySide mine, int draftVersion) =>
+            Server(ctx).StartRelayBotsAsync(ctx.PlayerId, generatorVersion, matchKey, mine, draftVersion);
+
+        /// <summary>Le vote d'un joueur au tirage des cartes (la carte que son duo bannit ; -1 : pas de choix à temps).</summary>
+        [CloudCodeFunction("BanRelay")]
+        public Task<RelayMatchResponse> BanRelay(IExecutionContext ctx, string matchId, int map) => Server(ctx).BanRelayAsync(ctx.PlayerId, matchId, map);
 
         /// <summary>Le relais d'un duo à la fin du match : rejoué, puis le match est jugé (Elo 2v2) quand les deux sont là.</summary>
         [CloudCodeFunction("SubmitRelay")]
@@ -262,17 +267,23 @@ namespace MummyEscape.Pvp.Server
         // --- Duel en direct
 
         /// <summary>Crée le duel de deux joueurs de la même ligue qui se sont trouvés dans un salon (l'hôte l'appelle).</summary>
+        /// <remarks><c>draftVersion</c> : absent chez un jeu sans tirage des cartes (0), qui reçoit « OUTDATED ».</remarks>
         [CloudCodeFunction("StartLiveDuel")]
-        public Task<LiveDuelResponse> StartLiveDuel(IExecutionContext ctx, int generatorVersion, string matchKey, LiveDuelist a, LiveDuelist b) =>
-            Server(ctx).StartLiveDuelAsync(ctx.PlayerId, generatorVersion, matchKey, a, b);
+        public Task<LiveDuelResponse> StartLiveDuel(IExecutionContext ctx, int generatorVersion, string matchKey, LiveDuelist a, LiveDuelist b, int draftVersion) =>
+            Server(ctx).StartLiveDuelAsync(ctx.PlayerId, generatorVersion, matchKey, a, b, draftVersion);
 
+        /// <summary>Le duel (pour l'invité, et pendant le tirage : ferme le tirage quand son heure est passée).</summary>
         [CloudCodeFunction("GetLiveDuel")]
         public Task<LiveDuelResponse> GetLiveDuel(IExecutionContext ctx, string matchId) => Server(ctx).GetLiveDuelAsync(ctx.PlayerId, matchId);
 
-        /// <summary>Personne de la ligue en une minute : un bot de la ligue, sa course jouée d'avance.</summary>
+        /// <summary>Le joueur bannit une carte du tirage (-1 : pas de choix à temps, le hasard bannit pour lui).</summary>
+        [CloudCodeFunction("BanLiveDuel")]
+        public Task<LiveDuelResponse> BanLiveDuel(IExecutionContext ctx, string matchId, int map) => Server(ctx).BanLiveDuelAsync(ctx.PlayerId, matchId, map);
+
+        /// <summary>Personne de la ligue en une minute : un bot de la ligue, qui bannit aussi, puis court d'avance.</summary>
         [CloudCodeFunction("StartLiveBotDuel")]
-        public Task<LiveDuelResponse> StartLiveBotDuel(IExecutionContext ctx, int generatorVersion, string matchKey, LiveDuelist mine) =>
-            Server(ctx).StartLiveBotDuelAsync(ctx.PlayerId, generatorVersion, matchKey, mine);
+        public Task<LiveDuelResponse> StartLiveBotDuel(IExecutionContext ctx, int generatorVersion, string matchKey, LiveDuelist mine, int draftVersion) =>
+            Server(ctx).StartLiveBotDuelAsync(ctx.PlayerId, generatorVersion, matchKey, mine, draftVersion);
 
         /// <summary>La course d'un joueur à la fin du duel : rejouée, puis le duel est jugé quand les deux sont là.</summary>
         [CloudCodeFunction("SubmitLiveDuel")]

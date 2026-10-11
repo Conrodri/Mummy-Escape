@@ -448,13 +448,17 @@ namespace MummyEscape.Online
         public Task<LiveDuelResponse> StartLiveBotDuelAsync(string matchKey, LiveDuelist mine) => Run(async () =>
         {
             var r = await _server.StartLiveBotDuelAsync(Me, Gen, matchKey, mine);
-            // Simulated players wear random outfits.
+            // Simulated players wear random outfits (the server gives it to the bot's run when the draft closes).
             if (r.Match != null && r.Match.B.Look == null)
-                lock (_rng) r.Match.B.Look = r.Match.BotRun.Look = Visual.PvpSkins.RandomLook(_rng);
+                lock (_rng) r.Match.B.Look = Visual.PvpSkins.RandomLook(_rng);
             return r;
         });
 
         public Task<LiveDuelResponse> GetLiveDuelAsync(string matchId) => Run(() => _server.GetLiveDuelAsync(Me, matchId));
+
+        public Task<LiveDuelResponse> BanLiveDuelAsync(string matchId, int map) => Run(() => _server.BanLiveDuelAsync(Me, matchId, map));
+
+        public Task<RelayMatchResponse> BanRelayAsync(string matchId, int map) => Run(() => _server.BanRelayAsync(Me, matchId, map));
 
         public Task<SubmitRunResponse> SubmitLiveDuelAsync(string matchId, RunSubmission run, string playerName) =>
             Run(() => _server.SubmitLiveDuelAsync(Me, matchId, run, playerName));

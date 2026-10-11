@@ -194,6 +194,18 @@ namespace MummyEscape.Tests
             return server.GetTeamsAsync(a).Result.Duos.Single(d => d.Members.Contains(b)).Id;
         }
 
+        /// <summary>Every player bans the first map; the match is read back with its mazes.</summary>
+        static RelayMatch Drafted(PvpServer server, RelayMatch match)
+        {
+            foreach (var side in new[] { match.A, match.B })
+                foreach (var r in side.Runners)
+                    if (!side.Bot) server.BanRelayAsync(r.PlayerId, match.Id, 0).Wait();
+            var drafted = server.RelayResultAsync(match.A.Runners[0].PlayerId, match.Id).Result.Match;
+            Assert.IsTrue(drafted.Draft.Closed);
+            Assert.AreNotEqual(0, drafted.Draft.Pick, "both duos banned the first map");
+            return drafted;
+        }
+
         static RelaySide Claim(string duoId, params string[] players) => new RelaySide
         {
             DuoId = duoId,
@@ -243,6 +255,7 @@ namespace MummyEscape.Tests
             Assert.AreEqual(match.Id, server.StartRelayMatchAsync("carol", DifficultyTable.GeneratorVersion, "lobby1", Claim(cd, "carol", "dave"), Claim(ab, "alice", "bob")).Result.Match.Id,
                             "same lobby, same match");
 
+            match = Drafted(server, match);
             var map = RelayArena.Generate(match.Seed);
             var perfect = PlayPerfect(map);
             var slower = Copy(perfect.Inputs);
@@ -269,7 +282,7 @@ namespace MummyEscape.Tests
         {
             var (server, advance) = NewServer();
             string ab = MakeDuo(server, "alice", "bob"), cd = MakeDuo(server, "carol", "dave");
-            var match = server.StartRelayMatchAsync("alice", DifficultyTable.GeneratorVersion, "lobby2", Claim(ab, "alice", "bob"), Claim(cd, "carol", "dave")).Result.Match;
+            var match = Drafted(server, server.StartRelayMatchAsync("alice", DifficultyTable.GeneratorVersion, "lobby2", Claim(ab, "alice", "bob"), Claim(cd, "carol", "dave")).Result.Match);
             var map = RelayArena.Generate(match.Seed);
             var perfect = PlayPerfect(map);
 
@@ -286,7 +299,7 @@ namespace MummyEscape.Tests
             Assert.AreEqual(DuelResult.Win, r.Result, "both lost: legs compared, and the forged relay counts for none");
 
             // A duo that never sends its relay loses once the window has passed.
-            var match2 = server.StartRelayMatchAsync("alice", DifficultyTable.GeneratorVersion, "lobby3", Claim(ab, "alice", "bob"), Claim(cd, "carol", "dave")).Result.Match;
+            var match2 = Drafted(server, server.StartRelayMatchAsync("alice", DifficultyTable.GeneratorVersion, "lobby3", Claim(ab, "alice", "bob"), Claim(cd, "carol", "dave")).Result.Match);
             var map2 = RelayArena.Generate(match2.Seed);
             var p2 = server.SubmitRelayAsync("bob", match2.Id, "bob", Copy(PlayPerfect(map2, legs: 2).Inputs), null).Result;
             Assert.IsTrue(p2.Pending);
@@ -305,6 +318,8 @@ namespace MummyEscape.Tests
             var (server, _) = NewServer();
             string ab = MakeDuo(server, "alice", "bob");
             var match = server.StartRelayBotsAsync("alice", DifficultyTable.GeneratorVersion, "party1", Claim(ab, "alice", "bob")).Result.Match;
+            Assert.IsNull(match.B.Inputs, "the bots run once the map is chosen");
+            match = Drafted(server, match);
             Assert.IsTrue(match.VsBots);
             Assert.IsTrue(match.B.Bot);
             Assert.AreEqual(2, match.B.Runners.Count);

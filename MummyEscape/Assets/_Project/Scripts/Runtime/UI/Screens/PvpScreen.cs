@@ -405,18 +405,39 @@ namespace MummyEscape.UI.Screens
             }, status, cancel);
         }
 
-        /// <summary>The VS screen while the tomb is drawn, then the live duel (HUD, preview, the start together).</summary>
+        /// <summary>
+        /// The map draft (each player bans one of three tombs), then the VS screen while the tomb is drawn, then the live duel
+        /// (HUD, preview, the start together).
+        /// </summary>
         public static void VersusLive(UIRouter router, DuelStart start)
         {
             var app = MummyEscape.App.GameApp.I;
-            var match = new PvpMatch(start.Match, start.Me);
             PlayGate.SpendPvp(app);
-            _ = Task.Run(() => PvpServer.Arena(match.Seed));
-            router.Open<VsScreen>().Show(app.Save.Loadout, app.Online.PlayerName, match.Duel.MyElo, match.Ghost, () =>
+            var duel = start.Match;
+            async Task<MapDraft> Read(Task<LiveDuelResponse> call)
             {
-                router.Open<HudScreen>();
-                _ = app.Game.StartDuel(match, start.Link);
-            });
+                var r = await call;
+                if (r?.Match == null) return null;
+                duel = r.Match;
+                return duel.Draft;
+            }
+            router.Open<DraftScreen>().Show(duel.Draft, start.Me, false, id => duel.SideOf(id)?.Name,
+                map => Read(app.Pvp.BanLiveDuelAsync(duel.Id, map)), () => Read(app.Pvp.GetLiveDuelAsync(duel.Id)), ok =>
+                {
+                    if (!ok)
+                    {
+                        start.Link?.Dispose();
+                        return;
+                    }
+                    start.Match = duel;
+                    var match = new PvpMatch(duel, start.Me);
+                    _ = Task.Run(() => PvpServer.Arena(match.Seed));
+                    router.Open<VsScreen>().Show(app.Save.Loadout, app.Online.PlayerName, match.Duel.MyElo, match.Ghost, () =>
+                    {
+                        router.Open<HudScreen>();
+                        _ = app.Game.StartDuel(match, start.Link);
+                    });
+                });
         }
 
         /// <summary>The VS screen while the tomb is drawn, then the run (HUD, preview).</summary>
