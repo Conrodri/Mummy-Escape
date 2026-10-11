@@ -11,7 +11,8 @@ namespace MummyEscape.UI.Screens
 
         Text _stars, _coins, _gold;
         PassBanner _pass;
-        Image _mummy, _glow, _chatDot, _floor;
+        Image _mummy, _glow, _chatDot;
+        HomeScene _scene;
         RectTransform _stage;
         Text _online, _goal;
         System.Action _goalAction;
@@ -22,12 +23,8 @@ namespace MummyEscape.UI.Screens
         {
             var backdrop = UIKit.Backdrop(Root, new Color(0, 0, 0, 0));
             backdrop.raycastTarget = false;
-            // The chosen act's floor slabs, dimmed so the menu stays readable (under the warm glow).
-            _floor = UIKit.Image(backdrop.transform, null, new Color(0.42f, 0.4f, 0.38f), false, "Floor"); // noloc
-            UIKit.Stretch(_floor.rectTransform);
-            _floor.transform.SetAsFirstSibling();
-            _floor.type = Image.Type.Tiled;
-            _floor.pixelsPerUnitMultiplier = 0.5f; // 32 px slabs drawn ~200 units wide: big pixels, like in the game
+            // Inside the chosen act's tomb, the mummy standing in it facing us.
+            _scene = HomeScene.Create(backdrop.transform);
 
             var column = UIKit.Rect("Column", Root);
             UIKit.Stretch(column, 0, 24, 0, 100);
@@ -168,8 +165,8 @@ namespace MummyEscape.UI.Screens
         {
             var entry = HomeThemes.Get(App.Settings.HomeTheme);
             bool on = entry != null && entry.IsUnlocked(App.Save);
-            _floor.enabled = on;
-            if (on) _floor.sprite = App.Art.ActFloor(entry.Act);
+            if (on) _scene.Show(App.Art, entry.Act);
+            else _scene.Hide();
         }
 
         void PlayLevel(LevelId id) =>

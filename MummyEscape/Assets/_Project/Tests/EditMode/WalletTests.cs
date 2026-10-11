@@ -138,6 +138,36 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public async Task GoldSet_CostsItsMissingPieces_TwentyPercentOff()
+        {
+            var (server, store) = NewServer();
+            var set = GoldShop.Sets[0];
+            var first = GoldShop.Exclusive(set.SkinIds[0]);
+            await Give(store, "alice", 500);
+            await server.BuyGoldItemAsync("alice", first.SkinId);
+            int full = 0;
+            foreach (var id in set.SkinIds) full += GoldShop.Exclusive(id).Gold;
+            int expected = (full - first.Gold) * 4 / 5;
+
+            var r = await server.BuyGoldItemAsync("alice", set.Id);
+            Assert.IsNull(r.Error);
+            Assert.AreEqual(500 - first.Gold - expected, r.Wallet.Gold, "the piece already owned is not paid again");
+            foreach (var id in set.SkinIds) CollectionAssert.Contains(r.Wallet.Skins, id);
+            Assert.AreEqual("OWNED", (await server.BuyGoldItemAsync("alice", set.Id)).Error);
+
+            await Give(store, "bob", 1);
+            Assert.AreEqual("GOLD", (await server.BuyGoldItemAsync("bob", set.Id)).Error);
+            Assert.AreEqual(0, (await server.GetWalletAsync("bob")).Wallet.Skins.Count, "nothing given without the gold");
+        }
+
+        [Test]
+        public void GoldSets_AreMadeOfTreasureExclusives()
+        {
+            foreach (var set in GoldShop.Sets)
+                foreach (var id in set.SkinIds) Assert.IsNotNull(GoldShop.Exclusive(id), set.Id + " " + id);
+        }
+
+        [Test]
         public void PaidSkins_AreTheTreasureAndPassOnes()
         {
             foreach (var item in GoldShop.Exclusives) Assert.IsTrue(GoldShop.IsPaid(item.SkinId), item.SkinId);

@@ -18,7 +18,8 @@ namespace MummyEscape.UI.Screens
         bool _busy;
 
         static readonly Color PremiumColor = new Color32(255, 96, 220, 255);
-        const float RowHeight = 150;
+        /// <summary>Ten tiers fit on a phone at once.</summary>
+        const float RowHeight = 116;
 
         Text _season, _tier, _xp, _gold, _note, _perks;
         Image _bar, _legendary;
@@ -92,7 +93,7 @@ namespace MummyEscape.UI.Screens
 
             // Column titles over the two tracks.
             var heads = UIKit.Row(body, 40, 14);
-            UIKit.Size(UIKit.Rect("Tier", heads.transform), -1, 96, 0); // noloc
+            UIKit.Size(UIKit.Rect("Tier", heads.transform), -1, 76, 0); // noloc
             UIKit.Size(UIKit.Label(heads.transform, "Gratuit", 26, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold), -1, -1, 1);
             UIKit.Size(UIKit.Label(heads.transform, "Premium", 26, PremiumColor, TextAnchor.MiddleCenter, FontStyle.Bold), -1, -1, 1);
 
@@ -155,8 +156,8 @@ namespace MummyEscape.UI.Screens
         {
             var row = UIKit.Row(_list, RowHeight, 14);
             var badge = UIKit.Image(row.transform, UISprites.Circle, t <= reached ? UIKit.Gold : UIKit.SurfaceHi, false, "Tier"); // noloc
-            UIKit.Size(badge, 96, 96, 0);
-            var number = UIKit.Title(badge.transform, t.ToString(), 40, t <= reached ? UIKit.Ink : UIKit.Dim);
+            UIKit.Size(badge, 76, 76, 0);
+            var number = UIKit.Title(badge.transform, t.ToString(), 32, t <= reached ? UIKit.Ink : UIKit.Dim);
             UIKit.Stretch(number.rectTransform);
             Cell(row.transform, t, false, BattlePass.Free(t), reached);
             Cell(row.transform, t, true, BattlePass.Premium(season, t), reached);
@@ -172,7 +173,7 @@ namespace MummyEscape.UI.Screens
             var cell = UIKit.Plate(parent, fill, 22, can ? (Color?)UIKit.Gold : premium ? new Color(1f, 0.38f, 0.86f, 0.35f) : UIKit.Rim, false, premium ? "Premium" : "Free"); // noloc
             UIKit.Size(cell, -1, 0, 1); // equal halves whatever the text
             var h = cell.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.padding = new RectOffset(14, 14, 10, 10);
+            h.padding = new RectOffset(12, 12, 6, 6);
             h.spacing = 12;
             h.childAlignment = TextAnchor.MiddleLeft;
             h.childControlWidth = h.childControlHeight = true;
@@ -180,7 +181,7 @@ namespace MummyEscape.UI.Screens
 
             var icon = UIKit.Image(cell.transform, null, Color.white);
             icon.preserveAspect = true;
-            UIKit.Size(icon, 110, 100, 0);
+            UIKit.Size(icon, 88, 80, 0);
             string label;
             if (reward.Kind == PassRewardKind.Skin)
             {
@@ -201,7 +202,7 @@ namespace MummyEscape.UI.Screens
                 label = reward.Kind == PassRewardKind.Gold ? Loc.F("{0} dorés", reward.Amount) : "+" + reward.Amount;
             }
             if (locked || t > reached) icon.color *= new Color(0.55f, 0.5f, 0.5f, 1f);
-            var text = UIKit.Label(cell.transform, "", reward.Kind == PassRewardKind.Skin ? 22 : 32,
+            var text = UIKit.Label(cell.transform, "", reward.Kind == PassRewardKind.Skin ? 20 : 28,
                                    reward.Kind == PassRewardKind.Skin ? PremiumColor : UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
             text.text = label;
             UIKit.FitText(text, 14);
@@ -210,19 +211,19 @@ namespace MummyEscape.UI.Screens
             if (claimed)
             {
                 var check = UIKit.Image(cell.transform, UISprites.Check, UIKit.Success);
-                UIKit.Size(check, 50, 50, 0);
+                UIKit.Size(check, 42, 42, 0);
             }
             else if (locked)
             {
                 var padlock = UIKit.Image(cell.transform, UIKit.Art.Lock, Color.white);
                 padlock.preserveAspect = true;
-                UIKit.Size(padlock, 50, 50, 0);
+                UIKit.Size(padlock, 42, 42, 0);
             }
             else if (can)
             {
                 int tier = t;
                 var btn = UIKit.Button(cell.transform, "OK", () => Claim(tier, premium), 26, ButtonStyle.Primary); // noloc
-                UIKit.Size(btn, 80, 96, 0);
+                UIKit.Size(btn, 76, 80, 0);
             }
         }
 

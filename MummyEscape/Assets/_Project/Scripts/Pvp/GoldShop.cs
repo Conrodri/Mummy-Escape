@@ -30,6 +30,14 @@ namespace MummyEscape.Monetization
         public bool Halloween;
     }
 
+    /// <summary>Treasure exclusives that go together, bought at once for less.</summary>
+    public sealed class GoldSet
+    {
+        public string Id;
+        public string Name;
+        public string[] SkinIds;
+    }
+
     /// <summary>
     /// The real-money economy, shared with the PvP server (it keeps the golden wallet and checks every price). Golden
     /// scarabs are the only thing the store sells (10 € = 100); everything else is priced in golden scarabs: the pass
@@ -91,6 +99,27 @@ namespace MummyEscape.Monetization
             new GoldItem { SkinId = "gold_hat_sun", Gold = 30 }, // noloc
             new GoldItem { SkinId = Core.Halloween.GoldSkin, Gold = 30, Halloween = true },
         };
+
+        /// <summary>Matching treasure exclusives sold together (bought through <c>BuyGoldItem</c> with the set's id).</summary>
+        public static readonly IReadOnlyList<GoldSet> Sets = new[]
+        {
+            new GoldSet { Id = "set_gold_saqqara", Name = "Parure de Saqqarah", SkinIds = new[] { "gold_col_saqqara", "gold_hat_pschent", "gold_torch_ruby", "gold_shoes_horus" } },
+            new GoldSet { Id = "set_gold_nefertari", Name = "Parure de Néfertari", SkinIds = new[] { "gold_col_rosegold", "gold_hat_sun", "gold_torch_ruby", "gold_shoes_horus" } },
+        };
+
+        public static GoldSet Set(string id)
+        {
+            foreach (var s in Sets) if (s.Id == id) return s;
+            return null;
+        }
+
+        /// <summary>The pieces still missing, 20 % off (like the act collections); 0 when the set is complete.</summary>
+        public static int SetPrice(GoldSet set, ICollection<string> owned)
+        {
+            int price = 0;
+            foreach (var id in set.SkinIds) if (!owned.Contains(id)) price += Exclusive(id).Gold;
+            return price * 4 / 5;
+        }
 
         /// <summary>For sale at that instant: event items only during their event.</summary>
         public static bool OnSale(GoldItem item, System.DateTime utc) => item != null && (!item.Halloween || Core.Halloween.IsOpen(utc));

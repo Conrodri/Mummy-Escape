@@ -152,7 +152,11 @@ namespace MummyEscape.Pvp
         /// Retire <paramref name="price"/> du portefeuille et applique <paramref name="grant"/> ; "GOLD" s'il en manque. Avec un
         /// <paramref name="requestId"/>, une demande déjà acceptée est rendue telle quelle, sans débiter de nouveau.
         /// </summary>
-        async Task<WalletResponse> SpendAsync(string me, int price, Func<Wallet, string> grant, string requestId = null)
+        Task<WalletResponse> SpendAsync(string me, int price, Func<Wallet, string> grant, string requestId = null) =>
+            SpendAsync(me, _ => price, grant, requestId);
+
+        /// <summary>Le prix lu dans le portefeuille même (un ensemble ne coûte que ses pièces manquantes).</summary>
+        async Task<WalletResponse> SpendAsync(string me, Func<Wallet, int> priceOf, Func<Wallet, string> grant, string requestId = null)
         {
             if (requestId != null && (requestId.Length == 0 || requestId.Length > 64)) return new WalletResponse { Error = "UNKNOWN_PRODUCT" };
             string error = null;
@@ -161,6 +165,7 @@ namespace MummyEscape.Pvp
                 var w = WalletOf(d);
                 w.Requests ??= new List<string>();
                 if (requestId != null && w.Requests.Contains(requestId)) return;
+                int price = priceOf(w); // avant le don : ce qui manque au joueur maintenant
                 error = w.Gold < price ? "GOLD" : grant(w);
                 if (error != null) return;
                 w.Gold -= price;
@@ -195,6 +200,14 @@ namespace MummyEscape.Pvp
 
         public Task<WalletResponse> BuyGoldItemAsync(string me, string skinId)
         {
+            var set = GoldShop.Set(skinId);
+            if (set != null)
+                return SpendAsync(me, w => GoldShop.SetPrice(set, w.Skins), w =>
+                {
+                    int missing = 0;
+                    foreach (var id in set.SkinIds) if (!w.Skins.Contains(id)) { w.Skins.Add(id); missing++; }
+                    return missing == 0 ? "OWNED" : null;
+                });
             var item = GoldShop.Exclusive(skinId);
             if (item == null) return Task.FromResult(new WalletResponse { Error = "UNKNOWN_PRODUCT" });
             if (!GoldShop.OnSale(item, _utcNow())) return Task.FromResult(new WalletResponse { Error = "EVENT" });

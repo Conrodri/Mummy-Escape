@@ -112,10 +112,7 @@ namespace MummyEscape.Visual
             switch (t.Type)
             {
                 case TileType.Wall:
-                    if (!l.WallFace) return Tiled($"wtop{v % 3}", () => PaintWallTop(v % 3));
-                    int wd = WallDecor(v);
-                    return wd >= 0 ? Tiled($"wdec{wd}_{v % 2}", () => PaintWallFace(v % 2).With(p => DecorateWall(p, wd)))
-                                   : Tiled($"wall{v % 4}", () => PaintWallFace(v % 4));
+                    return l.WallFace ? WallFace(v) : Tiled($"wtop{v % 3}", () => PaintWallTop(v % 3));
                 case TileType.Floor: return FloorSprite(v);
                 case TileType.Exit: return Tiled("exit", PaintExit);
                 case TileType.Door:
@@ -156,13 +153,24 @@ namespace MummyEscape.Visual
         /// <summary>Soft contact shadow cast on a floor tile by its solid neighbours (bit 1 N, 2 E, 4 S, 8 W).</summary>
         public Sprite Shadow(int mask) => mask == 0 ? null : Cached($"shadow{mask}", () => PaintShadow(mask));
 
-        /// <summary>A floor slab of an act's tomb, whatever tomb is themed now (home screen backdrop).</summary>
-        public Sprite ActFloor(int act)
+        /// <summary>A floor slab, wall face or wall torch of an act's tomb, whatever tomb is themed now (home screen backdrop).</summary>
+        public Sprite ActFloor(int act, int variant = 0) => InAct(act, () => FloorSprite(variant));
+        public Sprite ActWall(int act, int variant) => InAct(act, () => WallFace(variant));
+        public Sprite ActWallTorch(int act) => InAct(act, () => Tiled("wall_torch", PaintWallTorch));
+
+        Sprite InAct(int act, System.Func<Sprite> sprite)
         {
             var keep = T;
             T = TombTheme.ForAct(act);
-            try { return FloorSprite(0); }
+            try { return sprite(); }
             finally { T = keep; }
+        }
+
+        Sprite WallFace(int v)
+        {
+            int wd = WallDecor(v);
+            return wd >= 0 ? Tiled($"wdec{wd}_{v % 2}", () => PaintWallFace(v % 2).With(p => DecorateWall(p, wd)))
+                           : Tiled($"wall{v % 4}", () => PaintWallFace(v % 4));
         }
 
         Sprite FloorSprite(int v)
@@ -1122,8 +1130,9 @@ namespace MummyEscape.Visual
                 for (int x = 9; x < 23; x++)
                     if (p.Get(x, y).a == 255 && ((x + y) % 5 != 0)) p.Set(x, y, c.Shadow);
             for (int y = 13; y <= 16; y += 3) { p.Rect(6, y, 9, y, c.Shadow); p.Rect(22, y, 25, y, c.Shadow); }
-            // A legendary colour covers the act textures with its own animated one.
-            if (!c.Legendary) Texture(p, look.Mummy.Pattern);
+            // Under a legendary colour the act texture keeps its marks (cracks, glyphs...) but not its body tint: the animated
+            // colour shows between them.
+            Texture(p, look.Mummy.Pattern, c.Legendary);
             // Dark eye band + glowing eyes.
             p.Rect(11, 22, 21, 24, new Color32(30, 24, 20, 255));
             p.Rect(12, 23, 14, 23, c.Eyes); p.Rect(18, 23, 20, 23, c.Eyes);
@@ -1392,8 +1401,11 @@ namespace MummyEscape.Visual
 
         static bool IsBody(Px p, int x, int y) => p.Get(x, y).a == 255;
 
-        /// <summary>Texture of the act-themed mummies, painted over the bandages in the chosen colours.</summary>
-        static void Texture(Px p, BandagePattern pattern)
+        /// <summary>
+        /// Texture of the act-themed mummies, painted over the bandages in the chosen colours. With <paramref name="keepBody"/>
+        /// (a legendary colour) only the marks are drawn: the body keeps the colour the legendary effect repaints.
+        /// </summary>
+        static void Texture(Px p, BandagePattern pattern, bool keepBody)
         {
             switch (pattern)
             {
@@ -1433,15 +1445,16 @@ namespace MummyEscape.Visual
                 {
                     // Turned to stone: greyed, grainy, cracked.
                     var crack = new Color32(46, 44, 42, 255);
-                    for (int y = 2; y < 30; y++)
-                        for (int x = 5; x < 27; x++)
-                        {
-                            if (!IsBody(p, x, y)) continue;
-                            var g = p.Get(x, y);
-                            byte l = (byte)((g.r + g.g + g.b) / 3);
-                            var grey = new Color32(l, l, (byte)Mathf.Min(255, l + 6), 255);
-                            p.Set(x, y, Px.Shade(Px.Lerp(g, grey, 0.75f), (Px.Hash(x, y, 9) - 0.5f) * 0.18f));
-                        }
+                    if (!keepBody)
+                        for (int y = 2; y < 30; y++)
+                            for (int x = 5; x < 27; x++)
+                            {
+                                if (!IsBody(p, x, y)) continue;
+                                var g = p.Get(x, y);
+                                byte l = (byte)((g.r + g.g + g.b) / 3);
+                                var grey = new Color32(l, l, (byte)Mathf.Min(255, l + 6), 255);
+                                p.Set(x, y, Px.Shade(Px.Lerp(g, grey, 0.75f), (Px.Hash(x, y, 9) - 0.5f) * 0.18f));
+                            }
                     p.Line(12, 16, 14, 12, crack); p.Line(14, 12, 13, 9, crack);
                     p.Line(19, 7, 21, 4, crack); p.Line(17, 28, 19, 25, crack);
                     p.Set(8, 15, crack);
@@ -1468,9 +1481,10 @@ namespace MummyEscape.Visual
                     // Basalt bandages split by glowing cracks.
                     var hot = new Color32(255, 120, 30, 255);
                     var core = new Color32(255, 220, 90, 255);
-                    for (int y = 2; y < 30; y++)
-                        for (int x = 5; x < 27; x++)
-                            if (IsBody(p, x, y)) p.Set(x, y, Px.Lerp(p.Get(x, y), new Color32(34, 28, 30, 255), 0.72f));
+                    if (!keepBody)
+                        for (int y = 2; y < 30; y++)
+                            for (int x = 5; x < 27; x++)
+                                if (IsBody(p, x, y)) p.Set(x, y, Px.Lerp(p.Get(x, y), new Color32(34, 28, 30, 255), 0.72f));
                     p.Line(11, 4, 13, 9, hot); p.Line(13, 9, 12, 13, hot); p.Line(12, 13, 15, 17, hot);
                     p.Line(20, 5, 18, 10, hot); p.Line(18, 10, 20, 14, hot);
                     p.Line(13, 27, 16, 26, hot); p.Line(16, 26, 18, 28, hot);

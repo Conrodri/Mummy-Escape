@@ -238,6 +238,16 @@ namespace MummyEscape.UI.Screens
                 if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
             items.AddRange(HalloweenSkins.InShop(slot, save.Data.OwnedSkins, DateTime.UtcNow));
             foreach (var s in TowerSkins.All) if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
+            // The way to the sets, easy to miss behind their tab.
+            var toSets = UIKit.Button(_list, "Ensembles complets à -20 % : voir les collections", () =>
+            {
+                _section = SetsSection;
+                _sections.Select(_section);
+                Refresh();
+                _scroll.verticalNormalizedPosition = 1f;
+            }, 26, ButtonStyle.Secondary);
+            UIKit.FitText(toSets.GetComponentInChildren<Text>(), 16);
+            UIKit.Size(toSets, 72);
             Grid(items.Count, (parent, i) => ItemCard(parent, items[i]));
         }
 
@@ -394,85 +404,139 @@ namespace MummyEscape.UI.Screens
 
         // ------------------------------------------------------------------ collections
 
-        /// <summary>One wide card per act: the collection on a mummy, its pieces, bought at once for less or put on in one tap.</summary>
+        /// <summary>
+        /// One wide card per set: the act collections (scarabs, 20 % off), the Treasure's parures (golden scarabs, 20 % off),
+        /// then the sets that are won, not sold (Halloween, the tower, the team's): put on in one tap once complete.
+        /// </summary>
         void FillSets()
         {
             var save = App.Save;
             Intro("Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (50 par acte). L'ensemble complet coûte 20 % de moins.");
+            int index = 0;
             for (int act = 1; act <= DifficultyTable.ActCount; act++)
             {
                 var set = SkinCatalog.ThemeSet(act);
-                var look = SkinCatalog.Classic; // the collection alone, not over the current outfit
                 int missingPrice = 0;
-                bool worn = true;
-                foreach (var s in set)
-                {
-                    look = look.With(s);
-                    if (!save.Data.OwnedSkins.Contains(s.Id)) missingPrice += s.Price;
-                    if (!save.IsWorn(s.Id)) worn = false;
-                }
+                foreach (var s in set) if (!save.Data.OwnedSkins.Contains(s.Id)) missingPrice += s.Price;
                 int price = SkinCatalog.SetPrice(missingPrice);
                 int minStars = act * SkinCatalog.StarsPerTheme;
                 bool locked = missingPrice > 0 && save.TotalStars < minStars;
-                bool affordable = !locked && save.Data.Coins >= price;
-                var accent = ThemeColor(act);
-                var theme = TombTheme.ForAct(act);
-
-                var card = UIKit.Plate(_list, Color.white, 30, worn ? WornRim : new Color(accent.r, accent.g, accent.b, 0.5f), false, "Set" + act); // noloc
-                UIFx.Gradient(card, Color.Lerp(theme.Wall, Color.black, 0.2f), Color.Lerp(theme.FloorDark, Color.black, 0.55f));
-                UIKit.Size(card, 300);
-                var row = card.gameObject.AddComponent<HorizontalLayoutGroup>();
-                row.padding = new RectOffset(16, 26, 18, 18);
-                row.spacing = 18;
-                row.childAlignment = TextAnchor.MiddleLeft;
-                row.childControlWidth = row.childControlHeight = true;
-                row.childForceExpandWidth = row.childForceExpandHeight = false;
-
-                var stage = UIKit.Rect("Stage", card.transform); // noloc
-                UIKit.Size(stage, 260, 230);
-                UIFx.Halo(stage, new Color(accent.r, accent.g, accent.b, 0.45f), 320);
-                var preview = UIKit.Image(stage, null, Color.white);
-                preview.preserveAspect = true;
-                UIKit.Stretch(preview.rectTransform);
-                MummyAnimator.Show(preview, App.Art, look);
-                if (locked) Lock(preview, 80);
-
-                var info = UIKit.Rect("Info", card.transform); // noloc
-                UIKit.Size(info, -1, 0, 1);
-                UIKit.Column(info, 6, 0, TextAnchor.MiddleLeft);
-                var title = UIKit.Label(info, ThemeName(act), 30, accent, TextAnchor.MiddleLeft, FontStyle.Bold);
-                UIKit.FitText(title, 18);
-                UIKit.Size(title, 46);
-
-                // The pieces, each on its own.
-                var pieces = UIKit.Row(info, 76, 8);
-                pieces.childAlignment = TextAnchor.MiddleLeft;
-                foreach (var s in set)
-                {
-                    bool has = save.Data.OwnedSkins.Contains(s.Id);
-                    var chip = UIKit.Plate(pieces.transform, new Color(0, 0, 0, has ? 0.25f : 0.45f), 16, has ? (Color?)WornRim : null, false, s.Id);
-                    UIKit.Size(chip, 76, 76);
-                    var icon = ItemPreview.Create(chip.transform, s);
-                    UIKit.Stretch(icon.rectTransform, 6, 6, 6, 6);
-                    var piece = s;
-                    chip.raycastTarget = true;
-                    chip.gameObject.AddComponent<Button>().onClick.AddListener(() =>
-                    {
-                        var (tag, color) = TagOf(piece);
-                        Router.Open<ItemZoomScreen>().Show(piece, tag, color, Origin(piece), Loc.T("Fermer"), () => { });
-                    });
-                }
-
-                int a = act;
+                bool worn = Worn(set);
                 string label = worn ? Loc.T("Équipé") : missingPrice == 0 ? Loc.T("Tout équiper")
                              : locked ? Loc.F("Débloqué à {0} étoiles", minStars) : Loc.F("Ensemble : {0} scarabées", price);
-                bool usable = !worn && (missingPrice == 0 || affordable);
-                var btn = UIKit.Button(info, label, () => OnSet(a, price), 26, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);
-                btn.interactable = usable;
-                UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
-                UIKit.Size(btn, 78);
-                UIFx.PopIn(card, (act - 1) * 0.06f, 0.94f);
+                var theme = TombTheme.ForAct(act);
+                int a = act;
+                SetCard(ThemeName(act), set, ThemeColor(act), Color.Lerp(theme.Wall, Color.black, 0.2f), Color.Lerp(theme.FloorDark, Color.black, 0.55f),
+                        locked, label, !worn && (missingPrice == 0 || !locked && save.Data.Coins >= price), () => OnSet(a, price), index++);
             }
+
+            foreach (var gold in Monetization.GoldShop.Sets)
+            {
+                var set = new List<SkinDef>();
+                foreach (var id in gold.SkinIds) set.Add(SkinCatalog.Get(id));
+                int price = Monetization.GoldShop.SetPrice(gold, save.Data.OwnedSkins);
+                bool worn = Worn(set);
+                string label = worn ? Loc.T("Équipé") : price == 0 ? Loc.T("Tout équiper") : Loc.F("Parure : {0} dorés", price);
+                var g = gold;
+                SetCard(Loc.T(gold.Name), set, TreasureScreen.GoldColor, new Color32(70, 52, 20, 255), new Color32(30, 22, 8, 255),
+                        false, label, !worn, () => OnGoldSet(g, set, price), index++);
+            }
+
+            if (Halloween.IsOpen(DateTime.UtcNow) || Owns(HalloweenSkins.All))
+                Showcase(Loc.T("Nuit d'Halloween"), new[] { SkinCatalog.Get(Halloween.ShopSkin), SkinCatalog.Get(Halloween.RewardSkin) }, HalloweenColor, index++);
+            Showcase(Loc.T("Tour de défi"), TowerSkins.All, TowerColor, index++);
+            var team = new List<SkinDef>();
+            foreach (var id in Developers.Skins) team.Add(SkinCatalog.Get(id));
+            if (Owns(team)) Showcase(Loc.T("Équipe de Mummy Rush"), team, new Color32(90, 255, 190, 255), index++);
+        }
+
+        bool Worn(IEnumerable<SkinDef> set)
+        {
+            foreach (var s in set) if (!App.Save.IsWorn(s.Id)) return false;
+            return true;
+        }
+
+        bool Owns(IEnumerable<SkinDef> set)
+        {
+            foreach (var s in set) if (App.Save.Data.OwnedSkins.Contains(s.Id)) return true;
+            return false;
+        }
+
+        /// <summary>A set that is won, not sold: put on in one tap once complete, otherwise how many pieces are there.</summary>
+        void Showcase(string name, IReadOnlyList<SkinDef> set, Color accent, int index)
+        {
+            int owned = 0;
+            foreach (var s in set) if (App.Save.Data.OwnedSkins.Contains(s.Id)) owned++;
+            bool worn = Worn(set);
+            string label = worn ? Loc.T("Équipé") : owned == set.Count ? Loc.T("Tout équiper") : Loc.F("{0} / {1} pièces", owned, set.Count);
+            SetCard(name, set, accent, Color.Lerp(accent, Color.black, 0.75f), Color.Lerp(accent, Color.black, 0.9f),
+                    false, label, !worn && owned == set.Count, () => Wear(set), index);
+        }
+
+        /// <summary>A set's card: the set alone on a mummy, its pieces (each opens up close), and one button.</summary>
+        void SetCard(string name, IReadOnlyList<SkinDef> set, Color accent, Color top, Color bottom, bool locked, string label, bool usable, Action onTap, int index)
+        {
+            var save = App.Save;
+            var look = SkinCatalog.Classic; // the set alone, not over the current outfit
+            foreach (var s in set) look = look.With(s);
+            bool worn = Worn(set);
+
+            var card = UIKit.Plate(_list, Color.white, 30, worn ? WornRim : new Color(accent.r, accent.g, accent.b, 0.5f), false, "Set" + index); // noloc
+            UIFx.Gradient(card, top, bottom);
+            UIKit.Size(card, 300);
+            var row = card.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.padding = new RectOffset(16, 26, 18, 18);
+            row.spacing = 18;
+            row.childAlignment = TextAnchor.MiddleLeft;
+            row.childControlWidth = row.childControlHeight = true;
+            row.childForceExpandWidth = row.childForceExpandHeight = false;
+
+            var stage = UIKit.Rect("Stage", card.transform); // noloc
+            UIKit.Size(stage, 260, 230);
+            UIFx.Halo(stage, new Color(accent.r, accent.g, accent.b, 0.45f), 320);
+            var preview = UIKit.Image(stage, null, Color.white);
+            preview.preserveAspect = true;
+            UIKit.Stretch(preview.rectTransform);
+            MummyAnimator.Show(preview, App.Art, look);
+            if (locked) Lock(preview, 80);
+
+            var info = UIKit.Rect("Info", card.transform); // noloc
+            UIKit.Size(info, -1, 0, 1);
+            UIKit.Column(info, 6, 0, TextAnchor.MiddleLeft);
+            var title = UIKit.Label(info, name, 30, accent, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(title, 18);
+            UIKit.Size(title, 46);
+
+            // The pieces, each on its own.
+            var pieces = UIKit.Row(info, 76, 8);
+            pieces.childAlignment = TextAnchor.MiddleLeft;
+            foreach (var s in set)
+            {
+                bool has = save.Data.OwnedSkins.Contains(s.Id);
+                var chip = UIKit.Plate(pieces.transform, new Color(0, 0, 0, has ? 0.25f : 0.45f), 16, has ? (Color?)WornRim : null, false, s.Id);
+                UIKit.Size(chip, 76, 76);
+                var icon = ItemPreview.Create(chip.transform, s);
+                UIKit.Stretch(icon.rectTransform, 6, 6, 6, 6);
+                var piece = s;
+                chip.raycastTarget = true;
+                chip.gameObject.AddComponent<Button>().onClick.AddListener(() =>
+                {
+                    var (tag, color) = TagOf(piece);
+                    Router.Open<ItemZoomScreen>().Show(piece, tag, color, Origin(piece), Loc.T("Fermer"), () => { });
+                });
+            }
+
+            var btn = UIKit.Button(info, label, onTap, 26, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);
+            btn.interactable = usable;
+            UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
+            UIKit.Size(btn, 78);
+            UIFx.PopIn(card, Mathf.Min(index, 10) * 0.06f, 0.94f);
+        }
+
+        void Wear(IEnumerable<SkinDef> set)
+        {
+            foreach (var s in set) App.Save.SelectSkin(s.Id);
+            Refresh();
         }
 
         void OnSet(int act, int price)
@@ -486,8 +550,28 @@ namespace MummyEscape.UI.Screens
                 if (!save.TryBuyAll(set, price)) return;
                 App.Audio.Play(Sfx.Coin);
             }
-            foreach (var s in set) save.SelectSkin(s.Id);
-            Refresh();
+            Wear(set);
+        }
+
+        /// <summary>A Treasure parure: put on when complete, otherwise its missing pieces bought from the server's wallet.</summary>
+        void OnGoldSet(Monetization.GoldSet gold, List<SkinDef> set, int price)
+        {
+            if (price == 0) { Wear(set); return; }
+            if (!TreasureScreen.EnoughGold(App, Router, price, () => Router.Open<TreasureScreen>())) return;
+            Router.Open<OfferDialog>().Configure(Loc.T(gold.Name), Loc.F("Acheter les pièces qui te manquent pour {0} scarabées dorés ?", price),
+                (Loc.F("Acheter · {0} dorés", price), ButtonStyle.Primary, async () =>
+                {
+                    string error = await Monetization.GoldWallet.RunAsync(App, p => p.BuyGoldItemAsync(gold.Id));
+                    if (this == null) return;
+                    if (error != null && Monetization.GoldShop.SetPrice(gold, App.Save.Data.OwnedSkins) > 0)
+                    {
+                        Router.Open<OfferDialog>().Configure(Loc.T(gold.Name), Monetization.GoldWallet.ErrorText(error), ("OK", ButtonStyle.Primary, null)); // noloc
+                        return;
+                    }
+                    App.Audio.Play(Sfx.Win);
+                    Wear(set);
+                }),
+                ("Annuler", ButtonStyle.Ghost, null));
         }
 
         void Intro(string text)
