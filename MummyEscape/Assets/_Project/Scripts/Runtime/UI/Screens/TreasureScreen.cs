@@ -43,6 +43,7 @@ namespace MummyEscape.UI.Screens
             top.childAlignment = TextAnchor.MiddleLeft;
             _gold = UIKit.Chip(top.transform, UIKit.Art.GoldScarab, "", GoldColor, 76);
             _coins = UIKit.Chip(top.transform, UIKit.Art.Scarab, "", UIKit.Sand, 76);
+            UIKit.SameWidth(_gold, _coins);
             UIKit.Size(UIKit.Rect("Spacer", top.transform), -1, -1, 1); // noloc
 
             _note = UIKit.Label(body, "", 28, UIKit.Sand);

@@ -39,10 +39,10 @@ namespace MummyEscape.UI.Screens
             _coins = UIKit.Chip(top.transform, UIKit.Art.Scarab, "0");
             // Golden scarabs: a tap opens the Treasure.
             _gold = UIKit.Chip(top.transform, UIKit.Art.GoldScarab, "0", TreasureScreen.GoldColor);
+            UIKit.SameWidth(_stars, _coins, _gold);
             var goldPlate = _gold.transform.parent.gameObject;
             goldPlate.GetComponent<Image>().raycastTarget = true;
             goldPlate.AddComponent<Button>().onClick.AddListener(() => Router.Open<TreasureScreen>());
-            UIKit.Size(UIKit.Rect("Spacer", top.transform), -1, -1, 1);
             // The chat, with a dot when a friend or the guild wrote.
             var chat = UIKit.IconButton(top.transform, UISprites.Chat, () => Router.Open<ChatScreen>(), 92);
             _chatDot = UIKit.Image(chat.transform, UISprites.Circle, UIKit.Danger, false, "Dot"); // noloc

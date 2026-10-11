@@ -448,6 +448,12 @@ namespace MummyEscape.UI
             return t;
         }
 
+        /// <summary>Chips side by side (a wallet): they share the row's free width equally, whatever their numbers.</summary>
+        public static void SameWidth(params Text[] chips)
+        {
+            foreach (var chip in chips) Size(chip.transform.parent, -1, 0, 1);
+        }
+
         /// <summary>Shrinks the text (down to minSize) so it stays on its line instead of overflowing.</summary>
         public static Text FitText(Text t, int minSize)
         {

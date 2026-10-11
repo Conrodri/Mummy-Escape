@@ -77,6 +77,7 @@ namespace MummyEscape.UI.Screens
             _coins = UIKit.Chip(wallet.transform, UIKit.Art.Scarab, "", UIKit.Gold, 64);
             _seals = UIKit.Chip(wallet.transform, UISprites.Seal, "", UIKit.Turquoise, 64);
             _gold = UIKit.Chip(wallet.transform, UIKit.Art.GoldScarab, "", TreasureScreen.GoldColor, 64);
+            UIKit.SameWidth(_stars, _coins, _seals, _gold);
             var goldPlate = _gold.transform.parent;
             var plus = UIKit.Image(goldPlate, UISprites.Plus, TreasureScreen.GoldColor, false, "Plus"); // noloc
             UIKit.Size(plus, 30, 30);
