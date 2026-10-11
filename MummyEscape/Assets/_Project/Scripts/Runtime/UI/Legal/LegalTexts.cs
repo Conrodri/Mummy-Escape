@@ -12,7 +12,7 @@ namespace MummyEscape.UI.Legal
         public const string Address = "173 rue de Courcelles, 75017 Paris, France";
         public const string Contact = "contact@peakdevelopment.fr";
         public const string Mediator = "[NOM ET SITE DU MÉDIATEUR DE LA CONSOMMATION]";
-        public const string Updated = "11 octobre 2026";
+        public const string Updated = "12 octobre 2026";
 
         /// <summary>True while the publisher fields above still hold placeholders (the README and a warning flag it).</summary>
         public static bool HasPlaceholders => Publisher.StartsWith("[") || Contact.StartsWith("[");
@@ -69,6 +69,11 @@ namespace MummyEscape.UI.Legal
             "Google traite alors l'identifiant publicitaire de ton téléphone, ton adresse IP et des informations techniques sur l'appareil, pour afficher la publicité, " +
             "la mesurer et lutter contre la fraude. Si tu es mineur, seules des publicités non personnalisées te sont proposées. " +
             "Tu peux réinitialiser ou supprimer l'identifiant publicitaire dans les réglages Android. Politique de Google : policies.google.com/privacy.",
+            "# Statistiques d'usage (seulement si tu l'acceptes)",
+            "En mode en ligne, tu peux accepter que des statistiques d'usage soient envoyées à Unity Analytics (Unity Technologies, qui agit pour notre compte) : " +
+            "tombeaux joués, gagnés ou abandonnés, achats dans le jeu, publicités regardées, appareil et version du jeu, avec ton identifiant de joueur. " +
+            "Elles servent uniquement à améliorer le jeu. Aucun identifiant publicitaire n'est utilisé. " +
+            "Le choix se fait au premier lancement et se change à tout moment dans Paramètres › Confidentialité ; la suppression de tes données en ligne les efface aussi.",
             "# Transferts hors de l'Union européenne",
             "Unity Technologies et Google LLC sont établies aux États-Unis. Les transferts sont encadrés par le cadre de protection des données UE–États-Unis " +
             "(décision d'adéquation de la Commission européenne du 10 juillet 2023) et, à défaut, par les clauses contractuelles types de la Commission.",

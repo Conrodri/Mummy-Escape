@@ -43,6 +43,7 @@ namespace MummyEscape.Monetization
             string error = await RunAsync(app, p => p.VerifyPurchaseAsync(productId, transactionId));
             // Credited now or before: done. Anything else stays unfinished, to be tried again (Google refunds it in the end).
             if (error == null || error == "ALREADY_CREDITED") Store.Provider?.Finish(transactionId); // noloc
+            if (error == null) Services.Analytics.Track("purchase", ("product", productId)); // noloc
             return error;
         }
 

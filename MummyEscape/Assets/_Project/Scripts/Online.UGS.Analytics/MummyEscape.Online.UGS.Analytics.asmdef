@@ -1,0 +1,22 @@
+{
+    "name": "MummyEscape.Online.UGS.Analytics",
+    "rootNamespace": "MummyEscape.Online",
+    "references": [
+        "MummyEscape.Runtime",
+        "Unity.Services.Core",
+        "Unity.Services.Analytics"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MUMMY_UGS_ANALYTICS"
+    ],
+    "versionDefines": [
+        { "name": "com.unity.services.analytics", "expression": "6.0.0", "define": "MUMMY_UGS_ANALYTICS" }
+    ],
+    "noEngineReferences": false
+}

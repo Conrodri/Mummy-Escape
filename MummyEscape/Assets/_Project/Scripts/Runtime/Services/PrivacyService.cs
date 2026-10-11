@@ -21,17 +21,19 @@ namespace MummyEscape.Services
         public bool AgeChecked;
         /// <summary>A parent or guardian confirmed the online features for a minor.</summary>
         public bool ParentalConsent;
+        /// <summary>The player agreed to anonymous usage statistics (only acted on in online mode).</summary>
+        public bool AnalyticsEnabled;
     }
 
     /// <summary>
     /// GDPR / ePrivacy state of the player. Nothing leaves the device before the player has been informed and has
     /// chosen to play online; minors under their country's age of digital consent (art. 8) need a parent's approval.
-    /// The game uses no advertising, no analytics and no tracking identifier.
+    /// No tracking identifier; usage statistics only with an explicit opt-in (<see cref="AnalyticsAllowed"/>).
     /// </summary>
     public sealed class PrivacyService
     {
         /// <summary>Bump when the privacy policy or the terms change materially: players are asked again.</summary>
-        public const int PolicyVersion = 4;
+        public const int PolicyVersion = 5;
 
         /// <summary>Age of digital consent per EU/EEA country (GDPR art. 8, national choices between 13 and 16).</summary>
         static readonly Dictionary<string, int> ConsentAge = new Dictionary<string, int>
@@ -76,6 +78,15 @@ namespace MummyEscape.Services
 
         /// <summary>Online features may run (informed choice, and a parent's approval for a minor).</summary>
         public bool OnlineAllowed => !NeedsAnswer && Data.OnlineEnabled && (!Data.IsMinor || Data.ParentalConsent);
+
+        /// <summary>Usage statistics go out only with the online mode and the player's own yes (never a minor's by default).</summary>
+        public bool AnalyticsAllowed => OnlineAllowed && Data.AnalyticsEnabled;
+
+        public void SetAnalytics(bool on)
+        {
+            Data.AnalyticsEnabled = on;
+            Save();
+        }
 
         public static int ConsentAgeFor(string country) =>
             !string.IsNullOrEmpty(country) && ConsentAge.TryGetValue(country.ToUpperInvariant(), out int age) ? age : DefaultConsentAge;

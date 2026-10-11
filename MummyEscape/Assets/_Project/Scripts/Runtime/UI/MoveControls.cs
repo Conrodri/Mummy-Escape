@@ -24,15 +24,19 @@ namespace MummyEscape.UI
         public static MoveControls Create(Transform parent, GameController game)
         {
             var rt = UIKit.Rect("MoveControls", parent); // noloc
-            // Bottom left, above the bottom bar (the map and disarm buttons stay on the right).
-            rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
-            rt.pivot = new Vector2(0, 0);
             rt.sizeDelta = new Vector2(Size, Size);
-            rt.anchoredPosition = new Vector2(40, 230);
             var c = rt.gameObject.AddComponent<MoveControls>();
             c._game = game;
             c._root = rt;
+            c.SetSide(false);
             return c;
+        }
+
+        /// <summary>Bottom left above the bottom bar by default (the disarm button sits on the right), or bottom right.</summary>
+        public void SetSide(bool right)
+        {
+            _root.anchorMin = _root.anchorMax = _root.pivot = new Vector2(right ? 1 : 0, 0);
+            _root.anchoredPosition = new Vector2(right ? -40 : 40, 230);
         }
 
         /// <summary>Shows the control the player chose (nothing for swipes).</summary>

@@ -64,6 +64,14 @@ namespace MummyEscape.Core
             return paris.Month == 10 && paris.Day >= 24 || paris.Month == 11 && paris.Day <= 7;
         }
 
+        /// <summary>The next 24 October 00:00 Paris time, as a UTC instant (24 October is always in summer time: UTC+2).</summary>
+        public static DateTime NextOpening(DateTime utc)
+        {
+            var paris = ParisTime(utc);
+            int year = paris.Month > 10 || paris.Month == 10 && paris.Day >= 24 ? paris.Year + 1 : paris.Year;
+            return new DateTime(year, 10, 23, 22, 0, 0, DateTimeKind.Utc);
+        }
+
         /// <summary>
         /// Paris wall-clock time of a UTC instant, by the EU rule (summer time from the last Sunday of March to the last
         /// Sunday of October, both at 01:00 UTC). No time zone database: device and server ids differ, this does not.

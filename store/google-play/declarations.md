@@ -51,6 +51,15 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
 | Achats › **Historique des achats** | Produit, identifiant de commande, jeton d'achat Google Play, date | Fonctionnement de l'appli, Prévention des fraudes et sécurité | Non |
 | Messages › **Autres messages intégrés à l'appli** | Messages du tchat (100 derniers par canal), blocages, signalements | Fonctionnement de l'appli, Sécurité (modération) | Non |
 
+Avec le consentement séparé « Statistiques d'usage anonymes » (Unity Analytics, sous-traitant, *collectées*, *non partagées*, *facultatif*) :
+
+| Catégorie Play | Donnée | Finalités | Éphémère ? |
+|---|---|---|---|
+| Activité dans l'appli › **Interactions avec l'appli** | Tombeaux joués / gagnés / abandonnés, pubs regardées, achats, fin de duel | Analyse | Non |
+| Infos sur l'appli et performances › **Diagnostics** | Modèle d'appareil, système, version du jeu | Analyse | Non |
+
+Notifications : locales seulement (énergie pleine, ouverture d'Halloween), programmées sur l'appareil, aucune donnée envoyée. Permission `POST_NOTIFICATIONS` demandée après les premières étoiles.
+
 Exceptions, **collectées et partagées** (SDK AdMob, seulement quand le joueur regarde une pub) :
 
 | Catégorie Play | Donnée | Finalités | Facultatif ? |

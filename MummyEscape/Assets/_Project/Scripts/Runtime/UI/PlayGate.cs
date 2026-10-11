@@ -98,6 +98,7 @@ namespace MummyEscape.UI
                 watched = false;
             }
             if (!watched) return;
+            Services.Analytics.Track("ad_watched", ("mode", mode.ToString())); // noloc
             if (mode == PlayMode.Endless)
             {
                 if (!app.Save.RefillEndless()) return;

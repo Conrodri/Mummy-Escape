@@ -102,9 +102,6 @@ namespace MummyEscape.World
 
         void Apply()
         {
-            float b = _settings.Brightness;
-            _ambient.intensity = _baseAmbient * (1f + 0.5f * b);
-            _color.postExposure.value = b * 0.7f;
             bool fx = _settings.AdvancedLighting;
             _bloom.active = fx;
             _grain.active = fx;

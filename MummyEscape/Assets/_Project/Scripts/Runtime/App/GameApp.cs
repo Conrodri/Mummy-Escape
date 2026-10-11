@@ -46,7 +46,6 @@ namespace MummyEscape.App
         void Init(Material spriteMaterial, Material unlitMaterial, AudioClip music)
         {
             I = this;
-            Application.targetFrameRate = 60;
             // Portrait only, whatever the phone's auto-rotate setting.
             Screen.autorotateToLandscapeLeft = Screen.autorotateToLandscapeRight = Screen.autorotateToPortraitUpsideDown = false;
             Screen.orientation = ScreenOrientation.Portrait;
@@ -61,6 +60,8 @@ namespace MummyEscape.App
             SpriteMaterial = spriteMaterial;
             Settings = new SettingsService();
             Settings.Load();
+            Application.targetFrameRate = Settings.BatterySaver ? 30 : 60;
+            Settings.Changed += () => Application.targetFrameRate = Settings.BatterySaver ? 30 : 60;
             Loc.Apply(Settings.Language); // before any text is built
             Loc.Changed += OnLanguageChanged;
             Save = new SaveService();
@@ -99,6 +100,7 @@ namespace MummyEscape.App
             Game.CoopEnded += outcome => CoopScreen.ShowOutcome(this, outcome);
             Game.DuelEnded += (match, run) =>
             {
+                Analytics.Track("duel_end", ("outcome", run.Outcome.ToString()), ("live", match.IsLive), ("time_ms", run.TimeMs)); // noloc
                 Save.AddPassXp(Monetization.BattlePass.MatchXp);
                 UI.Open<PvpResultScreen>().Show(match, run);
             };
@@ -125,6 +127,8 @@ namespace MummyEscape.App
             Monetization.Store.UnfinishedFound = () => _ = Monetization.GoldWallet.RecoverAsync(this);
             UI.Open<MainMenuScreen>();
             if (Privacy.NeedsAnswer) UI.Open<WelcomeScreen>();
+            // A phone in a language the game does not speak: the player picks one before anything else (over the welcome).
+            if (Privacy.Data.AcceptedPolicyVersion == 0 && string.IsNullOrEmpty(Settings.Language) && !Loc.SpeaksSystemLanguage) UI.Open<LanguagePickerScreen>();
             StudioIntro.Play(Audio); // the studio's logo, over the first screen, in silence
 
             if (Privacy.OnlineAllowed) _ = StartOnline();
@@ -223,6 +227,7 @@ namespace MummyEscape.App
             }
             if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
             Online = service;
+            Analytics.Apply(Privacy.AnalyticsAllowed && service.IsAvailable);
             await AfterAccountChange();
             await SubmitRecords();
         }
@@ -286,6 +291,7 @@ namespace MummyEscape.App
         /// <summary>Stops every online exchange; the session stays on the device so turning it back on resumes it.</summary>
         public void StopOnline()
         {
+            Analytics.Apply(false);
             Online = Offline(OfflineReason);
             RefreshMenus();
         }
@@ -391,6 +397,7 @@ namespace MummyEscape.App
         void OnApplicationPause(bool paused)
         {
             if (paused) _ = SendSoloRuns(true);
+            if (paused) Notifications.Plan(this);
             if (paused && _cloudDirty && Online != null && Online.Account == AccountState.Account) _ = PushCloudSave();
         }
 

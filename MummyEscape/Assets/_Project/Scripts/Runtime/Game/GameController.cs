@@ -860,6 +860,7 @@ namespace MummyEscape.Game
         /// <summary>Hands the finished run to the save, which sends it to the server with the next batch.</summary>
         void QueueSoloRun(LevelResult result, Difficulty? endless, int depth, int xp, int scarabs)
         {
+            Analytics.Track("tomb_end", ("level", endless.HasValue ? "endless" : result.Level.Key), ("won", result.Won), ("stars", result.Stars), ("moves", result.Moves), ("depth", depth)); // noloc
             if (_soloRun == null || xp <= 0) return; // an endless death earns nothing: no call for it
             var run = new SoloRunReport { Id = Guid.NewGuid().ToString("N"), Inputs = _soloRun.Inputs, Depth = depth }; // noloc
             if (endless.HasValue) run.EndlessMode = (int)endless.Value;

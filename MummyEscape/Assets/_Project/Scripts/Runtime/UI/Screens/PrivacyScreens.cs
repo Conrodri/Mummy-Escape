@@ -39,6 +39,24 @@ namespace MummyEscape.UI.Screens
             return b;
         }
 
+        /// <summary>The player's id in a read-only field with a copy button (for a support ticket); nothing offline.</summary>
+        public static void PlayerIdLine(App.GameApp app, Transform card)
+        {
+            string id = app.Online.PlayerId;
+            if (string.IsNullOrEmpty(id) || !app.Online.IsAvailable) return;
+            var field = UIKit.Input(card, "", 24);
+            field.text = id;
+            field.readOnly = true;
+            UIKit.Size(field, 70);
+            Button copy = null;
+            copy = Wide(card, "Copier l'identifiant", () =>
+            {
+                GUIUtility.systemCopyBuffer = id;
+                UIKit.SetLabel(copy, "Copié !");
+            }, 28, 80);
+            Paragraph(card, "Ton identifiant de joueur, à donner au support si besoin.", 24, UIKit.Dim);
+        }
+
         public static RectTransform ScrollBody(UIScreen screen, RectTransform body, out ScrollRect scroll)
         {
             var content = UIKit.Scroll(body, out scroll);
@@ -95,6 +113,7 @@ namespace MummyEscape.UI.Screens
         RectTransform _content;
         ScrollRect _scroll;
         bool _isMinor;
+        bool _analytics;
 
         protected override void Build()
         {
@@ -152,6 +171,12 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(links.transform, "Confidentialité", () => PrivacyUI.OpenLegal(Router, true), 32), -1, -1, 1);
             UIKit.Size(UIKit.Button(links.transform, "Conditions", () => PrivacyUI.OpenLegal(Router, false), 32), -1, -1, 1);
             UIKit.Size(UIKit.Rect("Gap", _content), 20);
+            if (Services.Analytics.Provider != null)
+            {
+                _analytics = false; // never pre-ticked
+                UIKit.Toggle(_content, "En ligne, partager des statistiques d'usage anonymes", false, v => _analytics = v);
+                PrivacyUI.Paragraph(_content, "Quels tombeaux sont joués, gagnés ou abandonnés (prestataire Unity, jamais d'identifiant publicitaire). Modifiable dans Confidentialité.", 26, UIKit.Dim);
+            }
             PrivacyUI.Wide(_content, "Jouer en ligne", () => Go(Step.Age), 38, 104, ButtonStyle.Primary);
             PrivacyUI.Wide(_content, "Jouer hors ligne", () => Finish(false, null, false));
             PrivacyUI.Paragraph(_content, "Tu peux changer d'avis à tout moment dans Paramètres › Confidentialité.", 28, UIKit.Dim);
@@ -223,6 +248,7 @@ namespace MummyEscape.UI.Screens
         void Finish(bool online, bool? isMinor, bool parental)
         {
             App.Privacy.Answer(online, isMinor, parental);
+            if (!_fromSettings) App.Privacy.SetAnalytics(online && _analytics);
             Router.Close(this);
             if (App.Privacy.OnlineAllowed) _ = App.StartOnline();
             else App.StopOnline();
@@ -264,6 +290,11 @@ namespace MummyEscape.UI.Screens
             string countryLabel = string.IsNullOrEmpty(country) ? Loc.T("non affiché") : country == SaveService.AutoCountry ? Loc.T("celui de l'appareil") : CountryService.NameOf(country);
             PrivacyUI.Wide(online, Loc.F("Pays dans les classements : {0}", countryLabel), () => Router.Open<CountryPickerScreen>().OnPicked(Rebuild), 30, 88);
             PrivacyUI.Wide(online, "Mon compte", () => Router.Open<AccountScreen>(), 36);
+            if (Services.Analytics.Provider != null)
+            {
+                UIKit.Toggle(online, "Statistiques d'usage anonymes", p.AnalyticsEnabled, on => { App.Privacy.SetAnalytics(on); Services.Analytics.Apply(App.Privacy.AnalyticsAllowed && App.Online.IsAvailable); });
+                PrivacyUI.Paragraph(online, "Quels tombeaux sont joués, gagnés ou abandonnés, pour améliorer le jeu. Jamais d'identifiant publicitaire.", 26, UIKit.Dim);
+            }
             if (Monetization.Ads.Provider != null && Monetization.Ads.Provider.HasPrivacyOptions)
                 PrivacyUI.Wide(online, "Choix publicitaires", () => Monetization.Ads.Provider.ShowPrivacyOptions(Rebuild), 36);
 
@@ -326,7 +357,7 @@ namespace MummyEscape.UI.Screens
                 "Supprimer", async () =>
                 {
                     string error = await App.DeleteOnlineData();
-                    if (error == null) Rebuild();
+                    if (error == null) { await Services.Analytics.DeleteAsync(); Rebuild(); }
                     return error;
                 });
 
@@ -427,22 +458,7 @@ namespace MummyEscape.UI.Screens
         }
 
         /// <summary>The player id, for the support (refunds, unblocking) and the team list (Pvp.Developers). Selectable to copy.</summary>
-        void PlayerIdLine(Transform card)
-        {
-            string id = App.Online.PlayerId;
-            if (string.IsNullOrEmpty(id) || !App.Online.IsAvailable) return;
-            var field = UIKit.Input(card, "", 24);
-            field.text = id;
-            field.readOnly = true;
-            UIKit.Size(field, 70);
-            Button copy = null;
-            copy = PrivacyUI.Wide(card, "Copier l'identifiant", () =>
-            {
-                GUIUtility.systemCopyBuffer = id;
-                UIKit.SetLabel(copy, "Copié !");
-            }, 28, 80);
-            PrivacyUI.Paragraph(card, "Ton identifiant de joueur, à donner au support si besoin.", 24, UIKit.Dim);
-        }
+        void PlayerIdLine(Transform card) => PrivacyUI.PlayerIdLine(App, card);
 
         void GoogleError(Transform card)
         {

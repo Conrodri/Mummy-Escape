@@ -14,7 +14,7 @@ Cette page explique comment supprimer ton compte Mummy Rush et les données asso
 
 ## Ce qui est supprimé
 
-Ton profil et son identifiant, ton compte (identifiant de connexion et mot de passe), ton pseudonyme, tes scores dans les classements, tes amis et demandes d'ami, ta progression montrée à tes amis et ta sauvegarde en ligne, ton Elo et ton historique de duels et de 2v2, tes duos, ta place dans ta guilde, tes messages et replays partagés, et ton portefeuille (scarabées dorés, pass, objets payants).
+Ton profil et son identifiant, ton compte (lien avec Google Play Jeux, ou identifiant de connexion et mot de passe), ton pseudonyme, tes scores dans les classements, tes amis et demandes d'ami, ta progression montrée à tes amis et ta sauvegarde en ligne, ton Elo et ton historique de duels et de 2v2, tes duos, ta place dans ta guilde, tes messages et replays partagés, et ton portefeuille (scarabées dorés, pass, objets payants).
 
 ## Ce qui est conservé
 

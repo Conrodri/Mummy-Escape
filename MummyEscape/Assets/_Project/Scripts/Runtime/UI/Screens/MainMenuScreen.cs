@@ -128,6 +128,7 @@ namespace MummyEscape.UI.Screens
         {
             App.Lighting.SetMood(false);
             App.Audio.PlayMusic(0);
+            Services.Notifications.MaybeAsk(App);
             ApplyTheme();
             FitMummy();
             _stars.text = App.Save.TotalStars.ToString();

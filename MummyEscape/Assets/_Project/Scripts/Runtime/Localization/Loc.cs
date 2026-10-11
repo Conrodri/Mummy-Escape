@@ -52,14 +52,10 @@ namespace MummyEscape
         }
 
         /// <summary>Device language when supported, English otherwise (the most widely understood fallback).</summary>
-        public static LangInfo FromSystem()
-        {
-            switch (Application.systemLanguage)
-            {
-                case SystemLanguage.French: return Languages[0];
-                default: return Array.Find(Languages, l => l.Id == Lang.En);
-            }
-        }
+        public static LangInfo FromSystem() => SpeaksSystemLanguage && Application.systemLanguage == SystemLanguage.French ? Languages[0] : Array.Find(Languages, l => l.Id == Lang.En);
+
+        /// <summary>The game has the phone's language (otherwise the first launch asks which one to use).</summary>
+        public static bool SpeaksSystemLanguage => Application.systemLanguage == SystemLanguage.French || Application.systemLanguage == SystemLanguage.English;
 
         public static string T(string french)
         {

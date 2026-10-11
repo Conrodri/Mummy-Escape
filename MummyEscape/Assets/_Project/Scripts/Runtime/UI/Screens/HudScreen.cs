@@ -369,7 +369,11 @@ namespace MummyEscape.UI.Screens
             App.Game.TutorialEnded -= OnTutorialEnded;
         }
 
-        void ApplyControls() => _controls.Apply(App.Settings.Controls);
+        void ApplyControls()
+        {
+            _controls.SetSide(App.Settings.PadRight);
+            _controls.Apply(App.Settings.Controls);
+        }
 
         void OnTutorialEnded(bool won) => Router.Open<TutorialEndScreen>().Show(won);
 

@@ -1,0 +1,24 @@
+{
+    "name": "MummyEscape.Notifications.Mobile",
+    "rootNamespace": "MummyEscape.Services",
+    "references": [
+        "MummyEscape.Runtime",
+        "Unity.Notifications.Android"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MUMMY_NOTIFS"
+    ],
+    "versionDefines": [
+        { "name": "com.unity.mobile.notifications", "expression": "2.0.0", "define": "MUMMY_NOTIFS" }
+    ],
+    "noEngineReferences": false
+}

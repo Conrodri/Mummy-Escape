@@ -14,7 +14,7 @@ Write to contact@peakdevelopment.fr from any address, with the subject "Mummy Ru
 
 ## What is deleted
 
-Your profile and its ID, your account (login and password), your nickname, your leaderboard scores, your friends and friend requests, the progress shown to your friends and your online backup, your Elo and your duel and 2v2 history, your duos, your place in your guild, your messages and shared replays, and your wallet (golden scarabs, passes, paid items).
+Your profile and its ID, your account (link with Google Play Games, or login and password), your nickname, your leaderboard scores, your friends and friend requests, the progress shown to your friends and your online backup, your Elo and your duel and 2v2 history, your duos, your place in your guild, your messages and shared replays, and your wallet (golden scarabs, passes, paid items).
 
 ## What is kept
 

@@ -1,6 +1,6 @@
 # Mummy Rush — Privacy policy
 
-Version 3 — updated October 11, 2026. English translation: the French version prevails.
+Version 5 — updated October 12, 2026. English translation: the French version prevails.
 
 ## In short
 
@@ -26,7 +26,7 @@ This data stays on the device; you can erase it at any time (Settings › Privac
 • If you use the chat: your messages, their date and the replays you share there, visible to the members of the channel (global, your guild, or the friend you write to). Each channel keeps its last 100 messages, the oldest ones being erased as new ones arrive. Your blocks and reports are kept too, for moderation. Private messages are only possible between friends: the game sends the server your list of friends and whether you are a minor (to close the global channel to you).  
 • If you play against others (duels, 2v2, guilds): your runs (moves and times, replayed by the server to check they are possible), your Elo rating, your results and match history, your seals and rewards, your combat energy, your duos and your guild. Your opponents and teammates see your nickname, your look, your Elo and the replays of your matches.  
 • If you buy golden scarabs: the product, the order ID and the purchase token sent by Google Play, the date, and your wallet (golden scarabs, passes, paid items), kept by our server. We never receive your payment details: Google handles the payment.  
-• If you create an account (optional): your login, your password (stored encrypted by our provider, never readable by us) and a backup of your progress, so you can restore it on another device.  
+• If you create an account (optional, with Google Play Games): the player ID Google Play Games sends us to recognise you (neither your email address nor your name), and a backup of your progress, so you can restore it on another device. Accounts created earlier with a login keep it and their password (stored encrypted by our provider, never readable by us).  
 • Technical data required by the service (IP address, device model, error logs), used for its operation and security.
 
 ## Why, and on what legal basis?
@@ -44,6 +44,10 @@ Below the digital age of consent in your country (15 in France), online mode req
 • Our technical provider, Unity Technologies (Unity Gaming Services: Authentication, Leaderboards, Friends, Cloud Save, Cloud Code), acting on our behalf and under our instructions.  
 • Google, only if you watch an ad (see "Ads"), and Google Play for the payment and verification of your purchases.  
 Your game data is never sold or rented, and never passed on for advertising.
+
+## Usage statistics (only if you agree)
+
+In online mode, you may agree to usage statistics being sent to Unity Analytics (Unity Technologies, acting on our behalf): tombs played, won or abandoned, in-game purchases, ads watched, device and game version, with your player id. They are used only to improve the game. No advertising identifier is used. The choice is made at first launch and can be changed at any time in Settings › Privacy; deleting your online data erases them too.
 
 ## Ads (only if you choose to watch one)
 

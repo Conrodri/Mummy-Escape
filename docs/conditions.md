@@ -1,6 +1,6 @@
 # Mummy Rush — Conditions d'utilisation
 
-Version 3 — mise à jour le 11 octobre 2026.
+Version 5 — mise à jour le 12 octobre 2026.
 
 ## Objet
 
@@ -27,7 +27,7 @@ Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode e
 
 ## Ton compte
 
-Le compte est facultatif et se compose d'un identifiant et d'un mot de passe, que tu dois garder secrets. Aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. Tu peux supprimer ton compte et toutes tes données en ligne à tout moment depuis le jeu.
+Le compte est facultatif et se crée avec Google Play Jeux. Les comptes créés auparavant avec un identifiant et un mot de passe restent utilisables : garde-les secrets ; aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. Tu peux supprimer ton compte et toutes tes données en ligne à tout moment depuis le jeu.
 
 ## Règles de conduite
 

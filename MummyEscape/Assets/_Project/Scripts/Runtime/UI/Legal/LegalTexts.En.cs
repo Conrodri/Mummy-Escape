@@ -3,7 +3,7 @@ namespace MummyEscape.UI.Legal
     /// <summary>English versions of the legal texts. Keep them in sync with the French ones (LegalTexts.cs), which prevail.</summary>
     public static partial class LegalTexts
     {
-        public const string UpdatedEn = "October 11, 2026";
+        public const string UpdatedEn = "October 12, 2026";
 
         /// <summary>The documents in the current game language.</summary>
         public static string[] CurrentPrivacy => Loc.Current == Loc.Lang.En ? PrivacyEn : Privacy;
@@ -54,6 +54,11 @@ namespace MummyEscape.UI.Legal
             "• Our technical provider, Unity Technologies (Unity Gaming Services: Authentication, Leaderboards, Friends, Cloud Save, Cloud Code), acting on our behalf and under our instructions.\n" +
             "• Google, only if you watch an ad (see \"Ads\"), and Google Play for the payment and verification of your purchases.\n" +
             "Your game data is never sold or rented, and never passed on for advertising.",
+            "# Usage statistics (only if you agree)",
+            "In online mode, you may agree to usage statistics being sent to Unity Analytics (Unity Technologies, acting on our behalf): " +
+            "tombs played, won or abandoned, in-game purchases, ads watched, device and game version, with your player id. " +
+            "They are used only to improve the game. No advertising identifier is used. " +
+            "The choice is made at first launch and can be changed at any time in Settings › Privacy; deleting your online data erases them too.",
             "# Ads (only if you choose to watch one)",
             "When you run out of energy, you can watch a short ad to get some back. It is provided by Google AdMob " +
             "(Google Ireland Limited), which is independently responsible for it. Before the first one, a Google form asks, where the law requires it, " +

@@ -1,6 +1,6 @@
 # Mummy Rush — Terms of use
 
-Version 3 — updated October 11, 2026. English translation: the French version prevails.
+Version 5 — updated October 12, 2026. English translation: the French version prevails.
 
 ## Purpose
 
@@ -27,7 +27,7 @@ Below the digital age of consent in your country (15 in France), online mode is 
 
 ## Your account
 
-The account is optional and consists of a login and a password, which you must keep secret. Since no email address is requested, a forgotten password cannot be recovered. You can delete your account and all your online data at any time from the game.
+The account is optional and is created with Google Play Games. Accounts created earlier with a login and a password still work: keep them secret; since no email address is requested, a forgotten password cannot be recovered. You can delete your account and all your online data at any time from the game.
 
 ## Code of conduct
 
