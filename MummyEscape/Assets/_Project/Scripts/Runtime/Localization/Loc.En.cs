@@ -1423,6 +1423,20 @@ namespace MummyEscape
             ["Choisir un malus"] = "Pick a handicap",
             ["Commencer"] = "Start",
             ["Le plus d'étages en une course, puis le temps"] = "Most floors in one run, then the time",
+            ["Commun"] = "Common",
+            ["Rare"] = "Rare",
+            ["Épique"] = "Epic",
+            ["Ordre par défaut"] = "Default order",
+            ["Par qualité"] = "By quality",
+            ["Les parures du Trésor, en scarabées dorés : les pièces qui te manquent à -20 %."] = "The Treasure's regalia, for golden scarabs: the pieces you're missing at 20% off.",
+            ["Ces ensembles ne se vendent pas : ils se gagnent. Complets, ils s'équipent d'un geste."] = "These sets aren't sold: they're won. Once complete, put them on in one tap.",
+            ["Les pièces des ligues de duel, réunies. Le bouton achète d'un coup celles qui te manquent et dont tu as atteint la ligue, au prix normal."] = "The duel league pieces, together. The button buys at once the ones you're missing whose league you've reached, at the normal price.",
+            ["Collection complète"] = "Collection complete",
+            ["Acheter {0} pièce"] = "Buy {0} piece",
+            ["Acheter {0} pièces"] = "Buy {0} pieces",
+            [" · {0} sceaux"] = " · {0} seals",
+            ["Pièces des ligues"] = "League pieces",
+            [" pour {0} sceaux ?"] = " for {0} seals?",
         };
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MummyEscape.Core;
 using MummyEscape.Pvp;
 using MummyEscape.Services;
@@ -38,10 +39,21 @@ namespace MummyEscape.UI.Screens
         internal static readonly Color HalloweenColor = new Color32(255, 140, 40, 255);
         internal static readonly Color TowerColor = new Color32(170, 140, 255, 255);
 
+        // The collections by what pays for them; the sets that are won, not sold, last.
+        static readonly string[] SetCategories = { "Scarabées", "Scarabées dorés", "Sceaux", "Récompenses" };
+        static readonly string[] QualityNames = { "Commun", "Rare", "Épique", "Légendaire" };
+        static readonly Color[] QualityColors =
+        {
+            new Color32(190, 182, 168, 255), new Color32(90, 170, 255, 255), new Color32(200, 120, 255, 255), CasinoScreen.LegendaryColor,
+        };
+
         Text _coins, _stars, _seals, _gold, _note;
         PassBanner _pass;
-        UIKit.Segmented _sections;
+        UIKit.Segmented _sections, _setTabs, _sort;
         RectTransform _categories;
+        GameObject _setTabsRoot, _sortRoot;
+        int _setCategory;
+        bool _byQuality;
         readonly List<(Image plate, Image icon, Text label)> _chips = new List<(Image, Image, Text)>();
         RectTransform _list;
         ScrollRect _scroll;
@@ -83,6 +95,21 @@ namespace MummyEscape.UI.Screens
             // The slot categories of the Skins section: large icon chips.
             _categories = UIKit.Row(body, 112, 10).GetComponent<RectTransform>();
             for (int i = 0; i < Categories.Length; i++) CategoryChip(i);
+            _sort = new UIKit.Segmented(body, new[] { "Ordre par défaut", "Par qualité" }, i =>
+            {
+                _byQuality = i == 1;
+                Refresh();
+                _scroll.verticalNormalizedPosition = 1f;
+            }, 64);
+            _sortRoot = body.GetChild(body.childCount - 1).gameObject;
+
+            _setTabs = new UIKit.Segmented(body, SetCategories, i =>
+            {
+                _setCategory = i;
+                Refresh();
+                _scroll.verticalNormalizedPosition = 1f;
+            }, 72);
+            _setTabsRoot = body.GetChild(body.childCount - 1).gameObject;
 
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
@@ -210,6 +237,10 @@ namespace MummyEscape.UI.Screens
             _pass.Refresh(App);
 
             _categories.gameObject.SetActive(_section == SkinsSection);
+            _sortRoot.SetActive(_section == SkinsSection);
+            _sort.Select(_byQuality ? 1 : 0);
+            _setTabsRoot.SetActive(_section == SetsSection);
+            _setTabs.Select(_setCategory);
             for (int i = 0; i < _chips.Count; i++)
             {
                 bool on = i == _category;
@@ -224,7 +255,7 @@ namespace MummyEscape.UI.Screens
             _note = null;
             _cardIndex = 0;
             if (_section == TreasureSection) { FillTreasure(); return; }
-            if (_section == SetsSection) { FillSets(); return; }
+            if (_section == SetsSection) { FillSets(pvp); return; }
             if (_section == SealsSection) { FillSeals(pvp); return; }
 
             var slot = Categories[_category].slot;
@@ -238,6 +269,7 @@ namespace MummyEscape.UI.Screens
                 if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
             items.AddRange(HalloweenSkins.InShop(slot, save.Data.OwnedSkins, DateTime.UtcNow));
             foreach (var s in TowerSkins.All) if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
+            if (_byQuality) items = items.OrderByDescending(Quality).ToList(); // stable: the usual order within a quality
             // The way to the sets, easy to miss behind their tab.
             var toSets = UIKit.Button(_list, "Ensembles complets à -20 % : voir les collections", () =>
             {
@@ -281,6 +313,14 @@ namespace MummyEscape.UI.Screens
             return (Loc.F("Acte {0}", item.Theme), ThemeColor(item.Theme));
         }
 
+        /// <summary>0 Commun (classics), 1 Rare (acts, duels), 2 Épique (Treasure, pass, events, tower, seals), 3 Légendaire (animated).</summary>
+        internal static int Quality(SkinDef item)
+        {
+            if (item.Legendary) return 3;
+            if (item.Badge != null || SealShop.Get(item.Id) != null) return 2;
+            return item.Pvp || item.Theme > 0 ? 1 : 0;
+        }
+
         static string HalloweenDates => Loc.T("Événement Halloween, du 24 octobre au 7 novembre.");
 
         internal static string Origin(SkinDef item)
@@ -320,7 +360,12 @@ namespace MummyEscape.UI.Screens
             card.gameObject.AddComponent<PressScale>();
             UIKit.Column(card.transform, 4, 14, TextAnchor.MiddleCenter);
 
-            var tagText = UIKit.Label(card.transform, tag.ToUpperInvariant(), 20, tagColor, TextAnchor.MiddleCenter, FontStyle.Bold);
+            // The quality in its colour before the origin (alone when they say the same, like Légendaire).
+            int quality = Quality(item);
+            string qualityName = Loc.T(QualityNames[quality]);
+            var tagText = UIKit.Label(card.transform, "", 20, tagColor, TextAnchor.MiddleCenter, FontStyle.Bold);
+            tagText.text = (qualityName == tag ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(QualityColors[quality]) + ">" + qualityName.ToUpperInvariant() + "</color> · ") // noloc
+                         + tag.ToUpperInvariant();
             UIKit.FitText(tagText, 14);
             UIKit.Size(tagText, 28, 0);
 
@@ -405,14 +450,40 @@ namespace MummyEscape.UI.Screens
         // ------------------------------------------------------------------ collections
 
         /// <summary>
-        /// One wide card per set: the act collections (scarabs, 20 % off), the Treasure's parures (golden scarabs, 20 % off),
-        /// then the sets that are won, not sold (Halloween, the tower, the team's): put on in one tap once complete.
+        /// One wide card per set, by category: the act collections (scarabs, 20 % off), the Treasure's parures (golden scarabs,
+        /// 20 % off), the league pieces (seals, full price), then the sets that are won, not sold (Halloween, the tower, the team's).
         /// </summary>
-        void FillSets()
+        void FillSets(PlayerPvpData d)
         {
             var save = App.Save;
-            Intro("Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (50 par acte). L'ensemble complet coûte 20 % de moins.");
             int index = 0;
+            if (_setCategory == 1)
+            {
+                Intro("Les parures du Trésor, en scarabées dorés : les pièces qui te manquent à -20 %.");
+                foreach (var gold in Monetization.GoldShop.Sets)
+                {
+                    var set = SkinSets.Pieces(gold.SkinIds);
+                    int price = Monetization.GoldShop.SetPrice(gold, save.Data.OwnedSkins);
+                    bool worn = Worn(set);
+                    string label = worn ? Loc.T("Équipé") : price == 0 ? Loc.T("Tout équiper") : Loc.F("Parure : {0} dorés", price);
+                    var g = gold;
+                    SetCard(Loc.T(gold.Name), set, TreasureScreen.GoldColor, new Color32(70, 52, 20, 255), new Color32(30, 22, 8, 255),
+                            false, label, !worn, () => OnGoldSet(g, set, price), index++);
+                }
+                return;
+            }
+            if (_setCategory == 2) { SealPack(d); return; }
+            if (_setCategory == 3)
+            {
+                Intro("Ces ensembles ne se vendent pas : ils se gagnent. Complets, ils s'équipent d'un geste.");
+                if (Halloween.IsOpen(DateTime.UtcNow) || Owns(HalloweenSkins.All))
+                    Showcase(Loc.T("Nuit d'Halloween"), SkinSets.Halloween, HalloweenColor, index++);
+                Showcase(Loc.T("Tour de défi"), TowerSkins.All, TowerColor, index++);
+                if (Owns(SkinSets.Team)) Showcase(Loc.T("Équipe de Mummy Rush"), SkinSets.Team, new Color32(90, 255, 190, 255), index++);
+                return;
+            }
+
+            Intro("Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (50 par acte). L'ensemble complet coûte 20 % de moins.");
             for (int act = 1; act <= DifficultyTable.ActCount; act++)
             {
                 var set = SkinCatalog.ThemeSet(act);
@@ -429,22 +500,69 @@ namespace MummyEscape.UI.Screens
                 SetCard(ThemeName(act), set, ThemeColor(act), Color.Lerp(theme.Wall, Color.black, 0.2f), Color.Lerp(theme.FloorDark, Color.black, 0.55f),
                         locked, label, !worn && (missingPrice == 0 || !locked && save.Data.Coins >= price), () => OnSet(a, price), index++);
             }
+        }
 
-            foreach (var gold in Monetization.GoldShop.Sets)
+        /// <summary>
+        /// Maât's league pieces on one card, at their full price: one tap buys every missing piece whose league is reached.
+        /// Not worn together (three of them are colours): each piece is put on from the Seals tab.
+        /// </summary>
+        void SealPack(PlayerPvpData d)
+        {
+            Intro("Les pièces des ligues de duel, réunies. Le bouton achète d'un coup celles qui te manquent et dont tu as atteint la ligue, au prix normal.");
+            _note = UIKit.Label(_list, "", 26, UIKit.Sand);
+            UIKit.FitText(_note, 18);
+            UIKit.Size(_note, 44);
+            if (App.Pvp == null) _note.text = Loc.T("Les duels se jouent en ligne : active le mode en ligne (Paramètres › Confidentialité).");
+            else if (d == null) _note.text = Loc.T("Chargement…");
+
+            var set = new List<SkinDef>();
+            var buy = new List<string>();
+            int price = 0, missing = 0;
+            League? next = null;
+            foreach (var item in SealShop.Items)
             {
-                var set = SkinSets.Pieces(gold.SkinIds);
-                int price = Monetization.GoldShop.SetPrice(gold, save.Data.OwnedSkins);
-                bool worn = Worn(set);
-                string label = worn ? Loc.T("Équipé") : price == 0 ? Loc.T("Tout équiper") : Loc.F("Parure : {0} dorés", price);
-                var g = gold;
-                SetCard(Loc.T(gold.Name), set, TreasureScreen.GoldColor, new Color32(70, 52, 20, 255), new Color32(30, 22, 8, 255),
-                        false, label, !worn, () => OnGoldSet(g, set, price), index++);
+                var def = PvpSkins.ShopItem(item.Id);
+                if (def == null) continue;
+                set.Add(def);
+                if (App.Save.Data.OwnedSkins.Contains(item.Id) || d != null && d.UnlockedRewards.Contains(item.Id)) continue;
+                missing++;
+                if (d != null && d.HighestLeague >= item.MinLeague) { buy.Add(item.Id); price += item.Price; }
+                else if (next == null) next = item.MinLeague;
             }
+            bool affordable = buy.Count > 0 && d.Seals >= price;
+            string label = missing == 0 ? Loc.T("Collection complète")
+                         : buy.Count > 0 ? Loc.P(buy.Count, "Acheter {0} pièce", "Acheter {0} pièces") + Loc.F(" · {0} sceaux", price)
+                         : next != null ? Loc.F("Ligue {0} requise", Loc.T(PvpSkins.LeagueName(next.Value))) : Loc.T("Chargement…");
+            SetCard(Loc.T("Pièces des ligues"), set, UIKit.Turquoise, new Color32(24, 70, 66, 255), new Color32(10, 30, 28, 255),
+                    false, label, !_busy && affordable, () => OnSealPack(buy, price), 0);
+        }
 
-            if (Halloween.IsOpen(DateTime.UtcNow) || Owns(HalloweenSkins.All))
-                Showcase(Loc.T("Nuit d'Halloween"), SkinSets.Halloween, HalloweenColor, index++);
-            Showcase(Loc.T("Tour de défi"), TowerSkins.All, TowerColor, index++);
-            if (Owns(SkinSets.Team)) Showcase(Loc.T("Équipe de Mummy Rush"), SkinSets.Team, new Color32(90, 255, 190, 255), index++);
+        void OnSealPack(List<string> ids, int price)
+        {
+            Router.Open<OfferDialog>().Configure(Loc.T("Pièces des ligues"), Loc.P(ids.Count, "Acheter {0} pièce", "Acheter {0} pièces") + Loc.F(" pour {0} sceaux ?", price),
+                (Loc.F("Acheter · {0} sceaux", price), ButtonStyle.Primary, () => BuySeals(ids)),
+                ("Annuler", ButtonStyle.Ghost, null));
+        }
+
+        /// <summary>One server purchase per piece, as in the Seals tab; stops at the first refusal and says why.</summary>
+        async void BuySeals(List<string> ids)
+        {
+            if (_busy || App.Pvp == null) return;
+            _busy = true;
+            Refresh();
+            string error = null;
+            foreach (var id in ids)
+            {
+                var r = await App.Pvp.BuyWithSealsAsync(id);
+                if (this == null) return;
+                if (r == null || !r.Ok) { error = PvpScreen.ErrorText(r?.Error); break; }
+                App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
+                if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
+            }
+            _busy = false;
+            if (error == null) App.Audio.Play(Sfx.Coin);
+            Refresh();
+            if (error != null && _note != null) _note.text = error;
         }
 
         bool Worn(IEnumerable<SkinDef> set)
