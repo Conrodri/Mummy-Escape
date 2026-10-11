@@ -446,6 +446,14 @@ namespace MummyEscape.UI.Screens
                 if (_moves.text != relay) _moves.text = relay;
                 return;
             }
+            if (App.Game.InCoop && App.Game.Coop != null)
+            {
+                // The pair's moves (the par counts both), this phone's clock.
+                int cs = App.Game.Coop.ElapsedMs / 1000;
+                string coop = Loc.F("Coups : {0}", App.Game.Coop.Moves) + $"  ·  {cs / 60}:{cs % 60:00}";
+                if (_moves.text != coop) _moves.text = coop;
+                return;
+            }
             int sec = s.ElapsedMs / 1000;
             string text = Loc.F("Coups : {0}", s.Moves) + $"  ·  {sec / 60}:{sec % 60:00}";
             // Solo: the expert mummy's time on this maze, red once the clock has gone past it.
@@ -464,7 +472,8 @@ namespace MummyEscape.UI.Screens
             var s = App.Game.Session;
             if (s == null) return;
             var level = s.Level;
-            _level.text = App.Game.InRelay ? "2v2" : App.Game.InTutorial ? Loc.T("Tutoriel") : App.Game.InDuel ? Loc.T("Duel")
+            var coopTomb = App.Game.InCoop ? App.Game.Coop?.Tomb : null;
+            _level.text = coopTomb != null ? "2v2 · " + Loc.T(coopTomb.Name) : App.Game.InRelay ? "2v2" : App.Game.InTutorial ? Loc.T("Tutoriel") : App.Game.InDuel ? Loc.T("Duel")
                         : App.Game.InEndless ? Loc.F("Tombeau {0}", App.Game.EndlessTomb) : Loc.F("Niveau {0}", level.Id); // noloc
             UpdateCounter(s);
             UpdateLesson(s);
@@ -484,7 +493,8 @@ namespace MummyEscape.UI.Screens
                     sub = maze + (App.Game.PreviewPages > 1 ? "  ·  " + Loc.T("glisse pour changer") : "");
                 }
                 _previewTitle.text = Loc.T("Mémorise le tombeau !") + $"\n<size=30>{sub}</size>";
-                _ready.gameObject.SetActive(!App.Game.InRelay && !App.Game.InLiveDuel); // live: same time for everyone
+                if (coopTomb != null) sub = Loc.F("Acte {0} — {1}", coopTomb.Act, Loc.T(CoopCampaign.ActName(coopTomb.Act)));
+                _ready.gameObject.SetActive(!App.Game.InRelay && !App.Game.InLiveDuel && !App.Game.InCoop); // live: same time for everyone
             }
 
 
@@ -527,6 +537,7 @@ namespace MummyEscape.UI.Screens
                     ? App.Game.ScreenCaptured ? Loc.T("Enregistrement d'écran détecté :\nle tombeau reste dans l'ombre")
                     : App.Game.ScreenshotRedraw ? Loc.T("Capture d'écran : les dieux ont scellé\nun autre tombeau !")
                     : ""
+                : App.Game.CoopWaiting ? Loc.F("En attente de {0}…", App.Game.CoopInfo?.MateName ?? "?")
                 : App.Game.DuelWaiting ? Loc.F("En attente de {0}…", App.Game.Match.Ghost?.PlayerName ?? "?")
                 : reversed > 0 ? Loc.F("Commandes inversées ! ({0})", reversed)
                 : justTurned ? Loc.T("Le tombeau a pivoté !\nTes gestes suivent l'écran.")
@@ -540,6 +551,7 @@ namespace MummyEscape.UI.Screens
             string Map = Loc.T("Maintiens « Carte » pour revoir ce que tu as exploré.");
             string mechanic = ActHint(level.Id.Act);
             _hint.text = preview || App.Game.InTutorial ? ""
+                : coopTomb != null ? (s.Moves < 6 ? Loc.T(coopTomb.Lesson) : "")
                 : mechanic == null ? (s.Moves == 0 ? Controls : s.Moves < 4 ? Map : "")
                 : s.Moves < 4 ? mechanic
                 : s.Moves < 8 ? Map

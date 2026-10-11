@@ -326,10 +326,10 @@ namespace MummyEscape.Online
         static string Gen() => "v" + Core.DifficultyTable.GeneratorVersion + "d" + PvpDraft.Version; // noloc
         static string League(DuelSearch search) => ((int)Leagues.FromElo(search.Elo)).ToString();
 
-        static string EncodeLook(PlayerLook look) => look == null ? "" :
+        internal static string EncodeLook(PlayerLook look) => look == null ? "" :
             string.Join("|", look.Mummy, look.Color, look.Torch, look.Hat, look.Shoes, look.Title); // noloc
 
-        static PlayerLook DecodeLook(string text)
+        internal static PlayerLook DecodeLook(string text)
         {
             var parts = (text ?? "").Split('|');
             if (parts.Length != 6) return null;

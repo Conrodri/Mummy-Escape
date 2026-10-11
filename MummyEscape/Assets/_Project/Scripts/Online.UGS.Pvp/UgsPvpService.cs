@@ -100,6 +100,13 @@ namespace MummyEscape.Online
         public async Task<DuoBoardResponse> GetDuoBoardAsync(int limit) =>
             await Call<DuoBoardResponse>("GetDuoBoard", Args("limit", limit), _ => null) ?? new DuoBoardResponse();
 
+        public Task<CoopClearResponse> SubmitCoopAsync(string duoId, int tomb, List<CoopRunInput> inputs, int timeMs) =>
+            Call("SubmitCoop", Args("duoId", duoId, "tomb", tomb, "inputs", inputs ?? new List<CoopRunInput>(), "timeMs", timeMs),
+                 e => new CoopClearResponse { Error = e });
+
+        public async Task<DuoBoardResponse> GetCoopBoardAsync(int limit) =>
+            await Call<DuoBoardResponse>("GetCoopBoard", Args("limit", limit), _ => null) ?? new DuoBoardResponse();
+
         public Task<FindDuelResponse> StartBattleRunAsync(string battleId) =>
             Call("StartBattleRun", Args("battleId", battleId, "generatorVersion", Gen), e => new FindDuelResponse { Error = e });
 

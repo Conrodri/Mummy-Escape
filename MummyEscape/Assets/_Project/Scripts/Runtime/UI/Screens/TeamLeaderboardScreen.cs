@@ -19,7 +19,7 @@ namespace MummyEscape.UI.Screens
         RectTransform _list;
         ScrollRect _scroll;
         Text _info;
-        bool _guilds;
+        bool _guilds, _coop;
         int _request;
 
         protected override void Build()
@@ -41,6 +41,15 @@ namespace MummyEscape.UI.Screens
         public void Show(bool guilds)
         {
             _guilds = guilds;
+            _coop = false;
+            OnShow();
+        }
+
+        /// <summary>Opens the 2v2 campaign ranking: the same duos, by stars then total time.</summary>
+        public void ShowCoop()
+        {
+            _guilds = false;
+            _coop = true;
             OnShow();
         }
 
@@ -62,7 +71,7 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             int request = ++_request;
-            bool guilds = _guilds;
+            bool guilds = _guilds, coop = _coop;
             var rows = new List<(string name, string record, string score)>();
             if (guilds)
             {
@@ -71,14 +80,20 @@ namespace MummyEscape.UI.Screens
                     rows.Add(($"[{g.Tag}] {g.Name}", Loc.F("{0}/{1} membres", g.MemberCount, TeamConfig.GuildMaxMembers) + " · " // noloc
                               + Loc.F("guerres {0} V · {1} D", g.WarWins, g.WarLosses), g.Points.ToString()));
             }
+            else if (coop)
+            {
+                var board = await pvp.GetCoopBoardAsync(Top);
+                foreach (var d in board.Rows)
+                    rows.Add((d.Name, Loc.F("{0} tombeaux", d.CoopCleared) + " · " + Core.LevelResult.FormatTime(d.CoopTimeMs), "★ " + d.CoopStars)); // noloc
+            }
             else
             {
                 var board = await pvp.GetDuoBoardAsync(Top);
                 foreach (var d in board.Rows)
                     rows.Add((d.Name, "<color=#40E0D0>" + Loc.F("{0} V", d.Wins) + "</color> · " + Loc.F("{0} N", d.Draws) + " · <color=#D65440>" + Loc.F("{0} D", d.Losses) + "</color>", d.Elo.ToString())); // noloc
             }
-            if (request != _request || this == null || guilds != _guilds) return;
-            _info.text = guilds ? Loc.T("Guildes · par points de guilde") : Loc.T("2v2 · par Elo de duo");
+            if (request != _request || this == null || guilds != _guilds || coop != _coop) return;
+            _info.text = guilds ? Loc.T("Guildes · par points de guilde") : coop ? Loc.T("Campagne 2v2 · par étoiles, puis temps") : Loc.T("2v2 · par Elo de duo");
             if (pvp.IsDemo) _info.text += "  ·  <color=#E8C35A>" + Loc.T("démo hors ligne") + "</color>";
             if (rows.Count == 0) UIKit.Size(UIKit.Label(_list, guilds ? "Aucune guilde pour le moment." : "Aucun duo classé pour le moment.", 28, UIKit.Dim), 80);
             for (int i = 0; i < rows.Count; i++) Row(i + 1, rows[i].name, rows[i].record, rows[i].score);

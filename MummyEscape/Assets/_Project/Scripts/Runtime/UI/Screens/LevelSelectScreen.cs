@@ -34,7 +34,7 @@ namespace MummyEscape.UI.Screens
             _glow.preserveAspect = false;
             UIKit.Place(_glow.rectTransform, 0.5f, 1f, 2200, 1600, 0, -250);
 
-            var title = Header("Solo");
+            var title = Header("Campagne");
             // The music of the tombs, with the solo game it belongs to.
             var jukebox = UIKit.IconButton(title.transform.parent, UISprites.Note, () => Router.Open<JukeboxScreen>(), 92);
             UIKit.Place((RectTransform)jukebox.transform, 1, 0.5f, 92, 92, -36, 0);
@@ -71,6 +71,8 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(_continue.GetComponentInChildren<Text>(), 24);
             _plays = UIKit.Label(body, "", 26, UIKit.Dim);
             UIKit.Size(_plays, 36);
+            // The 2v2 campaign: the same tomb for both mummies of a duo.
+            UIKit.Size(UIKit.Button(body, "Campagne 2v2", () => Router.Open<CoopScreen>(), 32, ButtonStyle.Secondary), 88);
 
             // The endless ladders, one per mode whose campaign is finished, each at the player's tomb.
             _endlessRow = UIKit.Row(body, 110, 16);

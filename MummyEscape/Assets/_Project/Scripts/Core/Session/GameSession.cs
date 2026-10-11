@@ -31,7 +31,7 @@ namespace MummyEscape.Core
         readonly List<PlayerAction> _history = new List<PlayerAction>();
 
         /// <summary>Currents, fragile slabs or barriers: a careless move can leave no way out.</summary>
-        readonly bool _canGetStuck;
+        bool _canGetStuck;
         public DefeatCause Defeat { get; private set; }
 
         /// <summary>Raised after every accepted action, with what happened.</summary>
@@ -76,7 +76,12 @@ namespace MummyEscape.Core
 
             var r = Rules.Step(Level, State, action);
             if (r.Has(StepFlags.Blocked)) return r;
+            return Commit(action, r);
+        }
 
+        /// <summary>Records an accepted step (its rules already applied): counters, fog, end of the run.</summary>
+        internal StepResult Commit(PlayerAction action, StepResult r)
+        {
             Moves++;
             _history.Add(action);
             if (r.CountsAsInteraction) Interactions++;
@@ -109,8 +114,14 @@ namespace MummyEscape.Core
             return r;
         }
 
-        /// <summary>Currently lit by the mummy's torch: own tile + 4 neighbours (only own tile when blind or when the torch is out).</summary>
-        public bool IsVisible(Cell c)
+        /// <summary>Currently lit: by the mummy's torch, or (two-player campaign) by the other mummy's.</summary>
+        public bool IsVisible(Cell c) => IsLitByTorch(c) || (SharedLight != null && SharedLight(c));
+
+        /// <summary>Two-player campaign: the tiles the other mummy's torch lights, seen as well.</summary>
+        public Func<Cell, bool> SharedLight { get; internal set; }
+
+        /// <summary>Lit by the mummy's own torch: own tile + 4 neighbours (only own tile when blind or when the torch is out).</summary>
+        public bool IsLitByTorch(Cell c)
         {
             var p = Position;
             if (c.Floor != p.Floor) return false;
@@ -155,7 +166,7 @@ namespace MummyEscape.Core
             return false;
         }
 
-        bool CanReach(Cell c) => c.Floor == Position.Floor && (IsVisible(c) || Rules.CanFeelFor(State, Level.Get(c)));
+        internal bool CanReach(Cell c) => c.Floor == Position.Floor && (IsVisible(c) || Rules.CanFeelFor(State, Level.Get(c)));
 
         public LevelResult BuildResult() => new LevelResult
         {
@@ -170,6 +181,28 @@ namespace MummyEscape.Core
             TrapsTriggered = TrapsTriggered,
             TimeMs = ElapsedMs,
         };
+
+        // ------------------------------------------------------------------ two-player campaign (CoopSession)
+
+        /// <summary>The pair's own rules decide when a run is lost: no single-mummy "walled in" check.</summary>
+        internal void ShareTomb() => _canGetStuck = false;
+
+        /// <summary>The other mummy changed the shared tomb (doors, slabs, disarmed traps): this mummy's state follows.</summary>
+        internal void Sync(RuleState s) => State = s;
+
+        /// <summary>The pair won or lost on the other mummy's step.</summary>
+        internal void End(SessionStatus status, DefeatCause cause)
+        {
+            if (Status != SessionStatus.Playing) return;
+            Status = status;
+            Defeat = cause;
+        }
+
+        /// <summary>A tile the other mummy's torch lights is remembered too.</summary>
+        internal void Reveal(Cell c)
+        {
+            if (Level.InBounds(c)) _explored[Level.IndexOf(c)] = true;
+        }
 
         void RevealAround(Cell p)
         {

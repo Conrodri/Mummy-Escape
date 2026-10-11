@@ -369,6 +369,11 @@ namespace MummyEscape.Online
             return board;
         });
 
+        public Task<CoopClearResponse> SubmitCoopAsync(string duoId, int tomb, List<CoopRunInput> inputs, int timeMs) =>
+            Run(() => _server.SubmitCoopAsync(Me, duoId, tomb, inputs, timeMs));
+
+        public Task<DuoBoardResponse> GetCoopBoardAsync(int limit) => Run(() => _server.GetCoopBoardAsync(limit));
+
         public Task<FindDuelResponse> StartBattleRunAsync(string battleId) => Run(() => _server.StartBattleRunAsync(Me, battleId, Gen));
 
         public Task<TeamBattle> GetBattleAsync(string battleId) => Run(() => _server.GetBattleAsync(Me, battleId));

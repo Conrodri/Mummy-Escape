@@ -62,7 +62,7 @@ namespace MummyEscape.UI
             bar.Add(row, UISprites.Home, "Accueil", new[] { NavTab.Home },
                 E("Accueil", UISprites.Home, s => s is MainMenuScreen, () => router.Reset<MainMenuScreen>()));
             bar.Add(row, UISprites.Play, "Jouer", new[] { NavTab.Solo, NavTab.Duel, NavTab.Ranking },
-                E("Solo", UISprites.Map, s => s.Tab == NavTab.Solo, bar.Go<LevelSelectScreen>),
+                E("Campagne", UISprites.Map, s => s.Tab == NavTab.Solo, bar.Go<LevelSelectScreen>),
                 E("Duel", UISprites.Swords, s => s.Tab == NavTab.Duel, bar.Go<PvpScreen>),
                 E("Classements", UISprites.Podium, s => s.Tab == NavTab.Ranking, bar.Go<LeaderboardScreen>));
             bar.Add(row, UISprites.User, "Momie", new[] { NavTab.Mummy },

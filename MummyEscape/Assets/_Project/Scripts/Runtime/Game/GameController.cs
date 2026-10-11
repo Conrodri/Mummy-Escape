@@ -72,6 +72,7 @@ namespace MummyEscape.Game
             int token = ++_loadToken;
             ResetForLoad();
             DetachDuelLink();
+            ClearCoop();
             Match = null;
             Pace = null;
             CurrentLevel = id;
@@ -114,6 +115,7 @@ namespace MummyEscape.Game
             ++_loadToken;
             ResetForLoad();
             DetachDuelLink();
+            ClearCoop();
             Match = null;
             Pace = null;
             InTutorial = true;
@@ -167,6 +169,7 @@ namespace MummyEscape.Game
             ResetForLoad();
             Session = null; // the last run's clock must not reach the new duel while its tomb is generated
             Match = match;
+            ClearCoop();
             AttachDuelLink(link);
             Pace = null;
             var id = PvpArena.LevelFor(match.Seed);
@@ -240,20 +243,20 @@ namespace MummyEscape.Game
             }
         }
 
-        void Setup(Level level)
+        void Setup(Level level, GameSession session = null)
         {
-            Session = new GameSession(level);
+            Session = session ?? new GameSession(level);
             ApplyTheme(TombTheme.ForAct(level.Id.Act));
             IndexMechanisms(level);
             _maze.Build(Session);
             _player.gameObject.SetActive(true);
             _player.ResetVisual();
             _player.SetSkin(_app.Save.Loadout);
-            _player.Place(level.Start);
+            _player.Place(Session.Position);
             _player.SetBlind(false);
             _player.SetReversed(0);
             _player.SetTorchLit(true);
-            _app.Camera.SnapTo(MazeView.CellToWorld(level.Start));
+            _app.Camera.SnapTo(MazeView.CellToWorld(Session.Position));
             _app.Camera.SetTurn(0, true);
             _app.Lighting.SetMood(true);
             _paused = false;
@@ -309,7 +312,7 @@ namespace MummyEscape.Game
         /// </summary>
         IEnumerator PreviewRoutine()
         {
-            if (!_app.Settings.ShowPreview && Match == null) // a duel always shows the tomb: both rivals get the same look
+            if (!_app.Settings.ShowPreview && Match == null && !InCoop) // a duel always shows the tomb: both rivals get the same look
             {
                 _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
                 PreviewChanged?.Invoke();
@@ -345,7 +348,7 @@ namespace MummyEscape.Game
                     PreviewChanged?.Invoke();
                 }
                 // In a duel the pause menu does not stop the preview either (no studying the map at leisure).
-                if (!captured && (!_paused || Match != null)) PreviewLeft -= Time.deltaTime;
+                if (!captured && (!_paused || Match != null || InCoop)) PreviewLeft -= Time.deltaTime;
                 yield return null;
             }
             PreviewLeft = 0f;
@@ -354,6 +357,7 @@ namespace MummyEscape.Game
             EndPreviewVisuals();
             // Live duel: both phones start together.
             if (InLiveDuel) yield return WaitForRival();
+            if (InCoop) yield return WaitForMate();
             _app.Audio.Play(Sfx.Darkness);
             _input.Enabled = !_paused && Session != null && Session.Status == SessionStatus.Playing;
             PreviewChanged?.Invoke();
@@ -385,7 +389,7 @@ namespace MummyEscape.Game
         {
             // A duel's tomb is drawn by the server and shared with the rival: it cannot be swapped.
             // An endless tomb is the same for everyone and stored for good: it cannot be swapped either.
-            if (!Previewing || Session == null || Match != null || InEndless) return;
+            if (!Previewing || Session == null || Match != null || InEndless || InCoop) return;
             _ = RedrawAfterScreenshot();
         }
 
@@ -399,7 +403,7 @@ namespace MummyEscape.Game
         /// <summary>"Ready": the run starts now, whatever floor the preview shows.</summary>
         public void SkipPreview()
         {
-            if (!InLiveDuel) _skipPreview = true; // a live duel shows the tomb as long to both rivals
+            if (!InLiveDuel && !InCoop) _skipPreview = true; // a live duel shows the tomb as long to both rivals
         }
 
         void EndPreviewVisuals()
@@ -417,13 +421,14 @@ namespace MummyEscape.Game
         {
             if (InTutorial) StartTutorial();
             else if (InEndless) _ = StartEndless(EndlessMode.Value);
-            else if (Match == null) _ = StartLevel(CurrentLevel);
+            else if (Match == null && !InCoop) _ = StartLevel(CurrentLevel);
         }
 
         public void Abandon()
         {
             _loadToken++;
             ClearRelay();
+            ClearCoop();
             DetachDuelLink();
             EndPreviewVisuals();
             StopAllCoroutines();
@@ -447,9 +452,14 @@ namespace MummyEscape.Game
             // In a duel the clock never stops: the rival's ghost did not pause either.
             bool duel = Match != null;
             UpdateRelay();
+            UpdateCoop();
             // A step being animated keeps the clock running even in pause: pausing on every swipe must not hide the
             // animations from the time (nobody beats RunTiming's minimum).
-            if (Session != null && Relay == null && !Previewing && !DuelWaiting && (!_paused || duel || _busy) && !(duel && Match.Over)) Session.Tick(Time.deltaTime);
+            if (Session != null && Relay == null && !Previewing && !DuelWaiting && (!_paused || duel || _busy || InCoop) && !(duel && Match.Over) && !CoopWaiting)
+            {
+                if (Coop != null) Coop.Tick(Time.deltaTime);
+                else Session.Tick(Time.deltaTime);
+            }
             if (duel) UpdateDuel();
             RepeatHeld();
             // A floor may have its own music (Resources/Music/act{n}_f{floor}); no-op while the track playing fits.
@@ -463,6 +473,7 @@ namespace MummyEscape.Game
             var turn = _app.Camera.Turn;
             _player.transform.rotation = turn;
             _ghost.transform.rotation = turn;
+            if (_mate != null) _mate.transform.rotation = turn;
         }
 
         public void SetPaused(bool paused)
@@ -514,7 +525,7 @@ namespace MummyEscape.Game
             if (Previewing)
             {
                 if (PreviewPages > 1) TurnPreviewPage(d == Dir.Up || d == Dir.Right ? 1 : -1);
-                else if (!InLiveDuel && !InRelay)
+                else if (!InLiveDuel && !InRelay && !InCoop)
                 {
                     _pendingMove = d;
                     SkipPreview();
@@ -571,6 +582,7 @@ namespace MummyEscape.Game
         IEnumerator Play(PlayerAction action)
         {
             if (Relay != null) { yield return PlayRelay(action); yield break; }
+            if (InCoop) { yield return PlayCoop(action); yield break; }
             var before = Session.State;
             var from = Session.Position;
             var r = Session.Apply(action);
@@ -773,6 +785,7 @@ namespace MummyEscape.Game
             Changed?.Invoke();
 
             if (Relay != null) { yield return RelayStepDone(); yield break; }
+            if (InCoop) { yield return CoopStepDone(); yield break; }
             if (Session.Status != SessionStatus.Playing)
             {
                 yield return Finish();

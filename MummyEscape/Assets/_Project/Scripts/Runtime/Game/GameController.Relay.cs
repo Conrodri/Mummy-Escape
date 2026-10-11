@@ -80,6 +80,7 @@ namespace MummyEscape.Game
             int token = ++_loadToken;
             ResetForLoad();
             ClearRelay();
+            ClearCoop();
             Session = null;
             Match = null;
             Pace = null;
