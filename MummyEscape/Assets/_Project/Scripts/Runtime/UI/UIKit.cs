@@ -677,8 +677,9 @@ namespace MummyEscape.UI
         /// <summary>
         /// Fixed-column grid laid out at its design size inside a stretching slot, scaled down as a whole when the slot is
         /// narrower or shorter (shrinking the cells instead would crush their content). Size the slot like any layout child.
+        /// With <paramref name="maxCellHeight"/>, the cells grow taller up to it to fill a slot with room to spare (tall phones).
         /// </summary>
-        public static GridLayoutGroup FittedGrid(Transform parent, int columns, Vector2 cell, Vector2 spacing, out RectTransform slot)
+        public static GridLayoutGroup FittedGrid(Transform parent, int columns, Vector2 cell, Vector2 spacing, out RectTransform slot, float maxCellHeight = 0f)
         {
             slot = Rect("GridSlot", parent);
             var rt = Rect("Grid", slot);
@@ -693,6 +694,7 @@ namespace MummyEscape.UI
             g.childAlignment = TextAnchor.UpperCenter;
             rt.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             FitInParent(rt, 0);
+            if (maxCellHeight > cell.y) rt.gameObject.AddComponent<GrowRows>().Init(g, cell.y, maxCellHeight);
             return g;
         }
 
@@ -961,6 +963,34 @@ namespace MummyEscape.UI
             settings.resizeTextForBestFit = false;
             settings.scaleFactor = 1f;
             return t.cachedTextGeneratorForLayout.GetPreferredWidth(t.text, settings);
+        }
+    }
+
+    /// <summary>
+    /// Makes a <see cref="UIKit.FittedGrid"/>'s rows taller (between the design height and a cap) until the grid fills its
+    /// slot: the slot's height at the grid's current scale, shared between the rows once their gaps are taken out.
+    /// </summary>
+    public sealed class GrowRows : MonoBehaviour
+    {
+        GridLayoutGroup _grid;
+        float _min, _max;
+
+        public void Init(GridLayoutGroup grid, float min, float max)
+        {
+            _grid = grid;
+            _min = min;
+            _max = max;
+        }
+
+        void LateUpdate()
+        {
+            var rt = (RectTransform)transform;
+            var slot = rt.parent as RectTransform;
+            int rows = Mathf.CeilToInt(transform.childCount / (float)_grid.constraintCount);
+            if (slot == null || rows == 0 || rt.localScale.x <= 0f) return;
+            float room = slot.rect.height / rt.localScale.x - (rows - 1) * _grid.spacing.y;
+            float h = Mathf.Clamp(Mathf.Floor(room / rows), _min, _max);
+            if (Mathf.Abs(_grid.cellSize.y - h) > 0.5f) _grid.cellSize = new Vector2(_grid.cellSize.x, h);
         }
     }
 }

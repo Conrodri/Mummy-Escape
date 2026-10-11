@@ -61,8 +61,8 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(dot, 20, 20);
             }
 
-            // Ten tombs per act: two rows of five.
-            _grid = (RectTransform)UIKit.FittedGrid(body, 5, new Vector2(200, 250), new Vector2(18, 26), out var slot).transform;
+            // Ten tombs per act: five rows of two, growing taller to fill tall phones.
+            _grid = (RectTransform)UIKit.FittedGrid(body, 2, new Vector2(470, 170), new Vector2(20, 18), out var slot, 240f).transform;
             UIKit.Size(slot, -1, -1, -1, 1);
 
             var row = UIKit.Rect("Continue", body); // noloc
