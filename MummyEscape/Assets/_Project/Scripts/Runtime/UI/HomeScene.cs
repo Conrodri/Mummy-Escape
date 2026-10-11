@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using MummyEscape.Visual;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,16 +7,15 @@ namespace MummyEscape.UI
     /// <summary>
     /// The home screen's backdrop when an act is picked: inside that act's tomb, seen from behind the camera's shoulder.
     /// The back wall (its carved faces and two burning torches) rises over the horizon, the floor slabs come towards the
-    /// viewer, growing row after row; the menu's mummy stands on them, facing us. The torches' light flickers.
+    /// viewer, growing row after row; the menu's mummy stands on them, facing us.
     /// </summary>
     public sealed class HomeScene : MonoBehaviour
     {
         /// <summary>Height of the horizon (wall foot) from the bottom of the screen, as a share of it.</summary>
         const float Horizon = 0.42f;
         const float WallTile = 216f;
-        static readonly Color Dim = new Color(0.78f, 0.74f, 0.7f);
+        static readonly Color Dim = new Color(0.55f, 0.52f, 0.5f);
 
-        readonly List<(Image glow, float seed)> _glows = new List<(Image, float)>();
         int _act;
 
         public static HomeScene Create(Transform parent)
@@ -36,7 +34,6 @@ namespace MummyEscape.UI
             if (act == _act) return; // already built: the menu shows again
             _act = act;
             UIKit.ClearChildren(transform);
-            _glows.Clear();
 
             // The back wall: whole faces, the bottom row standing on the horizon.
             var wall = Area("Wall", Horizon, 1f); // noloc
@@ -49,12 +46,9 @@ namespace MummyEscape.UI
                     face.rectTransform.pivot = new Vector2(0.5f, 0f);
                     face.rectTransform.anchoredPosition = new Vector2(col * WallTile, row * WallTile);
                 }
-            // Two torches on the wall, either side of the mummy, each in its own warm halo.
+            // Two torches on the wall, either side of the mummy.
             foreach (int side in new[] { -1, 1 })
             {
-                var glow = UIKit.Image(wall, UIKit.Art.Glow, new Color(1f, 0.6f, 0.25f, 0.5f), false, "Glow"); // noloc
-                Place(glow, side * WallTile * 1.5f, WallTile * 1.5f, 620f);
-                _glows.Add((glow, side * 1.7f));
                 var torch = Tile(wall, art.ActWallTorch(act), WallTile);
                 Place(torch, side * WallTile * 1.5f, WallTile * 1.5f, WallTile);
             }
@@ -78,27 +72,11 @@ namespace MummyEscape.UI
                 y += size;
                 size *= 1.38f;
             }
-            // Darker at the wall's foot, lit around the mummy, dark again at the bottom edge.
+            // Darker at the wall's foot.
             Shade(floor, new Color(0, 0, 0, 0.7f), new Color(0, 0, 0, 0.15f));
-            var pool = UIKit.Image(floor, UIKit.Art.Glow, new Color(1f, 0.7f, 0.35f, 0.35f), false, "Pool"); // noloc
-            pool.rectTransform.anchorMin = pool.rectTransform.anchorMax = new Vector2(0.5f, 1f);
-            pool.rectTransform.sizeDelta = new Vector2(1100f, 520f);
-            pool.rectTransform.anchoredPosition = new Vector2(0f, -150f);
-            _glows.Add((pool, 0.6f));
         }
 
         public void Hide() => gameObject.SetActive(false);
-
-        void Update()
-        {
-            float t = Time.unscaledTime;
-            foreach (var (glow, seed) in _glows)
-            {
-                // Two waves out of step: a living flame, never a blink.
-                float f = 0.82f + 0.1f * Mathf.Sin(t * 7.3f + seed) + 0.08f * Mathf.Sin(t * 12.9f + seed * 2.1f);
-                glow.rectTransform.localScale = new Vector3(f, f, 1f);
-            }
-        }
 
         RectTransform Area(string name, float from, float to)
         {

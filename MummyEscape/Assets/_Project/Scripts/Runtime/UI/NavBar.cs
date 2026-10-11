@@ -62,8 +62,10 @@ namespace MummyEscape.UI
             bar.Add(row, UISprites.Home, "Accueil", new[] { NavTab.Home },
                 E("Accueil", UISprites.Home, s => s is MainMenuScreen, () => router.Reset<MainMenuScreen>()));
             bar.Add(row, UISprites.Play, "Jouer", new[] { NavTab.Solo, NavTab.Duel, NavTab.Ranking },
-                E("Campagne", UISprites.Map, s => s.Tab == NavTab.Solo, bar.Go<LevelSelectScreen>),
+                E("Campagne", UISprites.Map, s => s.Tab == NavTab.Solo && !(s is EndlessScreen) && !(s is TowerScreen), bar.Go<LevelSelectScreen>),
                 E("Duel", UISprites.Swords, s => s.Tab == NavTab.Duel, bar.Go<PvpScreen>),
+                E("Sans fin", UISprites.Infinity, s => s is EndlessScreen, bar.Go<EndlessScreen>),
+                E("Tour de défi", UISprites.Tower, s => s is TowerScreen, bar.Go<TowerScreen>),
                 E("Classements", UISprites.Podium, s => s.Tab == NavTab.Ranking, bar.Go<LeaderboardScreen>));
             bar.Add(row, UISprites.User, "Momie", new[] { NavTab.Mummy },
                 E("Momie", UISprites.User, s => s is MummyScreen, bar.Go<MummyScreen>));

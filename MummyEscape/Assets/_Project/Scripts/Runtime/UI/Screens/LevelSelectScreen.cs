@@ -74,30 +74,12 @@ namespace MummyEscape.UI.Screens
             // The 2v2 campaign: the same tomb for both mummies of a duo.
             UIKit.Size(UIKit.Button(body, "Campagne 2v2", () => Router.Open<CoopScreen>(), 32, ButtonStyle.Secondary), 88);
 
-            // The endless ladders, one per mode whose campaign is finished, each at the player's tomb.
-            _endlessRow = UIKit.Row(body, 110, 16);
-            foreach (var m in DifficultyExt.All)
-            {
-                var mode = m;
-                var b = UIKit.Button(_endlessRow.transform, "Sans fin", () => PlayEndless(mode), 28);
-                UIKit.FitText(b.GetComponentInChildren<Text>(), 18);
-                UIKit.Size(b, 110, -1, 1);
-                _endless[(int)m] = b;
-            }
-            // The Halloween event (24 October - 7 November), only while it is open.
-            _halloween = UIKit.Button(_endlessRow.transform, "Halloween", PlayHalloween, 28, ButtonStyle.Primary);
+            // The Halloween event (24 October - 7 November), only while it is open. The endless ladders and the challenge
+            // tower have their own screens (Play menu of the bottom bar).
+            _halloween = UIKit.Button(body, "Halloween", PlayHalloween, 28, ButtonStyle.Primary);
             UIKit.FitText(_halloween.GetComponentInChildren<Text>(), 18);
-            UIKit.Size(_halloween, 110, -1, 1);
-            // The challenge tower, opened with the Facile ladder.
-            _tower = UIKit.Button(body, "Tour de défi", () => Router.Open<TowerScreen>(), 30, ButtonStyle.Secondary);
-            UIKit.FitText(_tower.GetComponentInChildren<Text>(), 20);
-            UIKit.Size(_tower, 96);
+            UIKit.Size(_halloween, 110);
         }
-
-        Button _tower;
-
-        /// <summary>"Finis F5-10": what opens a locked mode, on its greyed button.</summary>
-        static string Unlocks(Difficulty mode) => Loc.F("Finis {0}", LevelNames.Of(Progression.Last(mode)));
 
         Button _halloween;
 
@@ -111,46 +93,13 @@ namespace MummyEscape.UI.Screens
             });
         }
 
-        readonly Button[] _endless = new Button[3];
-        HorizontalLayoutGroup _endlessRow;
-
-        void RefreshEndless()
+        void RefreshHalloween()
         {
-            // Locked ladders stay in sight, greyed, with what opens them.
-            foreach (var m in DifficultyExt.All)
-            {
-                bool open = App.Save.IsEndlessUnlocked(m);
-                var b = _endless[(int)m];
-                b.interactable = open;
-                UIKit.SetLabel(b, Loc.F("Sans fin · {0}", LevelNames.Mode(m)) + "\n" + (open ? Loc.F("Tombeau {0}", App.Save.EndlessOf(m).Reached) : Unlocks(m)));
-            }
-            bool tower = App.Save.IsTowerUnlocked;
-            var run = App.Save.ActiveTower;
-            _tower.interactable = tower;
-            UIKit.SetLabel(_tower, Loc.T("Tour de défi") + " · " + (!tower ? Unlocks(Difficulty.Easy)
-                                   : run != null ? Loc.F("Étage {0}", run.Floor)
-                                   : App.Save.Data.TowerBest.BestFloors > 0 ? Loc.F("Record : {0} étages", App.Save.Data.TowerBest.BestFloors)
-                                   : Loc.T("des skins exclusifs à gagner")));
             bool halloween = Halloween.IsOpen(System.DateTime.UtcNow);
             _halloween.gameObject.SetActive(halloween);
             if (halloween)
                 UIKit.SetLabel(_halloween, Loc.T("Halloween") + " · " + (App.Save.HalloweenDone ? Loc.T("terminé") : App.Save.Data.HalloweenCleared + " / " + Halloween.TombCount)
                                            + "\n" + Loc.T("jusqu'au 7 novembre"));
-        }
-
-        void PlayEndless(Difficulty mode)
-        {
-            if (App.Save.EndlessOf(mode).Cleared >= MummyEscape.Game.GameController.EndlessTombCount(mode))
-            {
-                Router.Open<OfferDialog>().Configure("Sans fin", Loc.T("Tu as franchi tous les tombeaux : d'autres arrivent avec les mises à jour."),
-                    ("OK", ButtonStyle.Primary, null)); // noloc
-                return;
-            }
-            PlayGate.EndlessRun(App, () =>
-            {
-                Router.Open<HudScreen>();
-                _ = App.Game.StartEndless(mode);
-            });
         }
 
         /// <summary>The act banner: chevrons around the act's name, its floors and its star bar.</summary>
@@ -194,7 +143,7 @@ namespace MummyEscape.UI.Screens
             if (!_modeChosen) _mode = furthest.Mode;
             _plays.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
             SetMode(_mode);
-            RefreshEndless();
+            RefreshHalloween();
             App.Audio.PrefetchMusic(furthest.Act); // its theme is ready when the level starts
         }
 

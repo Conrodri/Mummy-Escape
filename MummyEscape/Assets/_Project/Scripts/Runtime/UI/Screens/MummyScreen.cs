@@ -148,7 +148,13 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(card, -1, 0, 1);
             var btn = card.gameObject.AddComponent<Button>();
             btn.targetGraphic = card;
-            btn.onClick.AddListener(() => Wear(item));
+            // Up close first, like in the shop: alone, on the mummy, or with its whole set.
+            btn.onClick.AddListener(() =>
+            {
+                var (tag, color) = ShopScreen.TagOf(item);
+                Router.Open<ItemZoomScreen>().Show(item, tag, color, ShopScreen.Origin(item), Loc.T(worn ? "Équipé" : "Équiper"),
+                    worn ? (System.Action)null : () => Wear(item));
+            });
             card.gameObject.AddComponent<PressScale>();
             UIKit.Column(card.transform, 2, 12, TextAnchor.MiddleCenter);
 

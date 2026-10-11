@@ -270,7 +270,7 @@ namespace MummyEscape.UI.Screens
 
         static Color ThemeColor(int act) => Color.Lerp(TombTheme.ForAct(act).Accent, UIKit.Sand, 0.25f);
 
-        static (string tag, Color color) TagOf(SkinDef item)
+        internal static (string tag, Color color) TagOf(SkinDef item)
         {
             if (item.Legendary) return (Loc.T("Légendaire"), LegendaryColor);
             if (item.Badge == HalloweenSkins.Badge) return (Loc.T(item.Badge), HalloweenColor);
@@ -283,7 +283,7 @@ namespace MummyEscape.UI.Screens
 
         static string HalloweenDates => Loc.T("Événement Halloween, du 24 octobre au 7 novembre.");
 
-        static string Origin(SkinDef item)
+        internal static string Origin(SkinDef item)
         {
             switch (item.Id)
             {
@@ -432,8 +432,7 @@ namespace MummyEscape.UI.Screens
 
             foreach (var gold in Monetization.GoldShop.Sets)
             {
-                var set = new List<SkinDef>();
-                foreach (var id in gold.SkinIds) set.Add(SkinCatalog.Get(id));
+                var set = SkinSets.Pieces(gold.SkinIds);
                 int price = Monetization.GoldShop.SetPrice(gold, save.Data.OwnedSkins);
                 bool worn = Worn(set);
                 string label = worn ? Loc.T("Équipé") : price == 0 ? Loc.T("Tout équiper") : Loc.F("Parure : {0} dorés", price);
@@ -443,11 +442,9 @@ namespace MummyEscape.UI.Screens
             }
 
             if (Halloween.IsOpen(DateTime.UtcNow) || Owns(HalloweenSkins.All))
-                Showcase(Loc.T("Nuit d'Halloween"), new[] { SkinCatalog.Get(Halloween.ShopSkin), SkinCatalog.Get(Halloween.RewardSkin) }, HalloweenColor, index++);
+                Showcase(Loc.T("Nuit d'Halloween"), SkinSets.Halloween, HalloweenColor, index++);
             Showcase(Loc.T("Tour de défi"), TowerSkins.All, TowerColor, index++);
-            var team = new List<SkinDef>();
-            foreach (var id in Developers.Skins) team.Add(SkinCatalog.Get(id));
-            if (Owns(team)) Showcase(Loc.T("Équipe de Mummy Rush"), team, new Color32(90, 255, 190, 255), index++);
+            if (Owns(SkinSets.Team)) Showcase(Loc.T("Équipe de Mummy Rush"), SkinSets.Team, new Color32(90, 255, 190, 255), index++);
         }
 
         bool Worn(IEnumerable<SkinDef> set)

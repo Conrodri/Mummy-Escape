@@ -19,6 +19,8 @@ namespace MummyEscape.UI.Screens
         UIKit.Segmented _view;
         Button _action;
         SkinDef _item;
+        /// <summary>The set the item belongs to (its third tab), null when none.</summary>
+        System.Collections.Generic.IReadOnlyList<SkinDef> _set;
         Action _onAction;
 
         protected override void Build()
@@ -62,7 +64,7 @@ namespace MummyEscape.UI.Screens
             _preview.preserveAspect = true;
             UIKit.Stretch(_preview.rectTransform);
 
-            _view = new UIKit.Segmented(panel.transform, new[] { "L'objet", "Sur ta momie" }, ShowView, 80);
+            _view = new UIKit.Segmented(panel.transform, new[] { "L'objet", "Sur ta momie", "Le set complet" }, ShowView, 80);
 
             _detail = UIKit.Label(panel.transform, "", 28, UIKit.Dim);
             UIKit.FitText(_detail, 18);
@@ -97,6 +99,9 @@ namespace MummyEscape.UI.Screens
             var halo = item.Legendary ? (Color)LegendarySkins.Accent(item.Fx) : Color.Lerp(tagColor, new Color(1f, 0.75f, 0.4f), 0.5f);
             _halo.color = new Color(halo.r, halo.g, halo.b, 0.6f);
             _rays.color = new Color(halo.r, halo.g, halo.b, item.Legendary ? 0.3f : 0.16f);
+            _set = SkinSets.Of(item);
+            if (_set != null && _set.Count < 2) _set = null;
+            _view.SetVisible(2, _set != null);
             _view.Select(0);
             ShowView(0);
             UIFx.PopIn(_pop, 0f, 0.8f);
@@ -107,7 +112,8 @@ namespace MummyEscape.UI.Screens
         {
             if (_item == null) return;
             if (i == 0) ItemPreview.Show(_preview, _item);
-            else MummyAnimator.Show(_preview, App.Art, App.Save.Loadout.With(_item));
+            else if (i == 1 || _set == null) MummyAnimator.Show(_preview, App.Art, App.Save.Loadout.With(_item));
+            else MummyAnimator.Show(_preview, App.Art, SkinSets.Wear(App.Save.Loadout, _set, _item));
         }
 
         // ------------------------------------------------------------------ rays sprite

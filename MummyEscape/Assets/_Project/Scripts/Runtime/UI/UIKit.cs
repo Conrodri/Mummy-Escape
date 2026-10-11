@@ -284,6 +284,9 @@ namespace MummyEscape.UI
 
             public void SetLabel(int i, string text) => _labels[i].text = Loc.T(text);
 
+            /// <summary>Shows or hides one tab (the others share its room).</summary>
+            public void SetVisible(int i, bool on) => _buttons[i].gameObject.SetActive(on);
+
             public void Select(int index)
             {
                 Selected = index;

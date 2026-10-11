@@ -51,7 +51,9 @@ namespace MummyEscape.UI.Screens
 
             var run = save.ActiveTower;
             var play = UIKit.Card(_content);
-            if (run != null)
+            if (!save.IsTowerUnlocked)
+                Paragraph(play, Loc.F("Finis {0} pour ouvrir la tour.", LevelNames.Of(Progression.Last(Difficulty.Easy))), 30, UIKit.Gold);
+            else if (run != null)
             {
                 UIKit.SectionTitle(play, "Course en cours");
                 Paragraph(play, Loc.F("Étage {0}", run.Floor) + (run.Curses.Count > 0 ? "\n" + CurseNames(run.Curses) : ""), 30, UIKit.Sand);

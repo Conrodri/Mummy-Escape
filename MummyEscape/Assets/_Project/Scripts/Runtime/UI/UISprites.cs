@@ -35,7 +35,7 @@ namespace MummyEscape.UI
         /// <summary>Four-pointed pixel sparkle.</summary>
         public static Sprite PixelSparkle { get; private set; }
 
-        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal, Arrow, Flag, Wheel, Palette, Torch, Crown, Boot, Mummy, Chat, Send;
+        public static Sprite Back, Next, Pause, Play, Gear, Podium, Friends, Bag, Share, Retry, Home, Close, Clock, Steps, Hand, Map, Check, User, Globe, Plus, Note, Swords, Seal, Arrow, Flag, Wheel, Palette, Torch, Crown, Boot, Mummy, Chat, Send, Infinity, Tower;
 
         public static void Init()
         {
@@ -146,6 +146,10 @@ namespace MummyEscape.UI
             Chat = Icon(p => Min(Box(p, 64, 74, 48, 34, 18), Poly(p, 30, 50, 30, 16, 62, 50)));
             // A paper plane, pointing right.
             Send = Icon(p => Max(Poly(p, 14, 110, 14, 18, 116, 64) - 2f, -Poly(p, 6, 82, 6, 46, 50, 64)));
+            // Two loops side by side: the endless ladders.
+            Infinity = Icon(p => Min(Annulus(p, 40, 64, 22, 13), Annulus(p, 88, 64, 22, 13)));
+            // A stepped tower with battlements: the challenge tower.
+            Tower = Icon(p => Min(Min(Box(p, 64, 30, 40, 18, 3), Box(p, 64, 66, 28, 20, 3)), Min(Box(p, 64, 96, 18, 12, 3), Min(Box(p, 50, 112, 5, 6, 1), Box(p, 78, 112, 5, 6, 1)))));
         }
 
         // ------------------------------------------------------------------ shapes

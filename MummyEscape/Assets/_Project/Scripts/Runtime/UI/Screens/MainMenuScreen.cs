@@ -167,6 +167,8 @@ namespace MummyEscape.UI.Screens
             bool on = entry != null && entry.IsUnlocked(App.Save);
             if (on) _scene.Show(App.Art, entry.Act);
             else _scene.Hide();
+            // The warm glow lights the plain backdrop only: in a tomb it washed the walls out.
+            _glow.color = on ? Color.clear : new Color(1f, 0.75f, 0.4f, 0.55f);
         }
 
         void PlayLevel(LevelId id) =>
