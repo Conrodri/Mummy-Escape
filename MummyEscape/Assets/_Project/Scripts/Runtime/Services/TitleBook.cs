@@ -40,7 +40,9 @@ namespace MummyEscape.Services
         {
             if (t.Kind == TitleKind.Developer) return (IsDeveloper(app) ? 1 : 0, 1);
             var d = app.PvpProfile?.Data;
-            return Titles.Progress(t, act => StarsInAct(app.Save, act), FastTombs(app.Save), d?.Wins ?? 0, d?.HighestLeague ?? League.Bronze);
+            var progress = Titles.Progress(t, act => StarsInAct(app.Save, act), FastTombs(app.Save), d?.Wins ?? 0, d?.HighestLeague ?? League.Bronze);
+            // The team wears every title, whatever its own progress.
+            return IsDeveloper(app) ? (progress.goal, progress.goal) : progress;
         }
 
         public static bool Earned(GameApp app, TitleDef t)

@@ -271,10 +271,20 @@ namespace MummyEscape.UI.Screens
             return (Loc.F("Acte {0}", item.Theme), ThemeColor(item.Theme));
         }
 
+        static string HalloweenDates => Loc.T("Événement Halloween, du 24 octobre au 7 novembre.");
+
         static string Origin(SkinDef item)
         {
+            switch (item.Id)
+            {
+                // Event pieces: what they are and how they were won, the event's dates last.
+                case Halloween.RewardSkin: return Loc.T("Une citrouille sculptée, lueur de bougie comprise. Offerte à qui franchit les 10 tombeaux de l'acte Halloween.") + "\n" + HalloweenDates;
+                case Halloween.ShopSkin: return Loc.T("Des bandelettes teintes à minuit, aux yeux couleur de citrouille. En vente aux scarabées pendant l'événement.") + "\n" + HalloweenDates;
+                case Halloween.GoldSkin: return Loc.T("Le chapeau pointu des sorcières du Nil. Au Trésor, en scarabées d'or, pendant l'événement.") + "\n" + HalloweenDates;
+                case Halloween.WheelLegendary: return Loc.T("Les feux de Samhain courent sur les bandelettes. Légendaire de la roue aux scarabées, seulement pendant l'événement.") + "\n" + HalloweenDates;
+            }
             if (item.Legendary) return Loc.T("Exclusivité du casino ou du pass : bandages animés.");
-            if (item.Badge == HalloweenSkins.Badge) return Loc.T("Événement Halloween, du 24 octobre au 7 novembre.");
+            if (item.Badge == HalloweenSkins.Badge) return HalloweenDates;
             if (item.Badge == TowerSkins.Badge) return Loc.F("Récompense de l'étage {0} de la tour de défi.", TowerSkins.FloorOf(item.Id));
             if (item.Badge != null) return Loc.T("Exclusivité du Trésor et du Pass de saison.");
             if (item.Pvp) return Loc.T("Récompense des duels.");
