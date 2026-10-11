@@ -292,10 +292,9 @@ namespace MummyEscape.UI.Screens
             Router.Open<OfferDialog>().Configure("Scarabées", Loc.F("Échanger {0} scarabées dorés contre {1} scarabées ?", offer.Gold, offer.Scarabs),
                 (Loc.F("Échanger · {0} dorés", offer.Gold), ButtonStyle.Primary, async () =>
                 {
-                    string error = await GoldWallet.RunAsync(App, p => p.BuyScarabsAsync(offer.Id));
+                    string error = await GoldWallet.SpendAsync(App, offer.Id);
                     if (this == null) return;
-                    if (error != null) { _note.text = GoldWallet.ErrorText(error); Refresh(); return; }
-                    App.Save.ReceiveScarabs(offer.Scarabs);
+                    if (error != null) { _note.text = GoldWallet.SpendErrorText(error); Refresh(); return; }
                     App.Audio.Play(Sfx.Coin);
                     _note.text = Loc.F("+{0} scarabées", offer.Scarabs);
                     Refresh();

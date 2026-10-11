@@ -54,12 +54,42 @@ namespace MummyEscape.Monetization
                 await CreditAsync(app, p.ProductId, p.TransactionId);
         }
 
+        /// <summary>Spends being asked right now (their answer may still come).</summary>
+        static readonly System.Collections.Generic.HashSet<string> InFlight = new System.Collections.Generic.HashSet<string>();
+
+        /// <summary>
+        /// Scarabs or pass tiers for golden scarabs (<see cref="Services.SaveService.TiersSpend"/> or a scarab offer id): the
+        /// spend is saved first, and delivered when a wallet from the server lists it, even one fetched after a lost answer.
+        /// </summary>
+        public static async Task<string> SpendAsync(GameApp app, string offer)
+        {
+            var spend = app.Save.StartGoldSpend(offer);
+            InFlight.Add(spend.Id);
+            string error;
+            try
+            {
+                error = await RunAsync(app, p => offer == Services.SaveService.TiersSpend
+                    ? p.BuyTiersAsync(spend.Id)
+                    : p.BuyScarabsAsync(offer, spend.Id));
+            }
+            finally { InFlight.Remove(spend.Id); }
+            // Refused: nothing was taken. Unanswered: kept, the next wallet tells whether the server took the gold.
+            if (error != null && error != PvpServiceFactory.NetworkError) app.Save.DropGoldSpend(spend.Id);
+            return error;
+        }
+
         public static async Task RefreshAsync(GameApp app)
         {
             if (!Available(app)) return;
             await RecoverAsync(app);
-            await RunAsync(app, p => p.GetWalletAsync());
+            // A spend the fresh wallet does not list was never taken (the server answers within a minute or gives up).
+            if (await RunAsync(app, p => p.GetWalletAsync()) == null) app.Save.DropStaleGoldSpends(5 * 60 * 1000, InFlight);
         }
+
+        /// <summary>The error of <see cref="SpendAsync"/>: without an answer, the spend may still have happened.</summary>
+        public static string SpendErrorText(string code) => code == PvpServiceFactory.NetworkError
+            ? Loc.T("Pas de réponse : si tes scarabées dorés ont été pris, ton achat arrivera à la prochaine connexion.")
+            : ErrorText(code);
 
         public static string ErrorText(string code)
         {

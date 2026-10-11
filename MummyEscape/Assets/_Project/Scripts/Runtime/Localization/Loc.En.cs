@@ -1034,6 +1034,8 @@ namespace MummyEscape
             ["Avancer de {0} paliers pour {1} scarabées dorés ?"] = "Skip {0} tiers for {1} golden scarabs?",
             ["Avancer · {0} dorés"] = "Skip · {0} gold",
             ["Palier {0} atteint !"] = "Tier {0} reached!",
+            ["Pas de réponse : si tes scarabées dorés ont été pris, ton achat arrivera à la prochaine connexion."] =
+                "No answer: if your golden scarabs were taken, your purchase will arrive at your next connection.",
             ["Scarabées dorés"] = "Golden scarabs",
             ["La monnaie du Trésor, achetée avec de l'argent réel : 10 € = 100 scarabées dorés."] = "The Treasure's currency, bought with real money: €10 = 100 golden scarabs.",
             ["Boutique de la plateforme indisponible pour le moment."] = "The platform store is unavailable right now.",

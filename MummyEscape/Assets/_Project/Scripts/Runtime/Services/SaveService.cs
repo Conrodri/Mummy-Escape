@@ -50,6 +50,17 @@ namespace MummyEscape.Services
         public List<string> PassesOwned = new List<string>();
         public List<int> PassFreeClaimed = new List<int>();
         public List<int> PassPremiumClaimed = new List<int>();
+        /// <summary>Golden-scarab spends the device delivers itself (scarabs, tiers), until the server's wallet confirms them.</summary>
+        public List<GoldSpend> GoldSpends = new List<GoldSpend>();
+    }
+
+    /// <summary>A spend asked to the server: <see cref="Offer"/> is a scarab offer id or <see cref="SaveService.TiersSpend"/>.</summary>
+    [Serializable]
+    public class GoldSpend
+    {
+        public string Id;
+        public string Offer;
+        public long AtMs;
     }
 
     public struct RecordOutcome
@@ -135,6 +146,8 @@ namespace MummyEscape.Services
             d.PassesOwned.RemoveAll(string.IsNullOrEmpty);
             d.PassFreeClaimed ??= new List<int>();
             d.PassPremiumClaimed ??= new List<int>();
+            d.GoldSpends ??= new List<GoldSpend>();
+            d.GoldSpends.RemoveAll(s => s == null || string.IsNullOrEmpty(s.Id));
             d.SoloEnergy ??= new MummyEscape.Pvp.EnergyMeter();
         }
 
@@ -151,7 +164,8 @@ namespace MummyEscape.Services
                 else mine.MergeWith(theirs);
             }
             Data.Coins = Math.Max(Data.Coins, other.Coins);
-            foreach (var s in other.OwnedSkins) if (!Data.OwnedSkins.Contains(s)) Data.OwnedSkins.Add(s);
+            // Paid skins come from the server's wallet only (ApplyWallet), never from a copy.
+            foreach (var s in other.OwnedSkins) if (!Data.OwnedSkins.Contains(s) && !Monetization.GoldShop.IsPaid(s)) Data.OwnedSkins.Add(s);
             if (string.IsNullOrEmpty(Data.Country)) Data.Country = other.Country ?? "";
             Data.ProfileDone |= other.ProfileDone;
             Data.TutorialDone |= other.TutorialDone;

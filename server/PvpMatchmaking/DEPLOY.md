@@ -82,6 +82,22 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
    `TransactionId` ; le serveur le vérifie auprès de Google (package `com.mummyrush.game`), le consomme puis crédite le
    porte-monnaie. Les achats demandent un compte Google Play Games connecté.
 
+## Porte-monnaie doré
+
+Le serveur fait foi pour les scarabées dorés, les pass achetés et les objets payants (`gold_…`, `pass_…`) : le jeu n'en garde
+qu'une copie d'affichage, remplacée par chaque réponse du serveur (un pass ou un objet payant absent du serveur est retiré du
+téléphone, et la copie Cloud Save d'un autre appareil n'en apporte plus). Toute dépense passe par un point d'entrée qui
+vérifie le prix et débite (`BuyPass` 40 dorés, refusé avec `OWNED` si la saison est déjà premium ; `BuyTiers`, `BuyScarabs`,
+`BuyGoldItem`) ; `GOLD` s'il en manque, sans rien débiter.
+
+`BuyTiers` et `BuyScarabs` livrent sur le téléphone (paliers, scarabées) : ils prennent un `requestId` (facultatif pour les
+anciens jeux). Une demande déjà acceptée est rendue telle quelle sans débiter de nouveau, et les 50 dernières sont listées
+dans `Wallet.Requests` : un téléphone qui a perdu la réponse livre l'achat quand un portefeuille la liste (`GetWallet` au
+lancement), et l'oublie s'il ne la liste toujours pas après 5 minutes.
+
+Aucune migration : avant ce porte-monnaie, l'or du téléphone ne venait d'aucun achat réel (aucune boutique n'existait) ; il
+n'est pas recrédité, la valeur du serveur le remplace.
+
 ## Énergie
 
 Le premier acte solo est libre. Ensuite, chaque partie solo coûte 1 énergie (10 au plus, gardée sur le téléphone) et chaque
