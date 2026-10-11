@@ -11,7 +11,7 @@ namespace MummyEscape.UI.Screens
 
         Text _stars, _coins, _gold;
         PassBanner _pass;
-        Image _mummy, _glow, _chatDot;
+        Image _mummy, _glow, _chatDot, _floor;
         RectTransform _stage;
         Text _online, _goal;
         System.Action _goalAction;
@@ -20,7 +20,14 @@ namespace MummyEscape.UI.Screens
         // the title shrinks between its minimum and preferred size, the mummy takes whatever space is left.
         protected override void Build()
         {
-            UIKit.Backdrop(Root, new Color(0, 0, 0, 0)).raycastTarget = false;
+            var backdrop = UIKit.Backdrop(Root, new Color(0, 0, 0, 0));
+            backdrop.raycastTarget = false;
+            // The chosen act's floor slabs, dimmed so the menu stays readable (under the warm glow).
+            _floor = UIKit.Image(backdrop.transform, null, new Color(0.42f, 0.4f, 0.38f), false, "Floor"); // noloc
+            UIKit.Stretch(_floor.rectTransform);
+            _floor.transform.SetAsFirstSibling();
+            _floor.type = Image.Type.Tiled;
+            _floor.pixelsPerUnitMultiplier = 0.5f; // 32 px slabs drawn ~200 units wide: big pixels, like in the game
 
             var column = UIKit.Rect("Column", Root);
             UIKit.Stretch(column, 0, 24, 0, 100);
@@ -72,6 +79,9 @@ namespace MummyEscape.UI.Screens
             _mummy.preserveAspect = true; // the outfit sprite is 32x40
             foreach (var rt in new[] { _glow.rectTransform, _mummy.rectTransform })
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            // The home backdrop, picked among the open acts (in the stage's corner: the top bar is full on narrow phones).
+            var theme = UIKit.IconAction(_stage, UISprites.Palette, "Thème", () => Router.Open<HomeThemeDialog>().OnPicked(ApplyTheme), 84);
+            UIKit.Place((RectTransform)theme.transform.parent.parent, 1f, 1f, 134, 144); // button → its slot → the action column
 
             // What to aim for next, one tap away.
             var goal = UIKit.ListItem(column, 116, () => _goalAction?.Invoke(), out var gh);
@@ -106,6 +116,7 @@ namespace MummyEscape.UI.Screens
         {
             App.Lighting.SetMood(false);
             App.Audio.PlayMusic(0);
+            ApplyTheme();
             FitMummy();
             _stars.text = App.Save.TotalStars.ToString();
             _coins.text = App.Save.Data.Coins.ToString();
@@ -152,6 +163,15 @@ namespace MummyEscape.UI.Screens
             _goalAction = () => Router.Open<PvpScreen>();
         }
 
+        /// <summary>Draws the chosen act's tomb behind the menu (the plain dark backdrop when none, or when it is no longer open).</summary>
+        void ApplyTheme()
+        {
+            var entry = HomeThemes.Get(App.Settings.HomeTheme);
+            bool on = entry != null && entry.IsUnlocked(App.Save);
+            _floor.enabled = on;
+            if (on) _floor.sprite = App.Art.ActFloor(entry.Act);
+        }
+
         void PlayLevel(LevelId id) =>
             PlayGate.Solo(App, id, () =>
             {
@@ -184,6 +204,112 @@ namespace MummyEscape.UI.Screens
         {
             public System.Action Resized;
             void OnRectTransformDimensionsChange() => Resized?.Invoke();
+        }
+    }
+
+    /// <summary>Backdrops of the home screen: an act's tomb, once the player has opened that act.</summary>
+    public static class HomeThemes
+    {
+        public sealed class Entry
+        {
+            /// <summary>Tomb drawn (<see cref="TombTheme.ForAct"/>), also the id saved in the settings.</summary>
+            public int Act;
+            /// <summary>Shown in the picker (French key); null = "Acte N — its name".</summary>
+            public string Name;
+            public System.Func<Services.SaveService, bool> IsUnlocked;
+        }
+
+        /// <summary>
+        /// The campaign acts, in order. Halloween: once its act and its TombTheme exist, add its entry here with its own
+        /// name and unlock rule (e.g. new Entry { Act = 6, Name = "Halloween", IsUnlocked = s => ... }).
+        /// </summary>
+        public static readonly System.Collections.Generic.List<Entry> All = Acts();
+
+        static System.Collections.Generic.List<Entry> Acts()
+        {
+            var list = new System.Collections.Generic.List<Entry>();
+            for (int act = 1; act <= DifficultyTable.ActCount; act++)
+            {
+                var first = new LevelId(Difficulty.Easy, act, 1); // modes open in order: an act open in any mode is open in Facile
+                list.Add(new Entry { Act = act, IsUnlocked = s => s.IsUnlocked(first) });
+            }
+            return list;
+        }
+
+        public static Entry Get(int act) => All.Find(e => e.Act == act);
+
+        public static string NameOf(Entry e) =>
+            e.Name != null ? Loc.T(e.Name) : Loc.F("Acte {0} — {1}", e.Act, Loc.T(DifficultyTable.GetAct(e.Act).Name));
+    }
+
+    /// <summary>Home screen backdrop picker: the plain one, then every act (locked ones shown with a padlock).</summary>
+    public sealed class HomeThemeDialog : UIScreen
+    {
+        public override bool IsModal => true;
+
+        RectTransform _list;
+        System.Action _picked;
+
+        /// <summary>Called once the player picked a backdrop (the home screen redraws its own).</summary>
+        public HomeThemeDialog OnPicked(System.Action picked)
+        {
+            _picked = picked;
+            return this;
+        }
+
+        protected override void Build()
+        {
+            var shade = UIKit.Image(Root, UIKit.Art.White, new Color(0, 0, 0, 0.8f), true, "Shade");
+            UIKit.Stretch(shade.rectTransform, -600, -600, -600, -600);
+            shade.gameObject.AddComponent<Button>().onClick.AddListener(() => Router.Close(this)); // tap outside = cancel
+
+            var panel = UIKit.Card(Root, 44, 22);
+            UIKit.Place(panel, 0.5f, 0.5f, 960, 0);
+            UIKit.FitInParent(panel);
+            panel.GetComponent<Image>().raycastTarget = true; // swallow taps inside the panel
+            panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            UIKit.Size(UIKit.Title(panel, "Thème de l'accueil", 46), 80);
+            _list = UIKit.Rect("List", panel); // noloc
+            UIKit.Column(_list, 12);
+            UIKit.Size(UIKit.Button(panel, "Fermer", () => Router.Close(this)), UIKit.ButtonHeight);
+        }
+
+        public override void OnShow()
+        {
+            UIKit.ClearChildren(_list);
+            var save = App.Save;
+            int chosen = App.Settings.HomeTheme;
+            if (HomeThemes.Get(chosen)?.IsUnlocked(save) != true) chosen = 0;
+            Item(0, null, Loc.T("Nuit du tombeau"), true, chosen == 0);
+            foreach (var e in HomeThemes.All)
+            {
+                bool open = e.IsUnlocked(save);
+                Item(e.Act, App.Art.ActFloor(e.Act), HomeThemes.NameOf(e), open, chosen == e.Act);
+            }
+        }
+
+        void Item(int act, Sprite floor, string name, bool open, bool selected)
+        {
+            UIKit.ListItem(_list, 104, open ? () => Pick(act) : (System.Action)null, out var h, selected);
+            var swatch = UIKit.Image(h.transform, floor ?? UIKit.Art.White, floor != null ? Color.white : UIKit.BackdropColor, false, "Swatch"); // noloc
+            UIKit.Size(swatch, 80, 80);
+            var label = UIKit.Label(h.transform, name, 34, open ? UIKit.Sand : UIKit.Dim, TextAnchor.MiddleLeft, selected ? FontStyle.Bold : FontStyle.Normal);
+            UIKit.FitText(label, 22);
+            UIKit.Size(label, -1, -1, 1);
+            if (open) return;
+            var padlock = UIKit.Image(h.transform, UIKit.Art.Lock, new Color(1, 1, 1, 0.45f), false, "Lock"); // noloc
+            UIKit.Size(padlock, 56, 56);
+            swatch.color = new Color(0.4f, 0.4f, 0.4f);
+        }
+
+        void Pick(int act)
+        {
+            App.Settings.SetHomeTheme(act);
+            Router.Close(this);
+            var picked = _picked;
+            _picked = null;
+            picked?.Invoke();
         }
     }
 }

@@ -31,6 +31,8 @@ namespace MummyEscape.Monetization
         static readonly Color32 Amber = new Color32(240, 160, 60, 255);
         /// <summary>Season 6, Osiris: the green of the risen god.</summary>
         static readonly Color32 Osiris = new Color32(70, 170, 90, 255);
+        /// <summary>The team's set: the mint of its legendary (<see cref="LegendarySkins.Accent"/> of Developer).</summary>
+        static readonly Color32 DevMint = new Color32(90, 255, 190, 255);
 
         public static readonly IReadOnlyList<SkinDef> All = new[]
         {
@@ -46,6 +48,9 @@ namespace MummyEscape.Monetization
 
             // ---- The game's team (Pvp.Developers): never sold, given to its accounts.
             Legendary(Pvp.Developers.SkinId, "Code source d'Imhotep", LegendaryFx.Developer, new Color32(240, 255, 250, 255), new Color(0.4f, 1f, 0.8f), "Développeur"),
+            new SkinDef { Id = Pvp.Developers.HatId, Name = "Antennes d'Imhotep", Slot = CosmeticSlot.Hat, Hat = HatStyle.CyberEars, Tint = DevMint, Badge = "Développeur" },
+            new SkinDef { Id = Pvp.Developers.TorchId, Name = "Plasma d'Imhotep", Slot = CosmeticSlot.Torch, TorchStyle = TorchStyle.Plasma, Tint = DevMint, Torch = new Color(0.4f, 1f, 0.8f), Badge = "Développeur" },
+            new SkinDef { Id = Pvp.Developers.ShoesId, Name = "Bottes d'Imhotep", Slot = CosmeticSlot.Shoes, Shoes = ShoeStyle.JetBoots, Tint = DevMint, Badge = "Développeur" },
 
             // ---- Season 1 pass: Thoth, the moon and the scribes.
             Legendary("pass_s1_leg", "Clair de lune de Thot", LegendaryFx.Moon, new Color32(255, 250, 220, 255), new Color(0.7f, 0.8f, 1f), Pass),

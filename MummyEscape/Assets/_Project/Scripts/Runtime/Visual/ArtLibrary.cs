@@ -156,6 +156,15 @@ namespace MummyEscape.Visual
         /// <summary>Soft contact shadow cast on a floor tile by its solid neighbours (bit 1 N, 2 E, 4 S, 8 W).</summary>
         public Sprite Shadow(int mask) => mask == 0 ? null : Cached($"shadow{mask}", () => PaintShadow(mask));
 
+        /// <summary>A floor slab of an act's tomb, whatever tomb is themed now (home screen backdrop).</summary>
+        public Sprite ActFloor(int act)
+        {
+            var keep = T;
+            T = TombTheme.ForAct(act);
+            try { return FloorSprite(0); }
+            finally { T = keep; }
+        }
+
         Sprite FloorSprite(int v)
         {
             int fd = FloorDecor(v);
