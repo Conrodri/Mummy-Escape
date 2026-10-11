@@ -3,7 +3,7 @@ namespace MummyEscape.UI.Legal
     /// <summary>English versions of the legal texts. Keep them in sync with the French ones (LegalTexts.cs), which prevail.</summary>
     public static partial class LegalTexts
     {
-        public const string UpdatedEn = "October 7, 2026";
+        public const string UpdatedEn = "October 11, 2026";
 
         /// <summary>The documents in the current game language.</summary>
         public static string[] CurrentPrivacy => Loc.Current == Loc.Lang.En ? PrivacyEn : Privacy;
@@ -126,8 +126,8 @@ namespace MummyEscape.UI.Legal
             "The game is free, with optional purchases. It can be played offline; the online features (leaderboards, friends, duels, guilds, chat, account, backup) are optional. " +
             "They are provided without any guarantee of permanent availability and may change or stop; your local progress then remains playable.",
             "# Energy",
-            "The first act is free to play. After that, each solo game costs one energy point (10 at most) and each duel or 2v2 match one combat energy point (3 at most); " +
-            "a point comes back every 6 minutes. A short, optional ad gives energy back a few times a day; the premium pass removes these limits for its season.",
+            "The first act is free to play. After that, each solo game costs one energy point (10 at most) and each duel or 2v2 match one combat energy point (10 at most); " +
+            "a point comes back every 2 minutes. A short, optional ad gives energy back a few times a day; the premium pass removes these limits for its season.",
             "# Purchases",
             "Golden scarabs are bought with real money on Google Play, at the price shown before the purchase. They are used to get the premium pass, pass tiers, " +
             "scarabs and cosmetic items, which give no advantage in the game. They have no monetary value and can be neither exchanged nor refunded, except for your statutory rights.\n" +

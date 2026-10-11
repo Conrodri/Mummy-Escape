@@ -8,11 +8,11 @@ namespace MummyEscape.UI.Legal
     /// </summary>
     public static partial class LegalTexts
     {
-        public const string Publisher = "[NOM DE L'ÉDITEUR — personne physique ou société]";
-        public const string Address = "[ADRESSE POSTALE DE L'ÉDITEUR]";
-        public const string Contact = "[ADRESSE E-MAIL DE CONTACT]";
+        public const string Publisher = "Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 152 514)";
+        public const string Address = "173 rue de Courcelles, 75017 Paris, France";
+        public const string Contact = "contact@peakdevelopment.fr";
         public const string Mediator = "[NOM ET SITE DU MÉDIATEUR DE LA CONSOMMATION]";
-        public const string Updated = "7 octobre 2026";
+        public const string Updated = "11 octobre 2026";
 
         /// <summary>True while the publisher fields above still hold placeholders (the README and a warning flag it).</summary>
         public static bool HasPlaceholders => Publisher.StartsWith("[") || Contact.StartsWith("[");
@@ -137,8 +137,8 @@ namespace MummyEscape.UI.Legal
             "Le jeu est gratuit, avec des achats facultatifs. Il se joue hors ligne ; les fonctions en ligne (classements, amis, duels, guildes, tchat, compte, sauvegarde) sont facultatives. " +
             "Elles sont fournies sans garantie de disponibilité permanente et peuvent évoluer ou s'arrêter ; ta progression locale reste alors jouable.",
             "# Énergie",
-            "Le premier acte se joue librement. Ensuite, chaque partie solo coûte un point d'énergie (10 au plus) et chaque duel ou match 2v2 un point d'énergie de combat (3 au plus) ; " +
-            "un point revient toutes les 6 minutes. Une courte publicité, facultative, rend de l'énergie quelques fois par jour ; le pass premium supprime ces limites pendant sa saison.",
+            "Le premier acte se joue librement. Ensuite, chaque partie solo coûte un point d'énergie (10 au plus) et chaque duel ou match 2v2 un point d'énergie de combat (10 au plus) ; " +
+            "un point revient toutes les 2 minutes. Une courte publicité, facultative, rend de l'énergie quelques fois par jour ; le pass premium supprime ces limites pendant sa saison.",
             "# Achats",
             "Les scarabées dorés s'achètent avec de l'argent réel sur Google Play, au prix affiché avant l'achat. Ils servent à obtenir le pass premium, des paliers du pass, " +
             "des scarabées et des objets cosmétiques, qui ne donnent aucun avantage en jeu. Ils n'ont aucune valeur monétaire et ne sont ni échangeables ni remboursables, sauf droits que tu tiens de la loi.\n" +
