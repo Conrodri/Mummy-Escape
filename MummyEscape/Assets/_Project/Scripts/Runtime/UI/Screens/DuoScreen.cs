@@ -266,6 +266,8 @@ namespace MummyEscape.UI.Screens
             UIKit.IconButton(top.transform, UISprites.Close, () => Leave(duo), 60);
             var stats = UIKit.Label(card.transform, Loc.F("Elo 2v2 {0}", duo.Elo) + "  ·  " + Loc.F("{0} V · {1} N · {2} D", duo.Wins, duo.Draws, duo.Losses), 26, UIKit.Sand);
             UIKit.Size(stats, 40);
+            var coop = UIKit.Label(card.transform, Loc.F("Campagne 2v2 : {0}/{1} tombeaux", CoopLogic.Cleared(duo), Core.CoopCampaign.Count), 24, UIKit.Dim);
+            UIKit.Size(coop, 34);
 
             var battles = _teams.Battles.Where(b => TeamLogic.SideOfTeam(b, duo.Id) != null).ToList();
             var active = battles.FirstOrDefault(b => b.Id == duo.ActiveBattle);

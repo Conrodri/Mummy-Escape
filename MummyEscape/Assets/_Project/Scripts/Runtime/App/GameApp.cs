@@ -92,6 +92,11 @@ namespace MummyEscape.App
             var ghost = Child<GhostView>("Ghost");
             ghost.Init(Art, Fx.Unlit);
             Game.Init(this, maze, player, ghost, input);
+            // 2v2 campaign: the teammate's mummy, in the same tomb.
+            var mate = Child<PlayerView>("Mate"); // noloc
+            mate.Init(Art, spriteMaterial, Settings);
+            Game.InitCoop(mate);
+            Game.CoopEnded += outcome => CoopScreen.ShowOutcome(this, outcome);
             Game.DuelEnded += (match, run) =>
             {
                 Save.AddPassXp(Monetization.BattlePass.MatchXp);
