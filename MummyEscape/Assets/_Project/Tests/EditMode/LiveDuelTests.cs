@@ -55,6 +55,17 @@ namespace MummyEscape.Tests
             }
         }
 
+        /// <summary>Both players ban (A the first map, B the last) and the duel is read back with its tomb.</summary>
+        static LiveDuel Drafted(World w, LiveDuel duel)
+        {
+            foreach (var (side, ban) in new[] { (duel.A, 0), (duel.B, 2) })
+                if (!side.Bot) w.Server.BanLiveDuelAsync(side.PlayerId, duel.Id, ban).Wait();
+            var drafted = w.Server.GetLiveDuelAsync(duel.A.PlayerId, duel.Id).Result.Match;
+            Assert.IsTrue(drafted.Draft.Closed);
+            Assert.AreEqual(drafted.Draft.Maps[drafted.Draft.Pick], drafted.Seed);
+            return drafted;
+        }
+
         static LiveDuelist Me(string id) => new LiveDuelist { PlayerId = id, Name = id, Look = new PlayerLook { Mummy = "classic" } };
 
         static RunSubmission Exit(LiveDuel duel, int gapMs)
@@ -83,7 +94,7 @@ namespace MummyEscape.Tests
             Assert.AreEqual("UNKNOWN", w.Server.StartLiveDuelAsync("carol", DifficultyTable.GeneratorVersion, "lobbyA", Me("alice"), Me("bob")).Result.Error,
                             "only a player of the duel creates it");
 
-            var duel = w.Server.StartLiveDuelAsync("alice", DifficultyTable.GeneratorVersion, "lobbyA", Me("alice"), Me("bob")).Result.Match;
+            var duel = Drafted(w, w.Server.StartLiveDuelAsync("alice", DifficultyTable.GeneratorVersion, "lobbyA", Me("alice"), Me("bob")).Result.Match);
             Assert.IsNotNull(duel);
             Assert.AreEqual(duel.Id, w.Server.GetLiveDuelAsync("bob", duel.Id).Result.Match.Id, "the guest reads it");
             Assert.AreEqual("UNKNOWN", w.Server.GetLiveDuelAsync("carol", duel.Id).Result.Error);
@@ -113,7 +124,7 @@ namespace MummyEscape.Tests
         public void Server_ARunMuchLaterThanItsTime_IsRefused_AndASilentRivalLoses()
         {
             var w = new World();
-            var duel = w.Server.StartLiveDuelAsync("alice", DifficultyTable.GeneratorVersion, "lobbyB", Me("alice"), Me("bob")).Result.Match;
+            var duel = Drafted(w, w.Server.StartLiveDuelAsync("alice", DifficultyTable.GeneratorVersion, "lobbyB", Me("alice"), Me("bob")).Result.Match);
             var run = Exit(duel, 300);
             // Sent five minutes after the start for an exit "in" a few seconds: the actions were stamped again.
             w.Now = w.Now.AddMinutes(5);
@@ -136,8 +147,13 @@ namespace MummyEscape.Tests
             Assert.IsNotNull(duel);
             Assert.IsTrue(duel.VsBot);
             Assert.IsTrue(duel.B.Bot);
+            Assert.IsTrue(duel.Draft.VoteOf(duel.B.PlayerId).Voted, "the bot bans at once");
+            int shownElo = duel.B.Elo;
+            duel = Drafted(w, duel);
             Assert.AreEqual(Leagues.FromElo(duel.A.Elo), Leagues.FromElo(duel.B.Elo), "a bot of her league");
-            Assert.IsNotNull(duel.B.Run, "its run is played in advance");
+            Assert.IsNotNull(duel.B.Run, "its run is played in advance, once the map is chosen");
+            Assert.AreEqual(shownElo, duel.BotRun.Elo, "the bot of the draft is the one that runs");
+            Assert.AreEqual(duel.Seed, duel.BotRun.Seed);
             var run = Exit(duel, 250);
             w.At(duel, run.TimeMs);
             var r = w.Server.SubmitLiveDuelAsync("alice", duel.Id, run, "Alice").Result;

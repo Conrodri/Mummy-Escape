@@ -10,11 +10,12 @@ namespace MummyEscape.Pvp
     public static class PvpArena
     {
         /// <summary>
-        /// Niveau dont le duel reprend le contrat : mode Normal, niveaux 3 à 8 des actes 1 à 3, assez courts pour une course
-        /// de 3 minutes.
+        /// Niveau dont le duel reprend le contrat : celui écrit dans une graine du tirage (<see cref="PvpDraft"/>) ; pour les
+        /// graines d'avant le tirage, mode Normal, niveaux 3 à 8 des actes 1 à 3, assez courts pour une course de 3 minutes.
         /// </summary>
         public static LevelId LevelFor(int seed)
         {
+            if (PvpDraft.TryDecode(seed, out var drafted)) return drafted;
             uint u = (uint)seed;
             return new LevelId(Difficulty.Normal, 1 + (int)(u % 3), 3 + (int)(u / 3 % 6));
         }

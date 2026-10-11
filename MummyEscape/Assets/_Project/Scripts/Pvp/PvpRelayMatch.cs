@@ -69,9 +69,12 @@ namespace MummyEscape.Pvp
     public class RelayMatch
     {
         public string Id;
+        /// <summary>Les labyrinthes joués : 0 tant que le tirage (<see cref="Draft"/>) est ouvert.</summary>
         public int Seed;
         public int GeneratorVersion;
         public RelaySide A, B;
+        /// <summary>Les trois cartes proposées et les votes des quatre joueurs.</summary>
+        public MapDraft Draft;
         public long CreatedAtUnixMs;
         /// <summary>Premier relais reçu : l'autre camp a encore un moment pour envoyer le sien.</summary>
         public long FirstSubmitUnixMs;

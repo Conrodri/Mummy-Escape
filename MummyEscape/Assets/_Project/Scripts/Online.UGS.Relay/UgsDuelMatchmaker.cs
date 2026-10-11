@@ -322,7 +322,8 @@ namespace MummyEscape.Online
 
         static string Data(Lobby lobby, string key) => lobby.Data != null && lobby.Data.TryGetValue(key, out var d) ? d.Value : null;
         static string PlayerData(Player p, string key) => p.Data != null && p.Data.TryGetValue(key, out var d) ? d.Value : null;
-        static string Gen() => "v" + Core.DifficultyTable.GeneratorVersion; // noloc
+        /// <summary>Only games with the same tombs and the same map draft meet.</summary>
+        static string Gen() => "v" + Core.DifficultyTable.GeneratorVersion + "d" + PvpDraft.Version; // noloc
         static string League(DuelSearch search) => ((int)Leagues.FromElo(search.Elo)).ToString();
 
         static string EncodeLook(PlayerLook look) => look == null ? "" :

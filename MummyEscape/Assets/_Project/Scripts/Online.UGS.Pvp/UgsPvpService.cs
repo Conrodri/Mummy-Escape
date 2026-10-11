@@ -106,10 +106,13 @@ namespace MummyEscape.Online
         public Task<TeamBattle> GetBattleAsync(string battleId) => Call<TeamBattle>("GetBattle", Args("battleId", battleId), _ => null);
 
         public Task<RelayMatchResponse> StartRelayMatchAsync(string matchKey, RelaySide a, RelaySide b) =>
-            Call("StartRelayMatch", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b), e => new RelayMatchResponse { Error = e });
+            Call("StartRelayMatch", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b, "draftVersion", PvpDraft.Version), e => new RelayMatchResponse { Error = e });
 
         public Task<RelayMatchResponse> StartRelayBotsAsync(string matchKey, RelaySide mine) =>
-            Call("StartRelayBots", Args("generatorVersion", Gen, "matchKey", matchKey, "mine", mine), e => new RelayMatchResponse { Error = e });
+            Call("StartRelayBots", Args("generatorVersion", Gen, "matchKey", matchKey, "mine", mine, "draftVersion", PvpDraft.Version), e => new RelayMatchResponse { Error = e });
+
+        public Task<RelayMatchResponse> BanRelayAsync(string matchId, int map) =>
+            Call("BanRelay", Args("matchId", matchId, "map", map), e => new RelayMatchResponse { Error = e });
 
         public Task<RelayResultResponse> SubmitRelayAsync(string matchId, string starter, List<RelayInput> inputs, List<string> quitters) =>
             Call("SubmitRelay", Args("matchId", matchId, "starter", starter ?? "", "inputs", inputs ?? new List<RelayInput>(), "quitters", quitters ?? new List<string>()),
@@ -175,13 +178,16 @@ namespace MummyEscape.Online
                  e => new WalletResponse { Error = e });
 
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
-            Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b), e => new LiveDuelResponse { Error = e });
+            Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b, "draftVersion", PvpDraft.Version), e => new LiveDuelResponse { Error = e });
 
         public Task<LiveDuelResponse> StartLiveBotDuelAsync(string matchKey, LiveDuelist mine) =>
-            Call("StartLiveBotDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "mine", mine), e => new LiveDuelResponse { Error = e });
+            Call("StartLiveBotDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "mine", mine, "draftVersion", PvpDraft.Version), e => new LiveDuelResponse { Error = e });
 
         public Task<LiveDuelResponse> GetLiveDuelAsync(string matchId) =>
             Call("GetLiveDuel", Args("matchId", matchId), e => new LiveDuelResponse { Error = e });
+
+        public Task<LiveDuelResponse> BanLiveDuelAsync(string matchId, int map) =>
+            Call("BanLiveDuel", Args("matchId", matchId, "map", map), e => new LiveDuelResponse { Error = e });
 
         public Task<SubmitRunResponse> SubmitLiveDuelAsync(string matchId, RunSubmission run, string playerName) =>
             Call("SubmitLiveDuel", Args("matchId", matchId, "run", run, "playerName", playerName ?? ""), e => new SubmitRunResponse { Error = e });

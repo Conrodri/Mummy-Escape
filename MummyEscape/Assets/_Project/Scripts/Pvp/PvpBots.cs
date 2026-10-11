@@ -29,11 +29,17 @@ namespace MummyEscape.Pvp
             return Names[(h & int.MaxValue) % Names.Length];
         }
 
+        /// <summary>
+        /// L'Elo d'un bot, toujours de la ligue du joueur : le premier tirage de <paramref name="rng"/>, donc le même que celui
+        /// de <see cref="Make(Random, int, int, string, long)"/> sur un générateur de même graine (le bot se montre avant sa course).
+        /// </summary>
+        public static int EloFor(Random rng, int playerElo) =>
+            Leagues.ClampTo(Math.Max(PvpConfig.MinElo, playerElo + rng.Next(-150, 151)), Leagues.FromElo(playerElo));
+
         /// <summary>La course d'un joueur simulé donné, sur un tombeau donné (manches des combats d'équipe hors ligne).</summary>
         public static GhostRun Make(Random rng, int playerElo, int seed, string botId, long nowMs)
         {
-            // Toujours de la ligue du joueur.
-            int elo = Leagues.ClampTo(Math.Max(PvpConfig.MinElo, playerElo + rng.Next(-150, 151)), Leagues.FromElo(playerElo));
+            int elo = EloFor(rng, playerElo);
             var level = PvpArena.Generate(seed);
             var (inputs, outcome, _) = new HumanPlayer(HumanPlayer.SkillForElo(elo), rng).Play(level, rng);
             // Un tombeau très court couru par un très bon bot : pas plus vite que ce que le serveur croit possible.

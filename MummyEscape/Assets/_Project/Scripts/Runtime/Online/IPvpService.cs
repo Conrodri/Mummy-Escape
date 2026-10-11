@@ -48,8 +48,10 @@ namespace MummyEscape.Online
         // --- live duel (the matchmaking itself goes through IDuelMatchmaker) ---
         Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b);
         Task<LiveDuelResponse> StartLiveBotDuelAsync(string matchKey, LiveDuelist mine);
-        /// <summary>The duel the lobby's host created (for the guest).</summary>
+        /// <summary>The duel the lobby's host created (for the guest), and the map draft as it goes (the server closes it when due).</summary>
         Task<LiveDuelResponse> GetLiveDuelAsync(string matchId);
+        /// <summary>The player bans a map of the draft (0-2; -1: no choice in time, a random ban).</summary>
+        Task<LiveDuelResponse> BanLiveDuelAsync(string matchId, int map);
         /// <summary>The player's run at the end; <see cref="SubmitRunResponse.Resolved"/> false while the rival's is awaited.</summary>
         Task<SubmitRunResponse> SubmitLiveDuelAsync(string matchId, RunSubmission run, string playerName);
         Task<SubmitRunResponse> GetLiveDuelResultAsync(string matchId);
@@ -61,7 +63,10 @@ namespace MummyEscape.Online
         Task<RelayMatchResponse> StartRelayBotsAsync(string matchKey, RelaySide mine);
         /// <summary>The duo's relay at the end of the match; the result once both duos have sent theirs (Pending meanwhile).</summary>
         Task<RelayResultResponse> SubmitRelayAsync(string matchId, string starter, List<RelayInput> inputs, List<string> quitters);
+        /// <summary>The match (its map draft too, closed by the server when due) and its result once settled.</summary>
         Task<RelayResultResponse> GetRelayResultAsync(string matchId);
+        /// <summary>The player's vote in the map draft: the map his duo bans (0-2; -1: no choice in time).</summary>
+        Task<RelayMatchResponse> BanRelayAsync(string matchId, int map);
         /// <summary>"Quit and report": the teammate who left the match.</summary>
         Task<ReportResponse> ReportRelayQuitAsync(string matchId, string quitterId);
 

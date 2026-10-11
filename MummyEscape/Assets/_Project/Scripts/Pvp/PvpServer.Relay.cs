@@ -64,9 +64,10 @@ namespace MummyEscape.Pvp
         /// Crée le match de deux duos qui se sont trouvés (l'hôte du salon l'appelle ; <paramref name="matchKey"/> = le salon,
         /// donc relancer l'appel rend le même match). Les quatre joueurs reçoivent la graine par le salon.
         /// </summary>
-        public async Task<RelayMatchResponse> StartRelayMatchAsync(string me, int generatorVersion, string matchKey, RelaySide a, RelaySide b)
+        public async Task<RelayMatchResponse> StartRelayMatchAsync(string me, int generatorVersion, string matchKey, RelaySide a, RelaySide b,
+                                                                   int draftVersion = PvpDraft.Version)
         {
-            if (generatorVersion != DifficultyTable.GeneratorVersion) return new RelayMatchResponse { Error = "OUTDATED" };
+            if (generatorVersion != DifficultyTable.GeneratorVersion || draftVersion != PvpDraft.Version) return new RelayMatchResponse { Error = "OUTDATED" };
             if (string.IsNullOrEmpty(matchKey)) return new RelayMatchResponse { Error = "UNKNOWN" };
             var sideA = await CheckedSideAsync(a);
             var sideB = await CheckedSideAsync(b);
@@ -76,21 +77,23 @@ namespace MummyEscape.Pvp
             // Toujours la même division : celle du meilleur joueur de chaque duo (un diamant et un bronze affrontent au
             // moins un diamant). Une partie déjà créée pour ce salon est rendue telle quelle.
             var existing = await Shared<RelayMatch>(RelaysCollection, RelayId(matchKey));
-            if (existing == null && (await BestDuelEloAsync(sideA)).League != (await BestDuelEloAsync(sideB)).League)
-                return new RelayMatchResponse { Error = "DIVISION" };
             if (existing != null) return new RelayMatchResponse { Match = existing };
+            var division = (await BestDuelEloAsync(sideA)).League;
+            if (division != (await BestDuelEloAsync(sideB)).League) return new RelayMatchResponse { Error = "DIVISION" };
             string spent = await SpendEnergyAsync(sideA.Runners.Concat(sideB.Runners).Select(r => r.PlayerId));
             if (spent != null) return new RelayMatchResponse { Error = spent };
-            return await CreateRelayAsync(RelayId(matchKey), sideA, sideB);
+            return await CreateRelayAsync(RelayId(matchKey), sideA, sideB, _newSeed(), division);
         }
 
         /// <summary>
-        /// Personne en vue et le duo accepte les bots : un match contre deux joueurs simulés d'Elo proche, dont le relais est
-        /// couru d'avance (les téléphones le rejouent sur leur horloge, comme un fantôme).
+        /// Personne en vue et le duo accepte les bots : un match contre deux joueurs simulés d'Elo proche, qui votent au tirage
+        /// et dont le relais est couru d'avance une fois la carte choisie (les téléphones le rejouent sur leur horloge, comme un
+        /// fantôme).
         /// </summary>
-        public async Task<RelayMatchResponse> StartRelayBotsAsync(string me, int generatorVersion, string matchKey, RelaySide mine)
+        public async Task<RelayMatchResponse> StartRelayBotsAsync(string me, int generatorVersion, string matchKey, RelaySide mine,
+                                                                  int draftVersion = PvpDraft.Version)
         {
-            if (generatorVersion != DifficultyTable.GeneratorVersion) return new RelayMatchResponse { Error = "OUTDATED" };
+            if (generatorVersion != DifficultyTable.GeneratorVersion || draftVersion != PvpDraft.Version) return new RelayMatchResponse { Error = "OUTDATED" };
             if (string.IsNullOrEmpty(matchKey)) return new RelayMatchResponse { Error = "UNKNOWN" };
             var side = await CheckedSideAsync(mine);
             if (side == null || !side.Has(me)) return new RelayMatchResponse { Error = "UNKNOWN" };
@@ -103,9 +106,6 @@ namespace MummyEscape.Pvp
             int seed = _newSeed();
             var rng = new Random(seed);
             int elo = Math.Max(PvpConfig.MinElo, side.Elo + rng.Next(-120, 121));
-            // Des bots de la division du duo : ils jouent au niveau de son meilleur joueur (l'Elo 2v2 sert au calcul).
-            var (best, division) = await BestDuelEloAsync(side);
-            int skill = Leagues.ClampTo(best + rng.Next(-100, 101), division);
             var bots = new RelaySide { DuoId = "bot_" + seed, Elo = elo, Bot = true };
             for (int k = 0; k < 2; k++)
             {
@@ -114,24 +114,59 @@ namespace MummyEscape.Pvp
             }
             bots.Name = bots.Runners[0].Name + " & " + bots.Runners[1].Name;
             bots.Starter = bots.Runners[rng.Next(2)].PlayerId;
-            var race = RelayBots.Play(RelayArenaFor(seed), rng, skill);
-            bots.Inputs = race.Inputs.Select(i => new RelayInput { Tick = i.Tick, Maze = i.Maze, Direction = i.Direction }).ToList();
-            bots.Verified = RelaySummary.Of(race);
-            return await CreateRelayAsync(id, side, bots, seed);
+            // Leur relais est couru à la fin du tirage (DraftRelayAsync), sur la carte choisie.
+            return await CreateRelayAsync(id, side, bots, seed, (await BestDuelEloAsync(side)).League);
         }
 
-        async Task<RelayMatchResponse> CreateRelayAsync(string id, RelaySide a, RelaySide b, int? seed = null)
+        async Task<RelayMatchResponse> CreateRelayAsync(string id, RelaySide a, RelaySide b, int seed, League division)
         {
+            var voters = new[] { a, b }.SelectMany((side, team) => side.Runners.Select(r => (r.PlayerId, team, side.Bot || r.Bot || IsBot?.Invoke(r.PlayerId) == true)));
             var match = await Shared<RelayMatch>(RelaysCollection, id, m => m ?? new RelayMatch
             {
                 Id = id,
-                Seed = seed ?? _newSeed(),
                 GeneratorVersion = DifficultyTable.GeneratorVersion,
                 A = a,
                 B = b,
+                Draft = PvpDraft.Open(seed, division, voters),
                 CreatedAtUnixMs = NowMs,
             });
             return new RelayMatchResponse { Match = match };
+        }
+
+        /// <summary>
+        /// Le vote d'un joueur au tirage (une fois ; -1 : pas de choix à temps). Chaque duo bannit la carte de ses votes ; le
+        /// match rendu donne les labyrinthes joués (<see cref="RelayMatch.Seed"/>) dès que le tirage est fini.
+        /// </summary>
+        public async Task<RelayMatchResponse> BanRelayAsync(string me, string matchId, int map)
+        {
+            var match = await Shared<RelayMatch>(RelaysCollection, matchId ?? "");
+            if (match?.SideOf(me) == null) return new RelayMatchResponse { Error = "UNKNOWN" };
+            return new RelayMatchResponse { Match = await DraftRelayAsync(match.Id, me, map) };
+        }
+
+        /// <summary>Le vote du joueur s'il y en a un, puis la fin du tirage si elle est due : les labyrinthes, et le relais des bots.</summary>
+        async Task<RelayMatch> DraftRelayAsync(string matchId, string me = null, int map = -1)
+        {
+            var current = await Shared<RelayMatch>(RelaysCollection, matchId);
+            if (current?.Draft == null || current.Draft.Closed) return current;
+            // Des bots de la division du duo : ils jouent au niveau de son meilleur joueur (l'Elo 2v2 sert au calcul). Lu
+            // avant, pour que le tirage fermé porte déjà leur relais (un téléphone qui le lit part aussitôt).
+            var (best, division) = current.B.Bot ? await BestDuelEloAsync(current.A) : (0, League.Bronze);
+            return await Shared<RelayMatch>(RelaysCollection, matchId, m =>
+            {
+                if (m?.Draft == null || m.Draft.Closed) return m;
+                if (me != null) PvpDraft.Vote(m.Draft, me, map, NowMs);
+                if (!PvpDraft.TryClose(m.Draft, NowMs)) return m;
+                m.Seed = m.Draft.Maps[m.Draft.Pick];
+                if (m.B.Bot)
+                {
+                    var rng = new Random(m.Draft.Seed);
+                    var race = RelayBots.Play(RelayArenaFor(m.Seed), rng, Leagues.ClampTo(best + rng.Next(-100, 101), division));
+                    m.B.Inputs = race.Inputs.Select(i => new RelayInput { Tick = i.Tick, Maze = i.Maze, Direction = i.Direction }).ToList();
+                    m.B.Verified = RelaySummary.Of(race);
+                }
+                return m;
+            });
         }
 
         /// <summary>
@@ -142,11 +177,12 @@ namespace MummyEscape.Pvp
         {
             var match = await Shared<RelayMatch>(RelaysCollection, matchId);
             if (match == null || match.SideOf(me) == null) return new RelayResultResponse { Error = "UNKNOWN" };
+            // Un relais envoyé vaut fin du tirage pour ce joueur ; encore au tirage, il n'y a rien à rejouer.
+            match = await DraftRelayAsync(matchId, me, -1);
             if (!match.Settled)
             {
-                var map = RelayArenaFor(match.Seed);
                 var mine = match.SideOf(me);
-                var race = RelayRace.Verify(map, inputs);
+                var race = match.Draft?.Closed == false ? null : RelayRace.Verify(RelayArenaFor(match.Seed), inputs);
                 var myQuitters = (quitters ?? new List<string>()).Where(mine.Has).ToList();
                 var summary = race == null ? new RelaySummary { Lost = true } : RelaySummary.Of(race, myQuitters.Count > 0);
                 bool isA = match.A == mine;
@@ -175,6 +211,7 @@ namespace MummyEscape.Pvp
         {
             var match = await Shared<RelayMatch>(RelaysCollection, matchId);
             if (match == null || match.SideOf(me) == null) return new RelayResultResponse { Error = "UNKNOWN" };
+            match = await DraftRelayAsync(matchId); // les téléphones lisent ici la fin du tirage
             if (!match.Settled)
             {
                 bool both = match.A.Verified != null && match.B.Verified != null;

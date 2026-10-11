@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using MummyEscape.Online;
 using MummyEscape.Pvp;
 using MummyEscape.Services;
@@ -362,6 +363,16 @@ namespace MummyEscape.UI.Screens
                 _searching.gameObject.SetActive(false);
                 return;
             }
+            if (!await DraftAsync(link))
+            {
+                link.Dispose();
+                if (this == null) return;
+                _search = null;
+                _searching.gameObject.SetActive(false);
+                _info.text = Loc.T("Connexion perdue : le match est annulé.");
+                return;
+            }
+            if (this == null) { link.Dispose(); return; }
             _searchStatus.text = Loc.T("Les dieux scellent les labyrinthes…");
             bool ready = await App.Game.StartRelay(link);
             if (this == null) return;
@@ -376,6 +387,35 @@ namespace MummyEscape.UI.Screens
             PlayGate.SpendPvp(App);
             Router.Open<HudScreen>();
             Router.Open<RelayVsScreen>().Show(link.Match, link.Me, App.Game.BeginRelayPreview);
+        }
+
+        /// <summary>
+        /// The map draft of the match (each duo bans one of three maps, by the vote of its players). The link's match takes
+        /// what the server decided: the mazes played and, against bots, their relay. False when the server was out of reach.
+        /// </summary>
+        Task<bool> DraftAsync(IRelayLink link)
+        {
+            var match = link.Match;
+            var done = new TaskCompletionSource<bool>();
+            async Task<MapDraft> Read(Task<RelayMatch> call)
+            {
+                var m = await call;
+                if (m?.Draft == null) return null;
+                match.Draft = m.Draft;
+                if (!m.Draft.Closed) return m.Draft;
+                match.Seed = m.Seed;
+                if (match.B.Bot)
+                {
+                    match.B.Inputs = m.B.Inputs;
+                    match.B.Verified = m.B.Verified;
+                }
+                return m.Draft;
+            }
+            async Task<RelayMatch> Ban(int map) => (await App.Pvp.BanRelayAsync(match.Id, map))?.Match;
+            async Task<RelayMatch> Get() => (await App.Pvp.GetRelayResultAsync(match.Id))?.Match;
+            Router.Open<DraftScreen>().Show(match.Draft, link.Me, true, id => match.SideOf(id)?.Runner(id)?.Name,
+                map => Read(Ban(map)), () => Read(Get()), ok => done.TrySetResult(ok));
+            return done.Task;
         }
 
         public override void OnHide() => CancelSearch();

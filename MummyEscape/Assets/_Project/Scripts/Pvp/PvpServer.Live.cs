@@ -28,9 +28,9 @@ namespace MummyEscape.Pvp
             Look = await VerifiedLookAsync(claimed.Look, claimed.PlayerId),
         };
 
-        async Task<string> LiveRefusalAsync(string me, int generatorVersion, string matchKey)
+        async Task<string> LiveRefusalAsync(string me, int generatorVersion, string matchKey, int draftVersion)
         {
-            if (generatorVersion != DifficultyTable.GeneratorVersion) return "OUTDATED";
+            if (generatorVersion != DifficultyTable.GeneratorVersion || draftVersion != PvpDraft.Version) return "OUTDATED";
             if (string.IsNullOrEmpty(matchKey)) return "UNKNOWN";
             if (await _store.GetSoloStarsAsync(me) < PvpConfig.RequiredSoloStars) return "LOCKED";
             return null;
@@ -38,11 +38,13 @@ namespace MummyEscape.Pvp
 
         /// <summary>
         /// Crée le duel de deux joueurs qui se sont trouvés (l'hôte du salon l'appelle ; <paramref name="matchKey"/> = le salon,
-        /// donc relancer l'appel rend le même duel). Toujours deux joueurs de la même ligue.
+        /// donc relancer l'appel rend le même duel). Toujours deux joueurs de la même ligue. Le duel commence par le tirage des
+        /// cartes (<see cref="BanLiveDuelAsync"/>) ; <paramref name="draftVersion"/> : un jeu qui ne le connaît pas reçoit « OUTDATED ».
         /// </summary>
-        public async Task<LiveDuelResponse> StartLiveDuelAsync(string me, int generatorVersion, string matchKey, LiveDuelist a, LiveDuelist b)
+        public async Task<LiveDuelResponse> StartLiveDuelAsync(string me, int generatorVersion, string matchKey, LiveDuelist a, LiveDuelist b,
+                                                               int draftVersion = PvpDraft.Version)
         {
-            string refusal = await LiveRefusalAsync(me, generatorVersion, matchKey);
+            string refusal = await LiveRefusalAsync(me, generatorVersion, matchKey, draftVersion);
             if (refusal != null) return new LiveDuelResponse { Error = refusal };
             if (string.IsNullOrEmpty(a?.PlayerId) || string.IsNullOrEmpty(b?.PlayerId) || a.PlayerId == b.PlayerId
                 || (a.PlayerId != me && b.PlayerId != me) || a.PlayerId.StartsWith("bot_") || b.PlayerId.StartsWith("bot_"))
@@ -61,26 +63,62 @@ namespace MummyEscape.Pvp
             var duel = await Shared<LiveDuel>(LiveCollection, id, d => d ?? new LiveDuel
             {
                 Id = id,
-                Seed = _newSeed(),
                 GeneratorVersion = DifficultyTable.GeneratorVersion,
                 A = duelistA,
                 B = duelistB,
+                Draft = PvpDraft.Open(_newSeed(), Leagues.FromElo(dataA.Elo), new[] { (a.PlayerId, 0, false), (b.PlayerId, 1, false) }),
                 CreatedAtUnixMs = NowMs,
             });
             return new LiveDuelResponse { Match = duel };
         }
 
-        /// <summary>Le duel, pour l'invité du salon (l'hôte l'a créé) : seuls ses deux joueurs le lisent.</summary>
+        /// <summary>
+        /// Le duel, pour l'invité du salon (l'hôte l'a créé) et pendant le tirage : seuls ses deux joueurs le lisent. Ferme le
+        /// tirage quand son heure est passée.
+        /// </summary>
         public async Task<LiveDuelResponse> GetLiveDuelAsync(string me, string matchId)
         {
             var duel = await Shared<LiveDuel>(LiveCollection, matchId ?? "");
-            return duel?.SideOf(me) != null ? new LiveDuelResponse { Match = duel } : new LiveDuelResponse { Error = "UNKNOWN" };
+            if (duel?.SideOf(me) == null) return new LiveDuelResponse { Error = "UNKNOWN" };
+            return new LiveDuelResponse { Match = await DraftLiveAsync(duel.Id) };
         }
 
-        /// <summary>Personne de la ligue en une minute et le joueur accepte les bots : un bot de sa ligue, dont la course est jouée d'avance.</summary>
-        public async Task<LiveDuelResponse> StartLiveBotDuelAsync(string me, int generatorVersion, string matchKey, LiveDuelist mine)
+        /// <summary>
+        /// Le joueur bannit une carte du tirage (une fois ; -1 : pas de choix à temps, le hasard bannit pour lui). Le tirage
+        /// ferme dès que les deux ont voté ; le duel rendu donne alors le tombeau joué (<see cref="LiveDuel.Seed"/>).
+        /// </summary>
+        public async Task<LiveDuelResponse> BanLiveDuelAsync(string me, string matchId, int map)
         {
-            string refusal = await LiveRefusalAsync(me, generatorVersion, matchKey);
+            var duel = await Shared<LiveDuel>(LiveCollection, matchId ?? "");
+            if (duel?.SideOf(me) == null) return new LiveDuelResponse { Error = "UNKNOWN" };
+            return new LiveDuelResponse { Match = await DraftLiveAsync(duel.Id, me, map) };
+        }
+
+        /// <summary>Le vote du joueur s'il y en a un, puis la fin du tirage si elle est due : le tombeau, et la course du bot sur lui.</summary>
+        Task<LiveDuel> DraftLiveAsync(string matchId, string me = null, int map = -1) =>
+            Shared<LiveDuel>(LiveCollection, matchId, d =>
+            {
+                if (d?.Draft == null || d.Draft.Closed) return d;
+                if (me != null) PvpDraft.Vote(d.Draft, me, map, NowMs);
+                if (!PvpDraft.TryClose(d.Draft, NowMs)) return d;
+                d.Seed = d.Draft.Maps[d.Draft.Pick];
+                if (d.B.Bot)
+                {
+                    // Même graine que l'Elo montré au tirage (PvpBots.EloFor) : le même bot, qui court maintenant le tombeau choisi.
+                    var bot = PvpBots.Make(new Random(d.Draft.Seed), d.A.Elo, d.Seed, d.B.PlayerId, NowMs);
+                    bot.PlayerName = d.B.Name;
+                    bot.Look = d.B.Look;
+                    d.BotRun = bot;
+                    d.B.Run = new RunSubmission { MatchId = d.Id, Outcome = bot.Outcome, TimeMs = bot.TimeMs, Progress = bot.Progress, Inputs = bot.Inputs };
+                }
+                return d;
+            });
+
+        /// <summary>Personne de la ligue en une minute et le joueur accepte les bots : un bot de sa ligue, qui bannit aussi, puis court d'avance.</summary>
+        public async Task<LiveDuelResponse> StartLiveBotDuelAsync(string me, int generatorVersion, string matchKey, LiveDuelist mine,
+                                                                  int draftVersion = PvpDraft.Version)
+        {
+            string refusal = await LiveRefusalAsync(me, generatorVersion, matchKey, draftVersion);
             if (refusal != null) return new LiveDuelResponse { Error = refusal };
             if (mine == null || mine.PlayerId != me) return new LiveDuelResponse { Error = "UNKNOWN" };
             string id = LiveId(matchKey);
@@ -91,21 +129,16 @@ namespace MummyEscape.Pvp
             if (spent != null) return new LiveDuelResponse { Error = spent };
             var data = await Update(me);
             int seed = _newSeed();
-            var bot = PvpBots.Make(new Random(seed), data.Elo, seed, "bot_" + seed, NowMs);
+            string botId = "bot_" + seed;
             var duelistMine = await DuelistAsync(mine, data.Elo);
-            bot.PlayerName = BotName?.Invoke(bot.PlayerId) ?? bot.PlayerName;
             var duel = await Shared<LiveDuel>(LiveCollection, id, d => d ?? new LiveDuel
             {
                 Id = id,
-                Seed = seed,
                 GeneratorVersion = DifficultyTable.GeneratorVersion,
                 A = duelistMine,
-                B = new LiveDuelist
-                {
-                    PlayerId = bot.PlayerId, Name = bot.PlayerName, Elo = bot.Elo, Look = bot.Look, Bot = true,
-                    Run = new RunSubmission { MatchId = id, Outcome = bot.Outcome, TimeMs = bot.TimeMs, Progress = bot.Progress, Inputs = bot.Inputs },
-                },
-                BotRun = bot,
+                // Sa course viendra à la fin du tirage (DraftLiveAsync), sur le tombeau choisi.
+                B = new LiveDuelist { PlayerId = botId, Name = BotName?.Invoke(botId) ?? PvpBots.NameOf(botId), Elo = PvpBots.EloFor(new Random(seed), data.Elo), Bot = true },
+                Draft = PvpDraft.Open(seed, Leagues.FromElo(data.Elo), new[] { (me, 0, false), (botId, 1, true) }),
                 CreatedAtUnixMs = NowMs,
             });
             return new LiveDuelResponse { Match = duel };
@@ -126,15 +159,20 @@ namespace MummyEscape.Pvp
         {
             var duel = await Shared<LiveDuel>(LiveCollection, matchId);
             if (duel == null || duel.SideOf(me) == null || run == null) return new SubmitRunResponse { Error = "UNKNOWN" };
+            // Une course envoyée vaut fin du tirage pour ce joueur (s'il quitte pendant le tirage, le hasard bannit pour lui).
+            duel = await DraftLiveAsync(matchId, me, -1);
+            // Encore au tirage : aucun tombeau sur lequel rejouer, seul un abandon a un sens.
+            bool drafting = duel.Draft?.Closed == false;
             string error = null;
             RunSubmission verified;
             if (run.Outcome == RunOutcome.Abandoned) verified = new RunSubmission { MatchId = matchId, Outcome = RunOutcome.Abandoned };
             else
             {
-                verified = RunValidator.IsPlausible(run, out _) ? RunReplay.Verify(Arena(duel.Seed), run) : null;
+                verified = !drafting && RunValidator.IsPlausible(run, out _) ? RunReplay.Verify(Arena(duel.Seed), run) : null;
                 if (verified != null && verified.Outcome != RunOutcome.TimedOut)
                 {
-                    long sinceStart = NowMs - duel.CreatedAtUnixMs - PreviewMs(duel.Seed) - LiveDuelConfig.VsScreenMs - LiveDuelConfig.ReadyWaitMs;
+                    long started = duel.Draft?.ClosedUnixMs ?? duel.CreatedAtUnixMs; // la course part après le tirage
+                    long sinceStart = NowMs - started - PreviewMs(duel.Seed) - LiveDuelConfig.VsScreenMs - LiveDuelConfig.ReadyWaitMs;
                     if (verified.TimeMs < sinceStart - LiveDuelConfig.LateSlackMs) verified = null;
                 }
                 if (verified == null)
