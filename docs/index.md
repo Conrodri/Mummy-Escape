@@ -11,5 +11,5 @@ Un puzzle-labyrinthe égyptien : tu es la momie, et tu dois t'échapper du tombe
 
 ## Contact
 
-[ADRESSE E-MAIL DE CONTACT]
+contact@peakdevelopment.fr
 

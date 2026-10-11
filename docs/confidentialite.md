@@ -1,6 +1,6 @@
 # Mummy Rush — Politique de confidentialité
 
-Version 3 — mise à jour le 7 octobre 2026.
+Version 3 — mise à jour le 11 octobre 2026.
 
 ## En bref
 
@@ -8,7 +8,7 @@ Mummy Rush se joue entièrement hors ligne : dans ce cas, aucune donnée ne quit
 
 ## Qui est responsable de tes données ?
 
-[NOM DE L'ÉDITEUR — personne physique ou société], [ADRESSE POSTALE DE L'ÉDITEUR]. Contact pour toute question ou demande : [ADRESSE E-MAIL DE CONTACT].
+Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 152 514), 173 rue de Courcelles, 75017 Paris, France. Contact pour toute question ou demande : contact@peakdevelopment.fr.
 
 ## Données conservées sur ton téléphone
 
@@ -66,7 +66,7 @@ Tu peux accéder à tes données, les corriger, les effacer, les récupérer dan
 • « Exporter mes données » : tout ce que le jeu et le serveur savent de toi ;  
 • « Supprimer mes données en ligne » : efface ton profil, ton compte, tes scores, tes amis, ta sauvegarde, tes données de duel, de 2v2 et de guilde, tes messages et ton portefeuille (les scarabées dorés non dépensés sont alors perdus) ;  
 • désactiver le mode en ligne ; changer de pseudonyme ou de pays.  
-Tu peux aussi écrire à [ADRESSE E-MAIL DE CONTACT] : nous répondons sous un mois. Si tu estimes que tes droits ne sont pas respectés, tu peux saisir la CNIL (www.cnil.fr, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07) ou l'autorité de protection des données de ton pays.
+Tu peux aussi écrire à contact@peakdevelopment.fr : nous répondons sous un mois. Si tu estimes que tes droits ne sont pas respectés, tu peux saisir la CNIL (www.cnil.fr, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07) ou l'autorité de protection des données de ton pays.
 
 ## Sécurité
 

@@ -1,6 +1,6 @@
 # Mummy Rush — Privacy policy
 
-Version 3 — updated October 7, 2026. English translation: the French version prevails.
+Version 3 — updated October 11, 2026. English translation: the French version prevails.
 
 ## In short
 
@@ -8,7 +8,7 @@ Mummy Rush can be played entirely offline: in that case, no data leaves your pho
 
 ## Who is responsible for your data?
 
-[NOM DE L'ÉDITEUR — personne physique ou société], [ADRESSE POSTALE DE L'ÉDITEUR]. Contact for any question or request: [ADRESSE E-MAIL DE CONTACT].
+Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 152 514), 173 rue de Courcelles, 75017 Paris, France. Contact for any question or request: contact@peakdevelopment.fr.
 
 ## Data kept on your phone
 
@@ -66,7 +66,7 @@ You can access your data, correct it, erase it, get it in a readable format (por
 • "Export my data": everything the game and the server know about you;  
 • "Delete my online data": erases your profile, your account, your scores, your friends, your backup, your duel, 2v2 and guild data, your messages and your wallet (unspent golden scarabs are then lost);  
 • turn off online mode; change your nickname or country.  
-You can also write to [ADRESSE E-MAIL DE CONTACT]: we answer within one month. If you believe your rights are not respected, you can lodge a complaint with the CNIL (www.cnil.fr, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France) or with the data protection authority of your country.
+You can also write to contact@peakdevelopment.fr: we answer within one month. If you believe your rights are not respected, you can lodge a complaint with the CNIL (www.cnil.fr, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France) or with the data protection authority of your country.
 
 ## Security
 

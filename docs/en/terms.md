@@ -1,10 +1,10 @@
 # Mummy Rush — Terms of use
 
-Version 3 — updated October 7, 2026. English translation: the French version prevails.
+Version 3 — updated October 11, 2026. English translation: the French version prevails.
 
 ## Purpose
 
-These terms govern the use of the game Mummy Rush, published by [NOM DE L'ÉDITEUR — personne physique ou société] ([ADRESSE POSTALE DE L'ÉDITEUR], [ADRESSE E-MAIL DE CONTACT]). By playing online, you accept them.
+These terms govern the use of the game Mummy Rush, published by Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 152 514) (173 rue de Courcelles, 75017 Paris, France, contact@peakdevelopment.fr). By playing online, you accept them.
 
 ## The game
 
@@ -12,7 +12,7 @@ The game is free, with optional purchases. It can be played offline; the online 
 
 ## Energy
 
-The first act is free to play. After that, each solo game costs one energy point (10 at most) and each duel or 2v2 match one combat energy point (3 at most); a point comes back every 6 minutes. A short, optional ad gives energy back a few times a day; the premium pass removes these limits for its season.
+The first act is free to play. After that, each solo game costs one energy point (10 at most) and each duel or 2v2 match one combat energy point (10 at most); a point comes back every 2 minutes. A short, optional ad gives energy back a few times a day; the premium pass removes these limits for its season.
 
 ## Purchases
 

@@ -1,10 +1,10 @@
 # Mummy Rush — Conditions d'utilisation
 
-Version 3 — mise à jour le 7 octobre 2026.
+Version 3 — mise à jour le 11 octobre 2026.
 
 ## Objet
 
-Ces conditions encadrent l'utilisation du jeu Mummy Rush, édité par [NOM DE L'ÉDITEUR — personne physique ou société] ([ADRESSE POSTALE DE L'ÉDITEUR], [ADRESSE E-MAIL DE CONTACT]). En jouant en ligne, tu les acceptes.
+Ces conditions encadrent l'utilisation du jeu Mummy Rush, édité par Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 152 514) (173 rue de Courcelles, 75017 Paris, France, contact@peakdevelopment.fr). En jouant en ligne, tu les acceptes.
 
 ## Le jeu
 
@@ -12,7 +12,7 @@ Le jeu est gratuit, avec des achats facultatifs. Il se joue hors ligne ; les fon
 
 ## Énergie
 
-Le premier acte se joue librement. Ensuite, chaque partie solo coûte un point d'énergie (10 au plus) et chaque duel ou match 2v2 un point d'énergie de combat (3 au plus) ; un point revient toutes les 6 minutes. Une courte publicité, facultative, rend de l'énergie quelques fois par jour ; le pass premium supprime ces limites pendant sa saison.
+Le premier acte se joue librement. Ensuite, chaque partie solo coûte un point d'énergie (10 au plus) et chaque duel ou match 2v2 un point d'énergie de combat (10 au plus) ; un point revient toutes les 2 minutes. Une courte publicité, facultative, rend de l'énergie quelques fois par jour ; le pass premium supprime ces limites pendant sa saison.
 
 ## Achats
 

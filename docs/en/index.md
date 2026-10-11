@@ -11,5 +11,5 @@ An Egyptian maze puzzle: you are the mummy, and you must escape the pitch-dark t
 
 ## Contact
 
-[ADRESSE E-MAIL DE CONTACT]
+contact@peakdevelopment.fr
 

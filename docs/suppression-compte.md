@@ -1,6 +1,6 @@
 # Mummy Rush — Supprimer ton compte et tes données
 
-Cette page explique comment supprimer ton compte Mummy Rush et les données associées, édité par [NOM DE L'ÉDITEUR — personne physique ou société].
+Cette page explique comment supprimer ton compte Mummy Rush et les données associées, édité par Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 152 514).
 
 ## Depuis le jeu (immédiat)
 
@@ -10,11 +10,11 @@ Cette page explique comment supprimer ton compte Mummy Rush et les données asso
 
 ## Sans le jeu
 
-Écris à [ADRESSE E-MAIL DE CONTACT] depuis l'adresse de ton choix, avec pour objet « Suppression de compte Mummy Rush », en indiquant ton identifiant de connexion (ou ton pseudonyme et ton code ami). Nous supprimons le compte sous 30 jours au plus tard et te confirmons la suppression. Pour éviter les suppressions abusives, nous pouvons te demander une preuve que le compte t'appartient (par exemple le code ami affiché dans le jeu).
+Écris à contact@peakdevelopment.fr depuis l'adresse de ton choix, avec pour objet « Suppression de compte Mummy Rush », en indiquant ton identifiant de connexion (ou ton pseudonyme et ton code ami). Nous supprimons le compte sous 30 jours au plus tard et te confirmons la suppression. Pour éviter les suppressions abusives, nous pouvons te demander une preuve que le compte t'appartient (par exemple le code ami affiché dans le jeu).
 
 ## Ce qui est supprimé
 
-Ton profil et son identifiant, ton compte (identifiant de connexion et mot de passe), ton pseudonyme, tes scores dans les classements, tes amis et demandes d'ami, ta progression partagée et ta sauvegarde en ligne, ton Elo et ton historique de duels et de 2v2, tes duos, ta place dans ta guilde, tes messages et replays partagés, et ton portefeuille (scarabées dorés, pass, objets payants).
+Ton profil et son identifiant, ton compte (identifiant de connexion et mot de passe), ton pseudonyme, tes scores dans les classements, tes amis et demandes d'ami, ta progression montrée à tes amis et ta sauvegarde en ligne, ton Elo et ton historique de duels et de 2v2, tes duos, ta place dans ta guilde, tes messages et replays partagés, et ton portefeuille (scarabées dorés, pass, objets payants).
 
 ## Ce qui est conservé
 

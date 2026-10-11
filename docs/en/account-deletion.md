@@ -1,6 +1,6 @@
 # Mummy Rush — Delete your account and data
 
-This page explains how to delete your Mummy Rush account and the associated data. Mummy Rush is published by [NOM DE L'ÉDITEUR — personne physique ou société].
+This page explains how to delete your Mummy Rush account and the associated data. Mummy Rush is published by Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 152 514).
 
 ## From the game (immediate)
 
@@ -10,11 +10,11 @@ This page explains how to delete your Mummy Rush account and the associated data
 
 ## Without the game
 
-Write to [ADRESSE E-MAIL DE CONTACT] from any address, with the subject "Mummy Rush account deletion", giving your login (or your nickname and friend code). We delete the account within 30 days at most and confirm the deletion. To prevent abusive deletions, we may ask for proof that the account is yours (for example the friend code shown in the game).
+Write to contact@peakdevelopment.fr from any address, with the subject "Mummy Rush account deletion", giving your login (or your nickname and friend code). We delete the account within 30 days at most and confirm the deletion. To prevent abusive deletions, we may ask for proof that the account is yours (for example the friend code shown in the game).
 
 ## What is deleted
 
-Your profile and its ID, your account (login and password), your nickname, your leaderboard scores, your friends and friend requests, your shared progress and your online backup, your Elo and your duel and 2v2 history, your duos, your place in your guild, your messages and shared replays, and your wallet (golden scarabs, passes, paid items).
+Your profile and its ID, your account (login and password), your nickname, your leaderboard scores, your friends and friend requests, the progress shown to your friends and your online backup, your Elo and your duel and 2v2 history, your duos, your place in your guild, your messages and shared replays, and your wallet (golden scarabs, passes, paid items).
 
 ## What is kept
 
