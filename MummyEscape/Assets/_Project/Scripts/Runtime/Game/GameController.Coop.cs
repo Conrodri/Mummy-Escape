@@ -63,7 +63,7 @@ namespace MummyEscape.Game
             public RuleState MineBefore;
         }
 
-        readonly Queue<MateStep> _mateSteps = new Queue<MateStep>();
+        readonly Queue<MateStep> _coopMateSteps = new Queue<MateStep>();
 
         /// <summary>The teammate's mummy (created once by the app).</summary>
         public void InitCoop(PlayerView mate)
@@ -118,7 +118,7 @@ namespace MummyEscape.Game
             var tomb = CoopCampaign.Get(number);
             Coop = new CoopSession(tomb);
             _coopOver = _coopAwait = _mateReady = _mateBusy = false;
-            _mateSteps.Clear();
+            _coopMateSteps.Clear();
             CurrentLevel = tomb.Level.Id;
             _app.Audio.PlayMusic(CurrentLevel.Act);
             LevelLoading?.Invoke(CurrentLevel);
@@ -248,7 +248,7 @@ namespace MummyEscape.Game
                     return;
                 }
                 SendCoopStep(m.Maze, action);
-                _mateSteps.Enqueue(new MateStep { Action = action, R = r, From = mateFrom, MineBefore = mineBefore });
+                _coopMateSteps.Enqueue(new MateStep { Action = action, R = r, From = mateFrom, MineBefore = mineBefore });
                 return;
             }
 
@@ -278,14 +278,14 @@ namespace MummyEscape.Game
                 _coopAwait = false;
                 StartCoroutine(Present(before, from, action, step));
             }
-            else _mateSteps.Enqueue(new MateStep { Action = action, R = step, From = matePos, MineBefore = before });
+            else _coopMateSteps.Enqueue(new MateStep { Action = action, R = step, From = matePos, MineBefore = before });
         }
 
         void UpdateCoop()
         {
             if (!InCoop) return;
             CoopInfo.Link.Pump();
-            if (!_mateBusy && _mateSteps.Count > 0) StartCoroutine(PresentMate(_mateSteps.Dequeue()));
+            if (!_mateBusy && _coopMateSteps.Count > 0) StartCoroutine(PresentMate(_coopMateSteps.Dequeue()));
             // The host never answered (it would have left): stop waiting.
             if (_coopAwait && Time.unscaledTime - _awaitSince > 5f) { _coopAwait = false; _busy = false; }
         }
@@ -429,7 +429,7 @@ namespace MummyEscape.Game
             Coop = null;
             CoopWaiting = false;
             MyWish = MateWish = 0;
-            _mateSteps.Clear();
+            _coopMateSteps.Clear();
             _coopAwait = _mateBusy = false;
             if (_mate != null) _mate.gameObject.SetActive(false);
         }

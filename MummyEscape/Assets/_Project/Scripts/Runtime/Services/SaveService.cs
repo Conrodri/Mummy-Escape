@@ -283,6 +283,13 @@ namespace MummyEscape.Services
             return true;
         }
 
+        /// <summary>Scarabs won outside a level (first clear of a 2v2 campaign tomb).</summary>
+        public void EarnCoins(int amount)
+        {
+            Data.Coins += Math.Max(0, amount);
+            Save();
+        }
+
         /// <summary>Buys every missing piece of a collection at once, for the given price.</summary>
         public bool TryBuyAll(IEnumerable<SkinDef> items, int price)
         {

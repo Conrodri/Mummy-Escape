@@ -315,7 +315,7 @@ namespace MummyEscape.UI.Screens
             {
                 if (r.FirstClear)
                 {
-                    app.Save.ReceiveScarabs(CoopConfig.FirstClearScarabs);
+                    app.Save.EarnCoins(CoopConfig.FirstClearScarabs);
                     app.Audio.Play(Sfx.Coin);
                     summary += "\n" + Loc.F("Premier passage : +{0} scarabées", CoopConfig.FirstClearScarabs);
                 }
