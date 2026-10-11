@@ -108,11 +108,28 @@ namespace MummyEscape.Online
         const int CountryPageSize = 1000;
         const int CountryMaxPages = 5;
 
-        public async Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit)
+        public async Task<bool> SubmitEndlessAsync(Difficulty mode, long score)
+        {
+            if (!IsAvailable) return false;
+            try
+            {
+                await LeaderboardsService.Instance.AddPlayerScoreAsync(Endless.BoardId(mode), score,
+                    new AddPlayerScoreOptions { Metadata = new ScoreMeta { c = Country ?? "" } });
+                return true;
+            }
+            catch (Exception e) { Debug.LogWarning("[Online] endless score not submitted: " + e.Message); return false; }
+        }
+
+        public Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit) =>
+            GetBoardAsync(OnlineServiceFactory.LeaderboardId(level), scope, limit);
+
+        public Task<LeaderboardPage> GetEndlessLeaderboardAsync(Difficulty mode, LeaderboardScope scope, int limit) =>
+            GetBoardAsync(Endless.BoardId(mode), scope, limit);
+
+        async Task<LeaderboardPage> GetBoardAsync(string id, LeaderboardScope scope, int limit)
         {
             var page = new LeaderboardPage();
             if (!IsAvailable) return page;
-            string id = OnlineServiceFactory.LeaderboardId(level);
             try
             {
                 var lb = LeaderboardsService.Instance;
@@ -547,6 +564,16 @@ namespace MummyEscape.Online
                     x.scores.Add($"{id}: +{overPar} coups, {LevelResult.FormatTime(timeMs)}, rang {e.Rank + 1}, pays « {CountryOf(e)} »"); // noloc: raw data export
                 }
                 catch (Exception) { /* no score on this level */ }
+            }
+            foreach (var mode in DifficultyExt.All)
+            {
+                try
+                {
+                    var e = await LeaderboardsService.Instance.GetPlayerScoreAsync(Endless.BoardId(mode), new GetPlayerScoreOptions { IncludeMetadata = true });
+                    var (reached, timeMs) = Endless.DecodeScore((long)e.Score);
+                    x.scores.Add($"{Endless.BoardId(mode)}: tombeau {reached}, {LevelResult.FormatTime(timeMs)}, rang {e.Rank + 1}, pays « {CountryOf(e)} »"); // noloc: raw data export
+                }
+                catch (Exception) { /* no score on this ladder */ }
             }
             try
             {

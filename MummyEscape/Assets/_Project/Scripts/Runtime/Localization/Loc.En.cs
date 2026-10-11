@@ -1234,6 +1234,20 @@ namespace MummyEscape
             ["Extrême"] = "Extreme",
             ["Termine le mode {0} pour l'ouvrir"] = "Finish {0} mode to open it",
             ["Touche pour revenir à la roue"] = "Tap to go back to the wheel",
+            // ---------------------------------------------------------------- endless mode
+            ["Sans fin"] = "Endless",
+            ["Sans fin · {0}"] = "Endless · {0}",
+            ["Tombeau {0}"] = "Tomb {0}",
+            ["Tombeau suivant"] = "Next tomb",
+            ["Tombeau {0} atteint !"] = "Tomb {0} reached!",
+            ["Tombeau {0} franchi en {1}."] = "Tomb {0} escaped in {1}.",
+            ["Temps cumulé : {0}"] = "Total time: {0}",
+            ["Le tombeau {0} t'attend toujours : même carte, nouvel essai."] = "Tomb {0} is still waiting: same map, another try.",
+            ["Tu as franchi tous les tombeaux : d'autres arrivent avec les mises à jour."] = "You've escaped every tomb: more arrive with the updates.",
+            ["Le tombeau le plus loin, puis le temps"] = "Furthest tomb, then time",
+            ["Franchis un tombeau sans fin pour entrer au classement"] = "Escape an endless tomb to enter the leaderboard",
+            ["Plus d'énergie pour le mode sans fin : un point par tombeau."] = "More energy for endless mode: one point per tomb.",
+            ["Énergie sans fin : {0}"] = "Endless energy: {0}",
         };
     }
 }

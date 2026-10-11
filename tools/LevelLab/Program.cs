@@ -8,6 +8,7 @@ using MummyEscape.Core;
 //        dotnet run -c Release --project tools/LevelLab -- --variants 100 [--act 2]
 //        dotnet run -c Release --project tools/LevelLab -- 2-5 [variant] -> ASCII map + optimal path of one maze
 //        dotnet run -c Release --project tools/LevelLab -- --mode N        -> one mode only (F, N or X); level ids take the mode letter (N2-5, F when left out)
+//        dotnet run -c Release --project tools/LevelLab -- --endless [300] [--mode N] -> appends the next endless tombs to Resources/Tombs/endless.txt
 LevelId Parse(string text) => LevelId.TryParse(text, out var parsed) ? parsed : throw new ArgumentException($"level id expected (F2-3, N1-5, X5-1): {text}");
 if (args.Length >= 1 && args[0].Contains("-") && !args[0].StartsWith("--"))
 {
@@ -124,6 +125,12 @@ if (args.Length >= 1 && args[0] == "--compact")
             }
         Console.WriteLine($"{act,3} | {ground / count * 100,8:0}% | {far / count * 100,6:0.0}% | {maxReach,9} | {junctions / count,9:0.0} | {wings}/{count}");
     }
+    return;
+}
+
+if (args.Length >= 1 && args[0] == "--endless")
+{
+    LevelLab.EndlessTool.Run(args);
     return;
 }
 

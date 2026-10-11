@@ -50,6 +50,7 @@ namespace MummyEscape.UI.Screens
         void Restart()
         {
             if (App.Game.InTutorial) { Router.Close(this); App.Game.Restart(); return; } // the tutorial costs no energy
+            if (App.Game.InEndless) { PlayGate.EndlessRun(App, () => { Router.Close(this); App.Game.Restart(); }); return; }
             PlayGate.Solo(App, App.Game.CurrentLevel, () => { Router.Close(this); App.Game.Restart(); });
         }
 

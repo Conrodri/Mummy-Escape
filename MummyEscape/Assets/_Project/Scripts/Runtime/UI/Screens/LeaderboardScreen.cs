@@ -51,6 +51,13 @@ namespace MummyEscape.UI.Screens
             _scope = System.Array.IndexOf(Scopes, scope);
         }
 
+        /// <summary>The endless ladders' boards come after the levels in the picker.</summary>
+        public void FocusEndless(Difficulty mode) => _index = _levels.Count + (int)mode;
+
+        int Boards => _levels.Count + DifficultyExt.All.Length;
+
+        Difficulty? EndlessAt(int index) => index >= _levels.Count ? (Difficulty)(index - _levels.Count) : (Difficulty?)null;
+
         protected override void Build()
         {
             UIKit.Backdrop(Root);
@@ -106,11 +113,14 @@ namespace MummyEscape.UI.Screens
             return v;
         }
 
-        /// <summary>Gap to the optimal route, with the play time (the tie breaker) underneath.</summary>
-        static string ScoreText(LeaderboardRow row) =>
-            row.TimeMs > 0
-                ? $"{LevelResult.FormatOverPar(row.OverPar)}\n<size=22><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color>{(row.Suspicious ? " <b><color=#E0903A>?</color></b>" : "")}</size>" // noloc
-                : LevelResult.FormatOverPar(row.OverPar);
+        /// <summary>Gap to the optimal route (endless: the furthest tomb), with the play time (the tie breaker) underneath.</summary>
+        static string ScoreText(LeaderboardRow row, bool endless)
+        {
+            string main = endless ? Loc.F("Tombeau {0}", Endless.ReachedOf(row.OverPar)) : LevelResult.FormatOverPar(row.OverPar);
+            return row.TimeMs > 0
+                ? $"{main}\n<size=22><color=#9C8B70>{LevelResult.FormatTime(row.TimeMs)}</color>{(row.Suspicious ? " <b><color=#E0903A>?</color></b>" : "")}</size>" // noloc
+                : main;
+        }
 
         /// <summary>
         /// The two rankings, Solo (per level) and Duel (monthly Elo), one tab away from each other. Like the bottom bar,
@@ -145,7 +155,7 @@ namespace MummyEscape.UI.Screens
 
         void Move(int delta)
         {
-            _index = (_index + delta + _levels.Count) % _levels.Count;
+            _index = (_index + delta + Boards) % Boards;
             Reload();
         }
 
@@ -157,10 +167,12 @@ namespace MummyEscape.UI.Screens
 
         async void Reload()
         {
-            var id = _levels[_index];
+            var endless = EndlessAt(_index);
+            var id = endless.HasValue ? default : _levels[_index];
             var scope = Scopes[_scope];
-            _levelLabel.text = Loc.F("Niveau {0}", LevelNames.Of(id));
-            _actLabel.text = Loc.F("Acte {0}", id.Act) + " · " + Loc.T(DifficultyTable.GetAct(id.Act).Name);
+            _levelLabel.text = endless.HasValue ? Loc.F("Sans fin · {0}", LevelNames.Mode(endless.Value)) : Loc.F("Niveau {0}", LevelNames.Of(id));
+            _actLabel.text = endless.HasValue ? Loc.T("Le tombeau le plus loin, puis le temps")
+                           : Loc.F("Acte {0}", id.Act) + " · " + Loc.T(DifficultyTable.GetAct(id.Act).Name);
             _info.text = Loc.T("Chargement…");
             _scroll.verticalNormalizedPosition = 1f;
             for (int i = 0; i < _rows.Count; i++) Fill(_rows[i], i + 1, null, scope != LeaderboardScope.Friends);
@@ -174,7 +186,8 @@ namespace MummyEscape.UI.Screens
             }
 
             int request = ++_requestId;
-            var page = await App.Online.GetLeaderboardAsync(id, scope, Top);
+            var page = endless.HasValue ? await App.Online.GetEndlessLeaderboardAsync(endless.Value, scope, Top)
+                                        : await App.Online.GetLeaderboardAsync(id, scope, Top);
             if (request != _requestId || this == null) return; // superseded by a newer request
 
             string title = scope == LeaderboardScope.Global ? Loc.T("Top 100 mondial")
@@ -206,7 +219,7 @@ namespace MummyEscape.UI.Screens
             v.Name.text = row.IsMe ? Loc.F("{0}  (toi)", row.PlayerName) : row.PlayerName;
             v.Name.color = row.IsMe ? UIKit.Turquoise : UIKit.Sand;
             v.Country.text = row.Country;
-            v.Score.text = ScoreText(row);
+            v.Score.text = ScoreText(row, EndlessAt(_index).HasValue);
             v.Background.color = row.IsMe ? new Color(0.13f, 0.4f, 0.4f, 0.65f)
                                : rank <= 3 ? new Color(1f, 0.85f, 0.4f, 0.12f)
                                : new Color(1f, 0.92f, 0.75f, rank % 2 == 0 ? 0.04f : 0.07f);
@@ -216,6 +229,15 @@ namespace MummyEscape.UI.Screens
         {
             _me.Root.SetActive(me != null);
             _meEmpty.gameObject.SetActive(me == null);
+            var endless = EndlessAt(_index);
+            if (me == null && endless.HasValue)
+            {
+                var p = App.Save.EndlessOf(endless.Value);
+                _meEmpty.text = !loaded ? ""
+                    : p.Cleared > 0 ? Loc.F("Ton record : {0} (pas encore classé)", Loc.F("Tombeau {0}", p.Reached))
+                    : Loc.T("Franchis un tombeau sans fin pour entrer au classement");
+                return;
+            }
             if (me == null)
             {
                 var rec = App.Save.GetRecord(_levels[_index]);
@@ -230,7 +252,7 @@ namespace MummyEscape.UI.Screens
             _me.Name.text = Loc.F("{0}  (toi)", me.PlayerName);
             _me.Name.color = UIKit.Sand;
             _me.Country.text = me.Country;
-            _me.Score.text = ScoreText(me);
+            _me.Score.text = ScoreText(me, endless.HasValue);
         }
     }
 }

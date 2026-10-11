@@ -158,7 +158,10 @@ dotnet run -c Release -- --human-why 3-8 attentif [n]   # issue de chaque partie
 dotnet run -c Release -- --compact [n]    # part du sol utilisée par le chemin idéal, carrefours, zones éloignées, par acte
 dotnet run -c Release -- --specs              # contrat de difficulté de chaque niveau (par, étages, taille, mécanismes, pièges)
 dotnet run -c Release -- --preview [n]      # durée d'aperçu par étage et par acte
+dotnet run -c Release -- --endless [300] [--mode N]   # complète chaque échelle sans fin jusqu'à n tombeaux (ajout seulement)
 ```
+
+**Mode sans fin** (solo) : une échelle par mode, ouverte en finissant la campagne de ce mode. Tous les joueurs montent les mêmes tombeaux dans le même ordre : ils sont **stockés** dans `Assets/_Project/Resources/Tombs/endless.txt` (format `Core/Model/TombArchive.cs`, une ligne par tombeau) et ne dépendent plus du générateur ni de `GeneratorVersion`. `--endless` tire les tombeaux suivants avec le générateur du moment (`Endless.Source` : un acte au hasard, un niveau un peu plus dur tous les 30 tombeaux) et les **ajoute** à la fin du fichier ; ne jamais modifier ni retirer une ligne (la position des joueurs pointe dessus). `EndlessTests.StoredTombs_AllLoadAndAreSolvable` vérifie que chaque tombeau stocké a toujours une sortie avec les `Rules` actuelles : une règle qui casse un ancien tombeau fait échouer ce test. Pas d'étoiles : seule l'évasion compte ; une mort fait rejouer le même tombeau. Énergie à part : 15 points, +1 toutes les 2 minutes, 1 point par tombeau, +5 par pub (mêmes limites quotidiennes). Classements `endless_f`, `endless_n`, `endless_x` : tombeau le plus loin atteint, puis temps cumulé des évasions.
 
 **Modifier la génération** : toute modification de `LevelGenerator` / `DifficultyTable` / `Rules` change les labyrinthes. Il faut alors
 1. incrémenter `DifficultyTable.GeneratorVersion` (les leaderboards sont indexés par version → pas de scores incomparables),

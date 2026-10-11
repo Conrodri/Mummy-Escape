@@ -71,6 +71,49 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(_continue.GetComponentInChildren<Text>(), 24);
             _plays = UIKit.Label(body, "", 26, UIKit.Dim);
             UIKit.Size(_plays, 36);
+
+            // The endless ladders, one per mode whose campaign is finished, each at the player's tomb.
+            _endlessRow = UIKit.Row(body, 110, 16);
+            foreach (var m in DifficultyExt.All)
+            {
+                var mode = m;
+                var b = UIKit.Button(_endlessRow.transform, "Sans fin", () => PlayEndless(mode), 28);
+                UIKit.FitText(b.GetComponentInChildren<Text>(), 18);
+                UIKit.Size(b, 110, -1, 1);
+                _endless[(int)m] = b;
+            }
+        }
+
+        readonly Button[] _endless = new Button[3];
+        HorizontalLayoutGroup _endlessRow;
+
+        void RefreshEndless()
+        {
+            bool any = false;
+            foreach (var m in DifficultyExt.All)
+            {
+                bool open = App.Save.IsEndlessUnlocked(m);
+                any |= open;
+                var b = _endless[(int)m];
+                b.gameObject.SetActive(open);
+                if (open) UIKit.SetLabel(b, Loc.F("Sans fin · {0}", LevelNames.Mode(m)) + "\n" + Loc.F("Tombeau {0}", App.Save.EndlessOf(m).Reached));
+            }
+            _endlessRow.gameObject.SetActive(any);
+        }
+
+        void PlayEndless(Difficulty mode)
+        {
+            if (App.Save.EndlessOf(mode).Cleared >= MummyEscape.Game.GameController.EndlessTombCount(mode))
+            {
+                Router.Open<OfferDialog>().Configure("Sans fin", Loc.T("Tu as franchi tous les tombeaux : d'autres arrivent avec les mises à jour."),
+                    ("OK", ButtonStyle.Primary, null)); // noloc
+                return;
+            }
+            PlayGate.EndlessRun(App, () =>
+            {
+                Router.Open<HudScreen>();
+                _ = App.Game.StartEndless(mode);
+            });
         }
 
         /// <summary>The act banner: chevrons around the act's name, its floors and its star bar.</summary>
@@ -114,6 +157,7 @@ namespace MummyEscape.UI.Screens
             if (!_modeChosen) _mode = furthest.Mode;
             _plays.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
             SetMode(_mode);
+            RefreshEndless();
             App.Audio.PrefetchMusic(furthest.Act); // its theme is ready when the level starts
         }
 

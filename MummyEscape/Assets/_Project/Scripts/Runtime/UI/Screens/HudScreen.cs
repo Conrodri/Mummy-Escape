@@ -397,6 +397,7 @@ namespace MummyEscape.UI.Screens
         {
             var match = App.Game.Match;
             string title = App.Game.InTutorial ? Loc.T("Tutoriel")
+                         : App.Game.InEndless ? Loc.F("Sans fin · {0}", LevelNames.Mode(App.Game.EndlessMode.Value)) + " · " + Loc.F("Tombeau {0}", App.Game.EndlessTomb)
                          : match == null ? Loc.F("Niveau {0}", LevelNames.Of(id))
                          : match.HasGhost ? Loc.F("Duel contre {0}", match.Ghost.PlayerName)
                          : Loc.T("Duel");
@@ -463,7 +464,8 @@ namespace MummyEscape.UI.Screens
             var s = App.Game.Session;
             if (s == null) return;
             var level = s.Level;
-            _level.text = App.Game.InRelay ? "2v2" : App.Game.InTutorial ? Loc.T("Tutoriel") : App.Game.InDuel ? Loc.T("Duel") : Loc.F("Niveau {0}", level.Id); // noloc
+            _level.text = App.Game.InRelay ? "2v2" : App.Game.InTutorial ? Loc.T("Tutoriel") : App.Game.InDuel ? Loc.T("Duel")
+                        : App.Game.InEndless ? Loc.F("Tombeau {0}", App.Game.EndlessTomb) : Loc.F("Niveau {0}", level.Id); // noloc
             UpdateCounter(s);
             UpdateLesson(s);
             _floor.text = level.Floors > 1 && !App.Game.Previewing ? Loc.F("Étage {0} / {1}", s.Position.Floor + 1, level.Floors) : "";

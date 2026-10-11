@@ -54,6 +54,10 @@ namespace MummyEscape.Services
         public List<int> PassPremiumClaimed = new List<int>();
         /// <summary>Golden-scarab spends the device delivers itself (scarabs, tiers), until the server's wallet confirms them.</summary>
         public List<GoldSpend> GoldSpends = new List<GoldSpend>();
+
+        // ---- Endless mode (solo): the place on each ladder (Facile, Normal, Extrême, in that order) and its own energy.
+        public List<EndlessProgress> Endless = new List<EndlessProgress> { new EndlessProgress(), new EndlessProgress(), new EndlessProgress() };
+        public MummyEscape.Pvp.EnergyMeter EndlessEnergy = new MummyEscape.Pvp.EnergyMeter();
     }
 
     /// <summary>A spend asked to the server: <see cref="Offer"/> is a scarab offer id or <see cref="SaveService.TiersSpend"/>.</summary>
@@ -153,6 +157,10 @@ namespace MummyEscape.Services
             d.GoldSpends ??= new List<GoldSpend>();
             d.GoldSpends.RemoveAll(s => s == null || string.IsNullOrEmpty(s.Id));
             d.SoloEnergy ??= new MummyEscape.Pvp.EnergyMeter();
+            d.Endless ??= new List<EndlessProgress>();
+            for (int i = 0; i < d.Endless.Count; i++) d.Endless[i] ??= new EndlessProgress();
+            while (d.Endless.Count < DifficultyExt.All.Length) d.Endless.Add(new EndlessProgress());
+            d.EndlessEnergy ??= new MummyEscape.Pvp.EnergyMeter();
         }
 
         public bool MergeFrom(SaveData other)
@@ -176,6 +184,8 @@ namespace MummyEscape.Services
             Data.ProfileDone |= other.ProfileDone;
             Data.TutorialDone |= other.TutorialDone;
             MergeEconomy(other);
+            // The endless ladders never go back: the further copy wins (the version reset above leaves them alone).
+            for (int i = 0; i < Data.Endless.Count; i++) Data.Endless[i].MergeWith(other.Endless[i]);
             bool changed = JsonUtility.ToJson(Data) != before;
             if (changed) Save();
             return changed;

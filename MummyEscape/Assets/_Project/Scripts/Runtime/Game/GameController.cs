@@ -130,6 +130,7 @@ namespace MummyEscape.Game
         void ResetForLoad()
         {
             InTutorial = false;
+            EndlessMode = null;
             StopAllCoroutines();
             EndPreviewVisuals();
             _busy = false;
@@ -383,7 +384,8 @@ namespace MummyEscape.Game
         void OnPreviewScreenshot()
         {
             // A duel's tomb is drawn by the server and shared with the rival: it cannot be swapped.
-            if (!Previewing || Session == null || Match != null) return;
+            // An endless tomb is the same for everyone and stored for good: it cannot be swapped either.
+            if (!Previewing || Session == null || Match != null || InEndless) return;
             _ = RedrawAfterScreenshot();
         }
 
@@ -414,7 +416,8 @@ namespace MummyEscape.Game
         public void Restart()
         {
             if (InTutorial) StartTutorial();
-            else             if (Match == null) _ = StartLevel(CurrentLevel);
+            else if (InEndless) _ = StartEndless(EndlessMode.Value);
+            else if (Match == null) _ = StartLevel(CurrentLevel);
         }
 
         public void Abandon()
@@ -425,6 +428,7 @@ namespace MummyEscape.Game
             EndPreviewVisuals();
             StopAllCoroutines();
             InTutorial = false;
+            EndlessMode = null;
             Session = null;
             Match = null;
             _ghost.Hide();
@@ -886,6 +890,11 @@ namespace MummyEscape.Game
                     result.PerfectMs = pace.Result.PerfectMs ?? 0;
                     result.Pace = (int)pace.Result.Judge(result.TimeMs, result.Par);
                 }
+            }
+            if (InEndless)
+            {
+                FinishEndless(result);
+                yield break;
             }
             var outcome = _app.Save.Apply(result);
             // Faster than the game's animations allow: a modified game, kept off the leaderboard.

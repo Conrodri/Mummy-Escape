@@ -32,26 +32,41 @@ namespace MummyEscape.EditorTools
             int count = 0;
             foreach (var id in DifficultyTable.AllLevels())
             {
-                string json =
-                    "{\n" +
-                    "  \"$schema\": \"https://ugs-config-schemas.unity3d.com/v1/leaderboards.schema.json\",\n" +
-                    "  \"SortOrder\": \"asc\",\n" +
-                    "  \"UpdateType\": \"keepBest\",\n" +
-                    $"  \"Name\": \"Mummy Rush v{version} {id}\"\n" +
-                    "}\n";
-                File.WriteAllText(PathOf(id, version), json);
+                Write(PathOf(id, version), $"Mummy Rush v{version} {id}");
+                count++;
+            }
+            // The endless ladders' boards: their tombs are stored for good, so their ids carry no generator version.
+            foreach (var mode in DifficultyExt.All)
+            {
+                Write(EndlessPath(mode), $"Mummy Rush endless {mode.Letter()}");
                 count++;
             }
             return count;
         }
 
-        /// <summary>Configs of the current generator version, one per level.</summary>
+        /// <summary>Ascending, keep best: lower scores are better (levels: moves over par then time; endless: see Endless.EncodeScore).</summary>
+        static void Write(string path, string name)
+        {
+            string json =
+                "{\n" +
+                "  \"$schema\": \"https://ugs-config-schemas.unity3d.com/v1/leaderboards.schema.json\",\n" +
+                "  \"SortOrder\": \"asc\",\n" +
+                "  \"UpdateType\": \"keepBest\",\n" +
+                $"  \"Name\": \"{name}\"\n" +
+                "}\n";
+            File.WriteAllText(path, json);
+        }
+
+        /// <summary>Configs of the current generator version, one per level, and the endless boards.</summary>
         public static List<string> Current()
         {
             var paths = new List<string>();
             foreach (var id in DifficultyTable.AllLevels()) paths.Add(PathOf(id, DifficultyTable.GeneratorVersion));
+            foreach (var mode in DifficultyExt.All) paths.Add(EndlessPath(mode));
             return paths;
         }
+
+        static string EndlessPath(Difficulty mode) => Path.Combine(Folder, Endless.BoardId(mode) + ".lb").Replace('\\', '/');
 
         /// <summary>Levels of the current generator version without a config: the build refuses to go out without them.</summary>
         public static List<string> Missing() => Current().FindAll(p => !File.Exists(p));
