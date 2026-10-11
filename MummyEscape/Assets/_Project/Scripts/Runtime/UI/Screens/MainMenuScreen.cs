@@ -11,7 +11,7 @@ namespace MummyEscape.UI.Screens
 
         Text _stars, _coins, _gold;
         PassBanner _pass;
-        Image _mummy, _glow, _chatDot;
+        Image _mummy, _chatDot;
         HomeScene _scene;
         RectTransform _stage;
         Text _online, _goal;
@@ -23,6 +23,7 @@ namespace MummyEscape.UI.Screens
         {
             var backdrop = UIKit.Backdrop(Root, new Color(0, 0, 0, 0));
             backdrop.raycastTarget = false;
+            Destroy(backdrop.transform.Find("Glow").gameObject); // no warm halo over the title and the tomb // noloc
             // Inside the chosen act's tomb, the mummy standing in it facing us.
             _scene = HomeScene.Create(backdrop.transform);
 
@@ -69,11 +70,10 @@ namespace MummyEscape.UI.Screens
             sle.minHeight = 150;
             _stage.gameObject.AddComponent<ResizeNotifier>().Resized = FitMummy;
 
-            _glow = UIKit.Image(_stage, UIKit.Art.Glow, new Color(1f, 0.75f, 0.4f, 0.55f));
             _mummy = UIKit.Image(_stage, null, Color.white);
             _mummy.preserveAspect = true; // the outfit sprite is 32x40
-            foreach (var rt in new[] { _glow.rectTransform, _mummy.rectTransform })
-                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            var rt = _mummy.rectTransform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
             // The home backdrop, picked among the open acts (in the stage's corner: the top bar is full on narrow phones).
             var theme = UIKit.IconAction(_stage, UISprites.Palette, "Thème", () => Router.Open<HomeThemeDialog>().OnPicked(ApplyTheme), 84);
             UIKit.Place((RectTransform)theme.transform.parent.parent, 1f, 1f, 134, 144); // button → its slot → the action column
@@ -165,8 +165,6 @@ namespace MummyEscape.UI.Screens
             bool on = entry != null && entry.IsUnlocked(App.Save);
             if (on) _scene.Show(App.Art, entry.Act);
             else _scene.Hide();
-            // The warm glow lights the plain backdrop only: in a tomb it washed the walls out.
-            _glow.color = on ? Color.clear : new Color(1f, 0.75f, 0.4f, 0.55f);
         }
 
         void PlayLevel(LevelId id) =>
@@ -190,10 +188,9 @@ namespace MummyEscape.UI.Screens
             // Grows with the room left (tall phones), never past a size where the pixel art turns into a poster.
             float size = Mathf.Min(620f, _stage.rect.height * 0.8f, _stage.rect.width * 0.7f);
             bool show = size >= 100f;
-            _mummy.enabled = _glow.enabled = show;
+            _mummy.enabled = show;
             if (!show) return;
             _mummy.rectTransform.sizeDelta = new Vector2(size, size);
-            _glow.rectTransform.sizeDelta = new Vector2(size * 2f, size * 2f);
         }
 
         /// <summary>Calls back when the layout resizes the rect it sits on.</summary>

@@ -48,6 +48,7 @@ namespace MummyEscape.UI.Screens
             swipeArea.color = Color.clear;
             body.gameObject.AddComponent<SwipePager>().Swiped = dir => SetAct(_act + dir, true);
 
+            _sections = Sections(body, Router, 0);
             _modes = new UIKit.Segmented(body, new[] { "Facile", "Normal", "Extrême" }, i => { _modeChosen = true; SetMode((Difficulty)i); }, 76);
 
             BuildBanner(body);
@@ -71,36 +72,23 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(_continue.GetComponentInChildren<Text>(), 24);
             _plays = UIKit.Label(body, "", 26, UIKit.Dim);
             UIKit.Size(_plays, 36);
-            // The 2v2 campaign: the same tomb for both mummies of a duo.
-            UIKit.Size(UIKit.Button(body, "Campagne 2v2", () => Router.Open<CoopScreen>(), 32, ButtonStyle.Secondary), 88);
-
-            // The Halloween event (24 October - 7 November), only while it is open. The endless ladders and the challenge
-            // tower have their own screens (Play menu of the bottom bar).
-            _halloween = UIKit.Button(body, "Halloween", PlayHalloween, 28, ButtonStyle.Primary);
-            UIKit.FitText(_halloween.GetComponentInChildren<Text>(), 18);
-            UIKit.Size(_halloween, 110);
         }
 
-        Button _halloween;
+        UIKit.Segmented _sections;
 
-        void PlayHalloween()
-        {
-            int tomb = App.Save.HalloweenNext;
-            PlayGate.HalloweenRun(App, () =>
+        /// <summary>
+        /// Solo (this screen), 2v2 (<see cref="CoopScreen"/>) or the seasonal events (<see cref="EventsScreen"/>), one tab
+        /// away from each other like the duels' 1v1 / 2v2; Back leads home.
+        /// </summary>
+        internal static UIKit.Segmented Sections(Transform body, UIRouter router, int selected) =>
+            new UIKit.Segmented(body, new[] { "Solo", "2v2", "Événements" }, i =>
             {
-                Router.Open<HudScreen>();
-                _ = App.Game.StartHalloween(tomb);
-            });
-        }
-
-        void RefreshHalloween()
-        {
-            bool halloween = Halloween.IsOpen(System.DateTime.UtcNow);
-            _halloween.gameObject.SetActive(halloween);
-            if (halloween)
-                UIKit.SetLabel(_halloween, Loc.T("Halloween") + " · " + (App.Save.HalloweenDone ? Loc.T("terminé") : App.Save.Data.HalloweenCleared + " / " + Halloween.TombCount)
-                                           + "\n" + Loc.T("jusqu'au 7 novembre"));
-        }
+                if (i == selected) return;
+                router.Reset<MainMenuScreen>();
+                if (i == 0) router.Open<LevelSelectScreen>();
+                else if (i == 1) router.Open<CoopScreen>();
+                else router.Open<EventsScreen>();
+            }, 88);
 
         /// <summary>The act banner: chevrons around the act's name, its floors and its star bar.</summary>
         void BuildBanner(Transform body)
@@ -143,7 +131,7 @@ namespace MummyEscape.UI.Screens
             if (!_modeChosen) _mode = furthest.Mode;
             _plays.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
             SetMode(_mode);
-            RefreshHalloween();
+            _sections.Select(0);
             App.Audio.PrefetchMusic(furthest.Act); // its theme is ready when the level starts
         }
 

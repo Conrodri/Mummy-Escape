@@ -38,12 +38,15 @@ namespace MummyEscape.UI.Screens
         Text _searchStatus;
         CancellationTokenSource _search;
 
+        UIKit.Segmented _sections;
+
         protected override void Build()
         {
             UIKit.Backdrop(Root);
-            Header("Campagne 2v2");
+            Header("Campagne");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 16);
+            _sections = LevelSelectScreen.Sections(body, Router, 1);
             _info = UIKit.Label(body, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 64);
@@ -71,6 +74,7 @@ namespace MummyEscape.UI.Screens
 
         public override void OnShow()
         {
+            _sections.Select(1);
             ProfileSetupScreen.AskIfNeeded(Router, App);
             App.Lighting.SetMood(false);
             _plays.text = PlayGate.Status(App, Monetization.PlayMode.Solo);
