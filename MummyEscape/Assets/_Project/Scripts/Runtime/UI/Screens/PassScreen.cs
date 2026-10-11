@@ -288,10 +288,10 @@ namespace MummyEscape.UI.Screens
                 error = await GoldWallet.RunAsync(App, p => p.ClaimPassRewardsAsync(BattlePass.Current.Id, free, paid));
                 _busy = false;
                 if (this == null) return;
-                if (error == null)
+                if (error == null) // only what the server granted (it holds back tiers out of reach for the season's days)
                 {
-                    foreach (int t in free) rewards.Add(SaveService.RewardOf(t, false));
-                    foreach (int t in paid) rewards.Add(SaveService.RewardOf(t, true));
+                    foreach (int t in free) if (App.Save.IsClaimed(t, false)) rewards.Add(SaveService.RewardOf(t, false));
+                    foreach (int t in paid) if (App.Save.IsClaimed(t, true)) rewards.Add(SaveService.RewardOf(t, true));
                 }
             }
             if (rewards.Count > 0) Collected(rewards);

@@ -21,6 +21,8 @@ namespace MummyEscape.Pvp
         public string ClaimsSeason;
         public List<int> FreeClaimed = new List<int>();
         public List<int> PremiumClaimed = new List<int>();
+        /// <summary>Paliers achetés en or cette saison : ils s'ajoutent à ceux que le temps de jeu rend possibles.</summary>
+        public int TiersBought;
         /// <summary>Derniers achats crédités (identifiants de commande), pour l'historique du joueur.</summary>
         public List<string> Orders = new List<string>();
         /// <summary>
@@ -62,12 +64,27 @@ namespace MummyEscape.Pvp
         public string ProductId;
         public int Gold;
         public long AtUnixMs;
+        /// <summary>Not yet in the owner's wallet: a retry after a failure in between credits it then (older records were credited).</summary>
+        public bool Pending;
+    }
+
+    /// <summary>
+    /// The arbiter of new orders: one item per shard that, once created, is only rewritten under its write lock, so two
+    /// accounts presenting the same order at once are served one after the other (Cloud Save cannot create an item only
+    /// if it is absent, which leaves the per-order record open to that race).
+    /// </summary>
+    [Serializable]
+    public class OrderClaims
+    {
+        public List<string> Orders = new List<string>();
+        public List<string> Players = new List<string>();
     }
 
     public sealed partial class PvpServer
     {
         public const string OrdersCollection = "pvp_orders";
         const int OrdersKept = 50;
+        const int ClaimShards = 16, ClaimsKept = 500;
         const int RequestsKept = 50;
 
         /// <summary>Le magasin réel (null : aucun achat réel n'est crédité).</summary>
@@ -118,29 +135,56 @@ namespace MummyEscape.Pvp
                 orderId = check.OrderId;
             }
 
-            // Le registre global : une commande appartient au premier compte qui l'a présentée.
+            // Une commande appartient au premier compte qui l'a présentée : le registre permanent pour les commandes connues,
+            // l'arbitre sous verrou pour les nouvelles.
             int gold = pack.Gold + pack.Bonus;
-            string owner = null;
-            bool fresh = false;
-            await Shared<PurchaseRecord>(OrdersCollection, OrderKey(orderId), r =>
+            string key = OrderKey(orderId);
+            var record = await Shared<PurchaseRecord>(OrdersCollection, key);
+            string owner = record?.PlayerId;
+            if (owner == null)
             {
-                if (r != null) { owner = r.PlayerId; return r; }
-                fresh = true;
-                owner = me;
-                return new PurchaseRecord { OrderId = orderId, PlayerId = me, ProductId = productId, Gold = gold, AtUnixMs = NowMs };
-            });
+                // shortcut: a shard's very first write is unlocked (it does not exist yet), so the first orders of each shard
+                // can still race; pre-create the 16 shards at deploy if that window matters.
+                await Shared<OrderClaims>(OrdersCollection, ClaimShard(orderId), c =>
+                {
+                    c ??= new OrderClaims();
+                    int i = c.Orders.IndexOf(orderId);
+                    if (i >= 0) { owner = c.Players[i]; return c; }
+                    owner = me;
+                    c.Orders.Add(orderId);
+                    c.Players.Add(me);
+                    if (c.Orders.Count > ClaimsKept) { c.Orders.RemoveAt(0); c.Players.RemoveAt(0); }
+                    return c;
+                });
+            }
             if (owner != me) return new WalletResponse { Error = "ALREADY_CREDITED" };
-            var data = fresh
-                ? await Update(me, d =>
+            if (record == null)
+                record = await Shared<PurchaseRecord>(OrdersCollection, key, r =>
+                    r ?? new PurchaseRecord { OrderId = orderId, PlayerId = me, ProductId = productId, Gold = gold, AtUnixMs = NowMs, Pending = true });
+
+            // Crédité une seule fois, même si une tentative précédente s'est arrêtée entre le registre et le portefeuille.
+            var data = !record.Pending
+                ? await Update(me)
+                : await Update(me, d =>
                 {
                     var w = WalletOf(d);
+                    if (w.Orders.Contains(orderId)) return;
                     w.Gold += gold;
                     w.Orders.Add(orderId);
                     if (w.Orders.Count > OrdersKept) w.Orders.RemoveRange(0, w.Orders.Count - OrdersKept);
-                })
-                : await Update(me);
+                });
+            if (record.Pending)
+                await Shared<PurchaseRecord>(OrdersCollection, key, r => { if (r != null) r.Pending = false; return r; });
             if (!test) await Purchases.ConsumeAsync(productId, purchaseToken);
             return new WalletResponse { Wallet = WalletOf(data) };
+        }
+
+        /// <summary>The arbiter shard of an order (a stable hash: the same on every server instance).</summary>
+        static string ClaimShard(string orderId)
+        {
+            uint h = 2166136261;
+            foreach (char ch in orderId) h = (h ^ ch) * 16777619;
+            return "claims_" + (h % ClaimShards); // noloc
         }
 
         /// <summary>The order's Cloud Save key: only ASCII letters, digits, - and _ are allowed there (GPA.3342-… becomes GPA_3342-…).</summary>
@@ -189,7 +233,40 @@ namespace MummyEscape.Pvp
         }
 
         /// <summary>10 paliers du pass : le serveur prend l'or, le jeu avance la progression (gardée par l'appareil).</summary>
-        public Task<WalletResponse> BuyTiersAsync(string me, string requestId = null) => SpendAsync(me, GoldShop.TierBundlePrice, _ => null, requestId);
+        public Task<WalletResponse> BuyTiersAsync(string me, string requestId = null)
+        {
+            var season = BattlePass.At(_utcNow());
+            return SpendAsync(me, GoldShop.TierBundlePrice, w =>
+            {
+                OpenSeason(w, season);
+                w.TiersBought += GoldShop.TierBundleSize;
+                return null;
+            }, requestId);
+        }
+
+        /// <summary>Le portefeuille passe à la saison en cours : paliers récupérés et achetés repartent de zéro.</summary>
+        static void OpenSeason(Wallet w, PassSeason season)
+        {
+            if (w.ClaimsSeason == season.Id) return;
+            w.ClaimsSeason = season.Id;
+            w.FreeClaimed.Clear();
+            w.PremiumClaimed.Clear();
+            w.TiersBought = 0;
+        }
+
+        /// <summary>
+        /// Plus que ce qu'un joueur très assidu atteint en un jour (2 évasions par palier) : la progression du pass est tenue
+        /// par le téléphone, le serveur borne seulement ce qui est réclamable depuis le début de la saison.
+        /// </summary>
+        public const int MaxTiersPerDay = 25;
+
+        /// <summary>The highest tier that can be claimed now: the days played since the season began, plus the tiers bought.</summary>
+        int ClaimableTiers(Wallet w, PassSeason season, string me)
+        {
+            if (Developers.Is(me)) return BattlePass.Tiers;
+            int days = Math.Max(0, (int)(_utcNow() - season.StartUtc).TotalDays) + 1;
+            return (int)Math.Min(BattlePass.Tiers, (long)days * MaxTiersPerDay + w.TiersBought);
+        }
 
         /// <summary>Des scarabées contre de l'or : le jeu crédite les scarabées (monnaie de l'appareil) quand le serveur a pris l'or.</summary>
         public Task<WalletResponse> BuyScarabsAsync(string me, string offerId, string requestId = null)
@@ -227,22 +304,19 @@ namespace MummyEscape.Pvp
         {
             var season = BattlePass.At(_utcNow());
             if (seasonId != season.Id) return new WalletResponse { Error = "SEASON" };
+            if ((freeTiers?.Count ?? 0) > BattlePass.Tiers || (premiumTiers?.Count ?? 0) > BattlePass.Tiers) return new WalletResponse { Error = "UNKNOWN_PRODUCT" };
             string error = null;
             var data = await Update(me, d =>
             {
                 var w = WalletOf(d);
-                if (w.ClaimsSeason != season.Id)
-                {
-                    w.ClaimsSeason = season.Id;
-                    w.FreeClaimed.Clear();
-                    w.PremiumClaimed.Clear();
-                }
+                OpenSeason(w, season);
+                int top = ClaimableTiers(w, season, me); // the tiers above wait for later days
                 foreach (int tier in (freeTiers ?? new List<int>()).Distinct())
-                    if (tier >= 1 && tier <= BattlePass.Tiers && !w.FreeClaimed.Contains(tier))
+                    if (tier >= 1 && tier <= top && !w.FreeClaimed.Contains(tier))
                         if (Grant(w, BattlePass.Free(tier))) w.FreeClaimed.Add(tier);
                 if ((premiumTiers?.Count ?? 0) > 0 && !w.Passes.Contains(season.Id)) { error = "NO_PASS"; return; }
                 foreach (int tier in (premiumTiers ?? new List<int>()).Distinct())
-                    if (tier >= 1 && tier <= BattlePass.Tiers && !w.PremiumClaimed.Contains(tier))
+                    if (tier >= 1 && tier <= top && !w.PremiumClaimed.Contains(tier))
                         if (Grant(w, BattlePass.Premium(season, tier))) w.PremiumClaimed.Add(tier);
             });
             return new WalletResponse { Wallet = WalletOf(data), Error = error };

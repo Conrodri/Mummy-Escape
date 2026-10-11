@@ -161,6 +161,59 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public async Task Purchase_StoppedBeforeTheWallet_IsCreditedOnRetry_OnlyOnce()
+        {
+            var (server, store) = NewServer();
+            // A first attempt wrote the record, then failed before the wallet.
+            store.Shared[PvpServer.OrdersCollection + "/test-cut"] = new PurchaseRecord { OrderId = "test-cut", PlayerId = "alice", Gold = 100, Pending = true };
+            var r = await server.VerifyPurchaseAsync("alice", "mummyrush.gold.100", "test-cut");
+            Assert.IsNull(r.Error);
+            Assert.AreEqual(100, r.Wallet.Gold, "credited on the retry");
+            r = await server.VerifyPurchaseAsync("alice", "mummyrush.gold.100", "test-cut");
+            Assert.AreEqual(100, r.Wallet.Gold, "and only once");
+
+            // A record from before the flag (credited, long gone from the wallet's recent orders) is never paid again.
+            store.Shared[PvpServer.OrdersCollection + "/test-old"] = new PurchaseRecord { OrderId = "test-old", PlayerId = "alice", Gold = 100 };
+            Assert.AreEqual(100, (await server.VerifyPurchaseAsync("alice", "mummyrush.gold.100", "test-old")).Wallet.Gold);
+            Assert.AreEqual("ALREADY_CREDITED", (await server.VerifyPurchaseAsync("bob", "mummyrush.gold.100", "test-cut")).Error);
+        }
+
+        [Test]
+        public async Task Purchase_ClaimedByAnotherAccount_IsRefused_EvenWithoutItsRecord()
+        {
+            var (server, store) = NewServer();
+            Assert.IsNull((await server.VerifyPurchaseAsync("alice", "mummyrush.gold.100", "test-race")).Error);
+            store.Shared.Remove(PvpServer.OrdersCollection + "/test-race"); // the per-order record lost in a race
+            Assert.AreEqual("ALREADY_CREDITED", (await server.VerifyPurchaseAsync("bob", "mummyrush.gold.100", "test-race")).Error, "the arbiter still knows");
+            Assert.AreEqual(0, (await server.GetWalletAsync("bob")).Wallet.Gold);
+        }
+
+        [Test]
+        public async Task PassClaims_AreBoundedByTheSeasonsDays_PlusBoughtTiers()
+        {
+            var store = new MemoryPvpStore();
+            var day1 = BattlePass.Seasons[0].StartUtc.AddHours(12);
+            var server = new PvpServer(store, () => day1) { AllowTestPurchases = true };
+            var all = new System.Collections.Generic.List<int>();
+            for (int t = 1; t <= BattlePass.Tiers; t++) all.Add(t);
+
+            await store.UpdatePlayerAsync("alice", d => (d.Wallet ??= new Wallet()).Passes.Add(BattlePass.Seasons[0].Id));
+            var r = await server.ClaimPassRewardsAsync("alice", BattlePass.Seasons[0].Id, all, all);
+            Assert.IsNull(r.Error);
+            CollectionAssert.Contains(r.Wallet.PremiumClaimed, 20, "a set piece within the day's reach");
+            CollectionAssert.DoesNotContain(r.Wallet.PremiumClaimed, 30, "tiers out of reach on day 1 wait");
+
+            await Give(store, "alice", GoldShop.TierBundlePrice);
+            await server.BuyTiersAsync("alice", "req-1");
+            r = await server.ClaimPassRewardsAsync("alice", BattlePass.Seasons[0].Id, all, all);
+            CollectionAssert.Contains(r.Wallet.PremiumClaimed, 30, "bought tiers add up");
+            CollectionAssert.DoesNotContain(r.Wallet.PremiumClaimed, 40);
+
+            var huge = new System.Collections.Generic.List<int>(new int[BattlePass.Tiers + 1]);
+            Assert.AreEqual("UNKNOWN_PRODUCT", (await server.ClaimPassRewardsAsync("alice", BattlePass.Seasons[0].Id, huge, null)).Error);
+        }
+
+        [Test]
         public void Sale_DealsEachItemOncePerDeck_NeverTwiceADay()
         {
             var pool = new[] { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j" }; // noloc
