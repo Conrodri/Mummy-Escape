@@ -49,12 +49,13 @@ namespace MummyEscape.UI.Screens
 
         Text _coins, _stars, _seals, _gold, _note;
         PassBanner _pass;
-        UIKit.Segmented _sections, _setTabs, _sort;
+        UIKit.Segmented _sections, _setTabs;
         RectTransform _categories;
-        GameObject _setTabsRoot, _sortRoot;
         int _setCategory;
         bool _byQuality;
         readonly List<(Image plate, Image icon, Text label)> _chips = new List<(Image, Image, Text)>();
+        readonly List<Text> _chipCounts = new List<Text>();
+        (Image plate, Image icon, Text label) _sortChip;
         RectTransform _list;
         ScrollRect _scroll;
         int _section;
@@ -95,13 +96,7 @@ namespace MummyEscape.UI.Screens
             // The slot categories of the Skins section: large icon chips.
             _categories = UIKit.Row(body, 112, 10).GetComponent<RectTransform>();
             for (int i = 0; i < Categories.Length; i++) CategoryChip(i);
-            _sort = new UIKit.Segmented(body, new[] { "Ordre par défaut", "Par qualité" }, i =>
-            {
-                _byQuality = i == 1;
-                Refresh();
-                _scroll.verticalNormalizedPosition = 1f;
-            }, 64);
-            _sortRoot = body.GetChild(body.childCount - 1).gameObject;
+            SortChip();
 
             _setTabs = new UIKit.Segmented(body, SetCategories, i =>
             {
@@ -109,7 +104,6 @@ namespace MummyEscape.UI.Screens
                 Refresh();
                 _scroll.verticalNormalizedPosition = 1f;
             }, 72);
-            _setTabsRoot = body.GetChild(body.childCount - 1).gameObject;
 
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
@@ -138,6 +132,7 @@ namespace MummyEscape.UI.Screens
             else { icon = UIKit.Art.GoldScarab; price = gold.Gold.ToString(); priceColor = save.Gold >= gold.Gold ? TreasureScreen.GoldColor : UIKit.Danger; }
             var card = Card(parent, item, tag, color, worn, false, icon, price, priceColor,
                 () => TreasureScreen.Zoom(App, Router, gold, () => Router.Open<TreasureScreen>(), _ => Refresh()));
+            if (GoldBuyable(gold)) BuyDot(card);
             UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
         }
 
@@ -191,6 +186,93 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(label, 14);
             UIKit.BottomBand(label.rectTransform, 38, 8);
             _chips.Add((plate, icon, label));
+            _chipCounts.Add(CountBadge(plate.transform));
+        }
+
+        /// <summary>The last chip of the row: toggles the sort by quality (lit when on).</summary>
+        void SortChip()
+        {
+            var plate = UIKit.Plate(_categories, UIKit.SurfaceHi, 24, UIKit.Rim, false, "Sort"); // noloc
+            UIKit.Size(plate, -1, 0, 1);
+            plate.raycastTarget = true;
+            var btn = plate.gameObject.AddComponent<Button>();
+            btn.targetGraphic = plate;
+            btn.onClick.AddListener(() =>
+            {
+                App.Audio.Play(Sfx.Click, 0f);
+                _byQuality = !_byQuality;
+                Refresh();
+                _scroll.verticalNormalizedPosition = 1f;
+            });
+            plate.gameObject.AddComponent<PressScale>();
+            var icon = UIKit.Image(plate.transform, UIKit.Art.Star, UIKit.Dim, false, "Icon"); // noloc
+            UIKit.Place(icon.rectTransform, 0.5f, 1f, 50, 50, 0, -12);
+            var label = UIKit.Label(plate.transform, "Qualité", 24, UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(label, 14);
+            UIKit.BottomBand(label.rectTransform, 38, 8);
+            _sortChip = (plate, icon, label);
+        }
+
+        /// <summary>A gold disc on a corner with a count: how many items can be bought right now.</summary>
+        static Text CountBadge(Transform parent)
+        {
+            var dot = UIKit.Image(parent, UISprites.Circle, UIKit.Gold, false, "Count"); // noloc
+            dot.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Place(dot.rectTransform, 1f, 1f, 38, 38, -4, -4);
+            var text = UIKit.Label(dot.transform, "", 22, UIKit.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Stretch(text.rectTransform);
+            return text;
+        }
+
+        static void Light((Image plate, Image icon, Text label) chip, bool on)
+        {
+            chip.plate.color = on ? new Color32(84, 64, 30, 255) : UIKit.SurfaceHi;
+            var rim = chip.plate.transform.Find("Rim")?.GetComponent<Image>();
+            if (rim != null) rim.color = on ? UIKit.Gold : UIKit.Rim;
+            chip.icon.color = chip.label.color = on ? UIKit.Gold : UIKit.Dim;
+        }
+
+        // ------------------------------------------------------------------ what can be bought now
+
+        bool Buyable(SkinDef s)
+        {
+            var save = App.Save;
+            return s.Price > 0 && !save.Data.OwnedSkins.Contains(s.Id) && save.TotalStars >= s.MinStars && save.Data.Coins >= s.Price;
+        }
+
+        int BuyableIn(CosmeticSlot slot)
+        {
+            int n = 0;
+            foreach (var s in SkinCatalog.InSlot(slot)) if (Buyable(s)) n++;
+            foreach (var s in HalloweenSkins.InShop(slot, App.Save.Data.OwnedSkins, DateTime.UtcNow)) if (Buyable(s)) n++;
+            return n;
+        }
+
+        bool GoldBuyable(Monetization.GoldItem g) => !App.Save.Data.OwnedSkins.Contains(g.SkinId) && App.Save.Gold >= g.Gold;
+
+        static bool SealBuyable(SealItem item, PlayerPvpData d, ICollection<string> owned) =>
+            d != null && !owned.Contains(item.Id) && !d.UnlockedRewards.Contains(item.Id) && d.HighestLeague >= item.MinLeague && d.Seals >= item.Price;
+
+        static string Counted(string name, int n) => n > 0 ? Loc.T(name) + " · " + n : Loc.T(name); // noloc
+
+        /// <summary>The tabs and the slot chips say how many items the wallet can pay for right now.</summary>
+        void RefreshCounts(PlayerPvpData d)
+        {
+            int skins = 0;
+            for (int i = 0; i < Categories.Length; i++)
+            {
+                int n = BuyableIn(Categories[i].slot);
+                skins += n;
+                _chipCounts[i].text = n.ToString();
+                _chipCounts[i].transform.parent.gameObject.SetActive(n > 0);
+            }
+            int treasure = 0;
+            foreach (var g in TreasureScreen.Exclusives(App)) if (GoldBuyable(g)) treasure++;
+            int seals = 0;
+            foreach (var s in SealShop.Items) if (SealBuyable(s, d, App.Save.Data.OwnedSkins)) seals++;
+            _sections.SetLabel(TreasureSection, Counted(Sections[TreasureSection], treasure));
+            _sections.SetLabel(SkinsSection, Counted(Sections[SkinsSection], skins));
+            _sections.SetLabel(SealsSection, Counted(Sections[SealsSection], seals));
         }
 
         static Sprite CategoryIcon(CosmeticSlot slot)
@@ -234,22 +316,16 @@ namespace MummyEscape.UI.Screens
             var pvp = App.PvpProfile?.Data;
             _seals.transform.parent.gameObject.SetActive(App.Pvp != null);
             _seals.text = (pvp?.Seals ?? 0).ToString();
+            // The pass only where golden scarabs are spent: the other tabs keep their room for the items.
+            _pass.Root.gameObject.SetActive(_section == TreasureSection);
             _pass.Refresh(App);
+            RefreshCounts(pvp);
 
             _categories.gameObject.SetActive(_section == SkinsSection);
-            _sortRoot.SetActive(_section == SkinsSection);
-            _sort.Select(_byQuality ? 1 : 0);
-            _setTabsRoot.SetActive(_section == SetsSection);
+            _setTabs.Root.SetActive(_section == SetsSection);
             _setTabs.Select(_setCategory);
-            for (int i = 0; i < _chips.Count; i++)
-            {
-                bool on = i == _category;
-                var (plate, icon, label) = _chips[i];
-                plate.color = on ? new Color32(84, 64, 30, 255) : UIKit.SurfaceHi;
-                var rim = plate.transform.Find("Rim")?.GetComponent<Image>();
-                if (rim != null) rim.color = on ? UIKit.Gold : UIKit.Rim;
-                icon.color = label.color = on ? UIKit.Gold : UIKit.Dim;
-            }
+            for (int i = 0; i < _chips.Count; i++) Light(_chips[i], i == _category);
+            Light(_sortChip, _byQuality);
 
             UIKit.ClearChildren(_list);
             _note = null;
@@ -270,17 +346,18 @@ namespace MummyEscape.UI.Screens
             items.AddRange(HalloweenSkins.InShop(slot, save.Data.OwnedSkins, DateTime.UtcNow));
             foreach (var s in TowerSkins.All) if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
             if (_byQuality) items = items.OrderByDescending(Quality).ToList(); // stable: the usual order within a quality
-            // The way to the sets, easy to miss behind their tab.
-            var toSets = UIKit.Button(_list, "Ensembles complets à -20 % : voir les collections", () =>
+            Grid(items.Count, (parent, i) => ItemCard(parent, items[i]));
+            // The way to the sets, a discreet link under the grid.
+            var toSets = UIKit.Button(_list, "Ensembles complets à -20 % : voir les collections ›", () =>
             {
                 _section = SetsSection;
                 _sections.Select(_section);
                 Refresh();
                 _scroll.verticalNormalizedPosition = 1f;
-            }, 26, ButtonStyle.Secondary);
+            }, 24, ButtonStyle.Ghost);
+            toSets.GetComponentInChildren<Text>().color = UIKit.Gold;
             UIKit.FitText(toSets.GetComponentInChildren<Text>(), 16);
-            UIKit.Size(toSets, 72);
-            Grid(items.Count, (parent, i) => ItemCard(parent, items[i]));
+            UIKit.Size(toSets, 64);
         }
 
         /// <summary>Rows of <see cref="Columns"/> cards, each popping in shortly after the previous one.</summary>
@@ -423,7 +500,18 @@ namespace MummyEscape.UI.Screens
                 Router.Open<ItemZoomScreen>().Show(item, tag, color, detail, action,
                     !worn && (owned || affordable) ? () => OnItem(item) : (Action)null);
             });
+            if (!owned && affordable) BuyDot(card);
             UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
+        }
+
+        /// <summary>A pulsing gold disc on the card's corner: this one can be bought right now.</summary>
+        static void BuyDot(Image card)
+        {
+            var dot = UIKit.Image(card.transform, UISprites.Circle, UIKit.Gold, false, "Buyable"); // noloc
+            dot.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Place(dot.rectTransform, 1f, 0f, 34, 34, -30, 30); // on the free end of the price pill, clear of the tag line
+            UIKit.Stretch(UIKit.Image(dot.transform, UISprites.Plus, UIKit.Ink).rectTransform, 7, 7, 7, 7);
+            UIFx.Pulse(dot, 0.12f, 1.6f);
         }
 
         /// <summary>Greys out a preview and puts a padlock over it (not enough stars yet).</summary>
@@ -744,6 +832,7 @@ namespace MummyEscape.UI.Screens
                 Router.Open<ItemZoomScreen>().Show(def, tag, color, Loc.T("Boutique des sceaux de Maât : les skins des ligues de duel."), action,
                     !_busy && !worn && (owned || affordable) ? () => OnSealItem(id, owned) : (Action)null);
             });
+            if (!owned && affordable) BuyDot(card);
             UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
         }
 

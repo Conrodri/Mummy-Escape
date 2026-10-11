@@ -239,7 +239,7 @@ namespace MummyEscape
             ["Équipe de Mummy Rush"] = "Mummy Rush team",
             ["{0} / {1} pièces"] = "{0} / {1} pieces",
             ["Acheter les pièces qui te manquent pour {0} scarabées dorés ?"] = "Buy the pieces you are missing for {0} golden scarabs?",
-            ["Ensembles complets à -20 % : voir les collections"] = "Full sets 20% off: see the collections",
+            ["Ensembles complets à -20 % : voir les collections ›"] = "Full sets 20% off: see the collections ›",
             ["Chaque acte a sa collection : momie, torche, chapeau et chaussures, débloquée par tes étoiles (50 par acte). L'ensemble complet coûte 20 % de moins."] =
                 "Each act has its collection: mummy, torch, hat and shoes, unlocked by your stars (50 per act). The full set costs 20% less.",
             ["Les étoiles débloquent les collections des actes, les scarabées les paient."] = "Stars unlock the act collections, scarabs pay for them.",
@@ -1426,8 +1426,7 @@ namespace MummyEscape
             ["Commun"] = "Common",
             ["Rare"] = "Rare",
             ["Épique"] = "Epic",
-            ["Ordre par défaut"] = "Default order",
-            ["Par qualité"] = "By quality",
+            ["Qualité"] = "Quality",
             ["Les parures du Trésor, en scarabées dorés : les pièces qui te manquent à -20 %."] = "The Treasure's regalia, for golden scarabs: the pieces you're missing at 20% off.",
             ["Ces ensembles ne se vendent pas : ils se gagnent. Complets, ils s'équipent d'un geste."] = "These sets aren't sold: they're won. Once complete, put them on in one tap.",
             ["Les pièces des ligues de duel, réunies. Le bouton achète d'un coup celles qui te manquent et dont tu as atteint la ligue, au prix normal."] = "The duel league pieces, together. The button buys at once the ones you're missing whose league you've reached, at the normal price.",
