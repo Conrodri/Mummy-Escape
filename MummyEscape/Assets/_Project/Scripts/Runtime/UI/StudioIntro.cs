@@ -6,7 +6,7 @@ namespace MummyEscape.UI
 {
     /// <summary>
     /// The studio's intro at launch, over everything: on black, the glowing white outline of three peaks comes out of the
-    /// dark while the camera slowly pushes in; "PEAK" drops in letter by letter, a line draws itself under it, then
+    /// dark while the camera slowly pushes in, a flag reading "PEAK" goes up on the summit and unfurls; "PEAK" drops in letter by letter, a line draws itself under it, then
     /// "DEVELOPMENT" settles into place; it all fades out on the game. About 3 s; a tap skips to the fade.
     /// </summary>
     public sealed class StudioIntro : MonoBehaviour, IPointerDownHandler
@@ -22,7 +22,8 @@ namespace MummyEscape.UI
         static readonly Vector2[] Ridge = { BaseLeft, Low, Valley1, Summit, Valley2, Mid, BaseRight };
 
         LineArt _ridge;
-        LineArt.Stroke _glowWide, _glowTight, _mountain, _snow;
+        LineArt.Stroke _glowWide, _glowTight, _mountain, _snow, _pole, _flag, _flagOutline;
+        RectTransform _peakText;
         RectTransform _stage, _underline;
         RectTransform[] _title, _sub;
         float[] _titleWidths, _subWidths;
@@ -89,6 +90,17 @@ namespace MummyEscape.UI
             _mountain = _ridge.Add(LineWidth, Ridge);
             // A snow line across the summit, between its two slopes.
             _snow = _ridge.Add(LineWidth * 0.75f, new Vector2(-54, 170), new Vector2(-27, 143), new Vector2(0, 170), new Vector2(28, 141), new Vector2(55, 170));
+
+            // The flag on the summit: its pole, the white cloth and its edge, and "PEAK" in black on it.
+            _pole = _ridge.Add(6f, Summit, Summit);
+            _flag = _ridge.Add(0f, Summit, Summit, Summit, Summit);
+            _flag.Filled = true;
+            _flagOutline = _ridge.Add(3f, Summit, Summit, Summit, Summit);
+            _flagOutline.Closed = true;
+            var peak = Label(rect, "PEAK", 30); // noloc
+            peak.color = Color.black;
+            _peakText = peak.rectTransform;
+            _peakText.sizeDelta = new Vector2(92, 52);
 
             // The studio's name under the mountain.
             var nameGo = new GameObject("Name", typeof(RectTransform)); // noloc
@@ -191,6 +203,7 @@ namespace MummyEscape.UI
             float breath = 0.85f + 0.15f * Mathf.Sin(t * 2.2f);
             _glowWide.Color = new Color(1f, 1f, 1f, 0.16f * appear * breath);
             _glowTight.Color = new Color(1f, 1f, 1f, 0.32f * appear * breath);
+            Flag(t);
             _ridge.Redraw();
 
             Word(_title, _titleWidths, t, 0.7f, 0.09f, Tracking, 34f, 1f);
@@ -200,6 +213,33 @@ namespace MummyEscape.UI
             if (_sfx != null && !_skipped && _previous < 0.7f && t >= 0.7f) _sfx.Play(Services.Sfx.Coin, 0f);
             _previous = t;
             _group.alpha = 1f - Phase(t, End, End + FadeOut);
+        }
+
+        /// <summary>The pole rises from the summit, then the cloth unfurls to the left and flutters.</summary>
+        void Flag(float t)
+        {
+            float rise = EaseOut(Phase(t, 0.35f, 0.65f));
+            var top = Summit + new Vector2(0, 160f * rise);
+            Set(_pole, Summit, top);
+            _pole.Color = new Color(1f, 1f, 1f, rise > 0f ? 1f : 0f);
+            float cloth = Phase(t, 0.6f, 1.0f);
+            float width = 92f * (cloth < 1f ? EaseOut(cloth) * 1.06f : 1f);
+            float flutter = Mathf.Sin(t * 7f) * 4f * cloth;
+            var c1 = top + new Vector2(-width, flutter);
+            var c2 = top + new Vector2(-width, -52f + flutter);
+            var c3 = top + new Vector2(0, -52f);
+            Set(_flag, top, c1, c2, c3);
+            Set(_flagOutline, top, c1, c2, c3);
+            _flag.Color = _flagOutline.Color = new Color(1f, 1f, 1f, cloth > 0f ? 1f : 0f);
+            _peakText.anchoredPosition = top + new Vector2(-width * 0.5f, -26f + flutter * 0.5f);
+            _peakText.localScale = new Vector3(Mathf.Clamp01(width / 92f), 1f, 1f);
+            _peakText.gameObject.SetActive(cloth > 0.3f);
+        }
+
+        static void Set(LineArt.Stroke s, params Vector2[] points)
+        {
+            s.Points.Clear();
+            s.Points.AddRange(points);
         }
 
         /// <summary>
