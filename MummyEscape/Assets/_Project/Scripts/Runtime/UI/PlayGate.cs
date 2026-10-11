@@ -28,6 +28,18 @@ namespace MummyEscape.UI
             start();
         }
 
+        /// <summary>Spends the point of one endless tomb and starts it; when none is left, offers more (then starts).</summary>
+        public static void EndlessRun(GameApp app, Action start)
+        {
+            if (!app.Save.CanPlayEndless)
+            {
+                Offer(app, PlayMode.Endless, () => EndlessRun(app, start));
+                return;
+            }
+            app.Save.UseEndless();
+            start();
+        }
+
         /// <summary>
         /// True when a point of combat energy is left (the server takes it when the match starts). Otherwise offers more
         /// and calls <paramref name="retry"/> once they are in.
@@ -53,11 +65,12 @@ namespace MummyEscape.UI
 
         static void Offer(GameApp app, PlayMode mode, Action retry)
         {
-            bool solo = mode == PlayMode.Solo;
-            long next = solo ? app.Save.SoloEnergyNextInMs : PvpMeter(app) is EnergyMeter m ? Energy.NextInMs(m, NowMs) : 0;
-            int adsLeft = solo ? app.Save.SoloAdsLeft : PvpMeter(app) is EnergyMeter p ? Energy.AdsLeft(p, NowMs) : EnergyConfig.AdRefillsPerDay;
-            int refill = solo ? EnergyConfig.SoloAdRefill : EnergyConfig.PvpAdRefill;
-            string text = (solo ? Loc.T("Plus d'énergie pour les parties solo (l'acte 1 reste libre).")
+            bool solo = mode == PlayMode.Solo, endless = mode == PlayMode.Endless;
+            long next = endless ? app.Save.EndlessEnergyNextInMs : solo ? app.Save.SoloEnergyNextInMs : PvpMeter(app) is EnergyMeter m ? Energy.NextInMs(m, NowMs) : 0;
+            int adsLeft = endless ? app.Save.EndlessAdsLeft : solo ? app.Save.SoloAdsLeft : PvpMeter(app) is EnergyMeter p ? Energy.AdsLeft(p, NowMs) : EnergyConfig.AdRefillsPerDay;
+            int refill = endless ? EnergyConfig.EndlessAdRefill : solo ? EnergyConfig.SoloAdRefill : EnergyConfig.PvpAdRefill;
+            string text = (endless ? Loc.T("Plus d'énergie pour le mode sans fin : un point par tombeau.")
+                         : solo ? Loc.T("Plus d'énergie pour les parties solo (l'acte 1 reste libre).")
                                 : Loc.T("Plus d'énergie de combat pour les duels et les matchs 2v2."))
                         + " " + Loc.F("Un point revient toutes les 2 minutes (le prochain dans {0}).", Energy.Clock(next)) + "\n\n"
                         + Loc.F("Regarde une courte pub pour +{0} d'énergie, ou prends le Pass : plus aucune limite.", refill);
@@ -82,7 +95,11 @@ namespace MummyEscape.UI
                 watched = false;
             }
             if (!watched) return;
-            if (mode == PlayMode.Solo)
+            if (mode == PlayMode.Endless)
+            {
+                if (!app.Save.RefillEndless()) return;
+            }
+            else if (mode == PlayMode.Solo)
             {
                 if (!app.Save.RefillSolo()) return;
             }
@@ -105,11 +122,12 @@ namespace MummyEscape.UI
         public static string Status(GameApp app, PlayMode mode)
         {
             if (app.Save.Unlimited) return Loc.T("Pass actif : parties illimitées");
-            bool solo = mode == PlayMode.Solo;
-            int left = solo ? app.Save.SoloEnergyLeft : PvpLeft(app);
-            int max = solo ? EnergyConfig.SoloMax : EnergyConfig.PvpMax;
-            long next = solo ? app.Save.SoloEnergyNextInMs : PvpMeter(app) is EnergyMeter m ? Energy.NextInMs(m, NowMs) : 0;
-            string count = solo ? Loc.F("Énergie : {0}", left + "/" + max) : Loc.F("Énergie de combat : {0}", left + "/" + max);
+            bool solo = mode == PlayMode.Solo, endless = mode == PlayMode.Endless;
+            int left = endless ? app.Save.EndlessEnergyLeft : solo ? app.Save.SoloEnergyLeft : PvpLeft(app);
+            int max = endless ? EnergyConfig.EndlessMax : solo ? EnergyConfig.SoloMax : EnergyConfig.PvpMax;
+            long next = endless ? app.Save.EndlessEnergyNextInMs : solo ? app.Save.SoloEnergyNextInMs : PvpMeter(app) is EnergyMeter m ? Energy.NextInMs(m, NowMs) : 0;
+            string count = endless ? Loc.F("Énergie sans fin : {0}", left + "/" + max)
+                         : solo ? Loc.F("Énergie : {0}", left + "/" + max) : Loc.F("Énergie de combat : {0}", left + "/" + max);
             return next > 0 ? count + " · " + Loc.F("+1 dans {0}", Energy.Clock(next)) : count;
         }
     }

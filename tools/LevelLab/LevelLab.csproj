@@ -13,5 +13,6 @@
     <Compile Include="HumanSim.cs" />
     <Compile Include="HumanReport.cs" />
     <Compile Include="Compactness.cs" />
+    <Compile Include="EndlessTool.cs" />
   </ItemGroup>
 </Project>

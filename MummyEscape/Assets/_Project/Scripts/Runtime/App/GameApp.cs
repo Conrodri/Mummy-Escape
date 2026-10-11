@@ -244,6 +244,25 @@ namespace MummyEscape.App
                 await SubmitScore(best);
                 if (!Online.IsAvailable) return;
             }
+            foreach (var mode in DifficultyExt.All)
+            {
+                var p = Save.EndlessOf(mode);
+                if (p.Cleared <= 0 || Save.Data.SubmittedScores.Contains(Endless.BoardId(mode) + ":" + p.Score)) continue;
+                await SubmitEndless(mode);
+                if (!Online.IsAvailable) return;
+            }
+        }
+
+        /// <summary>Sends the furthest tomb of an endless ladder (and its time) to that ladder's board.</summary>
+        public async Task SubmitEndless(Difficulty mode)
+        {
+            var p = Save.EndlessOf(mode);
+            if (p.Cleared <= 0 || !await Online.SubmitEndlessAsync(mode, p.Score)) return;
+            // One entry per ladder: the board keeps the best, only the last score sent matters.
+            string board = Endless.BoardId(mode) + ":";
+            Save.Data.SubmittedScores.RemoveAll(s => s.StartsWith(board));
+            Save.Data.SubmittedScores.Add(board + p.Score);
+            Save.Save();
         }
 
         /// <summary>Stops every online exchange; the session stays on the device so turning it back on resumes it.</summary>

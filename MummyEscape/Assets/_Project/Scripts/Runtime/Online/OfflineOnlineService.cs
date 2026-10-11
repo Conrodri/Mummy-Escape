@@ -79,6 +79,27 @@ namespace MummyEscape.Online
             return Task.FromResult(page);
         }
 
+        readonly Dictionary<Difficulty, long> _endless = new Dictionary<Difficulty, long>();
+
+        public Task<bool> SubmitEndlessAsync(Difficulty mode, long score)
+        {
+            if (!_endless.TryGetValue(mode, out long prev) || score < prev) _endless[mode] = score;
+            return Task.FromResult(false); // never reached a server
+        }
+
+        /// <summary>Only the player's own ladder (sent this session): the screen shows the saved one otherwise.</summary>
+        public Task<LeaderboardPage> GetEndlessLeaderboardAsync(Difficulty mode, LeaderboardScope scope, int limit)
+        {
+            var page = new LeaderboardPage();
+            if (_endless.TryGetValue(mode, out long score))
+            {
+                var (overPar, timeMs) = LevelResult.DecodeScore(score);
+                page.Me = new LeaderboardRow { Rank = 1, PlayerId = PlayerId, PlayerName = PlayerName, OverPar = overPar, TimeMs = timeMs, IsMe = true, Country = Country };
+                if (limit > 0) page.Rows.Add(page.Me);
+            }
+            return Task.FromResult(page);
+        }
+
         public Task<IReadOnlyList<FriendInfo>> GetFriendsAsync() => Task.FromResult<IReadOnlyList<FriendInfo>>(new List<FriendInfo>(_friends));
         public Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync() => Task.FromResult<IReadOnlyList<FriendRequest>>(new List<FriendRequest>(_requests));
 

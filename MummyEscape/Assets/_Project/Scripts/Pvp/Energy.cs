@@ -15,6 +15,9 @@ namespace MummyEscape.Pvp
         public const int PvpAdRefill = 3;
         /// <summary>Pubs qui rendent de l'énergie, par jour (UTC) et par réserve.</summary>
         public const int AdRefillsPerDay = 5;
+        /// <summary>Mode sans fin (solo) : sa propre réserve, un point par tombeau (revient au même rythme). Gardée par l'appareil.</summary>
+        public const int EndlessMax = 15;
+        public const int EndlessAdRefill = 5;
     }
 
     /// <summary>
