@@ -80,7 +80,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(t, 44);
         }
 
-        /// <summary>"act2_crue_du_nil" → "Crue du nil": the file name without its theme prefix.</summary>
+        /// <summary>"act2_course_du_nil" → "Course du nil": the file name without its theme prefix.</summary>
         static string Title(string resource)
         {
             int cut = resource.IndexOf('_');
