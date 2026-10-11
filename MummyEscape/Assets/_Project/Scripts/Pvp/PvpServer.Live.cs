@@ -137,7 +137,7 @@ namespace MummyEscape.Pvp
                 GeneratorVersion = DifficultyTable.GeneratorVersion,
                 A = duelistMine,
                 // Sa course viendra à la fin du tirage (DraftLiveAsync), sur le tombeau choisi.
-                B = new LiveDuelist { PlayerId = botId, Name = BotName?.Invoke(botId) ?? PvpBots.NameOf(botId), Elo = PvpBots.EloFor(new Random(seed), data.Elo), Bot = true },
+                B = new LiveDuelist { PlayerId = botId, Name = BotName?.Invoke(botId) ?? PvpBots.NameOf(botId), Elo = PvpBots.EloFor(new Random(seed), data.Elo), Look = PvpBots.LookOf(botId, NowMs), Bot = true },
                 Draft = PvpDraft.Open(seed, Leagues.FromElo(data.Elo), new[] { (me, 0, false), (botId, 1, true) }),
                 CreatedAtUnixMs = NowMs,
             });

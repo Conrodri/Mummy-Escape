@@ -141,15 +141,6 @@ namespace MummyEscape.Online
 
         string Unavailable => IsDemo ? null : "Les comptes nécessitent une connexion à Unity Gaming Services.";
 
-        public Task<string> CreateAccountAsync(string username, string password)
-        {
-            if (Unavailable != null) return Task.FromResult(Unavailable);
-            Account = AccountState.Account;
-            Username = username;
-            _demoPassword = password;
-            return Task.FromResult<string>(null);
-        }
-
         public Task<string> SignInAsync(string username, string password)
         {
             if (Unavailable != null) return Task.FromResult(Unavailable);

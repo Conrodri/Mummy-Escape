@@ -38,8 +38,9 @@ namespace MummyEscape.UI.Legal
             "Your opponents and teammates see your nickname, your look, your Elo and the replays of your matches.\n" +
             "• If you buy golden scarabs: the product, the order ID and the purchase token sent by Google Play, the date, " +
             "and your wallet (golden scarabs, passes, paid items), kept by our server. We never receive your payment details: Google handles the payment.\n" +
-            "• If you create an account (optional): your login, your password (stored encrypted by our provider, never readable by us) " +
-            "and a backup of your progress, so you can restore it on another device.\n" +
+            "• If you create an account (optional, with Google Play Games): the player ID Google Play Games sends us to recognise you " +
+            "(neither your email address nor your name), and a backup of your progress, so you can restore it on another device. " +
+            "Accounts created earlier with a login keep it and their password (stored encrypted by our provider, never readable by us).\n" +
             "• Technical data required by the service (IP address, device model, error logs), used for its operation and security.",
             "# Why, and on what legal basis?",
             "• Providing the online features you chose (leaderboards, friends, account, backup): performance of the terms of use (GDPR, art. 6.1.b).\n" +
@@ -97,7 +98,7 @@ namespace MummyEscape.UI.Legal
             "(or your nickname and friend code). We delete the account within 30 days at most and confirm the deletion. " +
             "To prevent abusive deletions, we may ask for proof that the account is yours (for example the friend code shown in the game).",
             "# What is deleted",
-            "Your profile and its ID, your account (login and password), your nickname, your leaderboard scores, " +
+            "Your profile and its ID, your account (link with Google Play Games, or login and password), your nickname, your leaderboard scores, " +
             "your friends and friend requests, the progress shown to your friends and your online backup, your Elo and your duel and 2v2 history, your duos, " +
             "your place in your guild, your messages and shared replays, and your wallet (golden scarabs, passes, paid items).",
             "# What is kept",
@@ -139,8 +140,8 @@ namespace MummyEscape.UI.Legal
             "# Age",
             "Below the digital age of consent in your country (15 in France), online mode is only available with the consent of a parent or legal guardian. Global chat is closed to minors; guild chat and messages between friends can be turned off in the game.",
             "# Your account",
-            "The account is optional and consists of a login and a password, which you must keep secret. " +
-            "Since no email address is requested, a forgotten password cannot be recovered. " +
+            "The account is optional and is created with Google Play Games. Accounts created earlier with a login and a password still work: " +
+            "keep them secret; since no email address is requested, a forgotten password cannot be recovered. " +
             "You can delete your account and all your online data at any time from the game.",
             "# Code of conduct",
             "You may not choose an insulting, discriminatory or sexual nickname, or one impersonating someone else, " +

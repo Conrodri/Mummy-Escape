@@ -376,23 +376,6 @@ namespace MummyEscape.Online
             catch (RequestFailedException e) { return Explain(e, "Connexion à Google Play Jeux impossible."); }
         }
 
-        public async Task<string> CreateAccountAsync(string username, string password)
-        {
-            if (!IsAvailable) return Status;
-            try
-            {
-                // Links a username/password to the current (anonymous) player: same id, scores and friends.
-                await AuthenticationService.Instance.AddUsernamePasswordAsync(username, password);
-                await AuthenticationService.Instance.GetPlayerInfoAsync();
-                return null;
-            }
-            catch (AuthenticationException e) when (e.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
-            {
-                return "Ce joueur a déjà un compte.";
-            }
-            catch (RequestFailedException e) { return Explain(e, "Cet identifiant est déjà pris ou invalide."); }
-        }
-
         public async Task<string> SignInAsync(string username, string password)
         {
             if (string.IsNullOrEmpty(Application.cloudProjectId)) return Status;

@@ -46,8 +46,9 @@ namespace MummyEscape.UI.Legal
             "Tes adversaires et coéquipiers voient ton pseudonyme, ton apparence, ton Elo et les replays de vos matchs.\n" +
             "• Si tu achètes des scarabées dorés : le produit, l'identifiant de commande et le jeton d'achat transmis par Google Play, la date, " +
             "et ton portefeuille (scarabées dorés, pass, objets payants), gardés par notre serveur. Nous ne recevons jamais tes coordonnées bancaires : le paiement est traité par Google.\n" +
-            "• Si tu crées un compte (facultatif) : ton identifiant de connexion, ton mot de passe (conservé chiffré par notre prestataire, jamais lisible par nous) " +
-            "et une copie de sauvegarde de ta progression, pour la retrouver sur un autre appareil.\n" +
+            "• Si tu crées un compte (facultatif, avec Google Play Jeux) : l'identifiant de joueur que Google Play Jeux nous transmet pour te reconnaître " +
+            "(ni ton adresse e-mail ni ton nom), et une copie de sauvegarde de ta progression, pour la retrouver sur un autre appareil. " +
+            "Les comptes créés auparavant avec un identifiant de connexion gardent celui-ci et leur mot de passe (conservé chiffré par notre prestataire, jamais lisible par nous).\n" +
             "• Les données techniques indispensables au service (adresse IP, modèle d'appareil, journaux d'erreurs), utilisées pour son fonctionnement et sa sécurité.",
             "# Pourquoi et sur quelle base ?",
             "• Fournir les fonctions en ligne que tu as choisies (classements, amis, compte, sauvegarde) : exécution des conditions d'utilisation (RGPD, art. 6.1.b).\n" +
@@ -107,7 +108,7 @@ namespace MummyEscape.UI.Legal
             "de connexion (ou ton pseudonyme et ton code ami). Nous supprimons le compte sous 30 jours au plus tard et te confirmons la suppression. " +
             "Pour éviter les suppressions abusives, nous pouvons te demander une preuve que le compte t'appartient (par exemple le code ami affiché dans le jeu).",
             "# Ce qui est supprimé",
-            "Ton profil et son identifiant, ton compte (identifiant de connexion et mot de passe), ton pseudonyme, tes scores dans les classements, " +
+            "Ton profil et son identifiant, ton compte (lien avec Google Play Jeux, ou identifiant de connexion et mot de passe), ton pseudonyme, tes scores dans les classements, " +
             "tes amis et demandes d'ami, ta progression montrée à tes amis et ta sauvegarde en ligne, ton Elo et ton historique de duels et de 2v2, tes duos, " +
             "ta place dans ta guilde, tes messages et replays partagés, et ton portefeuille (scarabées dorés, pass, objets payants).",
             "# Ce qui est conservé",
@@ -150,8 +151,8 @@ namespace MummyEscape.UI.Legal
             "# Âge",
             "Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne n'est accessible qu'avec l'accord d'un parent ou tuteur légal. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.",
             "# Ton compte",
-            "Le compte est facultatif et se compose d'un identifiant et d'un mot de passe, que tu dois garder secrets. " +
-            "Aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. " +
+            "Le compte est facultatif et se crée avec Google Play Jeux. Les comptes créés auparavant avec un identifiant et un mot de passe restent utilisables : " +
+            "garde-les secrets ; aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. " +
             "Tu peux supprimer ton compte et toutes tes données en ligne à tout moment depuis le jeu.",
             "# Règles de conduite",
             "Il est interdit de choisir un pseudonyme injurieux, discriminatoire, à caractère sexuel ou usurpant l'identité d'autrui, " +

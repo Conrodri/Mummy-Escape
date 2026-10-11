@@ -110,7 +110,7 @@ namespace MummyEscape.Pvp
             for (int k = 0; k < 2; k++)
             {
                 string botId = "bot_" + rng.Next(1, int.MaxValue);
-                bots.Runners.Add(new RelayRunner { PlayerId = botId, Name = BotName?.Invoke(botId) ?? PvpBots.NameOf(botId), Bot = true });
+                bots.Runners.Add(new RelayRunner { PlayerId = botId, Name = BotName?.Invoke(botId) ?? PvpBots.NameOf(botId), Look = PvpBots.LookOf(botId, NowMs), Bot = true });
             }
             bots.Name = bots.Runners[0].Name + " & " + bots.Runners[1].Name;
             bots.Starter = bots.Runners[rng.Next(2)].PlayerId;

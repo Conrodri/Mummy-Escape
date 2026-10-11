@@ -185,7 +185,8 @@ namespace MummyEscape.Visual
             // A few rivals show off a title, rarely a legendary colour.
             if (rng.Next(3) == 0) look.Title = Titles.All[rng.Next(Titles.All.Count)].Id;
             if (rng.Next(25) == 0) look.Color = LegendarySkins.All[rng.Next(LegendarySkins.All.Count)].Id;
-            return look;
+            if (look.Color == Core.Halloween.WheelLegendary) look.Color = SkinCatalog.Classic.Color.Id; // the event's: only during it
+            return Pvp.PvpBots.HalloweenLook(look, rng.Next(), System.DateTime.UtcNow);
         }
 
         public static void ClearCache()

@@ -111,9 +111,10 @@ namespace MummyEscape.Online
         AccountState Account { get; }
         /// <summary>Login of the account (empty for a guest).</summary>
         string Username { get; }
-        /// <summary>Turns the current guest into an account: progress, scores and friends are kept.</summary>
-        Task<string> CreateAccountAsync(string username, string password);
-        /// <summary>Signs in to an existing account (another device, after a sign-out...).</summary>
+        /// <summary>
+        /// Signs in to an existing account (another device, after a sign-out...). New accounts are made with Google Play Games
+        /// only (<see cref="LinkGoogleAsync"/>): this stays for the accounts created with a password before.
+        /// </summary>
         Task<string> SignInAsync(string username, string password);
         /// <summary>The account signs in with a password (false for an account made with Google only).</summary>
         bool HasPassword { get; }

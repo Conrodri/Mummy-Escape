@@ -407,12 +407,11 @@ namespace MummyEscape.UI.Screens
             if (online.Account == AccountState.Guest || online.IsDemo)
             {
                 UIKit.SectionTitle(card, "Tu joues en invité");
+                // New accounts are Google Play Games ones only: the password sign-in below stays for the accounts made before.
                 PrivacyUI.Paragraph(card, google
-                    ? "Ta progression n'existe que sur ce téléphone. Crée un compte pour la sauvegarder et la retrouver ailleurs : en un geste avec Google Play Jeux, ou avec un identifiant et un mot de passe, sans adresse e-mail."
-                    : "Ta progression n'existe que sur ce téléphone. Crée un compte pour la sauvegarder et la retrouver ailleurs : " +
-                      "il suffit d'un identifiant et d'un mot de passe, sans adresse e-mail.");
+                    ? "Ta progression n'existe que sur ce téléphone. Crée un compte avec Google Play Jeux pour la sauvegarder et la retrouver sur un autre téléphone."
+                    : "Ta progression n'existe que sur ce téléphone. Les comptes se créent avec Google Play Jeux, sur Android.");
                 if (google) PrivacyUI.Wide(card, "Continuer avec Google Play Jeux", LinkGoogle, 36, 100, ButtonStyle.Primary);
-                PrivacyUI.Wide(card, "Créer un compte", CreateAccount, 36, 100, google ? ButtonStyle.Secondary : ButtonStyle.Primary);
             }
             else
             {
@@ -486,21 +485,6 @@ namespace MummyEscape.UI.Screens
             _googleError = error;
             Rebuild();
         }
-
-        void CreateAccount() =>
-            Router.Open<FormDialog>().Configure("Créer un compte",
-                Loc.F("Identifiant : {0}-{1} caractères (lettres, chiffres, . - _ @).", AccountRules.UsernameMin, AccountRules.UsernameMax) + "\n" +
-                Loc.F("Mot de passe : {0}-{1} caractères, majuscule, minuscule, chiffre et symbole.", AccountRules.PasswordMin, AccountRules.PasswordMax),
-                new[] { ("Identifiant", false), ("Mot de passe", true), ("Confirme le mot de passe", true) }, "Créer",
-                async v =>
-                {
-                    string error = AccountRules.CheckUsername(v[0]) ?? AccountRules.CheckPassword(v[1]);
-                    if (error != null) return error;
-                    if (v[1] != v[2]) return "Les deux mots de passe diffèrent.";
-                    error = await App.CreateAccount(v[0], v[1]);
-                    if (error == null) Rebuild();
-                    return error;
-                });
 
         void SignIn() =>
             Router.Open<FormDialog>().Configure("Se connecter",

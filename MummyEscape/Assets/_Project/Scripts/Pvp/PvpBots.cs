@@ -22,11 +22,33 @@ namespace MummyEscape.Pvp
             Make(rng, playerElo, rng.Next(1, int.MaxValue), "bot_" + rng.Next(), nowMs);
 
         /// <summary>Le nom affiché d'un joueur simulé, tiré de son identifiant (toujours le même).</summary>
-        public static string NameOf(string botId)
+        public static string NameOf(string botId) => Names[Hash(botId) % Names.Length];
+
+        /// <summary>La tenue d'un joueur simulé : pendant Halloween, celle de l'événement (tirée de son identifiant), sinon aucune (la classique).</summary>
+        public static PlayerLook LookOf(string botId, long nowMs) =>
+            HalloweenLook(null, Hash(botId), DateTimeOffset.FromUnixTimeMilliseconds(nowMs).UtcDateTime);
+
+        /// <summary>
+        /// Pendant Halloween (<see cref="Halloween.IsOpen"/>), habille <paramref name="look"/> pour l'événement : citrouille ou
+        /// chapeau de sorcière, souvent la momie de minuit, parfois le légendaire de la roue. Hors événement, le rend tel quel.
+        /// </summary>
+        public static PlayerLook HalloweenLook(PlayerLook look, int roll, DateTime utc)
+        {
+            if (!Halloween.IsOpen(utc)) return look;
+            var dressed = look ?? new PlayerLook();
+            roll &= int.MaxValue;
+            dressed.Hat = roll % 2 == 0 ? Halloween.RewardSkin : Halloween.GoldSkin;
+            int colour = roll / 2 % 10;
+            if (colour == 0) dressed.Color = Halloween.WheelLegendary;
+            else if (colour < 6) dressed.Color = Halloween.ShopSkin;
+            return dressed;
+        }
+
+        static int Hash(string botId)
         {
             int h = 17;
             foreach (char c in botId ?? "") h = unchecked(h * 31 + c);
-            return Names[(h & int.MaxValue) % Names.Length];
+            return h & int.MaxValue;
         }
 
         /// <summary>
@@ -54,6 +76,7 @@ namespace MummyEscape.Pvp
                 GhostId = "bot_" + seed,
                 PlayerId = botId,
                 PlayerName = NameOf(botId),
+                Look = LookOf(botId, nowMs),
                 Elo = elo,
                 Seed = seed,
                 GeneratorVersion = DifficultyTable.GeneratorVersion,

@@ -103,5 +103,24 @@ namespace MummyEscape.Tests
             CollectionAssert.Contains(r.Wallet.Skins, item.SkinId);
             Assert.AreEqual(100 - item.Gold, r.Wallet.Gold);
         }
+
+        [Test]
+        public void Bots_WearTheEventPieces_OnlyDuringTheEvent()
+        {
+            long inside = new DateTimeOffset(Utc(2026, 10, 30, 12)).ToUnixTimeMilliseconds();
+            long outside = new DateTimeOffset(Utc(2026, 11, 8, 12)).ToUnixTimeMilliseconds();
+            Assert.IsNull(PvpBots.LookOf("bot_42", outside), "the classic outfit");
+            var hats = new System.Collections.Generic.HashSet<string>();
+            for (int i = 0; i < 40; i++)
+            {
+                var look = PvpBots.LookOf("bot_" + i, inside);
+                Assert.That(look.Hat, Is.EqualTo(Halloween.RewardSkin).Or.EqualTo(Halloween.GoldSkin));
+                Assert.AreEqual(look.Hat, PvpBots.LookOf("bot_" + i, inside).Hat, "always the same for a bot");
+                hats.Add(look.Hat);
+            }
+            Assert.AreEqual(2, hats.Count, "both hats are worn");
+            var run = PvpBots.Make(new Random(1), 1200, inside);
+            Assert.IsNotNull(run.Look, "a server bot's ghost carries its outfit");
+        }
     }
 }

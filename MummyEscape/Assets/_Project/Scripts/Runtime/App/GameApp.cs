@@ -336,14 +336,6 @@ namespace MummyEscape.App
             if (paused && _cloudDirty && Online != null && Online.Account == AccountState.Account) _ = PushCloudSave();
         }
 
-        /// <summary>Creates an account for the current guest, then backs the progression up.</summary>
-        public async Task<string> CreateAccount(string username, string password)
-        {
-            string error = await Online.CreateAccountAsync(username, password);
-            if (error == null) await AfterAccountChange();
-            return error;
-        }
-
         /// <summary>Signs in to an existing account (connects the backend first when needed).</summary>
         public async Task<string> SignIn(string username, string password)
         {

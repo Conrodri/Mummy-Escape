@@ -484,8 +484,10 @@ namespace MummyEscape
             ["Se connecter avec Google Play Jeux"] = "Sign in with Google Play Games",
             ["Ta progression est sauvegardée en ligne : sur un autre téléphone Android, connecte-toi avec Google Play Jeux pour la retrouver."] =
                 "Your progress is backed up online: on another Android phone, sign in with Google Play Games to get it back.",
-            ["Ta progression n'existe que sur ce téléphone. Crée un compte pour la sauvegarder et la retrouver ailleurs : en un geste avec Google Play Jeux, ou avec un identifiant et un mot de passe, sans adresse e-mail."] =
-                "Your progress only exists on this phone. Create an account to back it up and find it elsewhere: in one tap with Google Play Games, or with a login and a password, no e-mail address.",
+            ["Ta progression n'existe que sur ce téléphone. Crée un compte avec Google Play Jeux pour la sauvegarder et la retrouver sur un autre téléphone."] =
+                "Your progress only exists on this phone. Create an account with Google Play Games to back it up and find it on another phone.",
+            ["Ta progression n'existe que sur ce téléphone. Les comptes se créent avec Google Play Jeux, sur Android."] =
+                "Your progress only exists on this phone. Accounts are created with Google Play Games, on Android.",
             ["Compte Google déjà utilisé"] = "Google account already in use",
             ["Ce compte Google Play Jeux a déjà sa propre progression. T'y connecter ? Celle de ce téléphone y sera ajoutée."] =
                 "This Google Play Games account already has its own progress. Sign in to it? This phone's progress will be added to it.",
@@ -500,23 +502,13 @@ namespace MummyEscape
             ["Se déconnecter"] = "Sign out",
             ["Supprimer mon compte"] = "Delete my account",
             ["Tu joues en invité"] = "You are playing as a guest",
-            ["Ta progression n'existe que sur ce téléphone. Crée un compte pour la sauvegarder et la retrouver ailleurs : " +
-             "il suffit d'un identifiant et d'un mot de passe, sans adresse e-mail."] =
-                "Your progress only exists on this phone. Create an account to back it up and find it elsewhere: " +
-                "all it takes is a login and a password, no email address.",
-            ["Créer un compte"] = "Create an account",
             ["Non connecté"] = "Not signed in",
             ["Continuer en invité"] = "Continue as a guest",
             ["J'ai déjà un compte"] = "I already have an account",
             ["Sans e-mail, un mot de passe oublié ne peut pas être récupéré : note-le bien."] =
                 "Without an email, a forgotten password cannot be recovered: write it down.",
-            ["Identifiant : {0}-{1} caractères (lettres, chiffres, . - _ @)."] = "Login: {0}-{1} characters (letters, digits, . - _ @).",
-            ["Mot de passe : {0}-{1} caractères, majuscule, minuscule, chiffre et symbole."] =
-                "Password: {0}-{1} characters, uppercase, lowercase, digit and symbol.",
             ["Identifiant"] = "Login",
             ["Mot de passe"] = "Password",
-            ["Confirme le mot de passe"] = "Confirm the password",
-            ["Créer"] = "Create",
             ["Les deux mots de passe diffèrent."] = "The two passwords don't match.",
             ["Se connecter"] = "Sign in",
             ["La progression de ce téléphone sera ajoutée à celle du compte."] = "This phone's progress will be added to the account's.",
