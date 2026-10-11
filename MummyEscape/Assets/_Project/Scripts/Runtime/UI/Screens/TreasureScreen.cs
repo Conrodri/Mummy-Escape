@@ -206,6 +206,17 @@ namespace MummyEscape.UI.Screens
         async void BuyPack(GoldPack pack)
         {
             if (_busy || !Store.Available) return;
+            if (!GoldWallet.CanPurchase(App) && GoldWallet.Available(App) && MummyEscape.Online.GoogleSignIn.Supported)
+            {
+                // A guest links Google Play Jeux right here, then the purchase goes on; a failure falls back to the note.
+                _busy = true;
+                Refresh();
+                try { await App.LinkGoogle(); }
+                catch (System.Exception e) { Debug.LogWarning("[Treasure] Google sign-in failed: " + e.Message); } // noloc
+                if (this == null) return;
+                _busy = false;
+                Refresh();
+            }
             if (!GoldWallet.CanPurchase(App))
             {
                 _note.text = GoldWallet.Available(App) ? Loc.T("Connecte ton compte Google Play Jeux avant un achat : tes scarabées dorés y restent attachés.")

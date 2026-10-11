@@ -61,6 +61,8 @@ namespace MummyEscape.UI
         RectTransform _safeArea;
         NavBar _nav;
         Rect _lastSafeArea;
+        GameObject _guard;
+        float _guardUntil;
 
         public UIScreen Current => _history.Count > 0 ? _history.Peek() : null;
 
@@ -83,6 +85,11 @@ namespace MummyEscape.UI
             ApplySafeArea();
             _nav = NavBar.Create(_safeArea, this);
 
+            // Above every screen: swallows the taps of a short moment after a modal opens or closes (see GuardInput).
+            _guard = UIKit.Stretch(UIKit.Rect("InputGuard", canvasGo.transform)).gameObject;
+            _guard.AddComponent<Image>().color = Color.clear;
+            _guard.SetActive(false);
+
             if (FindAnyObjectByType<EventSystem>() == null)
             {
                 var es = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
@@ -93,6 +100,7 @@ namespace MummyEscape.UI
         void Update()
         {
             if (Screen.safeArea != _lastSafeArea) ApplySafeArea();
+            if (_guard.activeSelf && Time.unscaledTime >= _guardUntil) _guard.SetActive(false);
             if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) Back();
         }
 
@@ -160,6 +168,18 @@ namespace MummyEscape.UI
         {
             if (!_modals.Remove(modal)) return;
             Deactivate(modal);
+            GuardInput();
+        }
+
+        /// <summary>
+        /// Modals open or close inside a tap's handler, so what is under the finger changes at once: a double tap,
+        /// or a touch the phone delivers late (Android does when its keyboard closes), would land on what was behind (the
+        /// friend row under "Annuler", the shade of a dialog that just opened). The guard eats the taps of that short moment.
+        /// </summary>
+        void GuardInput()
+        {
+            _guardUntil = Time.unscaledTime + 0.3f;
+            _guard.SetActive(true);
         }
 
         public void Back()
@@ -192,12 +212,14 @@ namespace MummyEscape.UI
             _modals.Clear();
         }
 
-        static void Activate(UIScreen s)
+        void Activate(UIScreen s)
         {
             bool wasActive = s.gameObject.activeSelf;
             s.gameObject.SetActive(true);
             s.OnShow();
-            if (!wasActive) s.StartCoroutine(FadeIn(s));
+            if (wasActive) return;
+            s.StartCoroutine(FadeIn(s));
+            if (s.IsModal) GuardInput(); // not full screens: the game screen would lose the first swipe of a race
         }
 
         /// <summary>Screens fade in; modals also settle from a slightly smaller size.</summary>
