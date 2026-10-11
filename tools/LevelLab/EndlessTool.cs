@@ -51,10 +51,33 @@ namespace LevelLab
             Console.WriteLine(path);
         }
 
-        /// <summary>The stored file, found from the repository root whatever the working directory.</summary>
-        static string FindFile()
+        /// <summary>--halloween: draws the Halloween act's tombs once (an existing file is never rewritten).</summary>
+        public static void RunHalloween()
         {
-            const string rel = "MummyEscape/Assets/_Project/Resources/Tombs/endless.txt";
+            string path = FindFile("halloween.txt");
+            if (File.Exists(path)) { Console.WriteLine(path + " already exists: stored tombs never change"); return; }
+            var lines = new string[Halloween.TombCount];
+            Parallel.For(0, lines.Length, i =>
+            {
+                var level = LevelGenerator.Generate(Halloween.Source(i, out int variant), variant);
+                string line = TombArchive.Write(level);
+                if (TombArchive.Load(line).ComputeHash() != level.ComputeHash()) throw new InvalidOperationException($"Halloween tomb {i + 1}: the stored line does not round-trip");
+                lines[i] = line;
+            });
+            File.WriteAllText(path, "# Mummy Rush : tombeaux stockés de l'acte Halloween (TombArchive, format 1), dans l'ordre de jeu. Ne jamais modifier ni retirer une ligne.\n"
+                                    + string.Join("\n", lines) + "\n");
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var level = TombArchive.Load(lines[i]);
+                Console.WriteLine($"{i + 1,2}. {level.Id.Mode.Letter()}{level.Id.Short,-5} {level.Width}x{level.Height}x{level.Floors}  par {level.Solution.Moves}");
+            }
+            Console.WriteLine(path);
+        }
+
+        /// <summary>The stored file, found from the repository root whatever the working directory.</summary>
+        static string FindFile(string name = "endless.txt")
+        {
+            string rel = "MummyEscape/Assets/_Project/Resources/Tombs/" + name;
             for (var dir = new DirectoryInfo(Directory.GetCurrentDirectory()); dir != null; dir = dir.Parent)
                 if (Directory.Exists(Path.Combine(dir.FullName, "MummyEscape")))
                 {

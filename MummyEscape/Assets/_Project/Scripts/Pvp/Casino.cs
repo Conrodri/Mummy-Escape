@@ -125,6 +125,18 @@ namespace MummyEscape.Pvp
             DirectPrice = 5000,
         };
 
+        /// <summary>
+        /// La roue des scarabées à cet instant : pendant Halloween (<see cref="Core.Halloween.IsOpen"/>), son légendaire s'ajoute
+        /// à ceux de la case légendaire. Les chances des cases ne changent pas : l'affichage des chances reste juste.
+        /// </summary>
+        public static WheelDef ScarabsAt(DateTime utc) => !Core.Halloween.IsOpen(utc) ? Scarabs : HalloweenScarabs;
+
+        static readonly WheelDef HalloweenScarabs = new WheelDef
+        {
+            Id = Scarabs.Id, Price = Scarabs.Price, Segments = Scarabs.Segments, DirectPrice = Scarabs.DirectPrice,
+            Legendaries = new[] { "leg_ra", "leg_sekhmet", "leg_nut", "leg_aurora", "leg_gold", Core.Halloween.WheelLegendary },
+        };
+
         /// <summary>Roue des sceaux de Maât : mêmes chances, d'autres légendaires (gardés par le serveur, d'où le préfixe pvp_).</summary>
         public static readonly WheelDef Seals = new WheelDef
         {

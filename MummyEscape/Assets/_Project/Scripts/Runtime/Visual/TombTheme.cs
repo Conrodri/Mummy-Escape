@@ -5,7 +5,7 @@ namespace MummyEscape.Visual
     /// <summary>Art direction of one act: palette, how floors and walls are drawn, lighting and ambient particles.</summary>
     public sealed class TombTheme
     {
-        public enum Style { Sandstone, Flooded, Ruins, Tech, Inferno }
+        public enum Style { Sandstone, Flooded, Ruins, Tech, Inferno, Halloween }
 
         public int Act;
         public Style Kind;
@@ -74,6 +74,16 @@ namespace MummyEscape.Visual
                 Accent = new Color32(255, 120, 30, 255), AccentDark = new Color32(232, 195, 90, 255),
                 Ambient = new Color(0.75f, 0.35f, 0.3f), AmbientIntensity = 0.5f, SconceLight = new Color(1f, 0.5f, 0.15f),
                 Motes = new Color(1f, 0.55f, 0.15f, 0.8f), MotesGlow = true, MotesFall = -0.35f,
+            },
+            // The Halloween event (Core.Halloween.Theme), outside the campaign: mossy violet stone, pumpkins and cobwebs, orange light.
+            new TombTheme
+            {
+                Act = 6, Kind = Style.Halloween, Mood = "La nuit d'Halloween : citrouilles, toiles d'araignée et feux follets.",
+                Floor = new Color32(78, 66, 92, 255), FloorDark = new Color32(42, 34, 54, 255), FloorLight = new Color32(112, 98, 128, 255),
+                Wall = new Color32(56, 46, 70, 255), WallDark = new Color32(26, 20, 36, 255), WallLight = new Color32(98, 84, 116, 255),
+                Accent = new Color32(255, 136, 30, 255), AccentDark = new Color32(150, 70, 200, 255),
+                Ambient = new Color(0.55f, 0.35f, 0.85f), AmbientIntensity = 0.5f, SconceLight = new Color(1f, 0.55f, 0.12f),
+                Motes = new Color(0.75f, 1f, 0.45f, 0.7f), MotesGlow = true, MotesFall = -0.1f,
             },
         };
     }

@@ -26,6 +26,7 @@ namespace MummyEscape.Visual
             Def("leg_nut", "Nébuleuse de Nout", LegendaryFx.Galaxy, new Color32(255, 210, 255, 255), new Color(0.75f, 0.5f, 1f)),
             Def("leg_aurora", "Aurore du Nil", LegendaryFx.Aurora, new Color32(255, 140, 220, 255), new Color(0.45f, 1f, 0.8f)),
             Def("leg_gold", "Or liquide d'Amon", LegendaryFx.Gold, new Color32(90, 220, 255, 255), new Color(1f, 0.85f, 0.4f)),
+            Def(Core.Halloween.WheelLegendary, "Feux de Samhain", LegendaryFx.Samhain, new Color32(170, 255, 110, 255), new Color(1f, 0.55f, 0.2f)), // Halloween only (Casino.ScarabsAt)
             // Seal wheel.
             Def("pvp_leg_seth", "Foudre de Seth", LegendaryFx.Storm, new Color32(255, 255, 140, 255), new Color(0.55f, 0.75f, 1f)),
             Def("pvp_leg_anubis", "Spectre d'Anubis", LegendaryFx.Spectre, new Color32(200, 255, 240, 255), new Color(0.4f, 1f, 0.85f)),
@@ -75,6 +76,7 @@ namespace MummyEscape.Visual
                 case LegendaryFx.Sobek: return new Color(0.55f, 0.95f, 0.35f);
                 case LegendaryFx.Bastet: return new Color(1f, 0.65f, 0.2f);
                 case LegendaryFx.Osiris: return new Color(0.45f, 1f, 0.5f);
+                case LegendaryFx.Samhain: return new Color(1f, 0.55f, 0.15f);
                 case LegendaryFx.Developer: return new Color(0.35f, 1f, 0.75f);
                 default: return new Color(1f, 0.35f, 0.1f);
             }

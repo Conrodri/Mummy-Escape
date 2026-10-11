@@ -68,11 +68,12 @@ namespace MummyEscape.World
             _gameAmbient = theme.Ambient;
             _gameIntensity = theme.AmbientIntensity;
             // Wet stone and neon glow more; ruins are dusty and dull.
-            _bloom.intensity.Override(theme.Kind == Visual.TombTheme.Style.Tech ? 1.5f : theme.Kind == Visual.TombTheme.Style.Inferno ? 1.35f : 1.1f);
+            _bloom.intensity.Override(theme.Kind == Visual.TombTheme.Style.Tech ? 1.5f : theme.Kind == Visual.TombTheme.Style.Inferno || theme.Kind == Visual.TombTheme.Style.Halloween ? 1.35f : 1.1f);
             _color.saturation.Override(theme.Kind == Visual.TombTheme.Style.Ruins ? -18f : theme.Kind == Visual.TombTheme.Style.Tech ? 5f : -5f);
             _color.colorFilter.Override(theme.Kind == Visual.TombTheme.Style.Flooded ? new Color(0.9f, 0.98f, 1f)
                 : theme.Kind == Visual.TombTheme.Style.Inferno ? new Color(1f, 0.9f, 0.82f)
                 : theme.Kind == Visual.TombTheme.Style.Tech ? new Color(0.92f, 0.95f, 1f)
+                : theme.Kind == Visual.TombTheme.Style.Halloween ? new Color(1f, 0.88f, 0.95f) // orange lights in a violet night
                 : new Color(1f, 0.95f, 0.88f));
         }
 

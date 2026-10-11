@@ -18,6 +18,8 @@ Le test d'empreinte porte sur la variante 0 de chaque niveau et sur quelques ar�
 
 Les tombeaux du mode sans fin ne sont pas régénérés : ils sont écrits une fois dans `MummyEscape/Assets/_Project/Resources/Tombs/endless.txt` (`TombArchive`, une ligne par tombeau, ajout seulement) par `dotnet run -c Release --project tools/LevelLab -- --endless [n]`. Changer de version ne les touche pas, et leurs classements (`endless_f/n/x`) ne portent pas la version. En revanche une modification de `Rules` ou du `Solver` s'applique à eux : `EndlessTests.StoredTombs_AllLoadAndAreSolvable` vérifie que chacun a toujours une sortie. Ne jamais renuméroter `TileType`, `TrapKind` ni `TeleporterKind` (les valeurs sont stockées) : seulement ajouter à la fin.
 
+L'acte Halloween suit la même règle : ses 10 tombeaux sont écrits une fois dans `Resources/Tombs/halloween.txt` par `-- --halloween` (l'outil refuse de réécrire un fichier existant), `HalloweenTests.StoredTombs_TenLoadAndAreSolvable_EasyThenNormal` les vérifie.
+
 ## Retrouver une ancienne version
 
 Chaque version a son tag `generator-vN` (`git tag -n1 'generator-v*'`). Pour revoir les cartes d'une version sans toucher à la copie de travail :

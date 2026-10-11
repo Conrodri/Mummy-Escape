@@ -392,8 +392,61 @@ namespace MummyEscape.Visual
                         }
                     break;
                 }
+                case TombTheme.Style.Halloween:
+                {
+                    // Old violet flagstones, mossy grout, a few dead leaves.
+                    int off = seed % 2 == 0 ? 0 : 6;
+                    for (int i = 0; i < 32; i++)
+                    {
+                        p.Set(i, 0, SandDark); p.Set(i, 15, SandDark);
+                        p.Set((off + 4) % 32, i < 15 ? i : 0, SandDark);
+                        p.Set((off + 20) % 32, i >= 15 ? i : 15, SandDark);
+                    }
+                    for (int k = 0; k < 8; k++) p.Set((int)(Px.Hash(k, 5, seed) * 31), (k % 2) * 15, new Color32(70, 110, 60, 255));
+                    for (int k = 0; k < 3; k++)
+                    {
+                        int lx = 4 + (int)(Px.Hash(k, 8, seed) * 24), ly = 3 + (int)(Px.Hash(8, k, seed) * 24);
+                        var leaf = k % 2 == 0 ? new Color32(190, 90, 30, 255) : new Color32(150, 60, 30, 255);
+                        p.Set(lx, ly, leaf); p.Set(lx + 1, ly, leaf); p.Set(lx, ly + 1, Px.Shade(leaf, -0.25f));
+                    }
+                    Cracks(p, seed, 1);
+                    break;
+                }
             }
             return p;
+        }
+
+        /// <summary>A pumpkin, carved and lit from inside when <paramref name="lit"/> (Halloween tomb, hat).</summary>
+        static void Pumpkin(Px p, int cx, int cy, int r, bool lit)
+        {
+            var orange = new Color32(240, 128, 30, 255);
+            var dark = new Color32(170, 74, 18, 255);
+            p.Ellipse(cx, cy, r + 2, r, orange);
+            p.Line(cx - r / 2, cy - r + 1, cx - r / 2, cy + r - 1, dark); p.Line(cx + r / 2, cy - r + 1, cx + r / 2, cy + r - 1, dark);
+            p.Rect(cx - 1, cy + r, cx, cy + r + 2, new Color32(70, 110, 40, 255)); // stem
+            if (!lit) return;
+            var glow = new Color32(255, 220, 90, 255);
+            p.Set(cx - 2, cy + 1, glow); p.Set(cx - 3, cy + 1, glow); p.Set(cx + 2, cy + 1, glow); p.Set(cx + 3, cy + 1, glow); // eyes
+            for (int x = cx - 3; x <= cx + 3; x++) p.Set(x, cy - 2, glow); // grin
+            p.Set(cx - 1, cy - 1, glow); p.Set(cx + 1, cy - 1, glow);
+        }
+
+        /// <summary>A cobweb hanging in a corner of a tile (corner 0 top-left, 1 top-right).</summary>
+        static void Cobweb(Px p, int corner, int size, int top = 31)
+        {
+            var silk = new Color32(220, 220, 236, 200);
+            int x0 = corner == 0 ? 0 : 31, y0 = top, sx = corner == 0 ? 1 : -1;
+            for (int k = 0; k < 4; k++) // spokes
+            {
+                float a = k * Mathf.PI / 6f;
+                p.Line(x0, y0, x0 + sx * (int)(Mathf.Cos(a) * size), y0 - (int)(Mathf.Sin(a) * size), silk);
+            }
+            for (int ring = size / 3; ring <= size; ring += size / 3) // threads between the spokes
+                for (int k = 0; k < 3; k++)
+                {
+                    float a0 = k * Mathf.PI / 6f, a1 = (k + 1) * Mathf.PI / 6f;
+                    p.Line(x0 + sx * (int)(Mathf.Cos(a0) * ring), y0 - (int)(Mathf.Sin(a0) * ring), x0 + sx * (int)(Mathf.Cos(a1) * ring), y0 - (int)(Mathf.Sin(a1) * ring), silk);
+                }
         }
 
         static void Cracks(Px p, int seed, int count)
@@ -442,6 +495,12 @@ namespace MummyEscape.Visual
                     else if (kind == 1) { p.Circle(16, 16, 6, T.Accent, true); p.Circle(16, 16, 3, new Color32(255, 230, 140, 255), true); } // lava bubble
                     else if (kind == 2) { for (int k = 0; k < 10; k++) p.Set(4 + (int)(Px.Hash(k, 3, seed) * 24), 4 + (int)(Px.Hash(3, k, seed) * 24), new Color32(255, 170, 60, 255)); } // embers
                     else Shards(p, T.AccentDark, GoldDark);
+                    break;
+                case TombTheme.Style.Halloween:
+                    if (kind == 0) Pumpkin(p, 15, 14, 5, true);
+                    else if (kind == 1) Cobweb(p, seed % 2, 12);
+                    else if (kind == 2) { foreach (int x in new[] { 9, 16, 22 }) { p.Rect(x, 8, x + 1, 12 + x % 4, new Color32(236, 226, 200, 255)); p.Set(x, 13 + x % 4, new Color32(255, 170, 40, 255)); } } // candles
+                    else Bones(p, bone, boneDark);
                     break;
             }
         }
@@ -529,6 +588,12 @@ namespace MummyEscape.Visual
                     for (int y = 0; y < 25; y++) if (Px.Hash(4 + seed, y, 3) > 0.35f) p.Set(5 + seed * 9, y, new Color32(130, 170, 175, 255));
                     for (int x = 0; x < 32; x++) for (int y = 0; y < 4; y++) if (Px.Hash(x, y, seed + 21) > 0.45f - y * 0.1f) p.Set(x, y, T.Accent);
                     break;
+                case TombTheme.Style.Halloween:
+                    Bricks(p);
+                    // Cobwebs in the corners under the cap, moss at the foot of the wall.
+                    if (seed % 2 == 0) Cobweb(p, seed % 4 == 0 ? 0 : 1, 9, 24);
+                    for (int x = 0; x < 32; x++) for (int y = 0; y < 3; y++) if (Px.Hash(x, y, seed + 31) > 0.5f - y * 0.1f) p.Set(x, y, new Color32(70, 110, 60, 255));
+                    break;
                 default:
                     Bricks(p);
                     int g = seed % 4;
@@ -587,6 +652,19 @@ namespace MummyEscape.Visual
                     if (kind == 0) { for (int y = 0; y < 26; y++) for (int x = 13; x < 19; x++) p.Set(x, y, Px.Lerp(T.Accent, new Color32(255, 230, 140, 255), Px.Hash(x, y, 2))); } // lava fall
                     else if (kind == 1) { p.Rect(10, 3, 21, 20, T.AccentDark); p.Rect(12, 5, 19, 18, Black); p.Circle(15, 11, 2, T.Accent, true); } // golden sun shrine
                     else { p.Line(4, 4, 26, 22, T.Accent); }
+                    break;
+                case TombTheme.Style.Halloween:
+                    if (kind == 0) { p.Rect(9, 3, 22, 20, StoneDark); Pumpkin(p, 15, 10, 4, true); } // niche with a jack-o'-lantern
+                    else if (kind == 1) { Cobweb(p, 0, 16, 24); Cobweb(p, 1, 10, 24); }
+                    else // bats
+                        foreach (var (bx, by) in new[] { (9, 16), (20, 11), (14, 6) })
+                        {
+                            var bat = new Color32(20, 14, 26, 255);
+                            p.Rect(bx - 1, by, bx + 1, by + 1, bat);
+                            p.Line(bx - 1, by + 1, bx - 4, by + 3, bat); p.Line(bx - 4, by + 3, bx - 5, by + 1, bat);
+                            p.Line(bx + 1, by + 1, bx + 4, by + 3, bat); p.Line(bx + 4, by + 3, bx + 5, by + 1, bat);
+                            p.Set(bx - 1, by + 2, bat); p.Set(bx + 1, by + 2, bat);
+                        }
                     break;
             }
         }
@@ -831,6 +909,13 @@ namespace MummyEscape.Visual
                 p.Rect(11, 6, 20, 20, StoneDark);
                 p.Rect(13, 8, 18, 18, new Color32(160, 250, 255, 255));
                 p.Rect(15, 8, 16, 18, new Color32(240, 255, 255, 255));
+                return p;
+            }
+            if (S == TombTheme.Style.Halloween)
+            {
+                // A jack-o'-lantern on an iron bracket.
+                p.Rect(10, 9, 21, 10, MetalDark);
+                Pumpkin(p, 16, 15, 4, true);
                 return p;
             }
             var bronze = new Color32(150, 98, 42, 255);
@@ -1262,6 +1347,15 @@ namespace MummyEscape.Visual
                         return Color32.Lerp((Color32)hue, new Color32(10, 16, 34, 255), d / 9f);
                     return Px.Hash(x / 3, y / 3, 49) > 0.85f ? new Color32(22, 34, 64, 255) : new Color32(10, 16, 34, 255);
                 }
+                case LegendaryFx.Samhain:
+                {
+                    // Halloween night: violet bandages, pumpkin-orange flames licking up, a few green will-o'-the-wisps.
+                    if (Px.Hash(x, y + frame * 2, 83) > 0.975f) return new Color32(170, 255, 110, 255);
+                    float flame = 0.95f - y / 30f + 0.35f * Mathf.Sin(Tau * (x / 7f - t) + y / 4f) + 0.2f * Px.Hash(x, y / 2 + frame, 85);
+                    if (flame > 0.85f) return new Color32(255, 214, 90, 255);
+                    if (flame > 0.6f) return new Color32(250, 128, 30, 255);
+                    return Color32.Lerp(new Color32(40, 18, 64, 255), new Color32(120, 60, 170, 255), 0.5f + 0.5f * Mathf.Sin(Tau * t + x / 6f - y / 9f));
+                }
                 default: // Magma
                 {
                     float flow = Mathf.Sin(x * 0.8f + Tau * t) + Mathf.Sin(y * 0.55f - Tau * t);
@@ -1652,6 +1746,23 @@ namespace MummyEscape.Visual
                     }
                     p.Rect(15, 27, 17, 28, GuildGold);
                     p.Set(16, 27, GuildGem);
+                    break;
+                }
+                case HatStyle.Pumpkin:
+                    // A carved pumpkin worn like a cap, lit from inside (Halloween act reward).
+                    Pumpkin(p, 16, 31, 4, true);
+                    p.Line(17, 36, 19, 37, new Color32(70, 110, 40, 255)); // curling stem
+                    break;
+                case HatStyle.Witch:
+                {
+                    // Pointed witch hat with a wide brim and a buckled band (Halloween treasure).
+                    var felt = new Color32(70, 40, 96, 255);
+                    var feltDark = new Color32(40, 22, 58, 255);
+                    p.Rect(7, 26, 25, 27, feltDark);
+                    p.Poly(felt, new Vector2(10.5f, 27.5f), new Vector2(21.5f, 27.5f), new Vector2(19, 37.5f), new Vector2(15, 34.5f));
+                    p.Line(19, 37, 22, 36, felt); // the bent tip
+                    p.Rect(11, 28, 21, 29, new Color32(255, 136, 30, 255));
+                    p.Rect(15, 28, 17, 29, Gold);
                     break;
                 }
                 case HatStyle.Pschent:

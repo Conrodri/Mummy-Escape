@@ -18,6 +18,15 @@ namespace MummyEscape.UI.Screens
         public static readonly Color GoldColor = new Color32(255, 214, 64, 255);
         const int Columns = 4;
 
+        /// <summary>The exclusives shown: those on sale now (event ones during their event), plus any the player owns.</summary>
+        public static System.Collections.Generic.List<GoldItem> Exclusives(App.GameApp app)
+        {
+            var list = new System.Collections.Generic.List<GoldItem>();
+            foreach (var i in GoldShop.Exclusives)
+                if (GoldShop.OnSale(i, System.DateTime.UtcNow) || app.Save.Data.OwnedSkins.Contains(i.SkinId)) list.Add(i);
+            return list;
+        }
+
         Text _gold, _coins, _note;
         RectTransform _list;
         ScrollRect _scroll;
@@ -86,12 +95,13 @@ namespace MummyEscape.UI.Screens
             PassCard();
 
             Section("Exclusivités du Trésor", "Introuvables ailleurs : ni en boutique, ni au casino.");
-            for (int i = 0; i < GoldShop.Exclusives.Count; i += Columns)
+            var exclusives = Exclusives(App);
+            for (int i = 0; i < exclusives.Count; i += Columns)
             {
                 var row = UIKit.Row(_list, 340, 14);
                 for (int k = 0; k < Columns; k++)
                 {
-                    if (i + k < GoldShop.Exclusives.Count) ItemCard(row.transform, GoldShop.Exclusives[i + k]);
+                    if (i + k < exclusives.Count) ItemCard(row.transform, exclusives[i + k]);
                     else UIKit.Size(UIKit.Rect("Spacer", row.transform), -1, 0, 1); // noloc
                 }
             }

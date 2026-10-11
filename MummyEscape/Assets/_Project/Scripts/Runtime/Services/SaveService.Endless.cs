@@ -22,6 +22,23 @@ namespace MummyEscape.Services
             return p;
         }
 
+        // ---- Halloween event (same file: another act of stored tombs)
+
+        public bool HalloweenDone => Data.HalloweenCleared >= Halloween.TombCount;
+
+        /// <summary>The tomb a Halloween run starts on: the next one to escape, the first again once the act is finished.</summary>
+        public int HalloweenNext => HalloweenDone ? 1 : Data.HalloweenCleared + 1;
+
+        /// <summary>An escape from the next Halloween tomb moves the act on; the last one gives the act's skin. True when it just finished the act.</summary>
+        public bool ApplyHalloween(int tomb, bool won)
+        {
+            if (!won || tomb != Data.HalloweenCleared + 1) return false;
+            Data.HalloweenCleared = tomb;
+            if (HalloweenDone && !Data.OwnedSkins.Contains(Halloween.RewardSkin)) Data.OwnedSkins.Add(Halloween.RewardSkin);
+            Save();
+            return HalloweenDone;
+        }
+
         EnergyMeter EndlessMeter => Data.EndlessEnergy ??= new EnergyMeter();
 
         public int EndlessEnergyLeft => Energy.Left(EndlessMeter, EnergyConfig.EndlessMax, NowMs);

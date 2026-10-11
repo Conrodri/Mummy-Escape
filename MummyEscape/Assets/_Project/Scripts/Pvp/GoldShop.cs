@@ -26,6 +26,8 @@ namespace MummyEscape.Monetization
     {
         public string SkinId;
         public int Gold;
+        /// <summary>Sold only while the Halloween event is open (<see cref="Core.Halloween.IsOpen"/>), server-checked.</summary>
+        public bool Halloween;
     }
 
     /// <summary>
@@ -87,6 +89,10 @@ namespace MummyEscape.Monetization
             new GoldItem { SkinId = "gold_torch_ruby", Gold = 25 }, // noloc
             new GoldItem { SkinId = "gold_shoes_horus", Gold = 25 }, // noloc
             new GoldItem { SkinId = "gold_hat_sun", Gold = 30 }, // noloc
+            new GoldItem { SkinId = Core.Halloween.GoldSkin, Gold = 30, Halloween = true },
         };
+
+        /// <summary>For sale at that instant: event items only during their event.</summary>
+        public static bool OnSale(GoldItem item, System.DateTime utc) => item != null && (!item.Halloween || Core.Halloween.IsOpen(utc));
     }
 }

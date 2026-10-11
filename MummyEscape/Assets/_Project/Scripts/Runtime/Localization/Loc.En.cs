@@ -1268,6 +1268,20 @@ namespace MummyEscape
             ["Franchis un tombeau sans fin pour entrer au classement"] = "Escape an endless tomb to enter the leaderboard",
             ["Plus d'énergie pour le mode sans fin : un point par tombeau."] = "More energy for endless mode: one point per tomb.",
             ["Énergie sans fin : {0}"] = "Endless energy: {0}",
+            // ---------------------------------------------------------------- Halloween event
+            ["Halloween"] = "Halloween",
+            ["terminé"] = "done",
+            ["jusqu'au 7 novembre"] = "until 7 November",
+            ["Acte Halloween terminé !"] = "Halloween act complete!",
+            ["Tombeau {0} franchi !"] = "Tomb {0} escaped!",
+            ["Tu gagnes « {0} » et le thème d'accueil Halloween."] = "You win “{0}” and the Halloween home theme.",
+            ["{0} / {1} tombeaux"] = "{0} / {1} tombs",
+            ["Événement Halloween, du 24 octobre au 7 novembre."] = "Halloween event, 24 October to 7 November.",
+            ["L'événement Halloween est terminé : cet objet n'est plus en vente."] = "The Halloween event is over: this item is no longer for sale.",
+            ["Citrouille d'Halloween"] = "Halloween Pumpkin",
+            ["Momie de minuit"] = "Midnight Mummy",
+            ["Chapeau de sorcière"] = "Witch Hat",
+            ["Feux de Samhain"] = "Samhain Fires",
         };
     }
 }
