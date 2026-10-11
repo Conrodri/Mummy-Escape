@@ -54,6 +54,10 @@ namespace MummyEscape.Monetization
             return null;
         }
 
+        /// <summary>Skins only the server's wallet gives: treasure exclusives (gold_…) and pass pieces (pass_…).</summary>
+        public static bool IsPaid(string skinId) =>
+            skinId != null && (skinId.StartsWith("gold_", System.StringComparison.Ordinal) || skinId.StartsWith("pass_", System.StringComparison.Ordinal)); // noloc
+
         public static ScarabOffer Offer(string id)
         {
             foreach (var o in ScarabOffers) if (o.Id == id) return o;

@@ -247,10 +247,12 @@ namespace MummyEscape.Pvp.Server
         public Task<WalletResponse> BuyPass(IExecutionContext ctx) => Server(ctx).BuyPassAsync(ctx.PlayerId);
 
         [CloudCodeFunction("BuyTiers")]
-        public Task<WalletResponse> BuyTiers(IExecutionContext ctx) => Server(ctx).BuyTiersAsync(ctx.PlayerId);
+        public Task<WalletResponse> BuyTiers(IExecutionContext ctx, string requestId = null) => Server(ctx).BuyTiersAsync(ctx.PlayerId, requestId);
 
+        /// <summary><paramref name="requestId"/> : rejouer la même demande ne débite pas deux fois (absent chez les anciens clients).</summary>
         [CloudCodeFunction("BuyScarabs")]
-        public Task<WalletResponse> BuyScarabs(IExecutionContext ctx, string offerId) => Server(ctx).BuyScarabsAsync(ctx.PlayerId, offerId);
+        public Task<WalletResponse> BuyScarabs(IExecutionContext ctx, string offerId, string requestId = null) =>
+            Server(ctx).BuyScarabsAsync(ctx.PlayerId, offerId, requestId);
 
         [CloudCodeFunction("BuyGoldItem")]
         public Task<WalletResponse> BuyGoldItem(IExecutionContext ctx, string skinId) => Server(ctx).BuyGoldItemAsync(ctx.PlayerId, skinId);

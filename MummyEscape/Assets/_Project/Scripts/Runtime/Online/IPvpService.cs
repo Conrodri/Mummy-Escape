@@ -100,8 +100,12 @@ namespace MummyEscape.Online
         /// <summary>Credits a Play Store purchase once the server has checked it with Google (the Play Billing purchase token).</summary>
         Task<WalletResponse> VerifyPurchaseAsync(string productId, string purchaseToken);
         Task<WalletResponse> BuyPassAsync();
-        Task<WalletResponse> BuyTiersAsync();
-        Task<WalletResponse> BuyScarabsAsync(string offerId);
+        /// <summary>
+        /// The phone delivers these two itself: <paramref name="requestId"/> is never debited twice, and the wallet lists it
+        /// (Wallet.Requests) so a lost answer is delivered later.
+        /// </summary>
+        Task<WalletResponse> BuyTiersAsync(string requestId);
+        Task<WalletResponse> BuyScarabsAsync(string offerId, string requestId);
         Task<WalletResponse> BuyGoldItemAsync(string skinId);
         /// <summary>The pass rewards that give golden scarabs or a skin (the scarab ones stay on the device).</summary>
         Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers);

@@ -23,6 +23,11 @@ namespace MummyEscape.Pvp
         public List<int> PremiumClaimed = new List<int>();
         /// <summary>Derniers achats crédités (identifiants de commande), pour l'historique du joueur.</summary>
         public List<string> Orders = new List<string>();
+        /// <summary>
+        /// Derniers achats en or que le téléphone livre lui-même (scarabées, paliers), par identifiant de demande : rejouer une
+        /// demande ne débite pas deux fois, et un téléphone qui a perdu la réponse retrouve ici ce qu'il doit livrer.
+        /// </summary>
+        public List<string> Requests = new List<string>();
     }
 
     [Serializable]
@@ -63,6 +68,7 @@ namespace MummyEscape.Pvp
     {
         public const string OrdersCollection = "pvp_orders";
         const int OrdersKept = 50;
+        const int RequestsKept = 50;
 
         /// <summary>Le magasin réel (null : aucun achat réel n'est crédité).</summary>
         public IPurchaseVerifier Purchases;
@@ -142,15 +148,25 @@ namespace MummyEscape.Pvp
             new string(orderId.Select(c => c == '.' ? '_' : c)
                 .Where(c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_').Take(120).ToArray());
 
-        /// <summary>Retire <paramref name="price"/> du portefeuille et applique <paramref name="grant"/> ; "GOLD" s'il en manque.</summary>
-        async Task<WalletResponse> SpendAsync(string me, int price, Func<Wallet, string> grant)
+        /// <summary>
+        /// Retire <paramref name="price"/> du portefeuille et applique <paramref name="grant"/> ; "GOLD" s'il en manque. Avec un
+        /// <paramref name="requestId"/>, une demande déjà acceptée est rendue telle quelle, sans débiter de nouveau.
+        /// </summary>
+        async Task<WalletResponse> SpendAsync(string me, int price, Func<Wallet, string> grant, string requestId = null)
         {
+            if (requestId != null && (requestId.Length == 0 || requestId.Length > 64)) return new WalletResponse { Error = "UNKNOWN_PRODUCT" };
             string error = null;
             var data = await Update(me, d =>
             {
                 var w = WalletOf(d);
+                w.Requests ??= new List<string>();
+                if (requestId != null && w.Requests.Contains(requestId)) return;
                 error = w.Gold < price ? "GOLD" : grant(w);
-                if (error == null) w.Gold -= price;
+                if (error != null) return;
+                w.Gold -= price;
+                if (requestId == null) return;
+                w.Requests.Add(requestId);
+                if (w.Requests.Count > RequestsKept) w.Requests.RemoveRange(0, w.Requests.Count - RequestsKept);
             });
             return new WalletResponse { Wallet = WalletOf(data), Error = error };
         }
@@ -168,13 +184,13 @@ namespace MummyEscape.Pvp
         }
 
         /// <summary>10 paliers du pass : le serveur prend l'or, le jeu avance la progression (gardée par l'appareil).</summary>
-        public Task<WalletResponse> BuyTiersAsync(string me) => SpendAsync(me, GoldShop.TierBundlePrice, _ => null);
+        public Task<WalletResponse> BuyTiersAsync(string me, string requestId = null) => SpendAsync(me, GoldShop.TierBundlePrice, _ => null, requestId);
 
         /// <summary>Des scarabées contre de l'or : le jeu crédite les scarabées (monnaie de l'appareil) quand le serveur a pris l'or.</summary>
-        public Task<WalletResponse> BuyScarabsAsync(string me, string offerId)
+        public Task<WalletResponse> BuyScarabsAsync(string me, string offerId, string requestId = null)
         {
             var offer = GoldShop.Offer(offerId);
-            return offer == null ? Task.FromResult(new WalletResponse { Error = "UNKNOWN_PRODUCT" }) : SpendAsync(me, offer.Gold, _ => null);
+            return offer == null ? Task.FromResult(new WalletResponse { Error = "UNKNOWN_PRODUCT" }) : SpendAsync(me, offer.Gold, _ => null, requestId);
         }
 
         public Task<WalletResponse> BuyGoldItemAsync(string me, string skinId)
@@ -236,7 +252,7 @@ namespace MummyEscape.Pvp
             var look = Developers.Restrict(PlayerLook.Sanitize(claimed), playerId);
             if (look == null || !IsHuman(playerId)) return look;
             var owned = WalletOf(await Update(playerId)).Skins;
-            string Keep(string id) => id != null && (id.StartsWith("gold_", StringComparison.Ordinal) || id.StartsWith("pass_", StringComparison.Ordinal)) && !owned.Contains(id) ? null : id;
+            string Keep(string id) => GoldShop.IsPaid(id) && !owned.Contains(id) ? null : id;
             look.Mummy = Keep(look.Mummy);
             look.Color = Keep(look.Color);
             look.Torch = Keep(look.Torch);

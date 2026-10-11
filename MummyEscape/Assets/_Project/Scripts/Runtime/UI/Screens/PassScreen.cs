@@ -350,11 +350,10 @@ namespace MummyEscape.UI.Screens
                 {
                     if (_busy || save.PassTier >= BattlePass.Tiers) return;
                     _busy = true;
-                    string error = await GoldWallet.RunAsync(App, p => p.BuyTiersAsync());
+                    string error = await GoldWallet.SpendAsync(App, SaveService.TiersSpend);
                     _busy = false;
                     if (this == null) return;
-                    if (error != null) { _note.text = GoldWallet.ErrorText(error); return; }
-                    save.SkipTiers();
+                    if (error != null) { _note.text = GoldWallet.SpendErrorText(error); return; }
                     App.Audio.Play(Sfx.Coin);
                     OnShow();
                     _note.text = Loc.F("Palier {0} atteint !", save.PassTier);
