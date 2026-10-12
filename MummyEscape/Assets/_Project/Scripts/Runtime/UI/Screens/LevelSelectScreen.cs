@@ -34,9 +34,6 @@ namespace MummyEscape.UI.Screens
             UIKit.Place(_glow.rectTransform, 0.5f, 1f, 2200, 1600, 0, -250);
 
             var title = Header("Campagne");
-            // The music of the tombs, with the solo game it belongs to.
-            var jukebox = UIKit.IconButton(title.transform.parent, UISprites.Note, () => Router.Open<JukeboxScreen>(), 92);
-            UIKit.Place((RectTransform)jukebox.transform, 1, 0.5f, 92, 92, -36, 0);
             // The tutorial corridor, to walk again whenever a trap is forgotten.
             var tutorial = UIKit.IconButton(title.transform.parent, UISprites.Hand, () => { Router.Open<HudScreen>(); App.Game.StartTutorial(); }, 92);
             UIKit.Place((RectTransform)tutorial.transform, 1, 0.5f, 92, 92, -148, 0);
@@ -123,12 +120,10 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             App.Lighting.SetMood(false);
-            App.Audio.PlayMusic(0);
             var furthest = App.Save.FurthestUnlocked();
             if (!_modeChosen) _mode = furthest.Mode;
             SetMode(_mode);
             _sections.Select(0);
-            App.Audio.PrefetchMusic(furthest.Act); // its theme is ready when the level starts
         }
 
         bool ModeOpen(Difficulty mode) => Progression.IsModeUnlocked(mode, App.Save.IsCompleted);

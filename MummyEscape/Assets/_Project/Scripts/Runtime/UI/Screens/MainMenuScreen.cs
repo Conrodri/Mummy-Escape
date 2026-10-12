@@ -139,7 +139,6 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             App.Lighting.SetMood(false);
-            App.Audio.PlayMusic(0);
             Services.Notifications.MaybeAsk(App);
             ApplyTheme();
             FitMummy();

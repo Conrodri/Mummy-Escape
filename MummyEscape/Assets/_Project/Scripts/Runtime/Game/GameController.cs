@@ -75,7 +75,6 @@ namespace MummyEscape.Game
             Match = null;
             Pace = null;
             CurrentLevel = id;
-            _app.Audio.PlayMusic(id.Act); // renders (if needed) while the maze is generated
             LevelLoading?.Invoke(id);
 
             // Every run draws a new maze of the level (variant), usually prefetched while the previous run was played.
@@ -119,7 +118,6 @@ namespace MummyEscape.Game
             Pace = null;
             InTutorial = true;
             CurrentLevel = Tutorial.Id;
-            _app.Audio.PlayMusic(Tutorial.Id.Act);
             LevelLoading?.Invoke(Tutorial.Id);
             Setup(Tutorial.Build());
             LevelStarted?.Invoke();
@@ -174,7 +172,6 @@ namespace MummyEscape.Game
             Pace = null;
             var id = PvpArena.LevelFor(match.Seed);
             CurrentLevel = id;
-            _app.Audio.PlayMusic(id.Act);
             LevelLoading?.Invoke(id);
             Level level;
             try
@@ -475,9 +472,6 @@ namespace MummyEscape.Game
             }
             if (duel) UpdateDuel();
             RepeatHeld();
-            // A floor may have its own music (Resources/Music/act{n}_f{floor}); no-op while the track playing fits.
-            if (Session != null && Session.Status == SessionStatus.Playing && !Previewing)
-                _app.Audio.PlayLevelMusic(MusicTheme, Session.Position.Floor + 1);
         }
 
         void LateUpdate()

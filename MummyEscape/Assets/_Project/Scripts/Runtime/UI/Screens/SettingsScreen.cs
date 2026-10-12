@@ -32,7 +32,7 @@ namespace MummyEscape.UI.Screens
 
             var sound = UIKit.Card(body);
             UIKit.SectionTitle(sound, "Son");
-            UIKit.Slider(sound, "Musique", s.MusicVolume, s.SetMusicVolume);
+            UIKit.Slider(sound, "Ambiance", s.MusicVolume, s.SetMusicVolume);
             UIKit.Slider(sound, "Effets sonores", s.SfxVolume, v => s.SetSfxVolume(v));
             UIKit.Toggle(sound, "Vibrations", s.Haptics, s.SetHaptics);
 

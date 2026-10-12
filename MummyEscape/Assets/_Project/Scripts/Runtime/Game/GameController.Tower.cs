@@ -34,7 +34,6 @@ namespace MummyEscape.Game
             var id = Tower.Source(floor);
             TowerFloor = floor;
             CurrentLevel = id;
-            _app.Audio.PlayMusic(id.Act);
             LevelLoading?.Invoke(id);
             Level level;
             try

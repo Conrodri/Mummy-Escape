@@ -58,7 +58,6 @@ namespace MummyEscape.Game
                 EndlessMode = mode;
                 EndlessTomb = index + 1;
                 CurrentLevel = id;
-                _app.Audio.PlayMusic(id.Act);
                 LevelLoading?.Invoke(id);
                 level = await Task.Run(() => TombArchive.Load(line));
             }

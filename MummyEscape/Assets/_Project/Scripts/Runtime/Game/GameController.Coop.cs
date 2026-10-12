@@ -120,7 +120,6 @@ namespace MummyEscape.Game
             _coopOver = _coopAwait = _mateReady = _mateBusy = false;
             _coopMateSteps.Clear();
             CurrentLevel = tomb.Level.Id;
-            _app.Audio.PlayMusic(CurrentLevel.Act);
             LevelLoading?.Invoke(CurrentLevel);
             Setup(tomb.Level, Coop.Mummy(_myMummy));
 

@@ -93,7 +93,6 @@ namespace MummyEscape.Game
             RivalSide = match.OtherSide(link.Me);
             var id = RelayArena.LevelFor(match.Seed);
             CurrentLevel = id;
-            _app.Audio.PlayMusic(id.Act);
             RelayMap map;
             try
             {

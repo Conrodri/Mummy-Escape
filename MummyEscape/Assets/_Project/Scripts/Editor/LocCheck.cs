@@ -18,7 +18,7 @@ namespace MummyEscape.EditorTools
     {
         static readonly string[] Roots = { "Runtime", "Online.UGS" };
         // Their texts are not keys: legal documents have per-language copies, the tables are the translations.
-        static readonly string[] SkipFiles = { "LegalTexts.cs", "LegalTexts.En.cs", "Loc.En.cs", "Loc.cs", "MusicComposer.cs" };
+        static readonly string[] SkipFiles = { "LegalTexts.cs", "LegalTexts.En.cs", "Loc.En.cs", "Loc.cs" };
         static readonly string[] SkipLineMarkers = { "Debug.Log", "Shader.Find", "///", "[CliCommand", "PlayerPrefs.", "Resources.Load", "AndroidJava", "CallStatic", "throw new", "Rect(\"", "GameObject(\"", "Find(", "nameof(", "AddComponent",
             "Child<", "Image(", "Panel(parent, \"", "Create(\"", "string name =", "[Tooltip", "[Header(", "noloc" };
         // A capitalised word ("Jouer"), several words, or an accent; identifiers (ids, paths, keys) are left out.

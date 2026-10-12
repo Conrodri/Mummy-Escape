@@ -19,8 +19,6 @@ namespace MummyEscape.Game
         public int HalloweenTomb { get; private set; }
         public bool InHalloween => HalloweenTomb > 0;
 
-        /// <summary>Music of the tomb played: the Halloween track (Resources/Music/act6) when there is one, else the act's.</summary>
-        int MusicTheme => InHalloween && MusicCatalog.For(Halloween.Theme, 0).Count > 0 ? Halloween.Theme : CurrentLevel.Act;
 
         static List<string> _halloweenLines;
 
@@ -49,7 +47,6 @@ namespace MummyEscape.Game
                 var id = TombArchive.Read(line).Id;
                 HalloweenTomb = tomb;
                 CurrentLevel = id;
-                _app.Audio.PlayMusic(MusicTheme);
                 LevelLoading?.Invoke(id);
                 level = await Task.Run(() => TombArchive.Load(line));
             }
