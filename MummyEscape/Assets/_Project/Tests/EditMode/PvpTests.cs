@@ -20,12 +20,17 @@ namespace MummyEscape.Tests
             Assert.AreEqual(19, Elo.Points(100), "one point less every 100 duels");
             Assert.AreEqual(10, Elo.Points(1000));
             Assert.AreEqual(10, Elo.Points(5000), "never under 10");
-            Assert.AreEqual(1220, Elo.NewRating(1200, 1000, DuelResult.Win, 50), "the rival's rating does not matter");
-            Assert.AreEqual(980, Elo.NewRating(1000, 1200, DuelResult.Loss, 50));
-            Assert.AreEqual(1200, Elo.NewRating(1200, 1000, DuelResult.Draw, 50), "nothing for a draw");
-            Assert.AreEqual(1210, Elo.NewRating(1200, 1000, DuelResult.Win, 50, vsBot: true), "half against a bot");
-            Assert.AreEqual(1018, Elo.NewRating(1000, 1000, DuelResult.Win, 250), "18 points from the 200th duel");
-            Assert.That(Elo.NewRating(110, 2000, DuelResult.Loss, 3), Is.GreaterThanOrEqualTo(PvpConfig.MinElo));
+            Assert.AreEqual(1220, Elo.NewRating(1200, DuelResult.Win, 50), "a win pays the full stake in every league");
+            Assert.AreEqual(1200, Elo.NewRating(1200, DuelResult.Draw, 50), "nothing for a draw");
+            Assert.AreEqual(8, Elo.Loss(800, 50), "bronze loses 40 % of the stake");
+            Assert.AreEqual(12, Elo.Loss(1000, 50), "argent 60 %");
+            Assert.AreEqual(16, Elo.Loss(1200, 50), "or 80 %");
+            Assert.AreEqual(20, Elo.Loss(1400, 50), "platine: the full stake");
+            Assert.AreEqual(20, Elo.Loss(1700, 50), "diamant too");
+            Assert.AreEqual(1184, Elo.NewRating(1200, DuelResult.Loss, 50));
+            Assert.AreEqual(1018, Elo.NewRating(1000, DuelResult.Win, 250), "18 points from the 200th duel");
+            Assert.AreEqual(4, Elo.Loss(800, 1000), "10 × 40 %");
+            Assert.That(Elo.NewRating(110, DuelResult.Loss, 3), Is.GreaterThanOrEqualTo(PvpConfig.MinElo));
         }
 
         [Test]

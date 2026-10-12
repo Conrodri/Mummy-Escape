@@ -1,6 +1,6 @@
 // Simulates a week of ghost duels: human-like bots (HumanBot) find duels, play the real duel tombs and submit their runs to
 // the real PvP server logic (PvpServer on an in-memory store). Nothing touches Unity Cloud.
-//   dotnet run -c Release --project tools/PvpSim [-- players days seed]
+//   dotnet run -c Release --project tools/PvpSim [-- players days seed] [bots]
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +27,8 @@ if (args.Length > 0 && args[0] == "calibrate")
     return;
 }
 
+bool allowBots = args.Contains("bots"); // "bots": a league bot after a minute without a human ghost, as in the game
+args = args.Where(a => a != "bots").ToArray();
 int players = args.Length > 0 ? int.Parse(args[0]) : 60;
 int days = args.Length > 1 ? int.Parse(args[1]) : 5;
 int seed = args.Length > 2 ? int.Parse(args[2]) : 2026;
@@ -52,7 +54,7 @@ for (int i = 0; i < players; i++)
 var byId = bots.ToDictionary(b => b.Id);
 
 // ------------------------------------------------------------------ metrics
-int duels = 0, withGhost = 0, invalid = 0, resolved = 0, upsets = 0, clearFavourites = 0, draws = 0;
+int duels = 0, withGhost = 0, vsBots = 0, invalid = 0, resolved = 0, upsets = 0, clearFavourites = 0, draws = 0;
 var outcomes = new Dictionary<RunOutcome, int>();
 var eloGaps = new List<int>();
 var skillGaps = new List<double>();
@@ -86,7 +88,8 @@ for (int day = 0; day < days; day++)
         now = at;
         for (int k = 0; k < count; k++)
         {
-            var find = server.FindDuelAsync(bot.Id, DifficultyTable.GeneratorVersion).Result;
+            var find = server.FindDuelAsync(bot.Id, DifficultyTable.GeneratorVersion, allowBots).Result;
+            if (find.Searching) { now = now.AddMilliseconds(PvpConfig.BotFallbackMs + 500); find = server.FindDuelAsync(bot.Id, DifficultyTable.GeneratorVersion, allowBots).Result; } // the game asks again after the wait
             if (find.Error != null) { Console.WriteLine("FindDuel: " + find.Error); continue; }
             duels++;
             var level = PvpServer.Arena(find.Seed);
@@ -94,7 +97,7 @@ for (int day = 0; day < days; day++)
             {
                 withGhost++;
                 eloGaps.Add(Math.Abs(find.MyElo - find.Ghost.Elo));
-                skillGaps.Add(Math.Abs(bot.Skill - byId[find.Ghost.PlayerId].Skill));
+                if (!find.Ghost.Bot) skillGaps.Add(Math.Abs(bot.Skill - byId[find.Ghost.PlayerId].Skill)); else vsBots++;
                 ghostAgesMin.Add((new DateTimeOffset(now).ToUnixTimeMilliseconds() - find.Ghost.CreatedAtUnixMs) / 60000.0);
             }
 
@@ -133,8 +136,8 @@ for (int day = 0; day < days; day++)
             {
                 resolved++;
                 if (res.Result == DuelResult.Draw) draws++;
-                var rival = byId[find.Ghost.PlayerId];
-                if (Math.Abs(bot.Skill - rival.Skill) >= 0.2 && res.Result != DuelResult.Draw)
+                var rival = find.Ghost.Bot ? null : byId[find.Ghost.PlayerId];
+                if (rival != null && Math.Abs(bot.Skill - rival.Skill) >= 0.2 && res.Result != DuelResult.Draw)
                 {
                     clearFavourites++;
                     bool favouriteWon = (bot.Skill > rival.Skill) == (res.Result == DuelResult.Win);
@@ -156,7 +159,7 @@ double P90(List<double> l) { if (l.Count == 0) return 0; var s = l.OrderBy(x => 
 
 Console.WriteLine();
 Console.WriteLine($"=== {players} joueurs, {days} jours, {duels} duels ===");
-Console.WriteLine($"Contre un fantôme : {withGhost} ({Pct(withGhost, duels)}) ; le reste a couru en premier (fantôme mis en file).");
+Console.WriteLine($"Contre un fantôme : {withGhost} ({Pct(withGhost, duels)}), dont {vsBots} bots ; le reste a couru en premier (fantôme mis en file).");
 Console.WriteLine($"Duels résolus : {resolved}, nuls : {draws}, courses refusées par le serveur : {invalid} {string.Join(", ", invalidReasons.Select(kv => kv.Key + "=" + kv.Value))}");
 Console.WriteLine($"Issues : {string.Join(", ", outcomes.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key} {Pct(kv.Value, duels)}"))}");
 var ft = finishTimes.Select(x => (double)x).ToList();

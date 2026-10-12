@@ -29,14 +29,16 @@ namespace MummyEscape.Pvp
         }
 
         /// <summary>
-        /// Nouveau classement de A après un duel : plus ou moins la mise, rien pour un nul. Contre un bot (<paramref name="vsBot"/>),
-        /// la mise est divisée par deux : un bot tient l'Elo de la division sans en être un vrai membre.
+        /// Points lost on a defeat in this league: the full stake from Platine on, less below (<see cref="PvpConfig.LossPercent"/>),
+        /// so every active player climbs to the league of his level and only merit climbs above.
         /// </summary>
-        public static int NewRating(int ratingA, int ratingB, DuelResult resultForA, int totalDuelsA, bool vsBot = false)
+        public static int Loss(int rating, int totalDuels) =>
+            Math.Max(1, Points(totalDuels) * PvpConfig.LossPercent[(int)Leagues.FromElo(rating)] / 100);
+
+        /// <summary>Nouveau classement de A après un duel : plus la mise sur une victoire, moins la perte de sa ligue sur une défaite, rien pour un nul.</summary>
+        public static int NewRating(int ratingA, DuelResult resultForA, int totalDuelsA)
         {
-            int points = Points(totalDuelsA);
-            if (vsBot) points = (points + 1) / 2;
-            int delta = resultForA == DuelResult.Win ? points : resultForA == DuelResult.Loss ? -points : 0;
+            int delta = resultForA == DuelResult.Win ? Points(totalDuelsA) : resultForA == DuelResult.Loss ? -Loss(ratingA, totalDuelsA) : 0;
             return Math.Max(PvpConfig.MinElo, ratingA + delta);
         }
     }
@@ -376,10 +378,10 @@ namespace MummyEscape.Pvp
         /// Applique le résultat d'un duel résolu. Retourne les sceaux gagnés : <see cref="PvpConfig.WinSeals"/> par victoire,
         /// <see cref="PvpConfig.FirstLossSeals"/> pour la 1re défaite (ou nul) du jour, puis 1 de moins à chacune, jusqu’à 0.
         /// </summary>
-        public static int ApplyResult(PlayerPvpData d, string opponentId, int opponentElo, DuelResult result, bool vsBot = false)
+        public static int ApplyResult(PlayerPvpData d, string opponentId, int opponentElo, DuelResult result)
         {
             int seals = 0;
-            d.Elo = Elo.NewRating(d.Elo, opponentElo, result, d.TotalDuels, vsBot);
+            d.Elo = Elo.NewRating(d.Elo, result, d.TotalDuels);
             d.TotalDuels++;
             if (result == DuelResult.Win) { d.Wins++; d.SeasonWins++; }
             else if (result == DuelResult.Loss) { d.Losses++; d.SeasonLosses++; }

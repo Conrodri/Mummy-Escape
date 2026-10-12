@@ -11,6 +11,8 @@ namespace MummyEscape.Pvp
         public const int PointsStart = 20;              // points won or lost per duel over the first PointsStepDuels duels
         public const int PointsMin = 10;                // the stake never shrinks under this
         public const int PointsStepDuels = 100;         // one point less every this many duels played
+        /// <summary>Share of the stake lost on a defeat, per league (Bronze, Argent, Or, Platine, Diamant): a win always pays the full stake.</summary>
+        public static readonly int[] LossPercent = { 40, 60, 80, 100, 100 };
         public const int MinElo = 100;
 
         // --- Ligues (seuil minimal de chaque ligue) ---

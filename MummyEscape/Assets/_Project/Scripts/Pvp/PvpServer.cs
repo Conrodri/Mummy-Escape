@@ -250,7 +250,7 @@ namespace MummyEscape.Pvp
             var mine = await Update(me, d =>
             {
                 gained = abandoned ? 0 : DuelBookkeeping.RecordDuelPlayed(d, durationMs, utc, isTop100);
-                gained += DuelBookkeeping.ApplyResult(d, ghost.PlayerId, oppEloBefore, resultForMe, bot);
+                gained += DuelBookkeeping.ApplyResult(d, ghost.PlayerId, oppEloBefore, resultForMe);
                 d.Ranked = true;
             });
             var theirs = bot ? null : await Update(ghost.PlayerId, d =>

@@ -310,8 +310,8 @@ namespace MummyEscape.Pvp
             var duoA = await Shared<Duo>(DuosCollection, b.A.TeamId);
             var duoB = await Shared<Duo>(DuosCollection, b.B.TeamId);
             int eloA = duoA?.Elo ?? b.A.Elo, eloB = duoB?.Elo ?? b.B.Elo;
-            int newA = Elo.NewRating(eloA, eloB, b.Result, duoA?.Matches ?? 50);
-            int newB = Elo.NewRating(eloB, eloA, DuelResolver.Invert(b.Result), duoB?.Matches ?? 50);
+            int newA = Elo.NewRating(eloA, b.Result, duoA?.Matches ?? 50);
+            int newB = Elo.NewRating(eloB, DuelResolver.Invert(b.Result), duoB?.Matches ?? 50);
             await Shared<TeamBattle>(BattlesCollection, b.Id, x => { x.EloDeltaA = newA - eloA; x.EloDeltaB = newB - eloB; return x; });
             await SettleDuoAsync(b.A.TeamId, b.Id, newA, b.Result);
             await SettleDuoAsync(b.B.TeamId, b.Id, newB, DuelResolver.Invert(b.Result));
@@ -350,8 +350,8 @@ namespace MummyEscape.Pvp
             var ga = await Shared<Guild>(GuildsCollection, b.A.TeamId);
             var gb = await Shared<Guild>(GuildsCollection, b.B.TeamId);
             int eloA = ga?.WarElo ?? b.A.Elo, eloB = gb?.WarElo ?? b.B.Elo;
-            int newA = Elo.NewRating(eloA, eloB, b.Result, 50);
-            int newB = Elo.NewRating(eloB, eloA, DuelResolver.Invert(b.Result), 50);
+            int newA = Elo.NewRating(eloA, b.Result, 50);
+            int newB = Elo.NewRating(eloB, DuelResolver.Invert(b.Result), 50);
             await Shared<TeamBattle>(BattlesCollection, b.Id, x => { x.EloDeltaA = newA - eloA; x.EloDeltaB = newB - eloB; return x; });
             await SettleWarAsync(b, true, newA);
             await SettleWarAsync(b, false, newB);
