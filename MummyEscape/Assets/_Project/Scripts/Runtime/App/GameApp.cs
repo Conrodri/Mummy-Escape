@@ -208,8 +208,7 @@ namespace MummyEscape.App
             UI.Open<SettingsScreen>();
         }
 
-        string OfflineReason => Privacy.NeedsAnswer ? "Hors ligne" : Privacy.Data.IsMinor && !Privacy.Data.ParentalConsent
-            ? "Hors ligne (autorisation parentale requise pour jouer en ligne)" : "Hors ligne (mode en ligne désactivé dans Confidentialité)";
+        string OfflineReason => Privacy.NeedsAnswer ? "Hors ligne" : "Hors ligne (mode en ligne désactivé dans Confidentialité)";
 
         OfflineOnlineService Offline(string reason) =>
             new OfflineOnlineService(reason) { Country = Save.Country, LocalRecord = Save.GetRecord };

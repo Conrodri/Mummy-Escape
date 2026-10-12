@@ -56,7 +56,7 @@ namespace MummyEscape.UI.Legal
             "• Sécuriser le service, lutter contre la triche et les abus : intérêt légitime (art. 6.1.f).\n" +
             "• Montrer ta progression à tes amis : exécution des conditions d'utilisation, c'est la fonction même de la liste d'amis (art. 6.1.b). Pour ne plus la montrer à quelqu'un, retire-le de tes amis.\n" +
             "• Publicités personnalisées : ton consentement, recueilli par le formulaire de Google et retirable à tout moment (art. 6.1.a).\n" +
-            "Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne demande l'accord d'un parent ou tuteur (RGPD art. 8, loi Informatique et Libertés art. 45).",
+            "Sous l'âge du consentement numérique de ton pays (15 ans en France), le tchat (messages avec tes amis et ta guilde) demande l'accord d'un parent ou tuteur (RGPD art. 8, loi Informatique et Libertés art. 45) ; ton année de naissance n'est demandée qu'à l'ouverture du tchat et n'est pas conservée.",
             "# Qui peut voir ces données ?",
             "• Les autres joueurs : ton pseudonyme, ton apparence (tenue, titre), ton rang de duel, tes scores et ton pays (s'il est choisi) ; tes amis voient aussi ton statut et ta progression.\n" +
             "• Notre prestataire technique, Unity Technologies (services Unity Gaming Services : Authentication, Leaderboards, Friends, Cloud Save, Cloud Code), qui agit pour notre compte et selon nos instructions.\n" +
@@ -154,7 +154,7 @@ namespace MummyEscape.UI.Legal
             "La roue des scarabées propose des tirages au hasard dont les chances sont affichées ; elle n'est pas proposée dans les pays qui interdisent ces tirages. " +
             "Si tu es mineur, demande l'accord d'un parent avant tout achat. En cas de problème avec un achat, écris-nous.",
             "# Âge",
-            "Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne n'est accessible qu'avec l'accord d'un parent ou tuteur légal. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.",
+            "Sous l'âge du consentement numérique de ton pays (15 ans en France), le tchat n'est accessible qu'avec l'accord d'un parent ou tuteur légal, demandé à sa première ouverture. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.",
             "# Ton compte",
             "Le compte est facultatif et se crée avec Google Play Jeux. Les comptes créés auparavant avec un identifiant et un mot de passe restent utilisables : " +
             "garde-les secrets ; aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. " +

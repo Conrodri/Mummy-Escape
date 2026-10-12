@@ -33,7 +33,7 @@ namespace MummyEscape.Services
     public sealed class PrivacyService
     {
         /// <summary>Bump when the privacy policy or the terms change materially: players are asked again.</summary>
-        public const int PolicyVersion = 5;
+        public const int PolicyVersion = 6;
 
         /// <summary>Age of digital consent per EU/EEA country (GDPR art. 8, national choices between 13 and 16).</summary>
         static readonly Dictionary<string, int> ConsentAge = new Dictionary<string, int>
@@ -76,8 +76,14 @@ namespace MummyEscape.Services
         /// <summary>First launch, or the policy changed since the player answered.</summary>
         public bool NeedsAnswer => Data.AcceptedPolicyVersion < PolicyVersion;
 
-        /// <summary>Online features may run (informed choice, and a parent's approval for a minor).</summary>
-        public bool OnlineAllowed => !NeedsAnswer && Data.OnlineEnabled && (!Data.IsMinor || Data.ParentalConsent);
+        /// <summary>Online features may run (informed choice at the welcome screen).</summary>
+        public bool OnlineAllowed => !NeedsAnswer && Data.OnlineEnabled;
+
+        /// <summary>The chat asks the year of birth first, in the countries with an age of digital consent (GDPR art. 8).</summary>
+        public bool ChatNeedsAge => !Data.AgeChecked && ConsentAge.ContainsKey((CountryService.Detect() ?? "").ToUpperInvariant());
+
+        /// <summary>A minor may chat with friends and guild only with a parent's approval (the global channel stays closed).</summary>
+        public bool ChatAllowed => !Data.IsMinor || Data.ParentalConsent;
 
         /// <summary>Usage statistics go out only with the online mode and the player's own yes (never a minor's by default).</summary>
         public bool AnalyticsAllowed => OnlineAllowed && Data.AnalyticsEnabled;
@@ -99,7 +105,7 @@ namespace MummyEscape.Services
 
         /// <summary>
         /// Records the answer of the welcome screen. <paramref name="isMinor"/> is null when the age was not asked
-        /// (offline play needs no age: nothing leaves the device).
+        /// (it is only asked when the chat opens).
         /// </summary>
         public void Answer(bool online, bool? isMinor, bool parentalConsent)
         {
@@ -111,13 +117,13 @@ namespace MummyEscape.Services
                 Data.IsMinor = isMinor.Value;
                 Data.ParentalConsent = isMinor.Value && parentalConsent;
             }
-            Data.OnlineEnabled = online && Data.AgeChecked && (!Data.IsMinor || Data.ParentalConsent);
+            Data.OnlineEnabled = online;
             Save();
         }
 
         public void SetOnline(bool on)
         {
-            Data.OnlineEnabled = on && Data.AgeChecked && (!Data.IsMinor || Data.ParentalConsent);
+            Data.OnlineEnabled = on;
             Data.AnsweredAtUtc = DateTime.UtcNow.ToString("o");
             Save();
         }
@@ -125,7 +131,6 @@ namespace MummyEscape.Services
         public void SetParentalConsent(bool on)
         {
             Data.ParentalConsent = Data.IsMinor && on;
-            if (!Data.ParentalConsent && Data.IsMinor) Data.OnlineEnabled = false;
             Data.AnsweredAtUtc = DateTime.UtcNow.ToString("o");
             Save();
         }

@@ -120,6 +120,8 @@ namespace MummyEscape.UI.Screens
             App.Lighting.SetMood(false);
             _enabled.SetIsOnWithoutNotify(ChatState.Enabled);
             CloseMenu();
+            // Countries with an age of digital consent: the year of birth once, before the first chat (a minor needs a parent).
+            if (App.Pvp != null && App.Privacy.ChatNeedsAge) Router.Open<WelcomeScreen>().Begin(WelcomeScreen.Step.Age, true, OnShow);
             _request++;
             LoadFriends();
             LoadGuild();
@@ -219,6 +221,8 @@ namespace MummyEscape.UI.Screens
         {
             if (App.Pvp == null) return Loc.T("Le tchat se joue en ligne : active le mode en ligne (Paramètres › Confidentialité).");
             if (!ChatState.Enabled) return Loc.T("Le tchat est désactivé.");
+            if (App.Privacy.ChatNeedsAge) return Loc.T("Indique ton année de naissance pour ouvrir le tchat.");
+            if (!App.Privacy.ChatAllowed) return Loc.T("Le tchat demande l'accord d'un parent (Paramètres › Confidentialité).");
             if (_channel == ChatConfig.Global && !ChatState.GlobalAllowed(App)) return Loc.T("Le tchat global n'est pas ouvert aux joueurs mineurs. Discute avec ta guilde et tes amis.");
             var banned = ChatState.Inbox?.BannedUntilUnixMs ?? 0;
             if (banned > System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())

@@ -114,6 +114,7 @@ namespace MummyEscape.UI.Screens
         ScrollRect _scroll;
         bool _isMinor;
         bool _analytics;
+        Action _then;
 
         protected override void Build()
         {
@@ -123,10 +124,11 @@ namespace MummyEscape.UI.Screens
             _content = PrivacyUI.ScrollBody(this, Body(190, 40, 40), out _scroll);
         }
 
-        /// <summary>Opens at a given step; from the settings, closing returns to them instead of the menu.</summary>
-        public WelcomeScreen Begin(Step step, bool fromSettings)
+        /// <summary>Opens at a given step (the age or the parent, asked by the chat or the settings); <paramref name="then"/> runs once answered.</summary>
+        public WelcomeScreen Begin(Step step, bool fromSettings, Action then = null)
         {
             _fromSettings = fromSettings;
+            _then = then;
             Go(step);
             return this;
         }
@@ -177,7 +179,8 @@ namespace MummyEscape.UI.Screens
                 UIKit.Toggle(_content, "En ligne, partager des statistiques d'usage anonymes", false, v => _analytics = v);
                 PrivacyUI.Paragraph(_content, "Quels tombeaux sont joués, gagnés ou abandonnés (prestataire Unity, jamais d'identifiant publicitaire). Modifiable dans Confidentialité.", 26, UIKit.Dim);
             }
-            PrivacyUI.Wide(_content, "Jouer en ligne", () => Go(Step.Age), 38, 104, ButtonStyle.Primary);
+            PrivacyUI.Paragraph(_content, "En jouant, tu acceptes les conditions d'utilisation et la politique de confidentialité.", 28, UIKit.Sand);
+            PrivacyUI.Wide(_content, "Jouer", () => Finish(true, null, false), 38, 104, ButtonStyle.Primary);
             PrivacyUI.Wide(_content, "Jouer hors ligne", () => Finish(false, null, false));
             PrivacyUI.Paragraph(_content, "Tu peux changer d'avis à tout moment dans Paramètres › Confidentialité.", 28, UIKit.Dim);
         }
@@ -185,13 +188,8 @@ namespace MummyEscape.UI.Screens
         void Age()
         {
             UIKit.Size(UIKit.Title(_content, "Ton année de naissance", 46), 90);
-            PrivacyUI.Paragraph(_content, "Elle sert seulement à savoir si l'accord d'un parent est nécessaire. Elle n'est ni conservée, ni envoyée.", 30, UIKit.Dim);
+            PrivacyUI.Paragraph(_content, "Elle sert seulement à savoir si l'accord d'un parent est nécessaire pour le tchat. Elle n'est ni conservée, ni envoyée.", 30, UIKit.Dim);
             var year = YearField("AAAA");
-            bool accepted = false;
-            UIKit.Toggle(_content, "J'accepte les conditions d'utilisation", false, v => accepted = v);
-            var links = UIKit.Row(_content, 90, 20);
-            UIKit.Size(UIKit.Button(links.transform, "Lire les conditions", () => PrivacyUI.OpenLegal(Router, false), 30), -1, -1, 1);
-            UIKit.Size(UIKit.Button(links.transform, "Lire la confidentialité", () => PrivacyUI.OpenLegal(Router, true), 30), -1, -1, 1);
             var error = UIKit.Label(_content, "", 32, UIKit.Danger);
             UIKit.Size(error, 60);
             var row = UIKit.Row(_content, UIKit.ButtonHeight, 20);
@@ -199,7 +197,6 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(row.transform, "Continuer", () =>
             {
                 if (!ReadYear(year, out int y)) { error.text = Loc.T("Indique une année valide (4 chiffres)."); return; }
-                if (!accepted) { error.text = Loc.T("Accepte les conditions pour jouer en ligne."); return; }
                 _isMinor = PrivacyService.IsUnderConsentAge(y, CountryService.Detect());
                 if (_isMinor) Go(Step.Parent);
                 else Finish(true, false, false);
@@ -210,10 +207,10 @@ namespace MummyEscape.UI.Screens
         {
             UIKit.Size(UIKit.Title(_content, "Demande à un parent", 46), 90);
             PrivacyUI.Paragraph(_content,
-                "Pour jouer en ligne à ton âge, l'accord d'un parent ou d'un tuteur est nécessaire.\n\n" +
-                "À l'attention du parent : le mode en ligne publie un pseudonyme (attribué au hasard, modifiable) et les scores de votre enfant, " +
-                "et lui permet d'ajouter des amis par leur code. Aucune adresse e-mail, aucun nom réel, aucune publicité. " +
-                "Vous pouvez retirer cet accord et supprimer ses données à tout moment dans Paramètres › Confidentialité.");
+                "Pour utiliser le tchat à ton âge, l'accord d'un parent ou d'un tuteur est nécessaire.\n\n" +
+                "À l'attention du parent : le tchat permet à votre enfant d'échanger des messages avec ses amis (ajoutés par leur code) et sa guilde ; " +
+                "le tchat global lui reste fermé. Aucune adresse e-mail, aucun nom réel. " +
+                "Vous pouvez retirer cet accord à tout moment dans Paramètres › Confidentialité.");
             PrivacyUI.Wide(_content, "Lire la politique de confidentialité", () => PrivacyUI.OpenLegal(Router, true), 30, 88);
             PrivacyUI.Paragraph(_content, "Parent ou tuteur : votre année de naissance", 32, UIKit.Gold);
             var year = YearField("AAAA");
@@ -222,7 +219,7 @@ namespace MummyEscape.UI.Screens
             var error = UIKit.Label(_content, "", 32, UIKit.Danger);
             UIKit.Size(error, 60);
             var row = UIKit.Row(_content, UIKit.ButtonHeight, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Hors ligne", () => Finish(false, true, false)), -1, -1, 1);
+            UIKit.Size(UIKit.Button(row.transform, "Sans tchat", () => Finish(true, true, false)), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Autoriser", () =>
             {
                 if (!ReadYear(year, out int y) || DateTime.UtcNow.Year - y < 19) { error.text = Loc.T("L'accord doit venir d'un adulte."); return; }
@@ -248,11 +245,17 @@ namespace MummyEscape.UI.Screens
         void Finish(bool online, bool? isMinor, bool parental)
         {
             App.Privacy.Answer(online, isMinor, parental);
-            if (!_fromSettings) App.Privacy.SetAnalytics(online && _analytics);
             Router.Close(this);
-            if (App.Privacy.OnlineAllowed) _ = App.StartOnline();
-            else App.StopOnline();
+            if (!_fromSettings)
+            {
+                // First launch: the online choice is made here. From the chat or the settings, the online mode is already running.
+                App.Privacy.SetAnalytics(online && _analytics);
+                if (App.Privacy.OnlineAllowed) _ = App.StartOnline();
+                else App.StopOnline();
+            }
             if (_fromSettings && Router.Get<PrivacyScreen>().gameObject.activeSelf) Router.Get<PrivacyScreen>().OnShow();
+            _then?.Invoke();
+            _then = null;
         }
     }
 
@@ -285,7 +288,9 @@ namespace MummyEscape.UI.Screens
             UIKit.Toggle(online, "Classements, amis, compte", App.Privacy.OnlineAllowed, SetOnline);
             PrivacyUI.Paragraph(online, App.Online.IsAvailable ? Loc.F("État : en ligne ({0})", AccountLabel()) : Loc.F("État : {0}", Loc.T(App.Online.Status)), 28, UIKit.Dim);
             if (p.IsMinor && p.ParentalConsent)
-                PrivacyUI.Wide(online, "Retirer l'autorisation parentale", () => { App.Privacy.SetParentalConsent(false); App.StopOnline(); Rebuild(); }, 30, 88);
+                PrivacyUI.Wide(online, "Retirer l'autorisation parentale (tchat)", () => { App.Privacy.SetParentalConsent(false); Rebuild(); }, 30, 88);
+            else if (p.IsMinor)
+                PrivacyUI.Wide(online, "Autoriser le tchat (parent ou tuteur)", () => Router.Open<WelcomeScreen>().Begin(WelcomeScreen.Step.Parent, true), 30, 88);
             string country = App.Save.Data.Country;
             string countryLabel = string.IsNullOrEmpty(country) ? Loc.T("non affiché") : country == SaveService.AutoCountry ? Loc.T("celui de l'appareil") : CountryService.NameOf(country);
             PrivacyUI.Wide(online, Loc.F("Pays dans les classements : {0}", countryLabel), () => Router.Open<CountryPickerScreen>().OnPicked(Rebuild), 30, 88);
@@ -330,8 +335,6 @@ namespace MummyEscape.UI.Screens
                 Rebuild();
                 return;
             }
-            if (!p.AgeChecked) { Router.Open<WelcomeScreen>().Begin(WelcomeScreen.Step.Age, true); return; }
-            if (p.IsMinor && !p.ParentalConsent) { Router.Open<WelcomeScreen>().Begin(WelcomeScreen.Step.Parent, true); return; }
             App.Privacy.SetOnline(true);
             _ = StartThenRebuild();
         }

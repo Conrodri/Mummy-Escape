@@ -459,29 +459,31 @@ namespace MummyEscape
                 "Online mode adds leaderboards, friends and an optional account to restore your progress on another device. " +
                 "It then sends our provider (Unity) a random ID, your nickname and your scores.\n\n" +
                 "No tracking, no email address. Ads (Google) are only shown if you choose to watch one to play more.",
-            ["Jouer en ligne"] = "Play online",
+            ["En jouant, tu acceptes les conditions d'utilisation et la politique de confidentialité."] = "By playing, you accept the terms of use and the privacy policy.",
             ["Jouer hors ligne"] = "Play offline",
             ["Tu peux changer d'avis à tout moment dans Paramètres › Confidentialité."] = "You can change your mind at any time in Settings › Privacy.",
             ["Ton année de naissance"] = "Your year of birth",
-            ["Elle sert seulement à savoir si l'accord d'un parent est nécessaire. Elle n'est ni conservée, ni envoyée."] =
-                "It is only used to know whether a parent's consent is needed. It is neither kept nor sent.",
+            ["Elle sert seulement à savoir si l'accord d'un parent est nécessaire pour le tchat. Elle n'est ni conservée, ni envoyée."] =
+                "It is only used to know whether a parent's consent is needed for the chat. It is neither kept nor sent.",
             ["AAAA"] = "YYYY",
-            ["J'accepte les conditions d'utilisation"] = "I accept the terms of use",
             ["Lire les conditions"] = "Read the terms",
             ["Lire la confidentialité"] = "Read the privacy policy",
             ["Retour"] = "Back",
             ["Continuer"] = "Continue",
             ["Indique une année valide (4 chiffres)."] = "Enter a valid year (4 digits).",
-            ["Accepte les conditions pour jouer en ligne."] = "Accept the terms to play online.",
             ["Demande à un parent"] = "Ask a parent",
-            ["Pour jouer en ligne à ton âge, l'accord d'un parent ou d'un tuteur est nécessaire.\n\n" +
-             "À l'attention du parent : le mode en ligne publie un pseudonyme (attribué au hasard, modifiable) et les scores de votre enfant, " +
-             "et lui permet d'ajouter des amis par leur code. Aucune adresse e-mail, aucun nom réel, aucune publicité. " +
-             "Vous pouvez retirer cet accord et supprimer ses données à tout moment dans Paramètres › Confidentialité."] =
-                "To play online at your age, a parent's or guardian's consent is required.\n\n" +
-                "For the parent: online mode publishes a nickname (randomly assigned, editable) and your child's scores, " +
-                "and lets them add friends by their code. No email address, no real name, no ads. " +
-                "You can withdraw this consent and delete their data at any time in Settings › Privacy.",
+            ["Pour utiliser le tchat à ton âge, l'accord d'un parent ou d'un tuteur est nécessaire.\n\n" +
+             "À l'attention du parent : le tchat permet à votre enfant d'échanger des messages avec ses amis (ajoutés par leur code) et sa guilde ; " +
+             "le tchat global lui reste fermé. Aucune adresse e-mail, aucun nom réel. " +
+             "Vous pouvez retirer cet accord à tout moment dans Paramètres › Confidentialité."] =
+                "To use the chat at your age, a parent's or guardian's consent is required.\n\n" +
+                "For the parent: the chat lets your child exchange messages with their friends (added by their code) and their guild; " +
+                "the global chat stays closed to them. No email address, no real name. " +
+                "You can withdraw this consent at any time in Settings › Privacy.",
+            ["Sans tchat"] = "Without chat",
+            ["Autoriser le tchat (parent ou tuteur)"] = "Allow the chat (parent or guardian)",
+            ["Indique ton année de naissance pour ouvrir le tchat."] = "Enter your year of birth to open the chat.",
+            ["Le tchat demande l'accord d'un parent (Paramètres › Confidentialité)."] = "The chat needs a parent's consent (Settings › Privacy).",
             ["Lire la politique de confidentialité"] = "Read the privacy policy",
             ["Parent ou tuteur : votre année de naissance"] = "Parent or guardian: your year of birth",
             ["Je suis son parent ou tuteur et j'autorise"] = "I am their parent or guardian and I consent",
@@ -492,7 +494,7 @@ namespace MummyEscape
             ["Classements, amis, compte"] = "Leaderboards, friends, account",
             ["État : en ligne ({0})"] = "Status: online ({0})",
             ["État : {0}"] = "Status: {0}",
-            ["Retirer l'autorisation parentale"] = "Withdraw parental consent",
+            ["Retirer l'autorisation parentale (tchat)"] = "Withdraw parental consent (chat)",
             ["non affiché"] = "not shown",
             ["celui de l'appareil"] = "the device's",
             ["Pays dans les classements : {0}"] = "Country in leaderboards: {0}",
@@ -581,7 +583,6 @@ namespace MummyEscape
                 "Password: at least one uppercase letter, one lowercase letter, one digit and one symbol.",
 
             // ---------------------------------------------------------------- online statuses and errors
-            ["Hors ligne (autorisation parentale requise pour jouer en ligne)"] = "Offline (parental consent required to play online)",
             ["Hors ligne (mode en ligne désactivé dans Confidentialité)"] = "Offline (online mode turned off in Privacy)",
             ["Déconnecté (Paramètres › Compte pour te reconnecter)"] = "Signed out (Settings › Account to sign back in)",
             ["Connexion impossible : {0}"] = "Cannot connect: {0}",
