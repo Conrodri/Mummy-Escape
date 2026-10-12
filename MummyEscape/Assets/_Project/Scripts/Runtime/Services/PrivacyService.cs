@@ -51,7 +51,7 @@ namespace MummyEscape.Services
         public PrivacyData Data { get; private set; } = new PrivacyData();
         public event Action Changed;
 
-        static string FilePath => Path.Combine(Application.persistentDataPath, "privacy.json");
+        static string FilePath => Path.Combine(Application.persistentDataPath, TestProfile.File("privacy.json"));
 
         public void Load()
         {

@@ -53,6 +53,7 @@ namespace MummyEscape.Online
                 await UnityServices.InitializeAsync();
                 // Resumes the cached session (guest or account) or creates a guest player.
                 var auth = AuthenticationService.Instance;
+                if (Services.TestProfile.Active && !auth.IsSignedIn) auth.SwitchProfile(Services.TestProfile.Name); // the editor's clean guest: its own session, its own player id
                 if (!auth.IsSignedIn)
                 {
                     // A fresh install (no session on the phone): the Play Games account finds its player again, or makes one.

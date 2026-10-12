@@ -109,7 +109,7 @@ namespace MummyEscape.Services
         public SaveData Data { get; private set; } = new SaveData();
         public event Action Changed;
 
-        static string FilePath => Path.Combine(Application.persistentDataPath, "save.json");
+        static string FilePath => Path.Combine(Application.persistentDataPath, TestProfile.File("save.json"));
 
         public void Load()
         {
