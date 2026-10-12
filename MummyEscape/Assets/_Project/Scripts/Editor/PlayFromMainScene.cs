@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
 
 namespace MummyEscape.EditorTools
 {
@@ -10,7 +11,13 @@ namespace MummyEscape.EditorTools
         static PlayFromMainScene()
         {
             EditorApplication.delayCall += Assign;
-            EditorApplication.playModeStateChanged += s => { if (s == PlayModeStateChange.ExitingEditMode) Assign(); };
+            EditorApplication.playModeStateChanged += s =>
+            {
+                if (s != PlayModeStateChange.ExitingEditMode) return;
+                // Play mode tests enter Play from the runner's own InitTestScene: forcing Main there would drop the test controller.
+                if (SceneManager.GetActiveScene().name.StartsWith("InitTestScene")) EditorSceneManager.playModeStartScene = null;
+                else Assign();
+            };
         }
 
         static int _retries;

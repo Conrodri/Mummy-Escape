@@ -19,7 +19,7 @@ namespace MummyEscape.Tests
         [UnityTest]
         public IEnumerator EveryScreen_BuildsAndShows()
         {
-            yield return SceneManager.LoadSceneAsync("Main");
+            yield return SceneManager.LoadSceneAsync("Main", LoadSceneMode.Additive); // Single would unload the runner's own scene and kill the test
             float until = Time.realtimeSinceStartup + 15f;
             while ((GameApp.I == null || GameApp.I.UI == null) && Time.realtimeSinceStartup < until) yield return null;
             Assert.IsNotNull(GameApp.I, "GameApp did not boot");
