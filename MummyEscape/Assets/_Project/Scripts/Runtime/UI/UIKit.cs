@@ -250,23 +250,37 @@ namespace MummyEscape.UI
         {
             readonly Button[] _buttons;
             readonly Text[] _labels;
+            readonly GameObject _root;
             public int Selected { get; private set; } = -1;
 
             public Segmented(Transform parent, string[] labels, Action<int> onSelect, float height = 84)
             {
                 var track = Pixelated(Image(parent, UISprites.PixelPlate, new Color(0.16f, 0.12f, 0.09f, 0.85f), false, "Tabs"), UISprites.PixelPlate); // noloc
-                Size(track, height);
-                var row = track.gameObject.AddComponent<HorizontalLayoutGroup>();
-                row.padding = new RectOffset(6, 6, 6, 6);
-                row.spacing = 6;
-                row.childControlWidth = row.childControlHeight = true;
-                row.childForceExpandWidth = row.childForceExpandHeight = true;
+                _root = track.gameObject;
+                // More than four tabs on one line would shrink every label to the minimum size: wrap them on two lines.
+                int perLine = labels.Length > 4 ? (labels.Length + 1) / 2 : labels.Length;
+                int lines = (labels.Length + perLine - 1) / perLine;
+                Size(track, height * lines - 6 * (lines - 1));
+                var column = track.gameObject.AddComponent<VerticalLayoutGroup>();
+                column.padding = new RectOffset(6, 6, 6, 6);
+                column.spacing = 6;
+                column.childControlWidth = column.childControlHeight = true;
+                column.childForceExpandWidth = column.childForceExpandHeight = true;
                 _buttons = new Button[labels.Length];
                 _labels = new Text[labels.Length];
+                Transform line = null;
                 for (int i = 0; i < labels.Length; i++)
                 {
+                    if (i % perLine == 0)
+                    {
+                        var row = Rect("Line", track.transform).gameObject.AddComponent<HorizontalLayoutGroup>(); // noloc
+                        row.spacing = 6;
+                        row.childControlWidth = row.childControlHeight = true;
+                        row.childForceExpandWidth = row.childForceExpandHeight = true;
+                        line = row.transform;
+                    }
                     int index = i;
-                    _buttons[i] = Button(track.transform, labels[i], () => { Select(index); onSelect?.Invoke(index); }, 30, ButtonStyle.Ghost);
+                    _buttons[i] = Button(line, labels[i], () => { Select(index); onSelect?.Invoke(index); }, 30, ButtonStyle.Ghost);
                     Pixelated(_buttons[i].image, UISprites.PixelButton);
                     _labels[i] = _buttons[i].GetComponentInChildren<Text>();
                     // Narrow tabs: keep only a small side margin so the text can stay big.
@@ -280,7 +294,7 @@ namespace MummyEscape.UI
             }
 
             /// <summary>The track holding the tabs (to hide them all).</summary>
-            public GameObject Root => _buttons[0].transform.parent.gameObject;
+            public GameObject Root => _root;
 
             public void SetLabel(int i, string text) => _labels[i].text = Loc.T(text);
 

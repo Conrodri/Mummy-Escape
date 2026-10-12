@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
@@ -15,7 +16,9 @@ namespace MummyEscape.EditorTools
             {
                 if (s != PlayModeStateChange.ExitingEditMode) return;
                 // Play mode tests enter Play from the runner's own InitTestScene: forcing Main there would drop the test controller.
-                if (SceneManager.GetActiveScene().name.StartsWith("InitTestScene")) EditorSceneManager.playModeStartScene = null;
+                // A killed run can leave that scene open after its file was deleted; its stale controller would rerun the tests on every Play.
+                var active = SceneManager.GetActiveScene();
+                if (active.name.StartsWith("InitTestScene") && File.Exists(active.path)) EditorSceneManager.playModeStartScene = null;
                 else Assign();
             };
         }
