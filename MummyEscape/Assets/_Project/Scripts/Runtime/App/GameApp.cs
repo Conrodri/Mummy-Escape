@@ -310,6 +310,24 @@ namespace MummyEscape.App
             await PublishProgress();
             _ = MummyEscape.Online.ChatState.RegisterNameAsync(this);
             _ = LoadStatus();
+            _ = LoadGroup();
+            RefreshMenus();
+        }
+
+        /// <summary>The player's group (the duo of two friends), shown on the home; null without one or until loaded.</summary>
+        public Duo Group { get; private set; }
+
+        /// <summary>The group screens keep this copy in step (the home draws the teammate from it).</summary>
+        public void SetGroup(Duo duo) => Group = duo;
+
+        /// <summary>Loads the group after a sign-in (the home shows the teammate's mummy beside the player's).</summary>
+        public async Task LoadGroup()
+        {
+            var pvp = Pvp;
+            if (pvp == null) { Group = null; return; }
+            var teams = await pvp.GetTeamsAsync();
+            if (teams == null || teams.Error != null) return;
+            Group = teams.Duos.Count > 0 ? teams.Duos[0] : null;
             RefreshMenus();
         }
 

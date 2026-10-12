@@ -99,6 +99,15 @@ namespace MummyEscape.Online
         public Task<TeamActionResponse> LeaveDuoAsync(string duoId) =>
             Call("LeaveDuo", Args("duoId", duoId), e => new TeamActionResponse { Error = e });
 
+        public Task<DuoResponse> GetDuoAsync(string duoId, PlayerLook look) =>
+            Call("GetDuo", Args("duoId", duoId, "look", look), e => new DuoResponse { Error = e });
+
+        public Task<DuoResponse> SetGroupReadyAsync(string duoId, bool ready, PlayerLook look) =>
+            Call("SetGroupReady", Args("duoId", duoId, "ready", ready, "look", look), e => new DuoResponse { Error = e });
+
+        public Task<DuoResponse> LaunchGroupAsync(string duoId, string mode) =>
+            Call("LaunchGroup", Args("duoId", duoId, "mode", mode), e => new DuoResponse { Error = e });
+
         public Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst) =>
             Call("FindDuoMatch", Args("duoId", duoId, "meFirst", meFirst, "generatorVersion", Gen), e => new TeamActionResponse { Error = e });
 

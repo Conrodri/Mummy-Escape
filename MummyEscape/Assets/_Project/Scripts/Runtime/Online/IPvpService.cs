@@ -41,6 +41,10 @@ namespace MummyEscape.Online
         Task<TeamActionResponse> InviteDuoAsync(string friendId, string playerName);
         Task<TeamActionResponse> RespondDuoAsync(string inviteId, bool accept, string playerName);
         Task<TeamActionResponse> LeaveDuoAsync(string duoId);
+        /// <summary>The group (the duo as a team of two): its state, my readiness, the leader's launch.</summary>
+        Task<DuoResponse> GetDuoAsync(string duoId, PlayerLook look);
+        Task<DuoResponse> SetGroupReadyAsync(string duoId, bool ready, PlayerLook look);
+        Task<DuoResponse> LaunchGroupAsync(string duoId, string mode);
         /// <summary>Starts a 2v2 battle; <paramref name="meFirst"/>: the player runs rounds 1 and 3, the partner round 2.</summary>
         Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst);
         Task<DuoBoardResponse> GetDuoBoardAsync(int limit);

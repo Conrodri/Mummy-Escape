@@ -12,35 +12,33 @@ using UnityEngine.UI;
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// The 2v2: duos formed with friends (invitations sent and received), each with its own 2v2 Elo. A match is a live
-    /// relay against another duo: both teammates search at the same time, four players meet, and each duo runs its two
-    /// mazes in turn (Game.GameController). Duos of bots stand in when nobody is around, for those who accept.
+    /// The 2v2 duel, launched from the group (<see cref="GroupScreen"/>): the duo with its own 2v2 Elo. A match is a live
+    /// relay against another duo: both teammates search at the same time (the group's launch starts both phones), four
+    /// players meet, and each duo runs its two mazes in turn (Game.GameController). Duos of bots stand in when nobody is
+    /// around, for those who accept.
     /// </summary>
     public sealed class DuoScreen : UIScreen
     {
-        public override NavTab Tab => NavTab.Duel;
+        public override NavTab Tab => NavTab.Home;
 
         RectTransform _list;
         ScrollRect _scroll;
         Text _info;
         TeamsResponse _teams;
-        IReadOnlyList<Online.FriendInfo> _friends;
         bool _busy;
         int _request;
         // Live search of a match: the panel over the list, and the duo to search again after a match.
         RectTransform _searching;
         Text _searchStatus;
         CancellationTokenSource _search;
-        Duo _lastDuo;
-        UIKit.Segmented _modes;
+        Duo _lastDuo, _autoDuo;
 
         protected override void Build()
         {
             UIKit.Backdrop(Root);
-            Header("Duel");
+            Header("Duel 2v2");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 16);
-            _modes = PvpScreen.Modes(body, Router, 1);
             _info = UIKit.Label(body, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 64);
@@ -65,11 +63,13 @@ namespace MummyEscape.UI.Screens
             _searching.gameObject.SetActive(false);
         }
 
+        /// <summary>Opened by the group's launch: the search starts by itself once the duo is loaded (both phones do it).</summary>
+        public void SearchWith(Duo duo) => _autoDuo = duo;
+
         public override void OnShow()
         {
             ProfileSetupScreen.AskIfNeeded(Router, App);
             App.Lighting.SetMood(false);
-            _modes.Select(1);
             _busy = false;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;
@@ -87,7 +87,6 @@ namespace MummyEscape.UI.Screens
             int request = ++_request;
             if (_teams == null) _info.text = Loc.T("Chargement…");
             var teams = await App.Pvp.GetTeamsAsync();
-            var friends = await App.Online.GetFriendsAsync();
             if (request != _request || this == null) return;
             if (teams == null || teams.Error != null)
             {
@@ -95,9 +94,15 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             _teams = teams;
-            _friends = friends;
+            App.SetGroup(teams.Duos.FirstOrDefault());
             if (!_busy) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : coéquipiers et adversaires simulés") + "</color>" : "";
             Fill();
+            if (_autoDuo != null)
+            {
+                var duo = teams.Duos.Find(d => d.Id == _autoDuo.Id);
+                _autoDuo = null;
+                if (duo != null) Search(duo);
+            }
             // The server's 2v2 history: the replays of matches played on another phone, both relays complete.
             var history = await App.Pvp.GetRelayHistoryAsync();
             if (request != _request || this == null || history?.Matches == null) return;
@@ -117,40 +122,12 @@ namespace MummyEscape.UI.Screens
 
         void FillTeams()
         {
-            if (_teams.Invites.Count > 0)
-            {
-                UIKit.SectionTitle(_list, "Invitations");
-                foreach (var invite in _teams.Invites) InviteRow(invite);
-            }
-
-            UIKit.SectionTitle(_list, Loc.F("Mes duos ({0}/{1})", _teams.Duos.Count, TeamConfig.MaxDuosPerPlayer));
             if (_teams.Duos.Count == 0)
-            {
-                var none = UIKit.Label(_list, "Invite un ami ci-dessous pour former ton premier duo.", 26, UIKit.Dim);
-                UIKit.Size(none, 60);
-            }
+                UIKit.Size(UIKit.Label(_list, "Forme un groupe avec un ami (Accueil › Groupe) pour jouer en 2v2.", 26, UIKit.Dim), 60);
             foreach (var duo in _teams.Duos) DuoCard(duo);
 
             var board = UIKit.Button(_list, "Classement 2v2", () => Router.Open<TeamLeaderboardScreen>().Show(false), 30);
             UIKit.Size(board, 88);
-
-            if (_teams.Duos.Count < TeamConfig.MaxDuosPerPlayer)
-            {
-                UIKit.SectionTitle(_list, "Inviter un ami");
-                var partners = new HashSet<string>(_teams.Duos.SelectMany(d => d.Members));
-                int shown = 0;
-                foreach (var f in _friends ?? new List<Online.FriendInfo>())
-                {
-                    if (partners.Contains(f.PlayerId)) continue;
-                    FriendRow(f);
-                    shown++;
-                }
-                if (shown == 0)
-                {
-                    var hint = UIKit.Label(_list, "Ajoute des amis (onglet Amis) pour les inviter.", 26, UIKit.Dim);
-                    UIKit.Size(hint, 60);
-                }
-            }
         }
 
         /// <summary>The matches kept apart (until the player removes them), then the last ones played, to watch again.</summary>
@@ -229,28 +206,6 @@ namespace MummyEscape.UI.Screens
             return h;
         }
 
-        void InviteRow(DuoInvite invite)
-        {
-            UIKit.ListItem(_list, 110, null, out var h);
-            var name = UIKit.Label(h.transform, Loc.F("{0} veut faire équipe", invite.FromName), 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.FitText(name, 18);
-            UIKit.Size(name, -1, 0, 1);
-            var no = UIKit.Button(h.transform, "Refuser", () => Respond(invite, false), 26);
-            UIKit.Size(no, 80, 170);
-            var yes = UIKit.Button(h.transform, "Accepter", () => Respond(invite, true), 26, ButtonStyle.Primary);
-            UIKit.Size(yes, 80, 190);
-        }
-
-        void FriendRow(Online.FriendInfo f)
-        {
-            UIKit.ListItem(_list, 100, null, out var h);
-            var name = UIKit.Label(h.transform, f.Name, 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.FitText(name, 18);
-            UIKit.Size(name, -1, 0, 1);
-            var invite = UIKit.Button(h.transform, "Inviter", () => Invite(f), 26, ButtonStyle.Primary);
-            UIKit.Size(invite, 76, 180);
-        }
-
         void DuoCard(Duo duo)
         {
             var card = UIKit.Panel(_list, "Duo"); // noloc
@@ -262,7 +217,6 @@ namespace MummyEscape.UI.Screens
             var name = UIKit.Title(top.transform, duo.Name, 40, UIKit.Gold, TextAnchor.MiddleLeft);
             UIKit.FitText(name, 22);
             UIKit.Size(name, -1, 0, 1);
-            UIKit.IconButton(top.transform, UISprites.Close, () => Leave(duo), 60);
             var stats = UIKit.Label(card.transform, Loc.F("Elo 2v2 {0}", duo.Elo) + "  ·  " + Loc.F("{0} V · {1} N · {2} D", duo.Wins, duo.Draws, duo.Losses), 26, UIKit.Sand);
             UIKit.Size(stats, 40);
             var coop = UIKit.Label(card.transform, Loc.F("Campagne 2v2 : {0}/{1} tombeaux", CoopLogic.Cleared(duo), Core.CoopCampaign.Count), 24, UIKit.Dim);
@@ -284,41 +238,6 @@ namespace MummyEscape.UI.Screens
             }
             foreach (var b in battles)
                 if (b != active) TeamView.BattleCard(card.transform, b, _teams.Me, Router, null);
-        }
-
-        async void Invite(Online.FriendInfo f)
-        {
-            if (_busy) return;
-            _busy = true;
-            var r = await App.Pvp.InviteDuoAsync(f.PlayerId, App.Online.PlayerName);
-            if (this == null) return;
-            _busy = false;
-            _info.text = r?.Ok == true ? Loc.F("Invitation envoyée à {0}.", f.Name) : TeamView.ErrorText(r?.Error);
-            Reload();
-        }
-
-        async void Respond(DuoInvite invite, bool accept)
-        {
-            if (_busy) return;
-            _busy = true;
-            var r = await App.Pvp.RespondDuoAsync(invite.Id, accept, App.Online.PlayerName);
-            if (this == null) return;
-            _busy = false;
-            _info.text = r?.Ok == true ? (accept ? Loc.F("Duo formé avec {0} !", invite.FromName) : "") : TeamView.ErrorText(r?.Error);
-            if (r?.Ok == true && accept) App.Audio.Play(Services.Sfx.Coin);
-            Reload();
-        }
-
-        void Leave(Duo duo)
-        {
-            Router.Open<ConfirmDialog>().Configure(Loc.F("Dissoudre le duo {0} ?", duo.Name),
-                "Son Elo 2v2 et son bilan seront perdus.", "Dissoudre", async () =>
-                {
-                    var r = await App.Pvp.LeaveDuoAsync(duo.Id);
-                    if (r == null || !r.Ok) return TeamView.ErrorText(r?.Error);
-                    if (this != null) Reload();
-                    return null;
-                });
         }
 
         /// <summary>After a match: the same duo searches again.</summary>

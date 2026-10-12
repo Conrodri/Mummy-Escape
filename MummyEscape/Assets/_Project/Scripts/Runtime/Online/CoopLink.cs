@@ -51,6 +51,8 @@ namespace MummyEscape.Online
         public PlayerLook Look;
         /// <summary>The tomb this player chose (the first of the two to come decides).</summary>
         public int Tomb;
+        /// <summary>The group's mate: never opens a lobby, only joins the leader's (who picks the tomb).</summary>
+        public bool FollowOnly;
         public IPvpService Pvp;
     }
 

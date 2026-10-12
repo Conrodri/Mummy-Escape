@@ -169,7 +169,7 @@ namespace MummyEscape.UI.Screens
         {
             App.Game.LeaveRelay();
             Router.Reset<MainMenuScreen>();
-            Router.Open<PvpScreen>();
+            Router.Open<GroupScreen>();
             Router.Open<DuoScreen>();
         }
 

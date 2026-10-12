@@ -11,7 +11,8 @@ namespace MummyEscape.UI.Screens
 
         Text _stars, _coins, _gold;
         PassBanner _pass;
-        Image _mummy, _chatDot;
+        Image _mummy, _mate, _chatDot;
+        Text _mateName;
         HomeScene _scene;
         RectTransform _stage;
         Text _online, _goal;
@@ -74,14 +75,21 @@ namespace MummyEscape.UI.Screens
             _mummy.preserveAspect = true; // the outfit sprite is 32x40
             var rt = _mummy.rectTransform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            // The teammate's mummy beside the player's (group of two), with his name under it.
+            _mate = UIKit.Image(_stage, null, Color.white);
+            _mate.preserveAspect = true;
+            var mt = _mate.rectTransform;
+            mt.anchorMin = mt.anchorMax = mt.pivot = new Vector2(0.5f, 0.5f);
+            _mateName = UIKit.Label(_stage, "", 26, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            _mateName.rectTransform.anchorMin = _mateName.rectTransform.anchorMax = _mateName.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             // The home backdrop, picked among the open acts (in the stage's corner: the top bar is full on narrow phones).
             var theme = UIKit.IconAction(_stage, UISprites.Palette, "Thème", () => Router.Open<HomeThemeDialog>().OnPicked(ApplyTheme), 84);
             UIKit.Place((RectTransform)theme.transform.parent.parent, 1f, 1f, 134, 144); // button → its slot → the action column
-            // A dark plate under the button and its caption, so the word reads over the carved wall.
-            var themeBack = UIKit.Plate(theme.transform.parent.parent, new Color(0.1f, 0.07f, 0.05f, 0.8f), 22, UIKit.Rim, false, "Back"); // noloc
-            themeBack.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-            UIKit.Stretch(themeBack.rectTransform, -6, -6, -6, -6);
-            themeBack.transform.SetAsFirstSibling();
+            CornerPlate(theme);
+            // The group: a friend to play the 2v2 campaign and duels with, in the other corner.
+            var group = UIKit.IconAction(_stage, UISprites.Friends, "Groupe", () => Router.Open<GroupScreen>(), 84);
+            UIKit.Place((RectTransform)group.transform.parent.parent, 0f, 1f, 134, 144);
+            CornerPlate(group);
 
             // The dock: the pass, the next goal, the play button and the account line, framed together over the floor.
             var dock = UIKit.Panel(column, "Dock").transform; // noloc
@@ -207,11 +215,25 @@ namespace MummyEscape.UI.Screens
                 _ = App.Game.StartLevel(id);
             });
 
+        /// <summary>A dark plate under a corner button and its caption, so the word reads over the carved wall.</summary>
+        static void CornerPlate(Component action)
+        {
+            var back = UIKit.Plate(action.transform.parent.parent, new Color(0.1f, 0.07f, 0.05f, 0.8f), 22, UIKit.Rim, false, "Back"); // noloc
+            back.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Stretch(back.rectTransform, -6, -6, -6, -6);
+            back.transform.SetAsFirstSibling();
+        }
+
         void Update()
         {
             if (_mummy == null || !_mummy.enabled) return;
             float size = _mummy.rectTransform.sizeDelta.y;
-            _mummy.rectTransform.anchoredPosition = new Vector2(0, Mathf.Sin(Time.time * 1.6f) * 12f * size / 260f);
+            bool duo = _mate.enabled;
+            _mummy.rectTransform.anchoredPosition = new Vector2(duo ? -size * 0.3f : 0, Mathf.Sin(Time.time * 1.6f) * 12f * size / 260f);
+            if (!duo) return;
+            float mate = _mate.rectTransform.sizeDelta.y;
+            _mate.rectTransform.anchoredPosition = new Vector2(size * 0.42f, -size * 0.1f + Mathf.Sin(Time.time * 1.6f + 1.2f) * 12f * mate / 260f);
+            _mateName.rectTransform.anchoredPosition = new Vector2(size * 0.42f, -size * 0.1f - mate * 0.55f);
         }
 
         /// <summary>The mummy fits the space left between the subtitle and the buttons (hidden when there is none).</summary>
@@ -222,8 +244,24 @@ namespace MummyEscape.UI.Screens
             float size = Mathf.Min(620f, _stage.rect.height * 0.8f, _stage.rect.width * 0.7f);
             bool show = size >= 100f;
             _mummy.enabled = show;
-            if (!show) return;
+            if (!show) { _mate.enabled = _mateName.enabled = false; return; }
             _mummy.rectTransform.sizeDelta = new Vector2(size, size);
+            _mate.rectTransform.sizeDelta = new Vector2(size * 0.72f, size * 0.72f);
+            _mateName.rectTransform.sizeDelta = new Vector2(size * 0.9f, 36);
+            ShowMate();
+        }
+
+        /// <summary>The group's other member, as he dresses, beside the player (nothing without a group).</summary>
+        void ShowMate()
+        {
+            var g = App.Group;
+            string mate = g?.Members.Find(m => m != App.Online.PlayerId);
+            var look = mate == null ? null : g.LookOf(mate);
+            bool show = look != null && _mummy.enabled;
+            _mate.enabled = _mateName.enabled = show;
+            if (!show) return;
+            MummyAnimator.Show(_mate, App.Art, PvpSkins.Loadout(look));
+            _mateName.text = g.Names[g.Members.IndexOf(mate)];
         }
 
         /// <summary>Calls back when the layout resizes the rect it sits on.</summary>

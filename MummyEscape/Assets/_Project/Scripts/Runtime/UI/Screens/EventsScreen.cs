@@ -23,7 +23,7 @@ namespace MummyEscape.UI.Screens
             Header("Campagne");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 16);
-            _sections = LevelSelectScreen.Sections(body, Router, 2);
+            _sections = LevelSelectScreen.Sections(body, Router, 1);
             _content = UIKit.Scroll(body, out var scroll);
             UIKit.Size(scroll, -1, -1, -1, 1);
             _content.GetComponent<VerticalLayoutGroup>().spacing = 20;
@@ -32,7 +32,7 @@ namespace MummyEscape.UI.Screens
         public override void OnShow()
         {
             App.Lighting.SetMood(false);
-            _sections.Select(2);
+            _sections.Select(1);
             UIKit.ClearChildren(_content);
             var intro = UIKit.Label(_content, "Des actes le temps d'une saison : leurs propres tombeaux et une récompense à garder pour toujours.", 26, UIKit.Dim);
             UIKit.FitText(intro, 16);

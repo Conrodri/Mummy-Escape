@@ -49,6 +49,12 @@ namespace MummyEscape.Online
                         var open = await OpenLobbiesAsync(search);
                         foreach (var candidate in open)
                             if (await TryJoinAsync(candidate.Id, search)) { lobbyId = candidate.Id; host = false; break; }
+                        if (lobbyId == null && search.FollowOnly)
+                        {
+                            // The leader has not pressed Play yet: keep looking for his lobby.
+                            await Task.Delay(PollMs, cancel);
+                            continue;
+                        }
                         if (lobbyId == null)
                         {
                             lobbyId = (await Lobbies.CreateLobbyAsync(LobbyName, 2, new CreateLobbyOptions

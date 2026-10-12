@@ -75,16 +75,15 @@ namespace MummyEscape.UI.Screens
         UIKit.Segmented _sections;
 
         /// <summary>
-        /// Solo (this screen), 2v2 (<see cref="CoopScreen"/>) or the seasonal events (<see cref="EventsScreen"/>), one tab
-        /// away from each other like the duels' 1v1 / 2v2; Back leads home.
+        /// Solo (this screen) or the seasonal events (<see cref="EventsScreen"/>), one tab away from each other; Back
+        /// leads home. The 2v2 campaign is launched from the group (<see cref="GroupScreen"/>).
         /// </summary>
         internal static UIKit.Segmented Sections(Transform body, UIRouter router, int selected) =>
-            new UIKit.Segmented(body, new[] { "Solo", "2v2", "Événements" }, i =>
+            new UIKit.Segmented(body, new[] { "Solo", "Événements" }, i =>
             {
                 if (i == selected) return;
                 router.Reset<MainMenuScreen>();
                 if (i == 0) router.Open<LevelSelectScreen>();
-                else if (i == 1) router.Open<CoopScreen>();
                 else router.Open<EventsScreen>();
             }, 88);
 

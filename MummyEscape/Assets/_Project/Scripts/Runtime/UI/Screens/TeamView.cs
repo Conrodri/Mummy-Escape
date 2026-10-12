@@ -186,7 +186,9 @@ namespace MummyEscape.UI.Screens
                 case "FULL": return Loc.F("Guilde complète ({0} membres).", TeamConfig.GuildMaxMembers); // noloc
                 case "CLOSED": return Loc.T("Cette guilde est fermée : on n'y entre que sur invitation."); // noloc
                 case "REQUESTED": return Loc.T("Demande envoyée : le chef ou un officier te répondra."); // noloc
-                case "LEADER": return Loc.T("Réservé au chef de la guilde."); // noloc
+                case "LEADER": return Loc.T("Réservé au chef."); // noloc
+                case "NOT_READY": return Loc.T("Ton coéquipier n'est pas prêt."); // noloc
+                case "MODE": return Loc.T("Mode inconnu."); // noloc
                 case "MEMBER": return Loc.T("Ce joueur est déjà dans ta guilde."); // noloc
                 case "THEIR_GUILD": return Loc.T("Ce joueur est déjà dans une autre guilde."); // noloc
                 case "NOT_YOUR_TURN": return Loc.T("Ce n'est pas encore ton tour."); // noloc

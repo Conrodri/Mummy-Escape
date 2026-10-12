@@ -14,14 +14,14 @@ using UnityEngine.UI;
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// The 2v2 campaign, from the Campagne tab: both mummies of a duo in the same tomb, live. The page shows the player's
-    /// duos (formed by invitation, as for the 2v2 duel), the tombs of the chosen duo with its progress and the player's
-    /// own 2v2 stars, invitations and friends to invite. "Play" waits for the teammate (who presses "Play" too), then the
-    /// try starts on both phones. A try costs a point of energy to each player; the reward of a tomb comes once per player.
+    /// The 2v2 campaign, launched from the group (<see cref="GroupScreen"/>): both mummies of the duo in the same tomb,
+    /// live. The page shows the duo's tombs with its progress and the player's own 2v2 stars. The leader picks a tomb
+    /// and presses "Play"; the teammate's phone waits for him and joins the try as soon as he does. A try costs a point
+    /// of energy to each player; the reward of a tomb comes once per player.
     /// </summary>
     public sealed class CoopScreen : UIScreen
     {
-        public override NavTab Tab => NavTab.Solo;
+        public override NavTab Tab => NavTab.Home;
 
         /// <summary>Any act from 2 on: every try of the 2v2 campaign costs a point of the solo energy.</summary>
         static readonly LevelId EnergyCost = new LevelId(Difficulty.Easy, 2, 0);
@@ -30,23 +30,19 @@ namespace MummyEscape.UI.Screens
         ScrollRect _scroll;
         Text _info;
         TeamsResponse _teams;
-        IReadOnlyList<FriendInfo> _friends;
-        string _duoId;
-        bool _busy;
+        Duo _duo;
+        bool _leader;
         int _request;
         RectTransform _searching;
         Text _searchStatus;
         CancellationTokenSource _search;
 
-        UIKit.Segmented _sections;
-
         protected override void Build()
         {
             UIKit.Backdrop(Root);
-            Header("Campagne");
+            Header("Campagne 2v2");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 16);
-            _sections = LevelSelectScreen.Sections(body, Router, 1);
             _info = UIKit.Label(body, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 64);
@@ -71,14 +67,23 @@ namespace MummyEscape.UI.Screens
             _searching.gameObject.SetActive(false);
         }
 
+        /// <summary>Opened by the group's launch: the duo, and whether this phone is the leader's (who picks the tomb).</summary>
+        public void Show(Duo duo, bool leader)
+        {
+            _duo = duo;
+            _leader = leader;
+            Fill();
+            if (!leader) Follow();
+        }
+
         public override void OnShow()
         {
-            _sections.Select(1);
             ProfileSetupScreen.AskIfNeeded(Router, App);
             App.Lighting.SetMood(false);
-            _busy = false;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;
+            if (_duo == null) _duo = App.Group;
+            _leader = _duo != null && _duo.Leader == App.Online.PlayerId;
             Fill();
             Reload();
         }
@@ -93,7 +98,6 @@ namespace MummyEscape.UI.Screens
             int request = ++_request;
             if (_teams == null) _info.text = Loc.T("Chargement…");
             var teams = await App.Pvp.GetTeamsAsync();
-            var friends = await App.Online.GetFriendsAsync();
             await App.RefreshPvpProfile(); // the player's own 2v2 stars
             if (request != _request || this == null) return;
             if (teams == null || teams.Error != null)
@@ -102,67 +106,42 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             _teams = teams;
-            _friends = friends;
-            if (_teams.Duos.All(d => d.Id != _duoId)) _duoId = _teams.Duos.FirstOrDefault()?.Id;
-            if (!_busy) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : coéquipier simulé") + "</color>" : "";
+            _duo = teams.Duos.Find(d => d.Id == _duo?.Id) ?? teams.Duos.FirstOrDefault();
+            App.SetGroup(_duo);
+            _leader = _duo != null && _duo.Leader == teams.Me;
+            if (_search == null) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : coéquipier simulé") + "</color>" : "";
             Fill();
+            if (_duo != null && !_leader && _search == null) Follow();
         }
 
         void Fill()
         {
             UIKit.ClearChildren(_list);
-            var rules = UIKit.Label(_list, "Vos deux momies dans le même tombeau, en direct : l'un tient la dalle, l'autre passe la porte. La sortie attend les deux. Une momie morte, et le tombeau recommence.", 24, UIKit.Dim);
+            var rules = UIKit.Label(_list, "Vos deux momies dans le même tombeau, en direct : l'un tient la dalle, l'autre passe la porte. La sortie attend les deux. Une momie morte, et le tombeau recommence.", 24, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(rules, 16);
             UIKit.Size(rules, 100);
             int stars = CoopLogic.TotalStars(App.PvpProfile?.Data?.CoopStars);
             var mine = UIKit.Label(_list, Loc.F("Tes étoiles 2v2 : {0}", stars), 30, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.Size(mine, 44);
-            if (_teams == null) return;
-
-            if (_teams.Invites.Count > 0)
+            if (_duo == null)
             {
-                UIKit.SectionTitle(_list, "Invitations");
-                foreach (var invite in _teams.Invites) InviteRow(invite);
+                UIKit.Size(UIKit.Label(_list, "Forme un groupe avec un ami (Accueil › Groupe) pour jouer la campagne 2v2.", 26, UIKit.Dim), 60);
+                return;
             }
-
-            UIKit.SectionTitle(_list, Loc.F("Mes duos ({0}/{1})", _teams.Duos.Count, TeamConfig.MaxDuosPerPlayer));
-            if (_teams.Duos.Count == 0)
-                UIKit.Size(UIKit.Label(_list, "Invite un ami ci-dessous pour former ton premier duo.", 26, UIKit.Dim), 60);
-            if (_teams.Duos.Count > 1)
-            {
-                var names = _teams.Duos.Select(d => d.Name).ToArray();
-                var tabs = new UIKit.Segmented(_list, names, i => { _duoId = _teams.Duos[i].Id; Fill(); }, 76);
-                tabs.Select(Mathf.Max(0, _teams.Duos.FindIndex(d => d.Id == _duoId)));
-            }
-            var duo = _teams.Duos.Find(d => d.Id == _duoId);
-            if (duo != null) DuoTombs(duo);
-
+            DuoTombs(_duo);
             UIKit.Size(UIKit.Button(_list, "Classement campagne 2v2", () => Router.Open<TeamLeaderboardScreen>().ShowCoop(), 30), 88);
-
-            if (_teams.Duos.Count < TeamConfig.MaxDuosPerPlayer)
-            {
-                UIKit.SectionTitle(_list, "Inviter un ami");
-                var partners = new HashSet<string>(_teams.Duos.SelectMany(d => d.Members));
-                int shown = 0;
-                foreach (var f in _friends ?? new List<FriendInfo>())
-                {
-                    if (partners.Contains(f.PlayerId)) continue;
-                    FriendRow(f);
-                    shown++;
-                }
-                if (shown == 0) UIKit.Size(UIKit.Label(_list, "Ajoute des amis (onglet Amis) pour les inviter.", 26, UIKit.Dim), 60);
-            }
         }
 
-        /// <summary>The duo's tombs, act by act: its best clear, the player's stars, and "Play" on the open ones.</summary>
+        /// <summary>The duo's tombs, act by act: its best clear, the player's stars, and "Play" on the open ones (the leader's phone).</summary>
         void DuoTombs(Duo duo)
         {
             var head = UIKit.Label(_list, duo.Name + "  ·  " + Loc.F("{0}/{1} tombeaux", CoopLogic.Cleared(duo), CoopCampaign.Count)
                                          + "  ·  " + Loc.F("Elo 2v2 {0}", duo.Elo), 28, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(head, 18);
             UIKit.Size(head, 44);
-            string partner = duo.Names.Count >= 2 ? duo.Names[duo.Members[0] == _teams.Me ? 1 : 0] : "?";
-            var hint = UIKit.Label(_list, Loc.F("Appuyez tous les deux sur « Jouer », {0} et toi.", partner), 24, UIKit.Dim);
+            string me = App.Online.PlayerId;
+            string partner = duo.Names.Count >= 2 ? duo.Names[duo.Members[0] == me ? 1 : 0] : "?";
+            var hint = UIKit.Label(_list, _leader ? Loc.F("Choisis un tombeau : {0} te suit.", partner) : Loc.F("{0} choisit le tombeau, tu le suis.", partner), 24, UIKit.Dim);
             UIKit.FitText(hint, 16);
             UIKit.Size(hint, 36);
             var myStars = App.PvpProfile?.Data?.CoopStars;
@@ -195,61 +174,27 @@ namespace MummyEscape.UI.Screens
             var s = UIKit.Label(col, sub, 24, stars > 0 ? UIKit.Gold : UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(s, 14);
             UIKit.Size(s, 32);
+            if (!_leader) return;
             var play = UIKit.Button(h.transform, "Jouer", () => Play(duo, tomb.Number), 28, ButtonStyle.Primary);
             UIKit.Size(play, 76, 170);
             play.interactable = open;
         }
 
-        void InviteRow(DuoInvite invite)
-        {
-            UIKit.ListItem(_list, 110, null, out var h);
-            var name = UIKit.Label(h.transform, Loc.F("{0} veut faire équipe", invite.FromName), 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.FitText(name, 18);
-            UIKit.Size(name, -1, 0, 1);
-            UIKit.Size(UIKit.Button(h.transform, "Refuser", () => Respond(invite, false), 26), 80, 170);
-            UIKit.Size(UIKit.Button(h.transform, "Accepter", () => Respond(invite, true), 26, ButtonStyle.Primary), 80, 190);
-        }
-
-        void FriendRow(FriendInfo f)
-        {
-            UIKit.ListItem(_list, 100, null, out var h);
-            var name = UIKit.Label(h.transform, f.Name, 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.FitText(name, 18);
-            UIKit.Size(name, -1, 0, 1);
-            UIKit.Size(UIKit.Button(h.transform, "Inviter", () => Invite(f), 26, ButtonStyle.Primary), 76, 180);
-        }
-
-        async void Invite(FriendInfo f)
-        {
-            if (_busy) return;
-            _busy = true;
-            var r = await App.Pvp.InviteDuoAsync(f.PlayerId, App.Online.PlayerName);
-            if (this == null) return;
-            _busy = false;
-            _info.text = r?.Ok == true ? Loc.F("Invitation envoyée à {0}.", f.Name) : TeamView.ErrorText(r?.Error);
-            Reload();
-        }
-
-        async void Respond(DuoInvite invite, bool accept)
-        {
-            if (_busy) return;
-            _busy = true;
-            var r = await App.Pvp.RespondDuoAsync(invite.Id, accept, App.Online.PlayerName);
-            if (this == null) return;
-            _busy = false;
-            _info.text = r?.Ok == true ? (accept ? Loc.F("Duo formé avec {0} !", invite.FromName) : "") : TeamView.ErrorText(r?.Error);
-            if (r?.Ok == true && accept) App.Audio.Play(Sfx.Coin);
-            Reload();
-        }
-
         /// <summary>A point of energy, then the wait for the teammate; once both phones are connected, the try starts.</summary>
         void Play(Duo duo, int tomb)
         {
-            if (_search != null || _teams == null) return;
-            PlayGate.Solo(App, EnergyCost, () => Search(duo, tomb));
+            if (_search != null) return;
+            PlayGate.Solo(App, EnergyCost, () => Search(duo, tomb, false));
         }
 
-        async void Search(Duo duo, int tomb)
+        /// <summary>The teammate's phone: a point of energy, then it waits for the leader's tomb and joins it.</summary>
+        void Follow()
+        {
+            if (_search != null || _duo == null) return;
+            PlayGate.Solo(App, EnergyCost, () => Search(_duo, 0, true));
+        }
+
+        async void Search(Duo duo, int tomb, bool follow)
         {
             if (_search != null) return;
             var matchmaker = CoopMatchmakerFactory.For(App.Pvp);
@@ -262,7 +207,7 @@ namespace MummyEscape.UI.Screens
             _searching.gameObject.SetActive(true);
             var look = PvpSkins.Look(App.Save.Loadout);
             look.Title = TitleBook.Equipped(App);
-            var start = await matchmaker.FindAsync(new CoopSearch { Duo = duo, Me = _teams.Me, MyName = App.Online.PlayerName, Look = look, Tomb = tomb, Pvp = App.Pvp },
+            var start = await matchmaker.FindAsync(new CoopSearch { Duo = duo, Me = App.Online.PlayerId, MyName = App.Online.PlayerName, Look = look, Tomb = tomb, FollowOnly = follow, Pvp = App.Pvp },
                 status => { if (this != null && _search == search) _searchStatus.text = status; }, search.Token);
             if (this == null) { start?.Link?.Dispose(); return; }
             if (_search == search) _search = null;
@@ -343,12 +288,12 @@ namespace MummyEscape.UI.Screens
         /// <summary>A new try costs a point of energy; it starts once the teammate asks for the same tomb.</summary>
         static void Again(GameApp app, int tomb) => PlayGate.Solo(app, EnergyCost, () => app.Game.CoopWish(tomb));
 
-        /// <summary>Leaves the try (the teammate is told) and goes back to the campaign page.</summary>
+        /// <summary>Leaves the try (the teammate is told) and goes back to the campaign page, under the group.</summary>
         internal static void BackToCampaign(GameApp app)
         {
             app.Game.LeaveCoop();
             app.UI.Reset<MainMenuScreen>();
-            app.UI.Open<LevelSelectScreen>();
+            app.UI.Open<GroupScreen>();
             app.UI.Open<CoopScreen>();
         }
     }

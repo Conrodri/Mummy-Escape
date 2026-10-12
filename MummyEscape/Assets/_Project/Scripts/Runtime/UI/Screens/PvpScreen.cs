@@ -31,7 +31,6 @@ namespace MummyEscape.UI.Screens
         ScrollRect _scroll;
         bool _busy;
         int _request;
-        UIKit.Segmented _modes;
         /// <summary>The duel search running (the button cancels it).</summary>
         CancellationTokenSource _duelSearch;
 
@@ -41,7 +40,6 @@ namespace MummyEscape.UI.Screens
             Header("Duel");
             var body = Body(190, 40, 40);
             UIKit.Column(body, 16);
-            _modes = Modes(body, Router, 0);
             var list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
             list.GetComponent<VerticalLayoutGroup>().spacing = 20;
@@ -120,7 +118,6 @@ namespace MummyEscape.UI.Screens
         {
             ProfileSetupScreen.AskIfNeeded(Router, App);
             App.Lighting.SetMood(false);
-            _modes.Select(0);
             _busy = false;
             _replacing = null;
             _info.text = "";
@@ -385,16 +382,6 @@ namespace MummyEscape.UI.Screens
         }
 
         public override void OnHide() => CancelDuelSearch();
-
-        /// <summary>1v1 (this screen) or 2v2 (<see cref="DuoScreen"/>), one tab away from each other; Back leads home.</summary>
-        internal static UIKit.Segmented Modes(Transform body, UIRouter router, int selected) =>
-            new UIKit.Segmented(body, new[] { "1v1", "2v2" }, i => // noloc
-            {
-                if (i == selected) return;
-                router.Reset<MainMenuScreen>();
-                if (i == 0) router.Open<PvpScreen>();
-                else router.Open<DuoScreen>();
-            }, 96);
 
         /// <summary>Looks for a live rival of the player's league (the matchmaker tells how it goes through <paramref name="status"/>).</summary>
         public static Task<DuelStart> FindLiveAsync(MummyEscape.App.GameApp app, IDuelMatchmaker matchmaker, Action<string> status, CancellationToken cancel)

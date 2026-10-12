@@ -141,7 +141,7 @@ namespace MummyEscape.Tests
             var (server, store, _, _) = NewServer();
             string ab = MakeDuo(server, "alice", "bob");
             string cd = MakeDuo(server, "carol", "dave");
-            Assert.AreEqual("EXISTS", server.InviteDuoAsync("alice", "alice", "bob").Result.Error);
+            Assert.AreEqual("LIMIT", server.InviteDuoAsync("alice", "alice", "bob").Result.Error, "one group per player");
 
             var waiting = server.FindDuoMatchAsync("alice", ab, true, Gen).Result.Battle;
             Assert.IsNull(waiting.B, "nobody waiting: the battle waits for a rival duo");

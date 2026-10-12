@@ -109,6 +109,17 @@ namespace MummyEscape.Pvp.Server
         public Task<TeamActionResponse> RespondDuo(IExecutionContext ctx, string playerName, string inviteId, bool accept) =>
             Server(ctx).RespondDuoAsync(ctx.PlayerId, playerName, inviteId, accept);
 
+        /// <summary>Le groupe : le duo à jour (avec ma tenue notée dedans), prêt / plus prêt, et le lancement par le chef.</summary>
+        [CloudCodeFunction("GetDuo")]
+        public Task<DuoResponse> GetDuo(IExecutionContext ctx, string duoId, PlayerLook look) => Server(ctx).GetDuoAsync(ctx.PlayerId, duoId, look);
+
+        [CloudCodeFunction("SetGroupReady")]
+        public Task<DuoResponse> SetGroupReady(IExecutionContext ctx, string duoId, bool ready, PlayerLook look) =>
+            Server(ctx).SetGroupReadyAsync(ctx.PlayerId, duoId, ready, look);
+
+        [CloudCodeFunction("LaunchGroup")]
+        public Task<DuoResponse> LaunchGroup(IExecutionContext ctx, string duoId, string mode) => Server(ctx).LaunchGroupAsync(ctx.PlayerId, duoId, mode);
+
         [CloudCodeFunction("LeaveDuo")]
         public Task<TeamActionResponse> LeaveDuo(IExecutionContext ctx, string duoId) => Server(ctx).LeaveDuoAsync(ctx.PlayerId, duoId);
 

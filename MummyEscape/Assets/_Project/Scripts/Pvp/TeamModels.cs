@@ -18,7 +18,7 @@ namespace MummyEscape.Pvp
         // --- 2v2 ---
         public const int DuoSlots = 3;                 // 3 manches, la première équipe à 2 victoires gagne
         public const int DuoWinsNeeded = 2;
-        public const int MaxDuosPerPlayer = 3;
+        public const int MaxDuosPerPlayer = 1;         // le groupe : un seul duo à la fois
         public const int MaxDuoInvites = 10;
         public const int DuoStartingElo = 1000;
 
@@ -148,7 +148,41 @@ namespace MummyEscape.Pvp
         /// <summary>Campagne 2v2 : le meilleur passage de chaque tombeau passé par le duo.</summary>
         public List<CoopRecord> Coop = new List<CoopRecord>();
 
+        // Le groupe (écran Groupe) : le duo vu comme une équipe de deux, le créateur en chef.
+        /// <summary>La tenue de chaque membre (même ordre que <see cref="Members"/>), montrée côte à côte ; null tant qu'inconnue.</summary>
+        public List<PlayerLook> Looks = new List<PlayerLook>();
+        /// <summary>Membres prêts à partir (le chef lance quand l'autre l'est).</summary>
+        public List<string> Ready = new List<string>();
+        /// <summary>Dernier lancement du chef : <see cref="GroupLaunch.Coop"/> ou <see cref="GroupLaunch.Relay"/>, suivi par les deux téléphones.</summary>
+        public string Launch;
+        public long LaunchAtUnixMs;
+
         public string Name => Names.Count >= 2 ? Names[0] + " & " + Names[1] : Id;
+        /// <summary>Le chef du groupe : son créateur.</summary>
+        public string Leader => Members.Count > 0 ? Members[0] : null;
+        public bool IsReady(string playerId) => Ready != null && Ready.Contains(playerId);
+        public PlayerLook LookOf(string playerId)
+        {
+            int i = Members.IndexOf(playerId);
+            return Looks != null && i >= 0 && i < Looks.Count ? Looks[i] : null;
+        }
+    }
+
+    /// <summary>Ce que le chef peut lancer pour le groupe.</summary>
+    public static class GroupLaunch
+    {
+        public const string Coop = "coop", Relay = "relay";
+        /// <summary>Un lancement plus vieux que cela n'est plus suivi (le téléphone qui le lit arrive trop tard).</summary>
+        public const long WindowMs = 90_000;
+        public static bool IsValid(string mode) => mode == Coop || mode == Relay;
+    }
+
+    /// <summary>Réponse des actions de groupe : le duo à jour.</summary>
+    [Serializable]
+    public class DuoResponse
+    {
+        public Duo Duo;
+        public string Error;   // "UNKNOWN", "LEADER", "NOT_READY", "MODE"
     }
 
     [Serializable]
