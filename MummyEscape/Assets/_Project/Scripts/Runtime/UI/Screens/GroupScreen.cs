@@ -153,7 +153,7 @@ namespace MummyEscape.UI.Screens
             if (duo == null) return;
             var r = await App.Pvp.GetDuoAsync(duo.Id, MyLook());
             if (this == null || _duo != duo) return;
-            if (r?.Error == "UNKNOWN") { Reload(); return; } // dissolved by the other
+            if (r?.Error == "UNKNOWN") { Reload(); return; } // noloc, dissolved by the other
             if (r?.Duo == null) return;
             _duo = r.Duo;
             App.SetGroup(_duo);

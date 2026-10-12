@@ -62,13 +62,8 @@ namespace MummyEscape.UI.Screens
                 {
                     // Mandatory: the next floor waits for the pick.
                     Paragraph(play, Loc.T("Choisis un malus pour continuer :"), 28, UIKit.Gold);
-                    foreach (var curse in Tower.Curses)
-                    {
-                        var c = curse;
-                        var b = UIKit.Button(play, Loc.F("{0} ({1}/{2})", Loc.T(NameOf(c)), run.Curses.Of(c), Tower.Cap(c)), () => Take(c), 32, ButtonStyle.Primary);
-                        b.interactable = run.Curses.CanTake(c);
-                        UIKit.Size(b, UIKit.ButtonHeight);
-                    }
+                    var row = UIKit.Row(play, 330, 14);
+                    foreach (var curse in Tower.Curses) CurseCard(row.transform, curse, run.Curses);
                 }
                 else UIKit.Size(UIKit.Button(play, Loc.F("Étage {0}", run.Floor), Continue, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
                 UIKit.Size(UIKit.Button(play, "Abandonner la course", () => { save.EndTower(); Fill(); }, UIKit.TextSize, ButtonStyle.Ghost), 72);
@@ -84,8 +79,46 @@ namespace MummyEscape.UI.Screens
             label.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
+        /// <summary>A square to tap: the handicap's icon, its name, how many times it is taken, and what it does in a line.</summary>
+        void CurseCard(Transform row, TowerCurse curse, TowerCurses taken)
+        {
+            bool can = taken.CanTake(curse);
+            var card = UIKit.Plate(row, can ? UIKit.SurfaceHi : new Color(0.16f, 0.13f, 0.1f), 22, can ? UIKit.Gold : UIKit.Rim);
+            UIKit.Size(card, -1, 0, 1);
+            UIKit.Column(card.transform, 8, 18);
+            card.raycastTarget = can;
+            if (can)
+            {
+                var btn = card.gameObject.AddComponent<Button>();
+                btn.targetGraphic = card;
+                btn.onClick.AddListener(() => { App.Audio.Play(Services.Sfx.Click, 0f); Take(curse); });
+                card.gameObject.AddComponent<PressScale>().Amount = 0.96f;
+            }
+            var icon = UIKit.Image(card.transform, IconOf(curse), can ? Color.white : UIKit.Dim, false, "Icon"); // noloc
+            icon.preserveAspect = true;
+            UIKit.Size(icon, 96, 96);
+            var name = UIKit.Label(card.transform, Loc.T(NameOf(curse)), 26, can ? UIKit.Sand : UIKit.Dim, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.FitText(name, 16);
+            UIKit.Size(name, 64);
+            var count = UIKit.Label(card.transform, $"+1  ({taken.Of(curse)}/{Tower.Cap(curse)})", 24, can ? UIKit.Gold : UIKit.Dim); // noloc
+            UIKit.Size(count, 32);
+            var desc = UIKit.Label(card.transform, Loc.T(DescOf(curse)), 20, UIKit.Dim);
+            UIKit.FitText(desc, 13);
+            UIKit.Size(desc, 70);
+        }
+
+        /// <summary>Armed spikes for the traps, the tomb map for the size, the tower for the storeys.</summary>
+        Sprite IconOf(TowerCurse curse) =>
+            curse == TowerCurse.Traps ? App.Art.ForTile(new Tile { Type = TileType.Trap, Trap = TrapKind.Spikes }, new TileLook { Armed = true })
+            : curse == TowerCurse.Bigger ? UISprites.Map : UISprites.Tower;
+
         static string NameOf(TowerCurse curse) =>
             curse == TowerCurse.Traps ? "Plus de pièges" : curse == TowerCurse.Bigger ? "Tombeaux plus grands" : "Un étage de plus par tombeau";
+
+        static string DescOf(TowerCurse curse) =>
+            curse == TowerCurse.Traps ? "Un piège de plus à chaque étage, pointes puis ombre."
+            : curse == TowerCurse.Bigger ? "Chaque tombeau gagne une case en largeur et en hauteur."
+            : "Chaque tombeau a un étage de plus à traverser.";
 
         /// <summary>"Plus de pièges ×2 · Tombeaux plus grands": the handicaps taken so far.</summary>
         static string CurseNames(TowerCurses curses)
