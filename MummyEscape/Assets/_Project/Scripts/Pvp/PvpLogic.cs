@@ -5,20 +5,18 @@ using System.Globalization;
 
 namespace MummyEscape.Pvp
 {
+    /// <summary>
+    /// Ladder points, in the way of the big ranked games: a win gives a fixed number of points and a loss takes the same,
+    /// whoever the rival is, so a player who wins more than he loses climbs with the duels he plays. The stake shrinks with
+    /// experience, from <see cref="PvpConfig.PointsStart"/> on the first duels down to <see cref="PvpConfig.PointsMin"/>,
+    /// one point less every <see cref="PvpConfig.PointsStepDuels"/> duels. Still called Elo everywhere (the field, the
+    /// leaderboards, the leagues).
+    /// </summary>
     public static class Elo
     {
-        /// <summary>Probabilité que A batte B.</summary>
-        public static double Expected(int ratingA, int ratingB)
-        {
-            return 1.0 / (1.0 + Math.Pow(10.0, (ratingB - ratingA) / 400.0));
-        }
-
-        public static int KFactor(int rating, int totalDuels)
-        {
-            if (totalDuels < PvpConfig.PlacementDuels) return PvpConfig.KPlacement;
-            if (rating >= PvpConfig.KHighThreshold) return PvpConfig.KHigh;
-            return PvpConfig.KNormal;
-        }
+        /// <summary>Points at stake in the player's next duel: 20 over the first 100 duels, 19 over the next 100… never under 10.</summary>
+        public static int Points(int totalDuels) =>
+            Math.Max(PvpConfig.PointsMin, PvpConfig.PointsStart - Math.Max(0, totalDuels) / PvpConfig.PointsStepDuels);
 
         public static double Score(DuelResult result)
         {
@@ -31,19 +29,17 @@ namespace MummyEscape.Pvp
         }
 
         /// <summary>
-        /// Nouveau classement de A après un duel contre B. Contre un bot (<paramref name="vsBot"/>), le K est divisé par deux :
-        /// un bot tient l'Elo de la division sans en être un vrai membre.
+        /// Nouveau classement de A après un duel : plus ou moins la mise, rien pour un nul. Contre un bot (<paramref name="vsBot"/>),
+        /// la mise est divisée par deux : un bot tient l'Elo de la division sans en être un vrai membre.
         /// </summary>
         public static int NewRating(int ratingA, int ratingB, DuelResult resultForA, int totalDuelsA, bool vsBot = false)
         {
-            int k = KFactor(ratingA, totalDuelsA);
-            if (vsBot) k = (k + 1) / 2;
-            double delta = k * (Score(resultForA) - Expected(ratingA, ratingB));
-            int updated = ratingA + (int)Math.Round(delta, MidpointRounding.AwayFromZero);
-            return Math.Max(PvpConfig.MinElo, updated);
+            int points = Points(totalDuelsA);
+            if (vsBot) points = (points + 1) / 2;
+            int delta = resultForA == DuelResult.Win ? points : resultForA == DuelResult.Loss ? -points : 0;
+            return Math.Max(PvpConfig.MinElo, ratingA + delta);
         }
     }
-
     public static class Leagues
     {
         public static League FromElo(int elo)

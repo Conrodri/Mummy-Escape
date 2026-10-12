@@ -8,11 +8,9 @@ namespace MummyEscape.Pvp
     {
         // --- Elo ---
         public const int StartingElo = 800;              // under ArgentMin: a new player starts in Bronze
-        public const int PlacementDuels = 10;
-        public const int KPlacement = 40;
-        public const int KNormal = 24;
-        public const int KHigh = 16;
-        public const int KHighThreshold = 1800;
+        public const int PointsStart = 20;              // points won or lost per duel over the first PointsStepDuels duels
+        public const int PointsMin = 10;                // the stake never shrinks under this
+        public const int PointsStepDuels = 100;         // one point less every this many duels played
         public const int MinElo = 100;
 
         // --- Ligues (seuil minimal de chaque ligue) ---

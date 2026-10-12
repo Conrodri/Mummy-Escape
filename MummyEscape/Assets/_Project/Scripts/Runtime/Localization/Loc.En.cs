@@ -656,7 +656,6 @@ namespace MummyEscape
             ["{0} défaites"] = "{0} losses",
             ["{0} duel"] = "{0} duel",
             ["{0} duels"] = "{0} duels",
-            ["placement {0}/{1}"] = "placement {0}/{1}",
             ["torche de saison {0}/{1}"] = "season torch {0}/{1}",
             ["coffre du jour à gagner"] = "daily chest to win",
             ["{0} étoiles en solo pour débloquer ({1}/{0})"] = "{0} solo stars to unlock ({1}/{0})",

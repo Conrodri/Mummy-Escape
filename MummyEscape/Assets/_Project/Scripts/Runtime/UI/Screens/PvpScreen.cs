@@ -171,8 +171,7 @@ namespace MummyEscape.UI.Screens
                       : top ? Loc.F("Elo {0} · {1} · {2}e mondial", elo, leagueName, profile.WorldRank)
                       : profile.WorldRank > 0 ? Loc.F("Elo {0} · {1}e mondial", elo, profile.WorldRank)
                       : Loc.F("Elo {0} · pas encore classé ce mois-ci", elo);
-            _record.text = d == null ? "" : Loc.P(d.Wins, "{0} victoire", "{0} victoires") + " · " + Loc.P(d.Draws, "{0} nul", "{0} nuls") + " · " + Loc.P(d.Losses, "{0} défaite", "{0} défaites")
-                + (d.TotalDuels < PvpConfig.PlacementDuels ? "  ·  " + Loc.F("placement {0}/{1}", d.TotalDuels, PvpConfig.PlacementDuels) : "");
+            _record.text = d == null ? "" : Loc.P(d.Wins, "{0} victoire", "{0} victoires") + " · " + Loc.P(d.Draws, "{0} nul", "{0} nuls") + " · " + Loc.P(d.Losses, "{0} défaite", "{0} défaites");
             _seals.text = (d?.Seals ?? 0).ToString();
 
             if (d != null)
