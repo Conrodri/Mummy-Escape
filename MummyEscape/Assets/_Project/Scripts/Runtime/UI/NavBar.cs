@@ -24,9 +24,9 @@ namespace MummyEscape.UI
             public Sprite Icon;
             public System.Func<UIScreen, bool> IsCurrent;
             public System.Action Open;
-            /// <summary>Opens along the campaign (<see cref="Unlocks"/>); null for the screens open from the start.</summary>
-            public Feature? Feature;
-            public bool Locked => Feature != null && !Unlocks.IsUnlocked(Feature.Value, App.GameApp.I.Save.IsCompleted);
+            /// <summary>The tomb that opens this screen while it is locked, null once it is open (or from the start).</summary>
+            public System.Func<LevelId?> Gate;
+            public LevelId? LockedBy => Gate?.Invoke();
         }
 
         sealed class Group
@@ -67,32 +67,42 @@ namespace MummyEscape.UI
                 E("Accueil", UISprites.Home, s => s is MainMenuScreen, () => router.Reset<MainMenuScreen>()));
             bar.Add(row, UISprites.Play, "Jouer", new[] { NavTab.Solo, NavTab.Duel, NavTab.Ranking },
                 E("Campagne", UISprites.Map, s => s.Tab == NavTab.Solo && !(s is EndlessScreen) && !(s is TowerScreen), bar.Go<LevelSelectScreen>),
-                E("Duel", UISprites.Swords, s => s.Tab == NavTab.Duel, bar.Go<PvpScreen>, Feature.Duel),
-                E("Sans fin", UISprites.Infinity, s => s is EndlessScreen, bar.Go<EndlessScreen>),
-                E("Tour de défi", UISprites.Tower, s => s is TowerScreen, bar.Go<TowerScreen>),
+                E("Duel", UISprites.Swords, s => s.Tab == NavTab.Duel, bar.Go<PvpScreen>, Gate(Feature.Duel)),
+                E("Sans fin", UISprites.Infinity, s => s is EndlessScreen, bar.Go<EndlessScreen>, Campaign),
+                E("Tour de défi", UISprites.Tower, s => s is TowerScreen, bar.Go<TowerScreen>, Campaign),
                 E("Classements", UISprites.Podium, s => s.Tab == NavTab.Ranking, bar.Go<LeaderboardScreen>));
             bar.Add(row, UISprites.User, "Momie", new[] { NavTab.Mummy },
                 E("Momie", UISprites.User, s => s is MummyScreen, bar.Go<MummyScreen>));
             bar.Add(row, UISprites.Friends, "Social", new[] { NavTab.Friends },
                 E("Amis", UISprites.Friends, s => s is FriendsScreen, bar.Go<FriendsScreen>),
-                E("Guilde", UISprites.Crown, s => s is GuildScreen, bar.Go<GuildScreen>, Feature.Guild),
-                E("Tchat", UISprites.Chat, s => s is ChatScreen, bar.Go<ChatScreen>, Feature.Chat));
+                E("Guilde", UISprites.Crown, s => s is GuildScreen, bar.Go<GuildScreen>, Gate(Feature.Guild)),
+                E("Tchat", UISprites.Chat, s => s is ChatScreen, bar.Go<ChatScreen>, Gate(Feature.Chat)));
             bar.Add(row, UISprites.Bag, "Boutique", new[] { NavTab.Shop, NavTab.Casino },
                 E("Boutique", UISprites.Bag, s => s is ShopScreen || s is TreasureScreen, bar.Go<ShopScreen>),
-                E("Casino", UISprites.Wheel, s => s is CasinoScreen, bar.Go<CasinoScreen>, Feature.Casino),
+                E("Casino", UISprites.Wheel, s => s is CasinoScreen, bar.Go<CasinoScreen>, Gate(Feature.Casino)),
                 E("Pass", UISprites.Seal, s => s is PassScreen, bar.Go<PassScreen>));
             bg.gameObject.SetActive(false);
             return bar;
         }
 
-        static Entry E(string caption, Sprite icon, System.Func<UIScreen, bool> isCurrent, System.Action open, Feature? feature = null) =>
-            new Entry { Caption = caption, Icon = icon, IsCurrent = isCurrent, Open = open, Feature = feature };
+        static Entry E(string caption, Sprite icon, System.Func<UIScreen, bool> isCurrent, System.Action open, System.Func<LevelId?> gate = null) =>
+            new Entry { Caption = caption, Icon = icon, IsCurrent = isCurrent, Open = open, Gate = gate };
+
+        static System.Func<LevelId, bool> Done => App.GameApp.I.Save.IsCompleted;
+
+        /// <summary>A room of <see cref="Unlocks"/>: its gate while locked.</summary>
+        static System.Func<LevelId?> Gate(Feature feature) => () => Unlocks.IsUnlocked(feature, Done) ? (LevelId?)null : Unlocks.Gate(feature);
+
+        /// <summary>The endless mode and the tower open with the whole campaign.</summary>
+        static LevelId? Campaign() => Endless.IsUnlocked(Difficulty.Easy, Done) ? (LevelId?)null : Progression.Last(Difficulty.Easy);
 
         /// <summary>A locked entry says which tomb opens it.</summary>
-        public static void ExplainLock(UIRouter router, Feature feature, string caption) =>
+        public static void ExplainLock(UIRouter router, LevelId gate, string caption) =>
             router.Open<OfferDialog>().Configure("Pas encore ouvert",
-                Loc.F("Évade-toi du tombeau {0} pour ouvrir : {1}.", LevelNames.Of(Unlocks.Gate(feature)), Loc.T(caption)),
+                Loc.F("Évade-toi du tombeau {0} pour ouvrir : {1}.", LevelNames.Of(gate), Loc.T(caption)),
                 ("OK", ButtonStyle.Primary, null)); // noloc
+
+        public static void ExplainLock(UIRouter router, Feature feature, string caption) => ExplainLock(router, Unlocks.Gate(feature), caption);
 
         void Add(RectTransform row, Sprite sprite, string caption, NavTab[] tabs, params Entry[] entries)
         {
@@ -179,8 +189,9 @@ namespace MummyEscape.UI
             {
                 var e = entry;
                 bool here = current != null && e.IsCurrent(current);
-                bool locked = e.Locked;
-                var b = UIKit.Button(group.Choices, e.Caption, () => { CloseMenus(); if (locked) ExplainLock(_router, e.Feature.Value, e.Caption); else e.Open(); }, 34,
+                var gate = e.LockedBy;
+                bool locked = gate != null;
+                var b = UIKit.Button(group.Choices, e.Caption, () => { CloseMenus(); if (locked) ExplainLock(_router, gate.Value, e.Caption); else e.Open(); }, 34,
                                      here ? ButtonStyle.Primary : locked ? ButtonStyle.Ghost : ButtonStyle.Secondary);
                 UIKit.Size(b, 108);
                 var label = b.GetComponentInChildren<Text>();
