@@ -113,9 +113,7 @@ namespace MummyEscape.UI.Screens
         void Fill()
         {
             UIKit.ClearChildren(_list);
-            var rules = UIKit.Label(_list, "En direct contre un autre duo, sur les mêmes labyrinthes. Chacun a le sien : tu cours jusqu'à ta dalle, elle libère ton coéquipier, qui te libère à son tour… Le premier duo sorti gagne. Une momie morte fait perdre son duo.", 24, UIKit.Dim);
-            UIKit.FitText(rules, 16);
-            UIKit.Size(rules, 100);
+            UIKit.Help(_list, "Duel 2v2", "En direct contre un autre duo, sur les mêmes labyrinthes. Chacun a le sien : tu cours jusqu'à ta dalle, elle libère ton coéquipier, qui te libère à son tour… Le premier duo sorti gagne. Une momie morte fait perdre son duo.");
             if (_teams != null) FillTeams();
             FillReplays();
         }

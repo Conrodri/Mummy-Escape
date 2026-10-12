@@ -152,6 +152,7 @@ namespace MummyEscape.UI.Screens
             bool open = ModeOpen(_mode);
             if (animate && act == _act) return;
             _act = act;
+            StartCoroutine(App.Art.Warm(_act)); // the act's sprites, painted before its first tomb
             var def = DifficultyTable.GetAct(_act);
             var theme = TombTheme.ForAct(_act);
             var accent = Color.Lerp(theme.Accent, UIKit.Sand, 0.2f);

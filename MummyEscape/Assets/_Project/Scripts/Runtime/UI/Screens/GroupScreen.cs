@@ -19,7 +19,7 @@ namespace MummyEscape.UI.Screens
     {
         public override NavTab Tab => NavTab.Home;
 
-        const float PollSeconds = 3f;
+        const float PollSeconds = 5f;
 
         Text _info;
         RectTransform _list;

@@ -39,6 +39,8 @@ namespace MummyEscape.Services
         public bool ProfileDone;
         /// <summary>The tutorial corridor was walked to its exit once.</summary>
         public bool TutorialDone;
+        /// <summary>Features (Core.Feature bitmask) already celebrated on the home screen.</summary>
+        public int SeenUnlocks;
         /// <summary>Best scores the leaderboards confirmed ("level_f1_1:score"): any other record is sent again when online.</summary>
         public List<string> SubmittedScores = new List<string>();
 
@@ -254,6 +256,15 @@ namespace MummyEscape.Services
         }
 
         public bool IsCompleted(LevelId id) => GetRecord(id)?.Completions > 0;
+
+        /// <summary>Features opened since the last call (a <see cref="Feature"/> bitmask), so each is celebrated once.</summary>
+        public int TakeNewUnlocks()
+        {
+            int now = Unlocks.Mask(IsCompleted);
+            int fresh = now & ~Data.SeenUnlocks;
+            if (fresh != 0) { Data.SeenUnlocks = now; Save(); }
+            return fresh;
+        }
 
         public bool IsUnlocked(LevelId id) => Progression.IsUnlocked(id, IsCompleted);
 

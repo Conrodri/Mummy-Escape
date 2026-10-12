@@ -89,9 +89,7 @@ namespace MummyEscape.UI.Screens
             _info = UIKit.Label(list, "", 28, UIKit.Sand);
             UIKit.Size(_info, 84);
 
-            var rules = UIKit.Label(list, "En direct contre un joueur de ta ligue : même tombeau, même départ, il court à tes côtés. Le premier sorti gagne, le premier mort perd ; au bout de 3 minutes, le plus avancé.", 26, UIKit.Dim);
-            UIKit.FitText(rules, 18);
-            UIKit.Size(rules, 110);
+            UIKit.Help(list, "Duel", "En direct contre un joueur de ta ligue : même tombeau, même départ, il court à tes côtés. Le premier sorti gagne, le premier mort perd ; au bout de 3 minutes, le plus avancé.");
 
             _claim = UIKit.Button(list, "Récompenses", Claim, 30, ButtonStyle.Primary);
             UIKit.FitText(_claim.GetComponentInChildren<Text>(), 18);

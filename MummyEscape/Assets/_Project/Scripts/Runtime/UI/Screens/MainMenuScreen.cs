@@ -13,6 +13,8 @@ namespace MummyEscape.UI.Screens
         PassBanner _pass;
         Image _mummy, _mate, _chatDot;
         Text _mateName;
+        Button _chat;
+        RectTransform _groupAction;
         HomeScene _scene;
         RectTransform _stage;
         Text _online, _goal;
@@ -45,7 +47,8 @@ namespace MummyEscape.UI.Screens
             goldPlate.GetComponent<Image>().raycastTarget = true;
             goldPlate.AddComponent<Button>().onClick.AddListener(() => Router.Open<TreasureScreen>());
             // The chat, with a dot when a friend or the guild wrote.
-            var chat = UIKit.IconButton(top.transform, UISprites.Chat, () => Router.Open<ChatScreen>(), 92);
+            _chat = UIKit.IconButton(top.transform, UISprites.Chat, () => Router.Open<ChatScreen>(), 92);
+            var chat = _chat;
             _chatDot = UIKit.Image(chat.transform, UISprites.Circle, UIKit.Danger, false, "Dot"); // noloc
             UIKit.Place(_chatDot.rectTransform, 1, 1, 28, 28, -10, -10);
             _chatDot.enabled = false;
@@ -88,7 +91,8 @@ namespace MummyEscape.UI.Screens
             CornerPlate(theme);
             // The group: a friend to play the 2v2 campaign and duels with, in the other corner.
             var group = UIKit.IconAction(_stage, UISprites.Friends, "Groupe", () => Router.Open<GroupScreen>(), 84);
-            UIKit.Place((RectTransform)group.transform.parent.parent, 0f, 1f, 134, 144);
+            _groupAction = (RectTransform)group.transform.parent.parent;
+            UIKit.Place(_groupAction, 0f, 1f, 134, 144);
             CornerPlate(group);
 
             // The dock: the pass, the next goal, the play button and the account line, framed together over the floor.
@@ -145,6 +149,12 @@ namespace MummyEscape.UI.Screens
             _pass.Refresh(App);
             RefreshGoal();
             MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
+            // The rooms open along the campaign: hidden until then, celebrated once when they open.
+            _chat.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Chat, App.Save.IsCompleted));
+            _groupAction.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted));
+            int fresh = App.Save.TakeNewUnlocks();
+            if (fresh != 0 && !TutorialPending(App.Save)) Celebrate(fresh);
+            StartCoroutine(App.Art.Warm(App.Save.FurthestUnlocked().Act)); // the next tomb's sprites, painted now
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)
                 : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName)
@@ -153,6 +163,35 @@ namespace MummyEscape.UI.Screens
             _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId);
             _ = Online.ChatState.RefreshAsync(App.Pvp);
             _ = Online.ChatState.SyncProfileAsync(App);
+        }
+
+        /// <summary>" · ouvre les duels" when escaping this tomb opens a room (the goal card teases it).</summary>
+        string Opens(LevelId next)
+        {
+            if (Unlocks.Gate(Feature.Duel).Equals(next)) return "  ·  " + Loc.T("ouvre les duels");
+            if (Unlocks.Gate(Feature.Guild).Equals(next)) return "  ·  " + Loc.T("ouvre la guilde, le tchat et le casino");
+            return "";
+        }
+
+        /// <summary>Newly open rooms (a <see cref="Feature"/> bitmask): a word for each, and a way in to the first.</summary>
+        void Celebrate(int fresh)
+        {
+            var lines = new System.Collections.Generic.List<string>();
+            System.Action first = null;
+            foreach (var f in Unlocks.All)
+            {
+                if ((fresh & (int)f) == 0) continue;
+                switch (f)
+                {
+                    case Feature.Duel: lines.Add(Loc.T("Les duels et le groupe")); first ??= () => Router.Open<PvpScreen>(); break;
+                    case Feature.Guild: lines.Add(Loc.T("La guilde")); first ??= () => Router.Open<GuildScreen>(); break;
+                    case Feature.Chat: lines.Add(Loc.T("Le tchat")); first ??= () => Router.Open<ChatScreen>(); break;
+                    case Feature.Casino: lines.Add(Loc.T("Le casino")); first ??= () => Router.Open<CasinoScreen>(); break;
+                }
+            }
+            App.Audio.Play(Services.Sfx.Win);
+            Router.Open<OfferDialog>().Configure("Nouvelles salles ouvertes !", Loc.T("Ta progression ouvre :") + "\n\n• " + string.Join("\n• ", lines),
+                ("Voir", ButtonStyle.Primary, first), ("Plus tard", ButtonStyle.Ghost, null));
         }
 
         /// <summary>The next tomb to escape; once they are all escaped, the first one short of three stars; then the duels.</summary>
@@ -170,7 +209,7 @@ namespace MummyEscape.UI.Screens
             }
             if (rec == null || rec.Completions == 0)
             {
-                _goal.text = Loc.F("Évade-toi du tombeau {0}", LevelNames.Of(next));
+                _goal.text = Loc.F("Évade-toi du tombeau {0}", LevelNames.Of(next)) + Opens(next);
                 _goalAction = () => PlayLevel(next);
                 return;
             }

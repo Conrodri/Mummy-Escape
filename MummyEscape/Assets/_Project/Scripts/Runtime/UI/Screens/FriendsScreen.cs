@@ -90,6 +90,7 @@ namespace MummyEscape.UI.Screens
             new UIKit.Segmented(body, new[] { "Amis", "Guilde" }, i =>
             {
                 if (i == selected) return;
+                if (i == 1 && !Unlocks.IsUnlocked(Feature.Guild, MummyEscape.App.GameApp.I.Save.IsCompleted)) { NavBar.ExplainLock(router, Feature.Guild, "Guilde"); return; }
                 router.Reset<MainMenuScreen>();
                 if (i == 0) router.Open<FriendsScreen>();
                 else router.Open<GuildScreen>();
@@ -195,7 +196,11 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(progress, 16);
             UIKit.Size(progress, 32);
             // Write to the friend (the chat's private conversation).
-            UIKit.IconButton(h.transform, UISprites.Chat, () => Router.Open<ChatScreen>().OpenDirect(f.PlayerId, f.Name), 84);
+            UIKit.IconButton(h.transform, UISprites.Chat, () =>
+            {
+                if (Unlocks.IsUnlocked(Feature.Chat, App.Save.IsCompleted)) Router.Open<ChatScreen>().OpenDirect(f.PlayerId, f.Name);
+                else NavBar.ExplainLock(Router, Feature.Chat, "Tchat");
+            }, 84);
             UIKit.Size(UIKit.Image(h.transform, UISprites.Next, UIKit.Gold), 40, 40);
             LoadProgress(f, portrait, halo, title, badges.transform, progress);
         }

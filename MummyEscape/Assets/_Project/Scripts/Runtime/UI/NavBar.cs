@@ -1,3 +1,4 @@
+using MummyEscape.Core;
 using MummyEscape.UI.Screens;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,6 +24,9 @@ namespace MummyEscape.UI
             public Sprite Icon;
             public System.Func<UIScreen, bool> IsCurrent;
             public System.Action Open;
+            /// <summary>Opens along the campaign (<see cref="Unlocks"/>); null for the screens open from the start.</summary>
+            public Feature? Feature;
+            public bool Locked => Feature != null && !Unlocks.IsUnlocked(Feature.Value, App.GameApp.I.Save.IsCompleted);
         }
 
         sealed class Group
@@ -63,7 +67,7 @@ namespace MummyEscape.UI
                 E("Accueil", UISprites.Home, s => s is MainMenuScreen, () => router.Reset<MainMenuScreen>()));
             bar.Add(row, UISprites.Play, "Jouer", new[] { NavTab.Solo, NavTab.Duel, NavTab.Ranking },
                 E("Campagne", UISprites.Map, s => s.Tab == NavTab.Solo && !(s is EndlessScreen) && !(s is TowerScreen), bar.Go<LevelSelectScreen>),
-                E("Duel", UISprites.Swords, s => s.Tab == NavTab.Duel, bar.Go<PvpScreen>),
+                E("Duel", UISprites.Swords, s => s.Tab == NavTab.Duel, bar.Go<PvpScreen>, Feature.Duel),
                 E("Sans fin", UISprites.Infinity, s => s is EndlessScreen, bar.Go<EndlessScreen>),
                 E("Tour de défi", UISprites.Tower, s => s is TowerScreen, bar.Go<TowerScreen>),
                 E("Classements", UISprites.Podium, s => s.Tab == NavTab.Ranking, bar.Go<LeaderboardScreen>));
@@ -71,18 +75,24 @@ namespace MummyEscape.UI
                 E("Momie", UISprites.User, s => s is MummyScreen, bar.Go<MummyScreen>));
             bar.Add(row, UISprites.Friends, "Social", new[] { NavTab.Friends },
                 E("Amis", UISprites.Friends, s => s is FriendsScreen, bar.Go<FriendsScreen>),
-                E("Guilde", UISprites.Crown, s => s is GuildScreen, bar.Go<GuildScreen>),
-                E("Tchat", UISprites.Chat, s => s is ChatScreen, bar.Go<ChatScreen>));
+                E("Guilde", UISprites.Crown, s => s is GuildScreen, bar.Go<GuildScreen>, Feature.Guild),
+                E("Tchat", UISprites.Chat, s => s is ChatScreen, bar.Go<ChatScreen>, Feature.Chat));
             bar.Add(row, UISprites.Bag, "Boutique", new[] { NavTab.Shop, NavTab.Casino },
                 E("Boutique", UISprites.Bag, s => s is ShopScreen || s is TreasureScreen, bar.Go<ShopScreen>),
-                E("Casino", UISprites.Wheel, s => s is CasinoScreen, bar.Go<CasinoScreen>),
+                E("Casino", UISprites.Wheel, s => s is CasinoScreen, bar.Go<CasinoScreen>, Feature.Casino),
                 E("Pass", UISprites.Seal, s => s is PassScreen, bar.Go<PassScreen>));
             bg.gameObject.SetActive(false);
             return bar;
         }
 
-        static Entry E(string caption, Sprite icon, System.Func<UIScreen, bool> isCurrent, System.Action open) =>
-            new Entry { Caption = caption, Icon = icon, IsCurrent = isCurrent, Open = open };
+        static Entry E(string caption, Sprite icon, System.Func<UIScreen, bool> isCurrent, System.Action open, Feature? feature = null) =>
+            new Entry { Caption = caption, Icon = icon, IsCurrent = isCurrent, Open = open, Feature = feature };
+
+        /// <summary>A locked entry says which tomb opens it.</summary>
+        public static void ExplainLock(UIRouter router, Feature feature, string caption) =>
+            router.Open<OfferDialog>().Configure("Pas encore ouvert",
+                Loc.F("Évade-toi du tombeau {0} pour ouvrir : {1}.", LevelNames.Of(Unlocks.Gate(feature)), Loc.T(caption)),
+                ("OK", ButtonStyle.Primary, null)); // noloc
 
         void Add(RectTransform row, Sprite sprite, string caption, NavTab[] tabs, params Entry[] entries)
         {
@@ -169,12 +179,15 @@ namespace MummyEscape.UI
             {
                 var e = entry;
                 bool here = current != null && e.IsCurrent(current);
-                var b = UIKit.Button(group.Choices, e.Caption, () => { CloseMenus(); e.Open(); }, 34, here ? ButtonStyle.Primary : ButtonStyle.Secondary);
+                bool locked = e.Locked;
+                var b = UIKit.Button(group.Choices, e.Caption, () => { CloseMenus(); if (locked) ExplainLock(_router, e.Feature.Value, e.Caption); else e.Open(); }, 34,
+                                     here ? ButtonStyle.Primary : locked ? ButtonStyle.Ghost : ButtonStyle.Secondary);
                 UIKit.Size(b, 108);
                 var label = b.GetComponentInChildren<Text>();
                 label.alignment = TextAnchor.MiddleLeft;
                 label.rectTransform.offsetMin = new Vector2(104, label.rectTransform.offsetMin.y);
-                var icon = UIKit.Image(b.transform, e.Icon, here ? UIKit.Ink : UIKit.Sand, false, "Icon"); // noloc
+                if (locked) label.color = UIKit.Dim;
+                var icon = UIKit.Image(b.transform, locked ? UIKit.Art.Lock : e.Icon, here ? UIKit.Ink : locked ? UIKit.Dim : UIKit.Sand, false, "Icon"); // noloc
                 UIKit.Place(icon.rectTransform, 0f, 0.5f, 54, 54, 30, UISprites.PixelScale);
             }
         }

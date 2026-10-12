@@ -103,6 +103,41 @@ namespace MummyEscape.Visual
         /// <summary>Re-themes every tile sprite (cached per act).</summary>
         public void SetTheme(TombTheme theme) => T = theme ?? TombTheme.ForAct(1);
 
+        /// <summary>
+        /// Paints an act's tile sprites ahead of its first tomb, one new sprite per frame, so the tomb opens without a hitch.
+        /// Run as a coroutine from a menu; everything already painted costs nothing.
+        /// </summary>
+        public System.Collections.IEnumerator Warm(int act)
+        {
+            var tiles = new List<(Tile tile, TileLook look)>();
+            for (int v = 0; v < 36; v++)
+            {
+                tiles.Add((Tile.Floor, new TileLook { Variant = v }));
+                tiles.Add((Tile.Wall, new TileLook { Variant = v }));
+                tiles.Add((Tile.Wall, new TileLook { Variant = v, WallFace = true }));
+            }
+            var looks = new[] { new TileLook(), new TileLook { Open = true, Active = true, Armed = true, Collapsed = true, Fire = 2, Vertical = true } };
+            foreach (TileType type in System.Enum.GetValues(typeof(TileType)))
+            {
+                if (type == TileType.Floor || type == TileType.Wall) continue;
+                foreach (var look in looks)
+                {
+                    if (type == TileType.Trap)
+                        foreach (TrapKind kind in System.Enum.GetValues(typeof(TrapKind))) tiles.Add((new Tile { Type = type, Trap = kind, Param = 1 }, look));
+                    else if (type == TileType.Teleporter)
+                        foreach (TeleporterKind kind in System.Enum.GetValues(typeof(TeleporterKind))) tiles.Add((new Tile { Type = type, Teleporter = kind }, look));
+                    else tiles.Add((new Tile { Type = type }, look));
+                }
+            }
+            for (int mask = 1; mask < 16; mask++) Shadow(mask);
+            foreach (var (tile, look) in tiles)
+            {
+                int before = _cache.Count;
+                InAct(act, () => ForTile(tile, look));
+                if (_cache.Count != before) yield return null;
+            }
+        }
+
         // ------------------------------------------------------------------ public getters
 
         /// <summary>Sprite for a tile as the player perceives it.</summary>

@@ -117,9 +117,7 @@ namespace MummyEscape.UI.Screens
         void Fill()
         {
             UIKit.ClearChildren(_list);
-            var rules = UIKit.Label(_list, "Vos deux momies dans le même tombeau, en direct : l'un tient la dalle, l'autre passe la porte. La sortie attend les deux. Une momie morte, et le tombeau recommence.", 24, UIKit.Dim, TextAnchor.MiddleLeft);
-            UIKit.FitText(rules, 16);
-            UIKit.Size(rules, 100);
+            UIKit.Help(_list, "Campagne 2v2", "Vos deux momies dans le même tombeau, en direct : l'un tient la dalle, l'autre passe la porte. La sortie attend les deux. Une momie morte, et le tombeau recommence.");
             int stars = CoopLogic.TotalStars(App.PvpProfile?.Data?.CoopStars);
             var mine = UIKit.Label(_list, Loc.F("Tes étoiles 2v2 : {0}", stars), 30, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.Size(mine, 44);

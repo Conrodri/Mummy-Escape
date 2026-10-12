@@ -454,11 +454,23 @@ namespace MummyEscape.UI
             foreach (var chip in chips) Size(chip.transform.parent, -1, 0, 1);
         }
 
-        /// <summary>Shrinks the text (down to minSize) so it stays on its line instead of overflowing.</summary>
+        /// <summary>A slim "Comment ça marche ?" link that opens the rules in a dialog, instead of a paragraph taking the screen.</summary>
+        public static Button Help(Transform parent, string title, string rules)
+        {
+            var b = Button(parent, "Comment ça marche ?", () =>
+                App.GameApp.I.UI.Open<Screens.OfferDialog>().Configure(title, Loc.T(rules), ("OK", ButtonStyle.Primary, null)), 26, ButtonStyle.Ghost); // noloc
+            Size(b, 60);
+            return b;
+        }
+
+        /// <summary>Smallest text drawn, in reference pixels (1080 wide): about 2.3 mm on a 6-inch phone.</summary>
+        public const int MinTextSize = 16;
+
+        /// <summary>Shrinks the text (down to minSize, never under <see cref="MinTextSize"/>) so it stays on its line instead of overflowing.</summary>
         public static Text FitText(Text t, int minSize)
         {
             t.resizeTextForBestFit = true;
-            t.resizeTextMinSize = minSize;
+            t.resizeTextMinSize = Mathf.Max(minSize, MinTextSize);
             t.resizeTextMaxSize = t.fontSize;
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
             t.verticalOverflow = VerticalWrapMode.Truncate;
