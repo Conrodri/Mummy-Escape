@@ -152,7 +152,7 @@ namespace MummyEscape.UI.Screens
             // The rooms open along the campaign: hidden until then, celebrated once when they open.
             _chat.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Chat, App.Save.IsCompleted));
             _groupAction.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted));
-            int fresh = App.Save.TakeNewUnlocks();
+            int fresh = App.Save.TakeNewUnlocks() & (int)Feature.Duel; // the casino opens without fanfare: no popup toward a game of chance
             if (fresh != 0 && !TutorialPending(App.Save)) Celebrate(fresh);
             StartCoroutine(App.Art.Warm(App.Save.FurthestUnlocked().Act)); // the next tomb's sprites, painted now
             var online = App.Online;
@@ -184,7 +184,6 @@ namespace MummyEscape.UI.Screens
                 switch (f)
                 {
                     case Feature.Duel: lines.Add(Loc.T("Les duels et le groupe")); first ??= () => Router.Open<PvpScreen>(); break;
-                    case Feature.Casino: lines.Add(Loc.T("Le casino")); first ??= () => Router.Open<CasinoScreen>(); break;
                 }
             }
             App.Audio.Play(Services.Sfx.Win);
