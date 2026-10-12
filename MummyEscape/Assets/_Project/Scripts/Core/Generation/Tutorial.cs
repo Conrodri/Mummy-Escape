@@ -82,12 +82,12 @@ namespace MummyEscape.Core
             Corridor(0, 30, 34);
             Corridor(0, 36, 39);
             Corridor(0, 41, 43);
-            Set(0, 8, Row + 1, new Tile { Type = TileType.Button, Channel = 0 });
+            Set(0, 9, Row + 1, new Tile { Type = TileType.Button, Channel = 0 }); // right before the door: the torch (own tile + 4 neighbours) shows both from x = 9
             Set(0, 10, Row, new Tile { Type = TileType.Door, Channel = 0 });
             Set(0, 14, Row, Trap(TrapKind.Spikes, 0));
             Set(0, 18, Row, Trap(TrapKind.Darkness, 1));
             Portal(0, 22, 24, TeleporterKind.Visible);
-            Set(0, 26, Row + 1, new Tile { Type = TileType.Button, Channel = 1 });
+            Set(0, 27, Row + 1, new Tile { Type = TileType.Button, Channel = 1 }); // idem: the lever and the sealed portal seen from the same tile
             Portal(0, 28, 30, TeleporterKind.Locked, 1);
             Portal(0, 34, 36, TeleporterKind.Hidden);
             Portal(0, 39, 41, TeleporterKind.Cursed);

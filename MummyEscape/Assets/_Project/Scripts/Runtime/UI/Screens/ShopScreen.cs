@@ -52,7 +52,7 @@ namespace MummyEscape.UI.Screens
         UIKit.Segmented _sections, _setTabs;
         RectTransform _categories;
         int _setCategory;
-        bool _byQuality;
+        bool _byQuality = true; // by default: the weakest first, the best at the bottom
         readonly List<(Image plate, Image icon, Text label)> _chips = new List<(Image, Image, Text)>();
         readonly List<Text> _chipCounts = new List<Text>();
         (Image plate, Image icon, Text label) _sortChip;
@@ -352,7 +352,7 @@ namespace MummyEscape.UI.Screens
                 if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
             items.AddRange(HalloweenSkins.InShop(slot, save.Data.OwnedSkins, DateTime.UtcNow));
             foreach (var s in TowerSkins.All) if (s.Slot == slot && save.Data.OwnedSkins.Contains(s.Id)) items.Add(s);
-            if (_byQuality) items = items.OrderByDescending(Quality).ToList(); // stable: the usual order within a quality
+            if (_byQuality) items = items.OrderBy(Quality).ToList(); // stable: the usual order within a quality
             Grid(items.Count, (parent, i) => ItemCard(parent, items[i]));
             // The way to the sets, a discreet link under the grid.
             var toSets = UIKit.Button(_list, "Ensembles complets à -20 % : voir les collections ›", () =>
@@ -615,10 +615,11 @@ namespace MummyEscape.UI.Screens
                     var set = SkinSets.Pieces(gold.SkinIds);
                     int price = Monetization.GoldShop.SetPrice(gold, save.Data.OwnedSkins);
                     bool worn = Worn(set);
-                    string label = worn ? Loc.T("Équipé") : price == 0 ? Loc.T("Tout équiper") : Loc.F("Parure : {0} dorés", price);
+                    string label = worn ? Loc.T("Équipé") : price == 0 ? Loc.T("Tout équiper") : Loc.T("Acheter la parure");
                     var g = gold;
                     SetCard(Loc.T(gold.Name), set, TreasureScreen.GoldColor, new Color32(70, 52, 20, 255), new Color32(30, 22, 8, 255),
-                            false, label, !worn, () => OnGoldSet(g, set, price), index++);
+                            false, label, !worn, () => OnGoldSet(g, set, price), index++,
+                            UIKit.Art.GoldScarab, worn ? 0 : price, save.Gold >= price ? TreasureScreen.GoldColor : UIKit.Danger);
                 }
                 return;
             }
@@ -644,11 +645,13 @@ namespace MummyEscape.UI.Screens
                 bool locked = missingPrice > 0 && save.TotalStars < minStars;
                 bool worn = Worn(set);
                 string label = worn ? Loc.T("Équipé") : missingPrice == 0 ? Loc.T("Tout équiper")
-                             : locked ? Loc.F("Débloqué à {0} étoiles", minStars) : Loc.F("Ensemble : {0} scarabées", price);
+                             : locked ? Loc.F("Débloqué à {0} étoiles", minStars) : Loc.T("Acheter l'ensemble");
+                bool selling = !worn && missingPrice > 0 && !locked;
                 var theme = TombTheme.ForAct(act);
                 int a = act;
                 SetCard(ThemeName(act), set, ThemeColor(act), Color.Lerp(theme.Wall, Color.black, 0.2f), Color.Lerp(theme.FloorDark, Color.black, 0.55f),
-                        locked, label, !worn && (missingPrice == 0 || !locked && save.Data.Coins >= price), () => OnSet(a, price), index++);
+                        locked, label, !worn && (missingPrice == 0 || !locked && save.Data.Coins >= price), () => OnSet(a, price), index++,
+                        UIKit.Art.Scarab, selling ? price : 0, save.Data.Coins >= price ? UIKit.Gold : UIKit.Danger);
             }
         }
 
@@ -681,10 +684,11 @@ namespace MummyEscape.UI.Screens
             }
             bool affordable = buy.Count > 0 && d.Seals >= price;
             string label = missing == 0 ? Loc.T("Collection complète")
-                         : buy.Count > 0 ? Loc.P(buy.Count, "Acheter {0} pièce", "Acheter {0} pièces") + Loc.F(" · {0} sceaux", price)
+                         : buy.Count > 0 ? Loc.P(buy.Count, "Acheter {0} pièce", "Acheter {0} pièces")
                          : next != null ? Loc.F("Ligue {0} requise", Loc.T(PvpSkins.LeagueName(next.Value))) : Loc.T("Chargement…");
             SetCard(Loc.T("Pièces des ligues"), set, UIKit.Turquoise, new Color32(24, 70, 66, 255), new Color32(10, 30, 28, 255),
-                    false, label, !_busy && affordable, () => OnSealPack(buy, price), 0);
+                    false, label, !_busy && affordable, () => OnSealPack(buy, price), 0,
+                    UISprites.Seal, buy.Count > 0 ? price : 0, affordable ? UIKit.Turquoise : UIKit.Danger);
         }
 
         void OnSealPack(List<string> ids, int price)
@@ -738,15 +742,15 @@ namespace MummyEscape.UI.Screens
                     false, label, !worn && owned == set.Count, () => Wear(set), index);
         }
 
-        void SetCard(string name, IReadOnlyList<SkinDef> set, Color accent, Color top, Color bottom, bool locked, string label, bool usable, Action onTap, int index) =>
+        void SetCard(string name, IReadOnlyList<SkinDef> set, Color accent, Color top, Color bottom, bool locked, string label, bool usable, Action onTap, int index, Sprite priceIcon = null, int price = 0, Color? priceTint = null) =>
             SetCard(_list, name, set, accent, top, bottom, locked, label, usable, onTap, piece =>
             {
                 var (tag, color) = TagOf(piece);
                 Router.Open<ItemZoomScreen>().Show(piece, tag, color, Origin(piece), Loc.T("Fermer"), () => { });
-            }, index);
+            }, index, priceIcon, price, priceTint);
 
-        /// <summary>A set's card: the set alone on a mummy, its pieces (each opens up close), and one button.</summary>
-        internal static void SetCard(Transform list, string name, IReadOnlyList<SkinDef> set, Color accent, Color top, Color bottom, bool locked, string label, bool usable, Action onTap, Action<SkinDef> zoom, int index)
+        /// <summary>A set's card: the set alone on a mummy, its pieces (each opens up close), one button and, when it sells, the price as a chip with its currency.</summary>
+        internal static void SetCard(Transform list, string name, IReadOnlyList<SkinDef> set, Color accent, Color top, Color bottom, bool locked, string label, bool usable, Action onTap, Action<SkinDef> zoom, int index, Sprite priceIcon = null, int price = 0, Color? priceTint = null)
         {
             var save = MummyEscape.App.GameApp.I.Save;
             var look = SkinCatalog.Classic; // the set alone, not over the current outfit
@@ -794,10 +798,13 @@ namespace MummyEscape.UI.Screens
                 chip.gameObject.AddComponent<Button>().onClick.AddListener(() => zoom(piece));
             }
 
-            var btn = UIKit.Button(info, label, onTap, 26, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);
+            // The button, then the price as number + icon (never "500 scarabées" in words).
+            var action = UIKit.Row(info, 78, 10);
+            var btn = UIKit.Button(action.transform, label, onTap, 26, usable ? ButtonStyle.Primary : ButtonStyle.Secondary);
             btn.interactable = usable;
             UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
-            UIKit.Size(btn, 78);
+            UIKit.Size(btn, -1, -1, 1);
+            if (price > 0) UIKit.Chip(action.transform, priceIcon, price.ToString(), priceTint, 70);
             UIFx.PopIn(card, Mathf.Min(index, 10) * 0.06f, 0.94f);
         }
 

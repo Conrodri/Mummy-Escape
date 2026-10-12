@@ -34,8 +34,8 @@ namespace MummyEscape.Online
                 }
             }
             var code = new TaskCompletionSource<string>();
-            // A fresh code every time: each one can be traded only once.
-            games.RequestServerSideAccess(true, c => code.TrySetResult(string.IsNullOrEmpty(c) ? null : c));
+            // A fresh code every call (each one is traded once); no refresh token asked, so Google shows its consent screen only once per account.
+            games.RequestServerSideAccess(false, c => code.TrySetResult(string.IsNullOrEmpty(c) ? null : c));
             return await code.Task;
         }
 

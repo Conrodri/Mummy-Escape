@@ -432,7 +432,7 @@ namespace MummyEscape.UI.Screens
         void Update()
         {
             var session = App.Game.Session;
-            if (session != null) UpdateCounter(session);
+            if (session != null) { UpdateCounter(session); RefreshDisarm(session, App.Game.Previewing); }
             UpdateDuel();
             UpdateRelay();
             if (App.Game.Previewing)
@@ -473,6 +473,27 @@ namespace MummyEscape.UI.Screens
             if (_moves.text != text) _moves.text = text;
         }
 
+        /// <summary>The disarm button and its recharge veil, every frame: the 1 s cooldown is real time, not moves.</summary>
+        void RefreshDisarm(GameSession s, bool preview)
+        {
+            float cooldown = App.Game.DisarmCooldownLeft;
+            // Always pressable while playing, spikes or not: a press anywhere costs the cooldown, so spamming it does not pay.
+            _disarm.interactable = !preview && s.Status == SessionStatus.Playing && cooldown <= 0f;
+            if (cooldown > 0f)
+            {
+                _disarmCooldown.gameObject.SetActive(true);
+                _disarmCooldown.anchorMin = new Vector2(1f - cooldown / MummyEscape.Game.GameController.DisarmCooldown, 0f);
+                _disarmCooling = true;
+            }
+            else if (_disarmCooling)
+            {
+                // Ready again: the veil goes and the button pops.
+                _disarmCooldown.gameObject.SetActive(false);
+                _disarmCooling = false;
+                UIFx.PopIn(_disarm, 0f, 0.9f);
+            }
+        }
+
         void Refresh()
         {
             var s = App.Game.Session;
@@ -503,23 +524,7 @@ namespace MummyEscape.UI.Screens
                 _ready.gameObject.SetActive(!App.Game.InRelay && !App.Game.InLiveDuel && !App.Game.InCoop); // live: same time for everyone
             }
 
-
-            float cooldown = App.Game.DisarmCooldownLeft;
-            // Always pressable while playing, spikes or not: a press anywhere costs the cooldown, so spamming it does not pay.
-            _disarm.interactable = !preview && s.Status == SessionStatus.Playing && cooldown <= 0f;
-            if (cooldown > 0f)
-            {
-                _disarmCooldown.gameObject.SetActive(true);
-                _disarmCooldown.anchorMin = new Vector2(1f - cooldown / MummyEscape.Game.GameController.DisarmCooldown, 0f);
-                _disarmCooling = true;
-            }
-            else if (_disarmCooling)
-            {
-                // Ready again: the veil goes and the button pops.
-                _disarmCooldown.gameObject.SetActive(false);
-                _disarmCooling = false;
-                UIFx.PopIn(_disarm, 0f, 0.9f);
-            }
+            RefreshDisarm(s, preview);
 
             while (_ankhs.Count < level.MaxHp)
             {

@@ -30,7 +30,7 @@ namespace MummyEscape.UI.Screens
         RectTransform _list;
         ScrollRect _scroll;
         int _tab;
-        bool _byQuality;
+        bool _byQuality = true; // by default: the weakest first, the best at the bottom
         RectTransform _toolbar;
         Text _count;
         (Image plate, Image icon, Text label) _sortChip;
@@ -145,7 +145,7 @@ namespace MummyEscape.UI.Screens
         void FillSlot(CosmeticSlot slot)
         {
             var items = Owned(slot);
-            if (_byQuality) items = items.OrderByDescending(ShopScreen.Quality).ToList(); // stable: the usual order within a quality
+            if (_byQuality) items = items.OrderBy(ShopScreen.Quality).ToList(); // stable: the usual order within a quality
             _count.text = Loc.P(items.Count, "{0} pièce", "{0} pièces");
             for (int i = 0; i < items.Count; i += Columns)
             {

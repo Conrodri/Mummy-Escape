@@ -24,7 +24,7 @@ namespace MummyEscape.Services
         public bool PvpBots { get; private set; }
         /// <summary>Swipes, an on-screen directional pad, or a joystick that keeps moving while held.</summary>
         public MoveControl Controls { get; private set; }
-        /// <summary>Home screen backdrop: the act whose tomb is drawn behind it (see HomeThemes), 0 = the plain dark one.</summary>
+        /// <summary>Home screen backdrop: the act whose tomb is drawn behind it (see HomeThemes); act 1 by default.</summary>
         public int HomeTheme { get; private set; }
         /// <summary>The pad or the joystick under the right thumb instead of the left.</summary>
         public bool PadRight { get; private set; }
@@ -48,7 +48,7 @@ namespace MummyEscape.Services
             Language = PlayerPrefs.GetString("lang", "");
             PvpBots = PlayerPrefs.GetInt("pvp_bots", 1) == 1;
             Controls = (MoveControl)Mathf.Clamp(PlayerPrefs.GetInt("controls", 0), 0, 2);
-            HomeTheme = PlayerPrefs.GetInt("home_theme", 0);
+            HomeTheme = PlayerPrefs.GetInt("home_theme", 1);
             PadRight = PlayerPrefs.GetInt("pad_right", 0) == 1;
             BatterySaver = PlayerPrefs.GetInt("battery", 0) == 1;
             NotifyEnergy = PlayerPrefs.GetInt("notif_energy", 1) == 1;

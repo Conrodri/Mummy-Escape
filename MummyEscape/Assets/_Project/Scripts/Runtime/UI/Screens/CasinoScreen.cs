@@ -356,8 +356,7 @@ namespace MummyEscape.UI.Screens
             }
             // The price left the wallet, the prizes land when the wheel stops.
             _coins.text = (App.Save.Data.Coins - Casino.Winnings(results)).ToString();
-            if (results.Count > 1) StartCoroutine(Reveal(wheel, results, () => Landed(wheel, results, false)));
-            else StartCoroutine(Turn(wheel, results[0], () => Landed(wheel, results, false)));
+            StartCoroutine(Spin(wheel, results, () => Landed(wheel, results, false)));
         }
 
         async void SpinSeals(WheelDef wheel, int count)
@@ -378,8 +377,7 @@ namespace MummyEscape.UI.Screens
             // An older server answers a single turn without the list.
             var results = r.Results != null && r.Results.Count > 0 ? r.Results : new List<SpinResult> { r.Result };
             _seals.text = (r.Seals - Casino.Winnings(results)).ToString();
-            if (results.Count > 1) StartCoroutine(Reveal(wheel, results, () => Landed(wheel, results, true)));
-            else StartCoroutine(Turn(wheel, r.Result, () => Landed(wheel, results, true)));
+            StartCoroutine(Spin(wheel, results, () => Landed(wheel, results, true)));
         }
 
         void Started()
@@ -402,6 +400,14 @@ namespace MummyEscape.UI.Screens
         {
             if (_revealing) _skipReveal = true;
             else CloseTiles();
+        }
+
+        /// <summary>The wheel turns once, onto the first draw; the ×10 then drops its turns in as tiles.</summary>
+        System.Collections.IEnumerator Spin(WheelDef wheel, List<SpinResult> results, System.Action done)
+        {
+            yield return Turn(wheel, results[0], () => { });
+            if (results.Count > 1) yield return Reveal(wheel, results, done);
+            else done();
         }
 
         /// <summary>The ×10 turns drop in as tiles one after the other, in the order they were drawn.</summary>

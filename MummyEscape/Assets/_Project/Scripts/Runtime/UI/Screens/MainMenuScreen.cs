@@ -108,7 +108,7 @@ namespace MummyEscape.UI.Screens
 
             var play = UIKit.Rect("PlayRow", dock);
             UIKit.Size(play, 124);
-            var playBtn = UIKit.Button(play, Loc.T("JOUER"), () => Router.Open<LevelSelectScreen>(), 50, ButtonStyle.Primary);
+            var playBtn = UIKit.Button(play, Loc.T("JOUER"), () => { if (TutorialPending(App.Save)) StartTutorial(); else Router.Open<LevelSelectScreen>(); }, 50, ButtonStyle.Primary);
             UIKit.Place((RectTransform)playBtn.transform, 0.5f, 0.5f, 620, 124);
 
             // Duel, solo, rankings, friends and the shop are in the bottom bar (NavBar).
@@ -153,11 +153,11 @@ namespace MummyEscape.UI.Screens
             var save = App.Save;
             var next = save.FurthestUnlocked();
             var rec = save.GetRecord(next);
-            // A new player meets the traps in the tutorial corridor first.
-            if (!save.Data.TutorialDone && next.Equals(Progression.First(Difficulty.Easy)) && (rec == null || rec.Completions == 0))
+            // A new player meets the traps in the tutorial corridor first (JOUER goes there too).
+            if (TutorialPending(save))
             {
                 _goal.text = Loc.T("Apprends à déjouer les pièges : tutoriel");
-                _goalAction = () => { Router.Open<HudScreen>(); App.Game.StartTutorial(); };
+                _goalAction = StartTutorial;
                 return;
             }
             if (rec == null || rec.Completions == 0)
@@ -181,10 +181,24 @@ namespace MummyEscape.UI.Screens
         /// <summary>Draws the chosen act's tomb behind the menu (the plain dark backdrop when none, or when it is no longer open).</summary>
         void ApplyTheme()
         {
-            var entry = HomeThemes.Get(App.Settings.HomeTheme);
+            var entry = HomeThemes.Get(App.Settings.HomeTheme) ?? HomeThemes.Get(1); // the plain dark backdrop is gone: act 1 by default
             bool on = entry != null && entry.IsUnlocked(App.Save);
             if (on) _scene.Show(App.Art, entry.Act);
             else _scene.Hide();
+        }
+
+        /// <summary>A first-time player: the tutorial not walked yet and the first tomb never escaped.</summary>
+        static bool TutorialPending(Services.SaveService save)
+        {
+            var first = Progression.First(Difficulty.Easy);
+            var rec = save.GetRecord(first);
+            return !save.Data.TutorialDone && save.FurthestUnlocked().Equals(first) && (rec == null || rec.Completions == 0);
+        }
+
+        void StartTutorial()
+        {
+            Router.Open<HudScreen>();
+            App.Game.StartTutorial();
         }
 
         void PlayLevel(LevelId id) =>
@@ -254,7 +268,7 @@ namespace MummyEscape.UI.Screens
             e.Name != null ? Loc.T(e.Name) : Loc.F("Acte {0} — {1}", e.Act, Loc.T(DifficultyTable.GetAct(e.Act).Name));
     }
 
-    /// <summary>Home screen backdrop picker: the plain one, then every act (locked ones shown with a padlock).</summary>
+    /// <summary>Home screen backdrop picker: every act (locked ones shown with a padlock).</summary>
     public sealed class HomeThemeDialog : UIScreen
     {
         public override bool IsModal => true;
@@ -292,8 +306,7 @@ namespace MummyEscape.UI.Screens
             UIKit.ClearChildren(_list);
             var save = App.Save;
             int chosen = App.Settings.HomeTheme;
-            if (HomeThemes.Get(chosen)?.IsUnlocked(save) != true) chosen = 0;
-            Item(0, null, Loc.T("Nuit du tombeau"), true, chosen == 0);
+            if (HomeThemes.Get(chosen)?.IsUnlocked(save) != true) chosen = 1;
             foreach (var e in HomeThemes.All)
             {
                 bool open = e.IsUnlocked(save);
