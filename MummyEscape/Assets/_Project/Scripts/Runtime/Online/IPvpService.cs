@@ -10,10 +10,15 @@ namespace MummyEscape.Online
     /// the server (<see cref="PvpServer"/>, in a Cloud Code module online); the game only shows what it answers.
     /// Calls never throw: a failure comes back as a response whose Error is "NETWORK".
     /// </summary>
-    public interface IPvpService
+    public interface IPvpService : IPvpDuels, IPvpTeams, IPvpLiveDuels, IPvpRelays, IPvpChat, IPvpDataRights, IPvpWallet, IPvpGuilds
     {
         /// <summary>Offline duels against simulated rivals (editor and development builds only).</summary>
         bool IsDemo { get; }
+    }
+
+    /// <summary>Ghost duels: matchmaking, run submission, profile, season rewards and the seal shop.</summary>
+    public interface IPvpDuels
+    {
         Task<PvpProfileResponse> GetProfileAsync();
         /// <summary>A rival of the player's league; <see cref="FindDuelResponse.Searching"/> while the server looks (ask again).</summary>
         Task<FindDuelResponse> FindDuelAsync(bool allowBots);
@@ -36,7 +41,11 @@ namespace MummyEscape.Online
         /// <summary>Reports the rival of a duel of the history for cheating: the server files the whole duel for review.</summary>
         Task<ReportResponse> ReportCheatAsync(string matchId);
 
-        // --- 2v2 (duos of friends) ---
+    }
+
+    /// <summary>The duos of friends: group, 2v2 campaign, 2v2 battles.</summary>
+    public interface IPvpTeams
+    {
         Task<TeamsResponse> GetTeamsAsync();
         Task<TeamActionResponse> InviteDuoAsync(string friendId, string playerName);
         Task<TeamActionResponse> RespondDuoAsync(string inviteId, bool accept, string playerName);
@@ -57,7 +66,11 @@ namespace MummyEscape.Online
         /// <summary>A battle as this player may see it (undecided rival runs hidden), null on failure.</summary>
         Task<TeamBattle> GetBattleAsync(string battleId);
 
-        // --- live duel (the matchmaking itself goes through IDuelMatchmaker) ---
+    }
+
+    /// <summary>Live 1v1 duels (the matchmaking itself goes through IDuelMatchmaker).</summary>
+    public interface IPvpLiveDuels
+    {
         Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b);
         Task<LiveDuelResponse> StartLiveBotDuelAsync(string matchKey, LiveDuelist mine);
         /// <summary>The duel the lobby's host created (for the guest), and the map draft as it goes (the server closes it when due).</summary>
@@ -68,7 +81,11 @@ namespace MummyEscape.Online
         Task<SubmitRunResponse> SubmitLiveDuelAsync(string matchId, RunSubmission run, string playerName);
         Task<SubmitRunResponse> GetLiveDuelResultAsync(string matchId);
 
-        // --- 2v2 relay, live (the matchmaking itself goes through IRelayMatchmaker) ---
+    }
+
+    /// <summary>Live 2v2 relays (the matchmaking itself goes through IRelayMatchmaker).</summary>
+    public interface IPvpRelays
+    {
         /// <summary>The lobby host creates the match of the two duos that met (same key = same match).</summary>
         Task<RelayMatchResponse> StartRelayMatchAsync(string matchKey, RelaySide a, RelaySide b);
         /// <summary>No duo found and the players accept bots: a match against a simulated duo, played in advance.</summary>
@@ -85,7 +102,11 @@ namespace MummyEscape.Online
         /// <summary>The player's last 2v2 matches (<see cref="ChatConfig.RelayHistorySize"/>), both relays of each. Null on failure.</summary>
         Task<RelayHistoryResponse> GetRelayHistoryAsync();
 
-        // --- Chat: "global", "guild" or ChatConfig.Direct(friend) ---
+    }
+
+    /// <summary>Chat: "global", "guild" or ChatConfig.Direct(friend), names and shared replays.</summary>
+    public interface IPvpChat
+    {
         /// <summary>The messages of a channel after <paramref name="afterSeq"/>.</summary>
         Task<ChatPage> GetChatAsync(string channel, long afterSeq);
         Task<ChatSendResponse> SendChatAsync(string channel, string text, string playerName);
@@ -103,7 +124,11 @@ namespace MummyEscape.Online
         Task<ChatSendResponse> ShareReplayAsync(string kind, string matchId, string channel, string text, string playerName);
         Task<SharedReplayResponse> GetSharedReplayAsync(string id);
 
-        // --- Data rights ---
+    }
+
+    /// <summary>Data rights: export and deletion.</summary>
+    public interface IPvpDataRights
+    {
         /// <summary>Everything the PvP server holds about the player (profile, history, duos, guild, chat).</summary>
         Task<PvpDataExportResponse> ExportDataAsync();
         /// <summary>Erases the player's PvP data on the server (guild, duos, messages, history, leaderboard).</summary>
@@ -112,7 +137,11 @@ namespace MummyEscape.Online
         /// <summary>After a rewarded ad: one more point of combat energy (a few times a day).</summary>
         Task<EnergyResponse> RefillEnergyAsync();
 
-        // --- Golden wallet (kept by the server) ---
+    }
+
+    /// <summary>The golden wallet and the scarab economy, kept by the server.</summary>
+    public interface IPvpWallet
+    {
         Task<WalletResponse> GetWalletAsync();
         /// <summary>Credits a Play Store purchase once the server has checked it with Google (the Play Billing purchase token).</summary>
         Task<WalletResponse> VerifyPurchaseAsync(string productId, string purchaseToken);
@@ -135,7 +164,11 @@ namespace MummyEscape.Online
         /// <summary>Solo runs (actions and times) the server replays to grant their pass XP, in batches.</summary>
         Task<WalletResponse> SubmitSoloRunsAsync(List<SoloRunReport> runs);
 
-        // --- Guilds ---
+    }
+
+    /// <summary>Guilds and their wars.</summary>
+    public interface IPvpGuilds
+    {
         Task<GuildResponse> GetGuildAsync();
         Task<GuildResponse> CreateGuildAsync(string name, string tag, string playerName);
         Task<GuildSearchResponse> SearchGuildsAsync(string query, int limit);

@@ -2230,15 +2230,72 @@ namespace MummyEscape.Visual
 
         static Sprite ToSprite(Px p, int ppu = Ppu, Vector4 border = default, bool smooth = false, Vector2? pivot = null)
         {
+            bool bilinear = smooth || p.W == 64; // soft glows, beams, puffs
+            if (!bilinear)
+            {
+                // Point-filtered pixel art shares atlas pages, so the tomb and the menus draw in a few batches.
+                var packed = Atlas.Add(p, ppu, border, pivot ?? new Vector2(0.5f, 0.5f));
+                if (packed != null) return packed;
+            }
             var tex = new Texture2D(p.W, p.H, TextureFormat.RGBA32, false)
             {
-                filterMode = FilterMode.Point,
+                filterMode = bilinear ? FilterMode.Bilinear : FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp,
             };
-            if (smooth || p.W == 64) tex.filterMode = FilterMode.Bilinear; // soft glows, beams, puffs
             tex.SetPixels32(p.C);
             tex.Apply(false, true);
             return Sprite.Create(tex, new Rect(0, 0, p.W, p.H), pivot ?? new Vector2(0.5f, 0.5f), ppu, 0, SpriteMeshType.FullRect, border);
+        }
+
+        /// <summary>
+        /// Shelf-packed pages of point-filtered sprites: a new sprite is written in the page's pixels and uploaded once per
+        /// frame, right before the canvases render (<see cref="Canvas.willRenderCanvases"/>), so sprites made during a frame
+        /// are visible that frame. A sprite wider than a page, or a full set of pages, falls back to its own texture.
+        /// </summary>
+        static class Atlas
+        {
+            const int Size = 1024, Pad = 1, MaxPages = 8;
+            static readonly List<Page> Pages = new List<Page>();
+            static bool _hooked;
+
+            sealed class Page
+            {
+                public readonly Texture2D Tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                public int X, Y, RowH;
+                public bool Dirty;
+            }
+
+            public static Sprite Add(Px p, int ppu, Vector4 border, Vector2 pivot)
+            {
+                if (p.W + Pad > Size || p.H + Pad > Size) return null;
+                if (!_hooked) { Canvas.willRenderCanvases += Flush; _hooked = true; }
+                var page = Pages.Count > 0 ? Pages[Pages.Count - 1] : null;
+                if (page == null || !Fits(page, p))
+                {
+                    if (Pages.Count >= MaxPages) return null;
+                    Pages.Add(page = new Page());
+                }
+                if (page.X + p.W + Pad > Size) { page.X = 0; page.Y += page.RowH + Pad; page.RowH = 0; }
+                page.Tex.SetPixels32(page.X, page.Y, p.W, p.H, p.C);
+                var sprite = Sprite.Create(page.Tex, new Rect(page.X, page.Y, p.W, p.H), pivot, ppu, 0, SpriteMeshType.FullRect, border);
+                page.X += p.W + Pad;
+                if (p.H > page.RowH) page.RowH = p.H;
+                page.Dirty = true;
+                return sprite;
+            }
+
+            static bool Fits(Page page, Px p)
+            {
+                int y = page.X + p.W + Pad > Size ? page.Y + page.RowH + Pad : page.Y;
+                return y + p.H + Pad <= Size;
+            }
+
+            /// <summary>Uploads the pages written since the last frame (kept readable for the next sprites).</summary>
+            public static void Flush()
+            {
+                foreach (var page in Pages)
+                    if (page.Dirty) { page.Tex.Apply(false, false); page.Dirty = false; }
+            }
         }
 
         /// <summary>Minimal pixel canvas.</summary>
