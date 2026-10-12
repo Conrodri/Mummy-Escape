@@ -184,7 +184,7 @@ namespace MummyEscape.UI.Screens
                 _rewards.gameObject.SetActive(true);
             }
             Keep(r);
-            App.UpdatePvpWallet(r.Seals, null);
+            App.Session.UpdateWallet(r.Seals, null);
             SetButtons(true, false);
         }
 

@@ -166,16 +166,16 @@ namespace MummyEscape.UI.Screens
         /// <summary>The seals live on the server: fetched once if the duel home was never opened.</summary>
         async void LoadSeals()
         {
-            if (App.Pvp == null || App.PvpProfile != null) return;
+            if (App.Pvp == null || App.Session.Profile != null) return;
             int request = ++_request;
-            await App.RefreshPvpProfile();
+            await App.Session.RefreshProfile();
             if (request == _request && this != null && isActiveAndEnabled) Refresh();
         }
 
         void Refresh()
         {
             var save = App.Save;
-            var d = App.PvpProfile?.Data;
+            var d = App.Session.Profile?.Data;
             var wheel = Wheel;
             bool seals = Seals;
             _coins.text = save.Data.Coins.ToString();
@@ -245,7 +245,7 @@ namespace MummyEscape.UI.Screens
             }
             // Players who would rather not gamble buy it outright, at what it costs on average at the wheel.
             bool seals = Seals;
-            bool afford = seals ? (App.PvpProfile?.Data?.Seals ?? 0) >= price : App.Save.Data.Coins >= price;
+            bool afford = seals ? (App.Session.Profile?.Data?.Seals ?? 0) >= price : App.Save.Data.Coins >= price;
             Router.Open<ItemZoomScreen>().Show(def, Loc.T("Légendaire"), LegendaryColor,
                 seals ? Loc.F("Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} sceaux. Bandages animés.", price)
                       : Loc.F("Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} scarabées. Bandages animés.", price),
@@ -264,8 +264,8 @@ namespace MummyEscape.UI.Screens
                 error = r != null && r.Ok ? null : PvpScreen.ErrorText(r?.Error);
                 if (r != null && r.Ok)
                 {
-                    App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
-                    if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
+                    App.Session.UpdateWallet(r.Seals, r.UnlockedRewards);
+                    if (App.Session.Profile?.Data != null) App.Session.Profile.Data.UnlockedRewards = r.UnlockedRewards;
                 }
             }
             else
@@ -391,8 +391,8 @@ namespace MummyEscape.UI.Screens
                 Refresh();
                 return;
             }
-            App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
-            if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
+            App.Session.UpdateWallet(r.Seals, r.UnlockedRewards);
+            if (App.Session.Profile?.Data != null) App.Session.Profile.Data.UnlockedRewards = r.UnlockedRewards;
             // An older server answers a single turn without the list.
             var results = r.Results != null && r.Results.Count > 0 ? r.Results : new List<SpinResult> { r.Result };
             _seals.text = (r.Seals - Casino.Winnings(results)).ToString();

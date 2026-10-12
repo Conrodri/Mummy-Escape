@@ -120,7 +120,7 @@ namespace MummyEscape.UI.Screens
             _replacing = null;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;
-            Show(App.PvpProfile);
+            Show(App.Session.Profile);
             Reload();
             FillHistory();
         }
@@ -134,9 +134,9 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             int request = ++_request;
-            if (App.PvpProfile == null) _info.text = Loc.T("Chargement…");
+            if (App.Session.Profile == null) _info.text = Loc.T("Chargement…");
             await App.SyncSoloStars();
-            var profile = await App.RefreshPvpProfile();
+            var profile = await App.Session.RefreshProfile();
             if (request != _request || this == null) return;
             if (profile == null)
             {
@@ -188,7 +188,7 @@ namespace MummyEscape.UI.Screens
             _find.gameObject.SetActive(App.Pvp != null);
             UIKit.SetLabel(_find, _duelSearch != null ? "Annuler la recherche" : _busy ? "Recherche d'un adversaire…" : locked ? Loc.F("{0} étoiles en solo pour débloquer ({1}/{0})", PvpConfig.RequiredSoloStars, App.Save.TotalStars) : "Chercher un adversaire");
             // Maintenance: the team can pause the duels from the server (GameApp.Status) without a new build.
-            bool paused = App.Status?.PvpOff == true;
+            bool paused = App.Session.Status?.PvpOff == true;
             if (paused) UIKit.SetLabel(_find, "Duels en pause (maintenance)");
             _find.interactable = available && !locked && !paused && (!_busy || _duelSearch != null);
 
@@ -304,10 +304,10 @@ namespace MummyEscape.UI.Screens
 
         async void Claim()
         {
-            var last = App.PvpProfile?.Data?.LastSeason;
+            var last = App.Session.Profile?.Data?.LastSeason;
             string month = last != null ? PvpSkins.MonthName(last.Season) : "";
             _busy = true;
-            Show(App.PvpProfile);
+            Show(App.Session.Profile);
             var r = await App.Pvp.ClaimSeasonRewardsAsync();
             if (this == null) return;
             _busy = false;
@@ -329,8 +329,8 @@ namespace MummyEscape.UI.Screens
                 _info.text = Loc.F("Pas de récompense pour {0} : il fallait {1} duels (dont {2} la dernière semaine), ou {3} duels comptés pour la torche.",
                                    month, SeasonRewards.MinDuelsForRankReward, SeasonRewards.MinDuelsLastWeekForRankReward, SeasonRewards.ParticipationSteps[0]);
             else _info.text = ErrorText(r?.Error);
-            await App.RefreshPvpProfile();
-            if (this != null) Show(App.PvpProfile);
+            await App.Session.RefreshProfile();
+            if (this != null) Show(App.Session.Profile);
         }
 
         /// <summary>
@@ -351,7 +351,7 @@ namespace MummyEscape.UI.Screens
             _busy = true;
             var search = _duelSearch = new CancellationTokenSource();
             _info.text = Loc.T("Recherche d'un adversaire…");
-            Show(App.PvpProfile);
+            Show(App.Session.Profile);
             await App.SyncSoloStars();
             var start = await FindLiveAsync(App, matchmaker, text => { if (this != null && _duelSearch == search) _info.text = text; }, search.Token);
             if (this == null || search.IsCancellationRequested)
@@ -363,7 +363,7 @@ namespace MummyEscape.UI.Screens
             _duelSearch = null;
             if (start == null)
             {
-                Show(App.PvpProfile); // the status says why
+                Show(App.Session.Profile); // the status says why
                 return;
             }
             VersusLive(Router, start);
@@ -376,7 +376,7 @@ namespace MummyEscape.UI.Screens
             _duelSearch = null;
             _busy = false;
             if (_info != null) _info.text = "";
-            if (App.PvpProfile != null) Show(App.PvpProfile);
+            if (App.Session.Profile != null) Show(App.Session.Profile);
         }
 
         public override void OnHide() => CancelDuelSearch();
@@ -391,7 +391,7 @@ namespace MummyEscape.UI.Screens
                 Me = app.Online.PlayerId,
                 Name = app.Online.PlayerName,
                 Look = look,
-                Elo = app.PvpProfile?.Data?.Elo ?? PvpConfig.StartingElo,
+                Elo = app.Session.Profile?.Data?.Elo ?? PvpConfig.StartingElo,
                 AllowBots = app.Settings.PvpBots,
                 Pvp = app.Pvp,
             }, status, cancel);

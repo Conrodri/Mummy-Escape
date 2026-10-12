@@ -55,7 +55,7 @@ namespace MummyEscape.UI
         }
 
         /// <summary>The copy of the server's energy this phone shows (the server took its point when the match started).</summary>
-        static EnergyMeter PvpMeter(GameApp app) => app.PvpProfile?.Data?.Energy;
+        static EnergyMeter PvpMeter(GameApp app) => app.Session.Profile?.Data?.Energy;
 
         public static int PvpLeft(GameApp app) =>
             PvpMeter(app) is EnergyMeter m ? Energy.Left(m, EnergyConfig.PvpMax, NowMs) : EnergyConfig.PvpMax;
@@ -111,7 +111,7 @@ namespace MummyEscape.UI
             {
                 if (app.Pvp == null) return;
                 var refilled = await app.Pvp.RefillEnergyAsync();
-                if (refilled?.Energy != null && app.PvpProfile?.Data != null) app.PvpProfile.Data.Energy = refilled.Energy;
+                if (refilled?.Energy != null && app.Session.Profile?.Data != null) app.Session.Profile.Data.Energy = refilled.Energy;
                 if (refilled == null || refilled.Error != null)
                 {
                     app.UI.Open<OfferDialog>().Configure("Plus d'énergie", PvpScreen.ErrorText(refilled?.Error), ("OK", ButtonStyle.Primary, null)); // noloc

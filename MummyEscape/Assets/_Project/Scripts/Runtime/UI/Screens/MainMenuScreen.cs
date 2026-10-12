@@ -293,7 +293,7 @@ namespace MummyEscape.UI.Screens
         /// <summary>The group's other member, as he dresses, beside the player (nothing without a group).</summary>
         void ShowMate()
         {
-            var g = App.Group;
+            var g = App.Session.Group;
             string mate = g?.Members.Find(m => m != App.Online.PlayerId);
             var look = mate == null ? null : g.LookOf(mate);
             bool show = look != null && _mummy.enabled;

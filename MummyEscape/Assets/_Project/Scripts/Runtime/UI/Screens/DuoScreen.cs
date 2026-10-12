@@ -94,7 +94,7 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             _teams = teams;
-            App.SetGroup(teams.Duos.FirstOrDefault());
+            App.Session.SetGroup(teams.Duos.FirstOrDefault());
             if (!_busy) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : coéquipiers et adversaires simulés") + "</color>" : "";
             Fill();
             if (_autoDuo != null)

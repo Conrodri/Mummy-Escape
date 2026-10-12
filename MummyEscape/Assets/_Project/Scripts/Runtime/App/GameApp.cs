@@ -31,6 +31,8 @@ namespace MummyEscape.App
         public ScreenGuard Guard { get; private set; }
         public GameController Game { get; private set; }
         public UIRouter UI { get; private set; }
+        /// <summary>What the server told this session: duel profile, group, service status.</summary>
+        public PvpSession Session { get; private set; }
         /// <summary>Lit sprite material of the world (tiles, mummies), for views built later (duel replays).</summary>
         public Material SpriteMaterial { get; private set; }
 
@@ -58,6 +60,7 @@ namespace MummyEscape.App
             }
 
             SpriteMaterial = spriteMaterial;
+            Session = new PvpSession(this);
             Settings = new SettingsService();
             Settings.Load();
             Application.targetFrameRate = Settings.BatterySaver ? 30 : 60;
@@ -149,34 +152,11 @@ namespace MummyEscape.App
                 {
                     _pvpOnline = Online;
                     _pvp = PvpServiceFactory.For(Online, () => Save.TotalStars);
-                    PvpProfile = null;
+                    Session.Profile = null;
                 }
                 if (_pvp is LocalPvpService local) local.PlayerName = Online.PlayerName;
                 return _pvp;
             }
-        }
-
-        /// <summary>Last profile the server sent (null until loaded).</summary>
-        public PvpProfileResponse PvpProfile { get; private set; }
-
-        public async Task<PvpProfileResponse> RefreshPvpProfile()
-        {
-            var pvp = Pvp;
-            if (pvp == null) return null;
-            var profile = await pvp.GetProfileAsync();
-            if (profile?.Data != null)
-            {
-                PvpProfile = profile;
-                Save.GrantSkins(profile.Data.UnlockedRewards);
-            }
-            return profile;
-        }
-
-        /// <summary>Keeps the cached profile in step after a duel or a purchase.</summary>
-        public void UpdatePvpWallet(int seals, System.Collections.Generic.List<string> rewards)
-        {
-            if (PvpProfile?.Data != null) PvpProfile.Data.Seals = seals;
-            Save.GrantSkins(rewards);
         }
 
         int _syncedStars = -1;
@@ -308,48 +288,12 @@ namespace MummyEscape.App
             await SyncSoloStars();
             await PublishProgress();
             _ = MummyEscape.Online.ChatState.RegisterNameAsync(this);
-            _ = LoadStatus();
-            _ = LoadGroup();
+            _ = Session.LoadStatus();
+            _ = Session.LoadGroup();
             RefreshMenus();
         }
 
-        /// <summary>The player's group (the duo of two friends), shown on the home; null without one or until loaded.</summary>
-        public Duo Group { get; private set; }
-
-        /// <summary>The group screens keep this copy in step (the home draws the teammate from it).</summary>
-        public void SetGroup(Duo duo) => Group = duo;
-
-        /// <summary>Loads the group after a sign-in (the home shows the teammate's mummy beside the player's).</summary>
-        public async Task LoadGroup()
-        {
-            var pvp = Pvp;
-            if (pvp == null) { Group = null; return; }
-            var teams = await pvp.GetTeamsAsync();
-            if (teams == null || teams.Error != null) return;
-            Group = teams.Duos.Count > 0 ? teams.Duos[0] : null;
-            RefreshMenus();
-        }
-
-        /// <summary>The team's maintenance message and duel pause, read from the server (null until read).</summary>
-        public ServiceStatus Status { get; private set; }
-        string _statusShown;
-
-        /// <summary>Reads the service status; its message is shown once per text (a changed message shows again).</summary>
-        async Task LoadStatus()
-        {
-            var pvp = Pvp;
-            if (pvp == null || pvp.IsDemo) return;
-            var status = await pvp.GetStatusAsync();
-            if (status == null || status.Error != null) return;
-            Status = status;
-            RefreshMenus();
-            string text = Loc.Current == Loc.Lang.En && !string.IsNullOrEmpty(status.MessageEn) ? status.MessageEn : status.Message;
-            if (string.IsNullOrEmpty(text) || _statusShown == text || UI == null) return;
-            _statusShown = text;
-            UI.Open<OfferDialog>().Configure("Mummy Rush", text, ("OK", ButtonStyle.Primary, null)); // noloc
-        }
-
-        void RefreshMenus()
+        internal void RefreshMenus()
         {
             if (UI.Current is MainMenuScreen menu) menu.OnShow();
             else if (UI.Current is FriendsScreen friends) friends.OnShow();
@@ -561,7 +505,7 @@ namespace MummyEscape.App
         {
             var look = Visual.PvpSkins.Look(Save.Loadout);
             look.Title = TitleBook.Equipped(this);
-            var pvp = PvpProfile?.Data;
+            var pvp = Session.Profile?.Data;
             return new ProgressSnapshot
             {
                 FurthestLevel = Save.FurthestUnlocked().ToString(),

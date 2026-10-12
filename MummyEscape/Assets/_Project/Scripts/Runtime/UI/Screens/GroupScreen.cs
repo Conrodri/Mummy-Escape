@@ -99,8 +99,8 @@ namespace MummyEscape.UI.Screens
             _info.text = "";
             _shown[0] = _shown[1] = null;
             // A launch made before this screen opened is not followed: only what the leader does from now on.
-            _seenLaunch = App.Group?.LaunchAtUnixMs ?? 0;
-            _duo = App.Group;
+            _seenLaunch = App.Session.Group?.LaunchAtUnixMs ?? 0;
+            _duo = App.Session.Group;
             Fill();
             Reload();
         }
@@ -140,7 +140,7 @@ namespace MummyEscape.UI.Screens
             _teams = teams;
             _friends = friends;
             _duo = teams.Duos.FirstOrDefault();
-            App.SetGroup(_duo);
+            App.Session.SetGroup(_duo);
             if (!_busy) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : coéquipier simulé") + "</color>" : "";
             Fill();
             if (_duo != null) Poll();
@@ -156,7 +156,7 @@ namespace MummyEscape.UI.Screens
             if (r?.Error == "UNKNOWN") { Reload(); return; } // noloc, dissolved by the other
             if (r?.Duo == null) return;
             _duo = r.Duo;
-            App.SetGroup(_duo);
+            App.Session.SetGroup(_duo);
             FillSlots();
             FollowLaunch();
         }
@@ -311,7 +311,7 @@ namespace MummyEscape.UI.Screens
             var r = await App.Pvp.SetGroupReadyAsync(_duo.Id, ready, MyLook());
             if (this == null) return;
             _busy = false;
-            if (r?.Duo != null && r.Error == null) { _ready = ready; _duo = r.Duo; App.SetGroup(_duo); }
+            if (r?.Duo != null && r.Error == null) { _ready = ready; _duo = r.Duo; App.Session.SetGroup(_duo); }
             else _info.text = TeamView.ErrorText(r?.Error);
             FillSlots();
         }
@@ -332,7 +332,7 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             _duo = r.Duo;
-            App.SetGroup(_duo);
+            App.Session.SetGroup(_duo);
             _seenLaunch = _duo.LaunchAtUnixMs;
             Go(mode);
         }

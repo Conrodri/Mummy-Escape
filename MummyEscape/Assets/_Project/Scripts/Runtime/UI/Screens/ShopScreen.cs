@@ -307,9 +307,9 @@ namespace MummyEscape.UI.Screens
         /// <summary>The seals and duel rewards live on the server: fetched once if the duel home was never opened.</summary>
         async void LoadSeals()
         {
-            if (App.Pvp == null || App.PvpProfile != null) return;
+            if (App.Pvp == null || App.Session.Profile != null) return;
             int request = ++_request;
-            await App.RefreshPvpProfile();
+            await App.Session.RefreshProfile();
             if (request == _request && this != null && isActiveAndEnabled) Refresh();
         }
 
@@ -319,7 +319,7 @@ namespace MummyEscape.UI.Screens
             _coins.text = save.Data.Coins.ToString();
             _gold.text = save.Gold.ToString();
             _stars.text = save.TotalStars.ToString();
-            var pvp = App.PvpProfile?.Data;
+            var pvp = App.Session.Profile?.Data;
             _seals.transform.parent.gameObject.SetActive(App.Pvp != null);
             _seals.text = (pvp?.Seals ?? 0).ToString();
             // The pass only where golden scarabs are spent: the other tabs keep their room for the items.
@@ -710,8 +710,8 @@ namespace MummyEscape.UI.Screens
                 var r = await App.Pvp.BuyWithSealsAsync(id);
                 if (this == null) return;
                 if (r == null || !r.Ok) { error = PvpScreen.ErrorText(r?.Error); break; }
-                App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
-                if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
+                App.Session.UpdateWallet(r.Seals, r.UnlockedRewards);
+                if (App.Session.Profile?.Data != null) App.Session.Profile.Data.UnlockedRewards = r.UnlockedRewards;
             }
             _busy = false;
             if (error == null) App.Audio.Play(Sfx.Coin);
@@ -921,8 +921,8 @@ namespace MummyEscape.UI.Screens
             string note;
             if (r != null && r.Ok)
             {
-                App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
-                if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
+                App.Session.UpdateWallet(r.Seals, r.UnlockedRewards);
+                if (App.Session.Profile?.Data != null) App.Session.Profile.Data.UnlockedRewards = r.UnlockedRewards;
                 App.Save.SelectSkin(id);
                 App.Audio.Play(Sfx.Coin);
                 note = Loc.F("{0} : à toi !", Loc.T(PvpSkins.ShopItem(id).Name));

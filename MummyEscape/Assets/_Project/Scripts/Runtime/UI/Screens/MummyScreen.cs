@@ -106,9 +106,9 @@ namespace MummyEscape.UI.Screens
         /// <summary>The duel titles need the server's profile (wins, best league): fetched once if missing.</summary>
         async void LoadProfile()
         {
-            if (App.Pvp == null || App.PvpProfile != null) return;
+            if (App.Pvp == null || App.Session.Profile != null) return;
             int request = ++_request;
-            await App.RefreshPvpProfile();
+            await App.Session.RefreshProfile();
             if (request == _request && this != null && isActiveAndEnabled) Refresh();
         }
 

@@ -82,7 +82,7 @@ namespace MummyEscape.UI.Screens
             App.Lighting.SetMood(false);
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;
-            if (_duo == null) _duo = App.Group;
+            if (_duo == null) _duo = App.Session.Group;
             _leader = _duo != null && _duo.Leader == App.Online.PlayerId;
             Fill();
             Reload();
@@ -98,7 +98,7 @@ namespace MummyEscape.UI.Screens
             int request = ++_request;
             if (_teams == null) _info.text = Loc.T("Chargement…");
             var teams = await App.Pvp.GetTeamsAsync();
-            await App.RefreshPvpProfile(); // the player's own 2v2 stars
+            await App.Session.RefreshProfile(); // the player's own 2v2 stars
             if (request != _request || this == null) return;
             if (teams == null || teams.Error != null)
             {
@@ -107,7 +107,7 @@ namespace MummyEscape.UI.Screens
             }
             _teams = teams;
             _duo = teams.Duos.Find(d => d.Id == _duo?.Id) ?? teams.Duos.FirstOrDefault();
-            App.SetGroup(_duo);
+            App.Session.SetGroup(_duo);
             _leader = _duo != null && _duo.Leader == teams.Me;
             if (_search == null) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : coéquipier simulé") + "</color>" : "";
             Fill();
@@ -118,7 +118,7 @@ namespace MummyEscape.UI.Screens
         {
             UIKit.ClearChildren(_list);
             UIKit.Help(_list, "Campagne 2v2", "Vos deux momies dans le même tombeau, en direct : l'un tient la dalle, l'autre passe la porte. La sortie attend les deux. Une momie morte, et le tombeau recommence.");
-            int stars = CoopLogic.TotalStars(App.PvpProfile?.Data?.CoopStars);
+            int stars = CoopLogic.TotalStars(App.Session.Profile?.Data?.CoopStars);
             var mine = UIKit.Label(_list, Loc.F("Tes étoiles 2v2 : {0}", stars), 30, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.Size(mine, 44);
             if (_duo == null)
@@ -142,7 +142,7 @@ namespace MummyEscape.UI.Screens
             var hint = UIKit.Label(_list, _leader ? Loc.F("Choisis un tombeau : {0} te suit.", partner) : Loc.F("{0} choisit le tombeau, tu le suis.", partner), 24, UIKit.Dim);
             UIKit.FitText(hint, 16);
             UIKit.Size(hint, 36);
-            var myStars = App.PvpProfile?.Data?.CoopStars;
+            var myStars = App.Session.Profile?.Data?.CoopStars;
             int act = 0;
             foreach (var tomb in CoopCampaign.Tombs)
             {
@@ -266,7 +266,7 @@ namespace MummyEscape.UI.Screens
                     summary += "\n" + Loc.F("Premier passage : +{0} scarabées", CoopConfig.FirstClearScarabs);
                 }
                 if (r.NewStars > 0) summary += "\n" + Loc.F("+{0} étoiles 2v2 (total {1})", r.NewStars, r.TotalStars);
-                if (app.PvpProfile?.Data != null) _ = app.RefreshPvpProfile();
+                if (app.Session.Profile?.Data != null) _ = app.Session.RefreshProfile();
             }
             else summary += "\n" + Loc.T("Le passage n'a pas pu être enregistré.");
             Choices(app, o, "Évadés !", summary, true);

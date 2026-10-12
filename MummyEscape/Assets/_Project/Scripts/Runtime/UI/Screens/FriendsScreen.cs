@@ -104,7 +104,7 @@ namespace MummyEscape.UI.Screens
             _name.text = App.Online.PlayerName;
             string title = TitleBook.Equipped(App);
             _title.text = title == null ? Loc.T("Aucun titre") : TitleBook.Line(title);
-            var pvp = App.PvpProfile?.Data;
+            var pvp = App.Session.Profile?.Data;
             UIKit.ClearChildren(_badges);
             RankChip(_badges, pvp != null && pvp.TotalDuels > 0 ? pvp.Elo : 0, 48);
             string country = App.Save.Country;
