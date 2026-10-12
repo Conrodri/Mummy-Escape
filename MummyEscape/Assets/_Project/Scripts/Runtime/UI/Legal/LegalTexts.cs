@@ -22,7 +22,7 @@ namespace MummyEscape.UI.Legal
             $"Version {Services.PrivacyService.PolicyVersion} — mise à jour le {Updated}.",
             "# En bref",
             "Mummy Rush se joue entièrement hors ligne : dans ce cas, aucune donnée ne quitte ton téléphone. " +
-            "Le jeu ne contient ni mesure d'audience ni traceur. Une publicité ne s'affiche que si tu choisis d'en regarder une pour récupérer de l'énergie : " +
+            "Le jeu ne contient aucun traceur ; des statistiques d'usage ne sont envoyées que si tu les actives, en mode en ligne (voir « Statistiques d'usage »). Une publicité ne s'affiche que si tu choisis d'en regarder une pour récupérer de l'énergie : " +
             "c'est seulement à ce moment que le service publicitaire de Google est contacté (voir « Publicités »). " +
             "Aucune adresse e-mail, aucun nom réel et aucun numéro de téléphone ne te sont demandés.",
             "# Qui est responsable de tes données ?",

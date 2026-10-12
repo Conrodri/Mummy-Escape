@@ -165,10 +165,11 @@ namespace MummyEscape.UI.Screens
             UIKit.ListItem(_list, 100, () => Pick(code), out var h, selected);
             var label = UIKit.Label(h.transform, "", 36, UIKit.Sand, TextAnchor.MiddleLeft, selected ? FontStyle.Bold : FontStyle.Normal);
             label.text = name; // native names are never translated
+            UIKit.FitText(label, 26); // "Automatique (langue du téléphone)" on narrow phones
             UIKit.Size(label, -1, -1, 1);
             var d = UIKit.Label(h.transform, "", 30, UIKit.Dim, TextAnchor.MiddleRight);
             d.text = detail;
-            UIKit.Size(d, -1, 320, 0);
+            UIKit.Size(d, -1, 200, 0);
         }
 
         void Pick(string code)

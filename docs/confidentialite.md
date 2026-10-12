@@ -4,7 +4,7 @@ Version 5 — mise à jour le 12 octobre 2026.
 
 ## En bref
 
-Mummy Rush se joue entièrement hors ligne : dans ce cas, aucune donnée ne quitte ton téléphone. Le jeu ne contient ni mesure d'audience ni traceur. Une publicité ne s'affiche que si tu choisis d'en regarder une pour récupérer de l'énergie : c'est seulement à ce moment que le service publicitaire de Google est contacté (voir « Publicités »). Aucune adresse e-mail, aucun nom réel et aucun numéro de téléphone ne te sont demandés.
+Mummy Rush se joue entièrement hors ligne : dans ce cas, aucune donnée ne quitte ton téléphone. Le jeu ne contient aucun traceur ; des statistiques d'usage ne sont envoyées que si tu les actives, en mode en ligne (voir « Statistiques d'usage »). Une publicité ne s'affiche que si tu choisis d'en regarder une pour récupérer de l'énergie : c'est seulement à ce moment que le service publicitaire de Google est contacté (voir « Publicités »). Aucune adresse e-mail, aucun nom réel et aucun numéro de téléphone ne te sont demandés.
 
 ## Qui est responsable de tes données ?
 

@@ -501,7 +501,7 @@ namespace MummyEscape
             ["Supprimer mes données en ligne"] = "Delete my online data",
             ["Effacer les données de ce téléphone"] = "Erase the data on this phone",
             ["Informations"] = "Information",
-            ["Ni mesure d'audience, ni traceur, ni adresse e-mail. Publicité (Google AdMob) seulement quand tu choisis d'en regarder une."] = "No analytics, no trackers, no email address. Ads (Google AdMob) only when you choose to watch one.",
+            ["Ni traceur, ni adresse e-mail. Statistiques d'usage seulement si tu les actives ci-dessus. Publicité (Google AdMob) seulement quand tu choisis d'en regarder une."] = "No trackers, no email address. Usage statistics only if you turn them on above. Ads (Google AdMob) only when you choose to watch one.",
             ["Politique de confidentialité"] = "Privacy policy",
             ["Conditions d'utilisation"] = "Terms of use",
             ["Contacter l'éditeur"] = "Contact the publisher",

@@ -73,7 +73,9 @@ namespace MummyEscape.UI.Screens
             var help = UIKit.Card(body);
             UIKit.SectionTitle(help, "Aide");
             var row = UIKit.Row(help, UIKit.ButtonHeight, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Noter Mummy Rush", () => Application.OpenURL("market://details?id=" + Application.identifier)), -1, -1, 1); // noloc
+            var rate = UIKit.Button(row.transform, "Noter Mummy Rush", () => Application.OpenURL("market://details?id=" + Application.identifier)); // noloc
+            UIKit.FitText(rate.GetComponentInChildren<Text>(), 26); // two words too many for half a narrow row
+            UIKit.Size(rate, -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Discord", () => Application.OpenURL(FriendsScreen.DiscordInvite), UIKit.TextSize, ButtonStyle.Secondary), -1, -1, 1); // noloc
             var row2 = UIKit.Row(help, UIKit.ButtonHeight, 20);
             UIKit.Size(UIKit.Button(row2.transform, "Nous écrire", () => Application.OpenURL("mailto:" + LegalTexts.Contact + "?subject=Mummy%20Rush%20-%20support"), UIKit.TextSize, ButtonStyle.Secondary), -1, -1, 1); // noloc

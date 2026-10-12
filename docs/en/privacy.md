@@ -4,7 +4,7 @@ Version 5 — updated October 12, 2026. English translation: the French version 
 
 ## In short
 
-Mummy Rush can be played entirely offline: in that case, no data leaves your phone. The game contains no analytics and no trackers. An ad is only shown if you choose to watch one to get energy back: only then is Google's ad service contacted (see "Ads"). You are never asked for an email address, a real name or a phone number.
+Mummy Rush can be played entirely offline: in that case, no data leaves your phone. The game contains no trackers; usage statistics are only sent if you turn them on, in online mode (see “Usage statistics”). An ad is only shown if you choose to watch one to get energy back: only then is Google's ad service contacted (see "Ads"). You are never asked for an email address, a real name or a phone number.
 
 ## Who is responsible for your data?
 

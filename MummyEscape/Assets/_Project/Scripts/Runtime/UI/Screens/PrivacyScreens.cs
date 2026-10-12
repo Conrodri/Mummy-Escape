@@ -307,7 +307,7 @@ namespace MummyEscape.UI.Screens
 
             var info = UIKit.Card(_content);
             UIKit.SectionTitle(info, "Informations");
-            PrivacyUI.Paragraph(info, "Ni mesure d'audience, ni traceur, ni adresse e-mail. Publicité (Google AdMob) seulement quand tu choisis d'en regarder une.", 30);
+            PrivacyUI.Paragraph(info, "Ni traceur, ni adresse e-mail. Statistiques d'usage seulement si tu les actives ci-dessus. Publicité (Google AdMob) seulement quand tu choisis d'en regarder une.", 30);
             PrivacyUI.Wide(info, "Politique de confidentialité", () => PrivacyUI.OpenLegal(Router, true), 34);
             PrivacyUI.Wide(info, "Conditions d'utilisation", () => PrivacyUI.OpenLegal(Router, false), 34);
             if (!LegalTexts.Contact.StartsWith("["))
