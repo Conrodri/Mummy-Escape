@@ -25,8 +25,8 @@ namespace MummyEscape.UI.Screens
         const int Columns = 3;
         const float CardHeight = 380;
 
-        static readonly string[] Sections = { "Promos", "Trésor", "Skins", "Collections", "Sceaux" };
-        const int SaleSection = 0, TreasureSection = 1, SkinsSection = 2, SetsSection = 3, SealsSection = 4;
+        static readonly string[] Sections = { "Trésor", "Promos", "Skins", "Sceaux", "Collections" }; // two lines: 2 + 3
+        const int TreasureSection = 0, SaleSection = 1, SkinsSection = 2, SealsSection = 3, SetsSection = 4;
         static readonly (string name, CosmeticSlot slot)[] Categories =
         {
             ("Momies", CosmeticSlot.Mummy), ("Couleurs", CosmeticSlot.Color), ("Torches", CosmeticSlot.Torch),
@@ -58,7 +58,7 @@ namespace MummyEscape.UI.Screens
         (Image plate, Image icon, Text label) _sortChip;
         RectTransform _list;
         ScrollRect _scroll;
-        int _section;
+        int _section = SaleSection;
         int _category;
         bool _busy;
         int _request;
@@ -92,7 +92,7 @@ namespace MummyEscape.UI.Screens
                 _section = i;
                 Refresh();
                 _scroll.verticalNormalizedPosition = 1f;
-            }, 88);
+            }, 88, new[] { 2, 3 });
 
             // The slot categories of the Skins section: large icon chips.
             _categories = UIKit.Row(body, 112, 10).GetComponent<RectTransform>();

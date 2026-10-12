@@ -253,13 +253,13 @@ namespace MummyEscape.UI
             readonly GameObject _root;
             public int Selected { get; private set; } = -1;
 
-            public Segmented(Transform parent, string[] labels, Action<int> onSelect, float height = 84)
+            /// <param name="lineSizes">Tabs per line, e.g. {2, 3}; by default more than four tabs wrap on two lines, since one line would shrink every label to the minimum size.</param>
+            public Segmented(Transform parent, string[] labels, Action<int> onSelect, float height = 84, int[] lineSizes = null)
             {
                 var track = Pixelated(Image(parent, UISprites.PixelPlate, new Color(0.16f, 0.12f, 0.09f, 0.85f), false, "Tabs"), UISprites.PixelPlate); // noloc
                 _root = track.gameObject;
-                // More than four tabs on one line would shrink every label to the minimum size: wrap them on two lines.
-                int perLine = labels.Length > 4 ? (labels.Length + 1) / 2 : labels.Length;
-                int lines = (labels.Length + perLine - 1) / perLine;
+                lineSizes = lineSizes ?? (labels.Length > 4 ? new[] { (labels.Length + 1) / 2, labels.Length / 2 } : new[] { labels.Length });
+                int lines = lineSizes.Length;
                 Size(track, height * lines - 6 * (lines - 1));
                 var column = track.gameObject.AddComponent<VerticalLayoutGroup>();
                 column.padding = new RectOffset(6, 6, 6, 6);
@@ -269,10 +269,12 @@ namespace MummyEscape.UI
                 _buttons = new Button[labels.Length];
                 _labels = new Text[labels.Length];
                 Transform line = null;
+                int lineEnd = 0, lineIndex = 0;
                 for (int i = 0; i < labels.Length; i++)
                 {
-                    if (i % perLine == 0)
+                    if (i == lineEnd)
                     {
+                        lineEnd += lineSizes[Math.Min(lineIndex++, lines - 1)];
                         var row = Rect("Line", track.transform).gameObject.AddComponent<HorizontalLayoutGroup>(); // noloc
                         row.spacing = 6;
                         row.childControlWidth = row.childControlHeight = true;
