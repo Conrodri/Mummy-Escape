@@ -399,15 +399,8 @@ namespace MummyEscape.Game
                 yield return new WaitForSeconds(RelayConfig.HandoffMs / 1000f - 0.1f);
                 ShowMaze(MyRace.ActiveMaze);
                 if (MyTurn) _app.Audio.Play(Sfx.Versus);
-                _buffered = null;
             }
             _busy = false;
-            if (_buffered.HasValue && MyTurn)
-            {
-                var next = _buffered.Value;
-                _buffered = null;
-                Submit(next);
-            }
         }
 
         /// <summary>The player leaves the match: his duo loses, his teammate is told.</summary>
@@ -425,7 +418,6 @@ namespace MummyEscape.Game
             if (Phase == RelayPhase.Over || Relay == null) return;
             Phase = RelayPhase.Over;
             _input.Enabled = false;
-            _buffered = null;
             if (_relayPreview != null) StopCoroutine(_relayPreview);
             _relayPreview = null;
             if (Previewing) EndPreviewVisuals();

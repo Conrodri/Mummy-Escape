@@ -51,7 +51,6 @@ namespace MummyEscape.Game
 
         bool _busy;
         bool _paused;
-        PlayerAction? _buffered;
         int _loadToken;
 
         public void Init(GameApp app, MazeView maze, PlayerView player, GhostView ghost, SwipeInput input)
@@ -138,7 +137,6 @@ namespace MummyEscape.Game
             StopAllCoroutines();
             EndPreviewVisuals();
             _busy = false;
-            _buffered = null;
             _input.Enabled = false;
             ScreenshotRedraw = false;
             _ghost.Hide();
@@ -214,7 +212,6 @@ namespace MummyEscape.Game
             var match = Match;
             match.Over = true;
             _input.Enabled = false;
-            _buffered = null;
             var run = match.BuildRun(outcome);
             run.Look = PvpSkins.Look(_app.Save.Loadout);
             run.Look.Title = TitleBook.Equipped(_app);
@@ -530,7 +527,7 @@ namespace MummyEscape.Game
 
         void RepeatHeld()
         {
-            if (!_held.HasValue || _heldBlocked || _busy || _buffered.HasValue || !_input.Enabled || Previewing) return;
+            if (!_held.HasValue || _heldBlocked || _busy || !_input.Enabled || Previewing) return;
             if (Session == null || Session.Status != SessionStatus.Playing) return;
             Submit(PlayerAction.Move(_held.Value));
         }
@@ -592,7 +589,7 @@ namespace MummyEscape.Game
         public void Submit(PlayerAction action)
         {
             if (!Accepting) return;
-            if (_busy) { _buffered = action; return; }
+            if (_busy) return; // no input buffer: a move made while the mummy still walks is dropped
             StartCoroutine(Play(action));
         }
 
@@ -814,13 +811,7 @@ namespace MummyEscape.Game
             }
 
             _busy = false;
-            if (_buffered.HasValue)
-            {
-                var next = _buffered.Value;
-                _buffered = null;
-                Submit(next);
-            }
-            else RepeatHeld();
+            RepeatHeld();
         }
 
         /// <summary>Dust or sparks on every known gate of this floor that opened or closed with the last press.</summary>

@@ -290,7 +290,7 @@ namespace MummyEscape.Game
             if (_coopAwait && Time.unscaledTime - _awaitSince > 5f) { _coopAwait = false; _busy = false; }
         }
 
-        /// <summary>After one of the player's steps: the end of the try, or the next buffered swipe.</summary>
+        /// <summary>After one of the player's steps: the end of the try, or the joystick's next step.</summary>
         IEnumerator CoopStepDone()
         {
             if (Coop.Status != SessionStatus.Playing)
@@ -300,13 +300,7 @@ namespace MummyEscape.Game
                 yield break;
             }
             _busy = false;
-            if (_buffered.HasValue)
-            {
-                var next = _buffered.Value;
-                _buffered = null;
-                Submit(next);
-            }
-            else RepeatHeld();
+            RepeatHeld();
         }
 
         /// <summary>The teammate's step: its mummy walks, the gates it moved open or close, its traps go off.</summary>
@@ -372,7 +366,6 @@ namespace MummyEscape.Game
             if (_coopOver || Coop == null) yield break;
             _coopOver = true;
             _input.Enabled = false;
-            _buffered = null;
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
             bool won = Coop.Status == SessionStatus.Won;
             if (won)
