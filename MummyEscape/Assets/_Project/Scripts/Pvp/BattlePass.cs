@@ -38,7 +38,7 @@ namespace MummyEscape.Monetization
     public static class BattlePass
     {
         public const int Tiers = 100;
-        public const int XpPerTier = 140; // 100 tiers = 200 escapes at 70 XP (3-star level or endless tomb), about 7 a day over the month
+        public const int XpPerTier = 140; // 100 tiers = 560 escapes at 25 XP (3-star level or endless tomb) or 350 won duels: a full month of play
 
         public static readonly IReadOnlyList<PassSeason> Seasons = new[]
         {
@@ -158,14 +158,14 @@ namespace MummyEscape.Monetization
         }
 
         /// <summary>XP of a solo run: more for an escape and for each star.</summary>
-        public static int SoloXp(bool won, int stars) => won ? 40 + 10 * stars : 10;
+        public static int SoloXp(bool won, int stars) => won ? 10 + 5 * stars : 5;
 
         /// <summary>XP for playing a duel or a 2v2 match; a win doubles it.</summary>
-        public const int MatchXp = 50;
-        public const int WinBonusXp = 50;
+        public const int MatchXp = 20;
+        public const int WinBonusXp = 20;
 
         /// <summary>An endless tomb escaped (no stars there): worth a 3-star level, plus a few scarabs.</summary>
-        public const int EndlessXp = 70;
+        public const int EndlessXp = 25;
         public const int EndlessScarabs = 5;
     }
 }

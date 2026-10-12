@@ -244,6 +244,7 @@ namespace MummyEscape
             ["Le set complet"] = "The full set",
             ["2v2"] = "2v2",
             ["Événements"] = "Events",
+            ["Événements !"] = "Events!",
             ["Des actes le temps d'une saison : leurs propres tombeaux et une récompense à garder pour toujours."] = "Acts for one season: their own tombs and a reward to keep forever.",
             ["Jusqu'au 7 novembre"] = "Until 7 November",
             ["De retour le 24 octobre"] = "Back on 24 October",
@@ -1065,7 +1066,7 @@ namespace MummyEscape
             ["Voir"] = "See",
             ["Comment ça marche ?"] = "How does it work?",
             ["ouvre les duels"] = "opens the duels",
-            ["ouvre la guilde, le tchat et le casino"] = "opens the guild, the chat and the casino",
+            ["ouvre le casino"] = "opens the casino",
             // Rooms opened along the campaign
             ["Pas encore ouvert"] = "Not open yet",
             ["Évade-toi du tombeau {0} pour ouvrir : {1}."] = "Escape tomb {0} to open: {1}.",

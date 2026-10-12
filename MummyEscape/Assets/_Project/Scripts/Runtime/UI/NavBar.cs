@@ -102,7 +102,7 @@ namespace MummyEscape.UI
                 Loc.F("Évade-toi du tombeau {0} pour ouvrir : {1}.", LevelNames.Of(gate), Loc.T(caption)),
                 ("OK", ButtonStyle.Primary, null)); // noloc
 
-        public static void ExplainLock(UIRouter router, Feature feature, string caption) => ExplainLock(router, Unlocks.Gate(feature), caption);
+        public static void ExplainLock(UIRouter router, Feature feature, string caption) => ExplainLock(router, Unlocks.Gate(feature).Value, caption);
 
         void Add(RectTransform row, Sprite sprite, string caption, NavTab[] tabs, params Entry[] entries)
         {

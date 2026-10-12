@@ -172,7 +172,7 @@ namespace MummyEscape.Tests
             var duel = w.Server.StartLiveDuelAsync("alice", DifficultyTable.GeneratorVersion, "l1", Me("alice"), Me("bob")).Result.Match;
             Assert.AreEqual(0, duel.Seed, "no tomb before the draft");
             Assert.AreEqual(3, duel.Draft.Maps.Count);
-            Assert.IsTrue(duel.Draft.Maps.All(m => PvpArena.LevelFor(m).Act == 2 && PvpArena.LevelFor(m).Mode == Difficulty.Normal), "silver plays act 2");
+            Assert.IsTrue(duel.Draft.Maps.All(m => PvpArena.LevelFor(m).Act == 1 && PvpArena.LevelFor(m).Mode == Difficulty.Normal), "new players are bronze: act 1");
             Assert.AreEqual("UNKNOWN", w.Server.BanLiveDuelAsync("carol", duel.Id, 0).Result.Error);
 
             duel = w.Server.BanLiveDuelAsync("alice", duel.Id, 1).Result.Match;

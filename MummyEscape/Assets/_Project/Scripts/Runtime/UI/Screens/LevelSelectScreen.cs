@@ -79,7 +79,7 @@ namespace MummyEscape.UI.Screens
         /// leads home. The 2v2 campaign is launched from the group (<see cref="GroupScreen"/>).
         /// </summary>
         internal static UIKit.Segmented Sections(Transform body, UIRouter router, int selected) =>
-            new UIKit.Segmented(body, new[] { "Solo", "Événements" }, i =>
+            new UIKit.Segmented(body, new[] { "Solo", Halloween.IsOpen(System.DateTime.UtcNow) ? "Événements !" : "Événements" }, i => // the "!" says an event is on
             {
                 if (i == selected) return;
                 router.Reset<MainMenuScreen>();

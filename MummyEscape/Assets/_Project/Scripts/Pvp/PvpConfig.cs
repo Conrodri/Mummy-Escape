@@ -7,7 +7,7 @@ namespace MummyEscape.Pvp
     public static class PvpConfig
     {
         // --- Elo ---
-        public const int StartingElo = 1000;
+        public const int StartingElo = 800;              // under ArgentMin: a new player starts in Bronze
         public const int PlacementDuels = 10;
         public const int KPlacement = 40;
         public const int KNormal = 24;
@@ -75,7 +75,7 @@ namespace MummyEscape.Pvp
         }
 
         // --- Saison mensuelle ---
-        public const float SeasonSoftResetFactor = 0.75f; // R' = 1000 + 0,75 × (R − 1000)
+        public const float SeasonSoftResetFactor = 0.75f; // R' = S + 0,75 × (R − S), S = StartingElo
         public const int LastWeekDays = 7;
     }
 }

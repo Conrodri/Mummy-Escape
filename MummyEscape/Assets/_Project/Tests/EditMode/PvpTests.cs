@@ -99,13 +99,13 @@ namespace MummyEscape.Tests
         {
             var d = new PlayerPvpData { Elo = 1600, Season = "2026-09", Day = "2026-09-30", SeasonDuels = 40, SeasonDuelsLastWeek = 8 };
             Seasons.Roll(d, new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc));
-            Assert.AreEqual(1450, d.Elo);
+            Assert.AreEqual(PvpConfig.StartingElo + (int)(PvpConfig.SeasonSoftResetFactor * (1600 - PvpConfig.StartingElo)), d.Elo); // pulled toward the starting Elo
             Assert.AreEqual(1600, d.LastSeason.FinalElo);
             Assert.AreEqual(40, d.LastSeason.Duels);
             Assert.AreEqual(0, d.SeasonDuels);
             Assert.AreEqual("2026-10", d.Season);
             Assert.AreEqual("2026-10-01", d.Day);
-            Assert.AreEqual(850, Seasons.SoftReset(800));
+            Assert.AreEqual(PvpConfig.StartingElo - 150, Seasons.SoftReset(PvpConfig.StartingElo - 200)); // a quarter of the way back up
             Assert.IsTrue(Seasons.IsLastWeekOfSeason(new DateTime(2026, 10, 25)));
             Assert.IsFalse(Seasons.IsLastWeekOfSeason(new DateTime(2026, 10, 24)));
         }

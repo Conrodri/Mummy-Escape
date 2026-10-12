@@ -168,8 +168,8 @@ namespace MummyEscape.UI.Screens
         /// <summary>" · ouvre les duels" when escaping this tomb opens a room (the goal card teases it).</summary>
         string Opens(LevelId next)
         {
-            if (Unlocks.Gate(Feature.Duel).Equals(next)) return "  ·  " + Loc.T("ouvre les duels");
-            if (Unlocks.Gate(Feature.Guild).Equals(next)) return "  ·  " + Loc.T("ouvre la guilde, le tchat et le casino");
+            if (Unlocks.Gate(Feature.Duel).Value.Equals(next)) return "  ·  " + Loc.T("ouvre les duels");
+            if (Unlocks.Gate(Feature.Casino).Value.Equals(next)) return "  ·  " + Loc.T("ouvre le casino");
             return "";
         }
 
@@ -184,8 +184,6 @@ namespace MummyEscape.UI.Screens
                 switch (f)
                 {
                     case Feature.Duel: lines.Add(Loc.T("Les duels et le groupe")); first ??= () => Router.Open<PvpScreen>(); break;
-                    case Feature.Guild: lines.Add(Loc.T("La guilde")); first ??= () => Router.Open<GuildScreen>(); break;
-                    case Feature.Chat: lines.Add(Loc.T("Le tchat")); first ??= () => Router.Open<ChatScreen>(); break;
                     case Feature.Casino: lines.Add(Loc.T("Le casino")); first ??= () => Router.Open<CasinoScreen>(); break;
                 }
             }

@@ -20,7 +20,7 @@ namespace MummyEscape.Pvp
         public const int DuoWinsNeeded = 2;
         public const int MaxDuosPerPlayer = 1;         // le groupe : un seul duo à la fois
         public const int MaxDuoInvites = 10;
-        public const int DuoStartingElo = 1000;
+        public const int DuoStartingElo = PvpConfig.StartingElo; // a duo of new players starts in Bronze too
 
         // --- Guildes ---
         public const int GuildMaxMembers = 30;
