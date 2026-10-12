@@ -1,6 +1,6 @@
 # Mummy Rush — Politique de confidentialité
 
-Version 5 — mise à jour le 12 octobre 2026.
+Version 6 — mise à jour le 12 octobre 2026.
 
 ## En bref
 
@@ -36,7 +36,7 @@ Ces données restent sur l'appareil ; tu peux les effacer à tout moment (Param�
 • Sécuriser le service, lutter contre la triche et les abus : intérêt légitime (art. 6.1.f).  
 • Montrer ta progression à tes amis : exécution des conditions d'utilisation, c'est la fonction même de la liste d'amis (art. 6.1.b). Pour ne plus la montrer à quelqu'un, retire-le de tes amis.  
 • Publicités personnalisées : ton consentement, recueilli par le formulaire de Google et retirable à tout moment (art. 6.1.a).  
-Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne demande l'accord d'un parent ou tuteur (RGPD art. 8, loi Informatique et Libertés art. 45).
+Sous l'âge du consentement numérique de ton pays (15 ans en France), le tchat (messages avec tes amis et ta guilde) demande l'accord d'un parent ou tuteur (RGPD art. 8, loi Informatique et Libertés art. 45) ; ton année de naissance n'est demandée qu'à l'ouverture du tchat et n'est pas conservée.
 
 ## Qui peut voir ces données ?
 

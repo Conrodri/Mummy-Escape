@@ -1,6 +1,6 @@
 # Mummy Rush — Conditions d'utilisation
 
-Version 5 — mise à jour le 12 octobre 2026.
+Version 6 — mise à jour le 12 octobre 2026.
 
 ## Objet
 
@@ -23,7 +23,7 @@ La roue des scarabées propose des tirages au hasard dont les chances sont affic
 
 ## Âge
 
-Sous l'âge du consentement numérique de ton pays (15 ans en France), le mode en ligne n'est accessible qu'avec l'accord d'un parent ou tuteur légal. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.
+Sous l'âge du consentement numérique de ton pays (15 ans en France), le tchat n'est accessible qu'avec l'accord d'un parent ou tuteur légal, demandé à sa première ouverture. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.
 
 ## Ton compte
 

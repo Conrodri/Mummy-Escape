@@ -1,6 +1,6 @@
 # Mummy Rush — Terms of use
 
-Version 5 — updated October 12, 2026. English translation: the French version prevails.
+Version 6 — updated October 12, 2026. English translation: the French version prevails.
 
 ## Purpose
 
@@ -23,7 +23,7 @@ The scarab wheel offers random draws whose odds are shown; it is not offered in 
 
 ## Age
 
-Below the digital age of consent in your country (15 in France), online mode is only available with the consent of a parent or legal guardian. Global chat is closed to minors; guild chat and messages between friends can be turned off in the game.
+Below the digital age of consent in your country (15 in France), the chat is only available with the consent of a parent or legal guardian, asked when it first opens. Global chat is closed to minors; guild chat and messages between friends can be turned off in the game.
 
 ## Your account
 

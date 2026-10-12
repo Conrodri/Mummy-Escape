@@ -1,6 +1,6 @@
 # Mummy Rush — Privacy policy
 
-Version 5 — updated October 12, 2026. English translation: the French version prevails.
+Version 6 — updated October 12, 2026. English translation: the French version prevails.
 
 ## In short
 
@@ -36,7 +36,7 @@ This data stays on the device; you can erase it at any time (Settings › Privac
 • Securing the service, fighting cheating and abuse: legitimate interest (art. 6.1.f).  
 • Showing your progress to your friends: performance of the terms of use, it is what the friends list does (art. 6.1.b). To stop showing it to someone, remove them from your friends.  
 • Personalized ads: your consent, collected by Google's form and withdrawable at any time (art. 6.1.a).  
-Below the digital age of consent in your country (15 in France), online mode requires the consent of a parent or guardian (GDPR art. 8, French Data Protection Act art. 45).
+Below the digital age of consent in your country (15 in France), the chat (messages with your friends and guild) requires the consent of a parent or guardian (GDPR art. 8, French Data Protection Act art. 45); your year of birth is only asked when the chat opens and is not kept.
 
 ## Who can see this data?
 
