@@ -1091,6 +1091,7 @@ namespace MummyEscape
             ["Thème d'accueil Halloween"] = "Halloween home theme",
             ["Étage"] = "Floor",
             ["Étages franchis"] = "Floors cleared",
+            ["Étoiles"] = "Stars",
             ["+1 dans {0}"] = "+1 in {0}",
             ["Pass · palier {0}/{1}"] = "Pass · tier {0}/{1}",
             ["{0} récompense"] = "{0} reward",
@@ -1437,8 +1438,16 @@ namespace MummyEscape
             // ---- Challenge tower
             ["Tour de défi"] = "Challenge tower",
             ["Tour · {0}"] = "Tower · {0}",
-            ["Enchaîne les tombeaux, de plus en plus durs. La course s'arrête à la première chute, ou si tu sors avec moins de 2 étoiles."] =
-                "Chain tombs, harder and harder. The run ends at the first fall, or if you get out with fewer than 2 stars.",
+            ["Enchaîne des tombeaux tirés au hasard, un peu plus durs à chaque étage."] = "Chain tombs drawn at random, a little harder on every floor.",
+            ["Pour monter d'un étage, sors du tombeau avec au moins 2 étoiles : moins de {0} % du chemin idéal en coups, et moins de {0} % du temps de la momie experte."] =
+                "To climb a floor, get out of the tomb with at least 2 stars: under {0}% of the ideal path in moves, and under {0}% of the expert mummy's time.",
+            ["La course est perdue dès qu'un piège a raison de toi, ou dès que tu sors avec une seule étoile. Ton score : le nombre d'étages franchis."] =
+                "The run is lost as soon as a trap gets you, or as soon as you get out with a single star. Your score: the floors cleared.",
+            ["Course perdue : la momie a été emmurée. Un seul échec met fin à la course."] = "Run lost: the mummy was walled in. A single failure ends the run.",
+            ["Course perdue : les pièges ont eu raison de la momie. Un seul échec met fin à la course."] = "Run lost: the traps got the mummy. A single failure ends the run.",
+            ["Course perdue : il faut 2 étoiles pour monter, tu en as 1."] = "Run lost: climbing takes 2 stars, you got 1.",
+            ["{0} coups pour un chemin idéal de {1} : il en fallait {2} au plus."] = "{0} moves for an ideal path of {1}: it took {2} at most.",
+            ["{0} contre {1} pour la momie experte : il fallait {2} au plus."] = "{0} against {1} for the expert mummy: it took {2} at most.",
             ["Chaque course tire de nouveaux tombeaux et coûte un point d'énergie du mode sans fin."] =
                 "Each run draws new tombs and costs one point of endless energy.",
             ["Pas encore de record."] = "No record yet.",

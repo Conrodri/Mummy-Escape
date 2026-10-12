@@ -36,7 +36,9 @@ namespace MummyEscape.UI.Screens
             var best = save.Data.TowerBest;
 
             var rules = UIKit.Card(_content);
-            Paragraph(rules, Loc.T("Enchaîne les tombeaux, de plus en plus durs. La course s'arrête à la première chute, ou si tu sors avec moins de 2 étoiles."), 30, UIKit.Sand);
+            Paragraph(rules, Loc.T("Enchaîne des tombeaux tirés au hasard, un peu plus durs à chaque étage."), 30, UIKit.Sand);
+            Paragraph(rules, Loc.F("Pour monter d'un étage, sors du tombeau avec au moins 2 étoiles : moins de {0} % du chemin idéal en coups, et moins de {0} % du temps de la momie experte.", LevelResult.OneStarPercent), 28, UIKit.Sand);
+            Paragraph(rules, Loc.T("La course est perdue dès qu'un piège a raison de toi, ou dès que tu sors avec une seule étoile. Ton score : le nombre d'étages franchis."), 28, UIKit.Sand);
             Paragraph(rules, Loc.F("Tous les {0} étages, choisis un malus : il reste jusqu'à la fin de la course.", Tower.CurseEvery), 28, UIKit.Sand);
             Paragraph(rules, Loc.T("Chaque course tire de nouveaux tombeaux et coûte un point d'énergie du mode sans fin."), 26, UIKit.Dim);
             Paragraph(rules, best.BestFloors > 0 ? Loc.F("Record : {0} étages", best.BestFloors) : Loc.T("Pas encore de record."), 28, UIKit.Gold);

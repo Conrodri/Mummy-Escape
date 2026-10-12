@@ -119,7 +119,7 @@ namespace MummyEscape.UI.Screens
             if (outcome.RewardSkin != null) chips.Add((UISprites.Check, Loc.T(Visual.TowerSkins.Resolve(outcome.RewardSkin).Name), UIKit.Turquoise));
             else if (outcome.Record) chips.Add((UISprites.Podium, Loc.T("Nouveau record !"), UIKit.Turquoise));
             ModalKit.LayOutChips(_chips, chips, Width);
-            Note(outcome.Continues && run.CurseDue ? Loc.T("Choisis un malus pour continuer.") : "");
+            Note(outcome.Continues ? run.CurseDue ? Loc.T("Choisis un malus pour continuer.") : "" : WhyLost(result));
             Energy(outcome.Continues ? (PlayMode?)null : PlayMode.Endless);
             _ranking.transform.parent.parent.gameObject.SetActive(true);
             _main.gameObject.SetActive(true);
@@ -143,9 +143,24 @@ namespace MummyEscape.UI.Screens
             }
         }
 
+        /// <summary>Why the tower run is over, in plain words: the fatal trap, or the star missing and the figure that cost it.</summary>
+        string WhyLost(LevelResult result)
+        {
+            if (!result.Won)
+                return Loc.T(App.Game.Session?.Defeat == DefeatCause.Trapped ? "Course perdue : la momie a été emmurée. Un seul échec met fin à la course."
+                                                                              : "Course perdue : les pièges ont eu raison de la momie. Un seul échec met fin à la course.");
+            var lines = new List<string> { Loc.T("Course perdue : il faut 2 étoiles pour monter, tu en as 1.") };
+            if (result.Moves > result.MaxMovesFor(2))
+                lines.Add(Loc.F("{0} coups pour un chemin idéal de {1} : il en fallait {2} au plus.", result.Moves, result.Par, result.MaxMovesFor(2)));
+            if (result.TargetMs > 0 && result.TimeMs > result.MaxTimeFor(2))
+                lines.Add(Loc.F("{0} contre {1} pour la momie experte : il fallait {2} au plus.", LevelResult.FormatTime(result.TimeMs), LevelResult.FormatTime(result.TargetMs), LevelResult.FormatTime(result.MaxTimeFor(2))));
+            return string.Join("\n", lines);
+        }
+
         void Note(string text)
         {
             _note.text = text;
+            UIKit.Size(_note, 44 + 36 * (text.Split('\n').Length - 1)); // one line of 44 px, 36 more per extra line
             _note.gameObject.SetActive(text.Length > 0);
         }
 
