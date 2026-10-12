@@ -178,13 +178,12 @@ namespace MummyEscape.UI.Screens
             _goalAction = () => Router.Open<PvpScreen>();
         }
 
-        /// <summary>Draws the chosen act's tomb behind the menu (the plain dark backdrop when none, or when it is no longer open).</summary>
+        /// <summary>Draws the chosen act's tomb behind the menu (the default act when none is chosen or it is no longer open).</summary>
         void ApplyTheme()
         {
-            var entry = HomeThemes.Get(App.Settings.HomeTheme) ?? HomeThemes.Get(1); // the plain dark backdrop is gone: act 1 by default
-            bool on = entry != null && entry.IsUnlocked(App.Save);
-            if (on) _scene.Show(App.Art, entry.Act);
-            else _scene.Hide();
+            var entry = HomeThemes.Get(App.Settings.HomeTheme);
+            if (entry == null || !entry.IsUnlocked(App.Save)) entry = HomeThemes.Get(HomeThemes.Default);
+            _scene.Show(App.Art, entry.Act);
         }
 
         /// <summary>A first-time player: the tutorial not walked yet and the first tomb never escaped.</summary>
@@ -238,6 +237,8 @@ namespace MummyEscape.UI.Screens
     /// <summary>Backdrops of the home screen: an act's tomb, once the player has opened that act.</summary>
     public static class HomeThemes
     {
+        /// <summary>Act drawn when nothing is chosen or the chosen act is locked.</summary>
+        public const int Default = 1;
         public sealed class Entry
         {
             /// <summary>Tomb drawn (<see cref="TombTheme.ForAct"/>), also the id saved in the settings.</summary>
@@ -306,7 +307,7 @@ namespace MummyEscape.UI.Screens
             UIKit.ClearChildren(_list);
             var save = App.Save;
             int chosen = App.Settings.HomeTheme;
-            if (HomeThemes.Get(chosen)?.IsUnlocked(save) != true) chosen = 1;
+            if (HomeThemes.Get(chosen)?.IsUnlocked(save) != true) chosen = HomeThemes.Default;
             foreach (var e in HomeThemes.All)
             {
                 bool open = e.IsUnlocked(save);

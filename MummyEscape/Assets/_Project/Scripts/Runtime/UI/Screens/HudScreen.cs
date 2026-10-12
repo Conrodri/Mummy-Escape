@@ -432,7 +432,7 @@ namespace MummyEscape.UI.Screens
         void Update()
         {
             var session = App.Game.Session;
-            if (session != null) { UpdateCounter(session); RefreshDisarm(session, App.Game.Previewing); }
+            if (session != null) { UpdateCounter(session); RefreshDisarm(); }
             UpdateDuel();
             UpdateRelay();
             if (App.Game.Previewing)
@@ -474,11 +474,11 @@ namespace MummyEscape.UI.Screens
         }
 
         /// <summary>The disarm button and its recharge veil, every frame: the 1 s cooldown is real time, not moves.</summary>
-        void RefreshDisarm(GameSession s, bool preview)
+        void RefreshDisarm()
         {
             float cooldown = App.Game.DisarmCooldownLeft;
-            // Always pressable while playing, spikes or not: a press anywhere costs the cooldown, so spamming it does not pay.
-            _disarm.interactable = !preview && s.Status == SessionStatus.Playing && cooldown <= 0f;
+            // Pressable whenever the game takes actions, spikes or not: a press anywhere costs the cooldown, so spamming it does not pay.
+            _disarm.interactable = App.Game.Accepting && cooldown <= 0f;
             if (cooldown > 0f)
             {
                 _disarmCooldown.gameObject.SetActive(true);
@@ -523,8 +523,6 @@ namespace MummyEscape.UI.Screens
                 if (coopTomb != null) sub = Loc.F("Acte {0} — {1}", coopTomb.Act, Loc.T(CoopCampaign.ActName(coopTomb.Act)));
                 _ready.gameObject.SetActive(!App.Game.InRelay && !App.Game.InLiveDuel && !App.Game.InCoop); // live: same time for everyone
             }
-
-            RefreshDisarm(s, preview);
 
             while (_ankhs.Count < level.MaxHp)
             {

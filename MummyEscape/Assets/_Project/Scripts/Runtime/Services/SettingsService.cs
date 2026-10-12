@@ -48,7 +48,7 @@ namespace MummyEscape.Services
             Language = PlayerPrefs.GetString("lang", "");
             PvpBots = PlayerPrefs.GetInt("pvp_bots", 1) == 1;
             Controls = (MoveControl)Mathf.Clamp(PlayerPrefs.GetInt("controls", 0), 0, 2);
-            HomeTheme = PlayerPrefs.GetInt("home_theme", 1);
+            HomeTheme = PlayerPrefs.GetInt("home_theme", UI.Screens.HomeThemes.Default);
             PadRight = PlayerPrefs.GetInt("pad_right", 0) == 1;
             BatterySaver = PlayerPrefs.GetInt("battery", 0) == 1;
             NotifyEnergy = PlayerPrefs.GetInt("notif_energy", 1) == 1;

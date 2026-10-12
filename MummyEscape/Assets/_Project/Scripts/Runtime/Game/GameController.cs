@@ -429,8 +429,17 @@ namespace MummyEscape.Game
             else if (Match == null && !InCoop) _ = StartLevel(CurrentLevel);
         }
 
+        /// <summary>Walked once, won, lost or left: JOUER must not send the player back into the corridor forever.</summary>
+        void MarkTutorialDone()
+        {
+            if (_app.Save.Data.TutorialDone) return;
+            _app.Save.Data.TutorialDone = true;
+            _app.Save.Save();
+        }
+
         public void Abandon()
         {
+            if (InTutorial) MarkTutorialDone();
             _loadToken++;
             ClearRelay();
             ClearCoop();
@@ -569,17 +578,20 @@ namespace MummyEscape.Game
         /// <summary>The HUD disarm button: disarms the visible spikes next to the mummy, if any.</summary>
         public void DisarmAdjacent()
         {
-            if (Session == null || DisarmCooldownLeft > 0f) return;
+            if (!Accepting || DisarmCooldownLeft > 0f) return;
             _disarmReadyAt = Time.unscaledTime + DisarmCooldown;
             if (Session.CanDisarm(out var dir)) Submit(PlayerAction.Disarm(dir));
         }
 
+        /// <summary>The game takes actions: playing, not paused, not previewing, my turn, match not over.</summary>
+        public bool Accepting =>
+            Session != null && !_paused && !Previewing && Session.Status == SessionStatus.Playing
+            && !(Match != null && Match.Over) && !(Relay != null && !MyTurn);
+
         /// <summary>Feeds one action to the game (swipe / tap handlers, and the editor autoplay tool).</summary>
         public void Submit(PlayerAction action)
         {
-            if (Session == null || _paused || Previewing || Session.Status != SessionStatus.Playing) return;
-            if (Match != null && Match.Over) return;
-            if (Relay != null && !MyTurn) return;
+            if (!Accepting) return;
             if (_busy) { _buffered = action; return; }
             StartCoroutine(Play(action));
         }
@@ -902,11 +914,7 @@ namespace MummyEscape.Game
 
             if (InTutorial)
             {
-                if (result.Won && !_app.Save.Data.TutorialDone)
-                {
-                    _app.Save.Data.TutorialDone = true;
-                    _app.Save.Save();
-                }
+                MarkTutorialDone();
                 TutorialEnded?.Invoke(result.Won);
                 yield break;
             }

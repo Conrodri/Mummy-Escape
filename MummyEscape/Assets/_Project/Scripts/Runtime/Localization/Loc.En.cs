@@ -1474,7 +1474,6 @@ namespace MummyEscape
             ["Collection complète"] = "Collection complete",
             ["Acheter {0} pièce"] = "Buy {0} piece",
             ["Acheter {0} pièces"] = "Buy {0} pieces",
-            [" · {0} sceaux"] = " · {0} seals",
             ["Pièces des ligues"] = "League pieces",
             [" pour {0} sceaux ?"] = " for {0} seals?",
         };

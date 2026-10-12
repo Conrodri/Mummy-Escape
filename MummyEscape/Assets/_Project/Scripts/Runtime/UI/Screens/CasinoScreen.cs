@@ -402,10 +402,10 @@ namespace MummyEscape.UI.Screens
             else CloseTiles();
         }
 
-        /// <summary>The wheel turns once, onto the first draw; the ×10 then drops its turns in as tiles.</summary>
+        /// <summary>The wheel turns once, onto the best draw (the one the note announces); the ×10 then drops its turns in as tiles.</summary>
         System.Collections.IEnumerator Spin(WheelDef wheel, List<SpinResult> results, System.Action done)
         {
-            yield return Turn(wheel, results[0], () => { });
+            yield return Turn(wheel, Casino.Best(results), () => { });
             if (results.Count > 1) yield return Reveal(wheel, results, done);
             else done();
         }
