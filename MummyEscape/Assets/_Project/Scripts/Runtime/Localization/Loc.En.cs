@@ -1476,6 +1476,10 @@ namespace MummyEscape
             ["Acheter {0} pièces"] = "Buy {0} pieces",
             ["Pièces des ligues"] = "League pieces",
             [" pour {0} sceaux ?"] = " for {0} seals?",
+            ["+{0} sceaux"] = "+{0} seals",
+            ["Duels en pause (maintenance)"] = "Duels paused (maintenance)",
+            ["Légendaire garanti au plus tard au {0}e tour"] = "A legendary guaranteed by spin {0} at the latest",
+            ["Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} sceaux. Bandages animés."] = "Casino exclusive: 0.5% chance on every spin, or buy it outright for {0} seals. Animated bandages.",
         };
     }
 }

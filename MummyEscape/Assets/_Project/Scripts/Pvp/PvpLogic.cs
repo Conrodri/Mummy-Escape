@@ -271,6 +271,22 @@ namespace MummyEscape.Pvp
         public const int MinDuelsForRankReward = 15;
         public const int MinDuelsLastWeekForRankReward = 5;
 
+        /// <summary>
+        /// Monnaie de fin de saison selon la ligue finale (joueurs classés seulement) : scarabées dorés et sceaux pour
+        /// Diamant et Platine, scarabées pour les autres.
+        /// </summary>
+        public static (int Gold, int Seals, int Scarabs) Currency(League final)
+        {
+            switch (final)
+            {
+                case League.Diamant: return (20, 3000, 0);
+                case League.Platine: return (10, 2000, 0);
+                case League.Or: return (0, 0, 1500);
+                case League.Argent: return (0, 0, 800);
+                default: return (0, 0, 400);
+            }
+        }
+
         /// <summary>Identifiants des récompenses d'une saison terminée.
         /// Classement : la version de la ligue finale et toutes celles en dessous.
         /// Participation : chaque étape atteinte. Le Top 100 est traité à part (voir le guide).</summary>

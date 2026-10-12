@@ -66,15 +66,18 @@ namespace MummyEscape.Pvp
         public const int LegendaryWeight = 50;
         /// <summary>Tours d'un lancer groupé, payés <see cref="MultiSpinsPaid"/> (10 % de remise).</summary>
         public const int MultiSpins = 10, MultiSpinsPaid = 9;
+        /// <summary>Garantie : un légendaire au plus tard à ce tour depuis le dernier (l'espérance de la roue est 200 tours).</summary>
+        public const int PityAfter = 200;
 
         /// <summary>Prix de <paramref name="count"/> tours : 1 au prix normal, <see cref="MultiSpins"/> au prix de <see cref="MultiSpinsPaid"/>.</summary>
         public static int PriceOf(WheelDef wheel, int count) => count == MultiSpins ? wheel.Price * MultiSpinsPaid : wheel.Price * count;
 
         /// <summary>
         /// Plusieurs tours d'affilée : un légendaire gagné compte comme possédé pour les tours suivants (jamais deux fois le
-        /// même). <paramref name="random"/> donne des tirages dans [0, 1).
+        /// même). <paramref name="random"/> donne des tirages dans [0, 1). <paramref name="sinceLegendary"/> compte les tours
+        /// depuis le dernier légendaire : au <see cref="PityAfter"/>e, la case légendaire est forcée s'il en reste à gagner.
         /// </summary>
-        public static List<SpinResult> SpinMany(WheelDef wheel, int count, Func<double> random, ICollection<string> owned)
+        public static List<SpinResult> SpinMany(WheelDef wheel, int count, Func<double> random, ICollection<string> owned, ref int sinceLegendary)
         {
             var have = new HashSet<string>();
             if (owned != null) foreach (var id in owned) have.Add(id);
@@ -82,7 +85,13 @@ namespace MummyEscape.Pvp
             for (int i = 0; i < count; i++)
             {
                 var r = Spin(wheel, random(), random(), have);
-                if (r.Legendary != null) have.Add(r.Legendary);
+                sinceLegendary++;
+                if (r.Legendary == null && sinceLegendary >= PityAfter)
+                {
+                    var forced = Spin(wheel, 0, random(), have); // tirage 0 : la case légendaire, la première de la roue
+                    if (forced.Legendary != null) r = forced;
+                }
+                if (r.Legendary != null) { have.Add(r.Legendary); sinceLegendary = 0; }
                 results.Add(r);
             }
             return results;
@@ -145,7 +154,20 @@ namespace MummyEscape.Pvp
             Id = "seals", Price = 50,
             Segments = Segments(500, 250, 100, 50, 25, 10),
             Legendaries = new[] { "pvp_leg_seth", "pvp_leg_anubis", "pvp_leg_horus", "pvp_leg_prism", "pvp_leg_apophis" },
+            // Un bon mois de duels (10 par jour, 6 gagnés : ~150 sceaux par jour), comme le coût net moyen d'un légendaire à la roue.
+            DirectPrice = 5000,
         };
+
+        /// <summary>Achat direct d'un légendaire de la roue des sceaux. Null en cas de succès, sinon l'erreur.</summary>
+        public static string BuySealLegendary(PlayerPvpData d, string id)
+        {
+            if (Seals.DirectPrice <= 0 || Array.IndexOf(Seals.Legendaries, id) < 0) return "UNKNOWN_ITEM";
+            if (d.UnlockedRewards.Contains(id)) return "OWNED";
+            if (d.Seals < Seals.DirectPrice) return "SEALS";
+            d.Seals -= Seals.DirectPrice;
+            d.UnlockedRewards.Add(id);
+            return null;
+        }
 
         /// <summary>
         /// Un tour de roue. <paramref name="roll"/> et <paramref name="pick"/> sont deux tirages dans [0, 1) : le premier choisit
@@ -189,7 +211,7 @@ namespace MummyEscape.Pvp
             int price = PriceOf(Seals, count);
             if (d.Seals < price) return "SEALS";
             d.Seals -= price;
-            results = SpinMany(Seals, count, random, d.UnlockedRewards);
+            results = SpinMany(Seals, count, random, d.UnlockedRewards, ref d.SealWheelSpins);
             foreach (var r in results)
             {
                 if (r.Kind == PrizeKind.Currency) d.Seals += r.Amount;

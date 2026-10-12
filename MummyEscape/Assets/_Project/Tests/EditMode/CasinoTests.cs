@@ -26,6 +26,53 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Wheel_GuaranteesALegendaryByThePityTurn()
+        {
+            // A roll of 0.5 lands on the "nothing" wedge every time: only the guarantee can give a legendary.
+            int since = 0;
+            var owned = new List<string>();
+            int legendaries = 0, batches = Casino.PityAfter / Casino.MultiSpins;
+            for (int b = 0; b < batches; b++)
+                foreach (var r in Casino.SpinMany(Casino.Scarabs, Casino.MultiSpins, () => 0.5, owned, ref since))
+                {
+                    if (r.Legendary == null) continue;
+                    legendaries++;
+                    owned.Add(r.Legendary);
+                    Assert.AreEqual(batches - 1, b, "forced on the very last turn");
+                }
+            Assert.AreEqual(1, legendaries);
+            Assert.AreEqual(0, since, "the count restarts after a legendary");
+
+            // Every legendary already won: the guarantee has nothing to give and the count keeps growing.
+            owned.AddRange(Casino.Scarabs.Legendaries);
+            since = Casino.PityAfter;
+            foreach (var r in Casino.SpinMany(Casino.Scarabs, 1, () => 0.5, owned, ref since)) Assert.IsNull(r.Legendary);
+            Assert.AreEqual(Casino.PityAfter + 1, since);
+        }
+
+        [Test]
+        public void SealLegendary_BoughtOutright_OnceAndAtThePrice()
+        {
+            var d = new PlayerPvpData { Seals = Casino.Seals.DirectPrice + 10 };
+            string id = Casino.Seals.Legendaries[0];
+            Assert.AreEqual("UNKNOWN_ITEM", Casino.BuySealLegendary(d, "leg_ra"));
+            Assert.IsNull(Casino.BuySealLegendary(d, id));
+            Assert.AreEqual(10, d.Seals);
+            Assert.Contains(id, d.UnlockedRewards);
+            Assert.AreEqual("OWNED", Casino.BuySealLegendary(d, id));
+            Assert.AreEqual("SEALS", Casino.BuySealLegendary(d, Casino.Seals.Legendaries[1]));
+        }
+
+        [Test]
+        public void SeasonCurrency_TopLeaguesGetGoldAndSeals_OthersScarabs()
+        {
+            Assert.AreEqual((20, 3000, 0), SeasonRewards.Currency(League.Diamant));
+            Assert.AreEqual((10, 2000, 0), SeasonRewards.Currency(League.Platine));
+            Assert.AreEqual(0, SeasonRewards.Currency(League.Or).Gold);
+            Assert.That(SeasonRewards.Currency(League.Or).Scarabs, Is.GreaterThan(SeasonRewards.Currency(League.Bronze).Scarabs));
+        }
+
+        [Test]
         public void Wheels_GiveBackLessThanTheyCost()
         {
             foreach (var wheel in new[] { Casino.Scarabs, Casino.Seals })

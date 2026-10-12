@@ -324,9 +324,35 @@ namespace MummyEscape.Pvp
                         d.UnlockedRewards.Add(id);
                         response.NewRewards.Add(id);
                     }
+                response.Gold = response.Seals = response.Scarabs = response.ScarabsOnPhone = 0;
+                if (eligible)
+                {
+                    var (gold, seals, scarabs) = SeasonRewards.Currency(Leagues.FromElo(d.LastSeason.FinalElo));
+                    var w = WalletOf(d);
+                    w.Gold += gold;
+                    d.Seals += seals;
+                    if (w.ScarabsOpen) w.Scarabs += scarabs; else response.ScarabsOnPhone = scarabs;
+                    response.Gold = gold;
+                    response.Seals = seals;
+                    response.Scarabs = scarabs;
+                }
                 d.LastSeason.RewardsClaimed = true;
-                if (response.NewRewards.Count == 0) response.Error = "NOT_ELIGIBLE";
+                if (response.NewRewards.Count == 0 && !eligible) response.Error = "NOT_ELIGIBLE";
             });
+            return response;
+        }
+
+        /// <summary>Achète directement un légendaire de la roue des sceaux (<see cref="WheelDef.DirectPrice"/>).</summary>
+        public async Task<SealPurchaseResponse> BuySealLegendaryAsync(string me, string id)
+        {
+            var response = new SealPurchaseResponse();
+            var data = await Update(me, d =>
+            {
+                response.Error = Casino.BuySealLegendary(d, id);
+                response.Ok = response.Error == null;
+            });
+            response.Seals = data.Seals;
+            response.UnlockedRewards = data.UnlockedRewards;
             return response;
         }
 

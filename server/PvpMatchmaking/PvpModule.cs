@@ -62,6 +62,18 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("BuyWithSeals")]
         public Task<SealPurchaseResponse> BuyWithSeals(IExecutionContext ctx, string itemId) => Server(ctx).BuyWithSealsAsync(ctx.PlayerId, itemId);
 
+        /// <summary>Message de maintenance et pause des duels, lus par le jeu à sa connexion.</summary>
+        [CloudCodeFunction("GetStatus")]
+        public Task<ServiceStatus> GetStatus(IExecutionContext ctx) => Server(ctx).GetStatusAsync();
+
+        /// <summary>Pose l'état du service (équipe seulement).</summary>
+        [CloudCodeFunction("SetStatus")]
+        public Task<ServiceStatus> SetStatus(IExecutionContext ctx, ServiceStatus status) => Server(ctx).SetStatusAsync(ctx.PlayerId, status);
+
+        /// <summary>Achat direct d'un légendaire de la roue des sceaux.</summary>
+        [CloudCodeFunction("BuySealLegendary")]
+        public Task<SealPurchaseResponse> BuySealLegendary(IExecutionContext ctx, string id) => Server(ctx).BuySealLegendaryAsync(ctx.PlayerId, id);
+
         /// <summary>Un tour de la roue des sceaux du casino (0,5 % de chance d'un skin légendaire).</summary>
         [CloudCodeFunction("SpinSealWheel")]
         public Task<WheelSpinResponse> SpinSealWheel(IExecutionContext ctx) => Server(ctx).SpinSealWheelAsync(ctx.PlayerId);

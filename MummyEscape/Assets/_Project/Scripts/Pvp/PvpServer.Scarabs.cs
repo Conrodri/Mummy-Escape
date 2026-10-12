@@ -177,7 +177,7 @@ namespace MummyEscape.Pvp
                 response.Error = !w.ScarabsOpen ? "CLOSED" : w.Scarabs < price ? "SCARABS" : null;
                 if (response.Error != null) return;
                 w.Scarabs -= price;
-                var results = Casino.SpinMany(wheel, count, _random, w.Owned);
+                var results = Casino.SpinMany(wheel, count, _random, w.Owned, ref w.WheelSpins);
                 foreach (var r in results)
                 {
                     if (r.Kind == PrizeKind.Currency) w.Scarabs += r.Amount;

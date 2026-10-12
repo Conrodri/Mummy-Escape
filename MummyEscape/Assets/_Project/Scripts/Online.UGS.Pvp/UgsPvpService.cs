@@ -54,6 +54,11 @@ namespace MummyEscape.Online
         public Task<SeasonRewardsResponse> ClaimSeasonRewardsAsync() =>
             Call("ClaimSeasonRewards", null, e => new SeasonRewardsResponse { Error = e });
 
+        public Task<ServiceStatus> GetStatusAsync() => Call<ServiceStatus>("GetStatus", null, _ => null);
+
+        public Task<SealPurchaseResponse> BuySealLegendaryAsync(string id) =>
+            Call("BuySealLegendary", Args("id", id), e => new SealPurchaseResponse { Error = e });
+
         public Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId) =>
             Call("BuyWithSeals", new Dictionary<string, object> { { "itemId", itemId } }, e => new SealPurchaseResponse { Error = e });
 

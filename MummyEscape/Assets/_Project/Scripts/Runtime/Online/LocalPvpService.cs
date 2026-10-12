@@ -331,6 +331,10 @@ namespace MummyEscape.Online
 
         public Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId) => Run(() => _server.BuyWithSealsAsync(Me, itemId));
 
+        public Task<SealPurchaseResponse> BuySealLegendaryAsync(string id) => Run(() => _server.BuySealLegendaryAsync(Me, id));
+
+        public Task<ServiceStatus> GetStatusAsync() => Run(() => _server.GetStatusAsync());
+
         public Task<WheelSpinResponse> SpinSealWheelAsync(int count = 1) => Run(() => _server.SpinSealWheelAsync(Me, count));
 
         public Task SyncSoloStarsAsync(int stars) => Task.CompletedTask; // read live from the save

@@ -309,7 +309,27 @@ namespace MummyEscape.App
             await SyncSoloStars();
             await PublishProgress();
             _ = MummyEscape.Online.ChatState.RegisterNameAsync(this);
+            _ = LoadStatus();
             RefreshMenus();
+        }
+
+        /// <summary>The team's maintenance message and duel pause, read from the server (null until read).</summary>
+        public ServiceStatus Status { get; private set; }
+        string _statusShown;
+
+        /// <summary>Reads the service status; its message is shown once per text (a changed message shows again).</summary>
+        async Task LoadStatus()
+        {
+            var pvp = Pvp;
+            if (pvp == null || pvp.IsDemo) return;
+            var status = await pvp.GetStatusAsync();
+            if (status == null || status.Error != null) return;
+            Status = status;
+            RefreshMenus();
+            string text = Loc.Current == Loc.Lang.En && !string.IsNullOrEmpty(status.MessageEn) ? status.MessageEn : status.Message;
+            if (string.IsNullOrEmpty(text) || _statusShown == text || UI == null) return;
+            _statusShown = text;
+            UI.Open<OfferDialog>().Configure("Mummy Rush", text, ("OK", ButtonStyle.Primary, null)); // noloc
         }
 
         void RefreshMenus()

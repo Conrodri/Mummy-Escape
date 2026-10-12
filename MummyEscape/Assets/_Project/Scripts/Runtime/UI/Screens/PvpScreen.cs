@@ -192,7 +192,10 @@ namespace MummyEscape.UI.Screens
 
             _find.gameObject.SetActive(App.Pvp != null);
             UIKit.SetLabel(_find, _duelSearch != null ? "Annuler la recherche" : _busy ? "Recherche d'un adversaire…" : locked ? Loc.F("{0} étoiles en solo pour débloquer ({1}/{0})", PvpConfig.RequiredSoloStars, App.Save.TotalStars) : "Chercher un adversaire");
-            _find.interactable = available && !locked && (!_busy || _duelSearch != null);
+            // Maintenance: the team can pause the duels from the server (GameApp.Status) without a new build.
+            bool paused = App.Status?.PvpOff == true;
+            if (paused) UIKit.SetLabel(_find, "Duels en pause (maintenance)");
+            _find.interactable = available && !locked && !paused && (!_busy || _duelSearch != null);
 
             bool claimable = d?.LastSeason != null && !d.LastSeason.RewardsClaimed;
             _claim.gameObject.SetActive(claimable);
@@ -313,12 +316,18 @@ namespace MummyEscape.UI.Screens
             var r = await App.Pvp.ClaimSeasonRewardsAsync();
             if (this == null) return;
             _busy = false;
-            if (r != null && r.Error == null && r.NewRewards.Count > 0)
+            if (r != null && r.Error == null)
             {
                 App.Save.GrantSkins(r.NewRewards);
                 var names = new List<string>();
                 foreach (var id in r.NewRewards) names.Add(Loc.T(SkinCatalog.Get(id).Name));
-                _info.text = Loc.F("Débloqué : {0}", string.Join(", ", names)) + "\n<size=22>" + Loc.T("À porter depuis la Boutique") + "</size>";
+                // The league's currency: credited by the server (the phone adds the scarabs it still holds itself).
+                if (r.Gold > 0) names.Add(Loc.F("+{0} scarabées dorés", r.Gold));
+                if (r.Seals > 0) names.Add(Loc.F("+{0} sceaux", r.Seals));
+                if (r.Scarabs > 0) names.Add(Loc.F("+{0} scarabées", r.Scarabs));
+                if (r.ScarabsOnPhone > 0) App.Save.EarnCoins(r.ScarabsOnPhone);
+                if (r.Gold > 0) _ = Monetization.GoldWallet.RefreshAsync(App);
+                _info.text = Loc.F("Débloqué : {0}", string.Join(", ", names)) + (r.NewRewards.Count > 0 ? "\n<size=22>" + Loc.T("À porter depuis la Boutique") + "</size>" : "");
                 App.Audio.Play(Sfx.Win);
             }
             else if (r?.Error == "NOT_ELIGIBLE")

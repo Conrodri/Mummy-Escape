@@ -77,10 +77,10 @@ namespace MummyEscape.Monetization
         }
 
         /// <summary>
-        /// Golden scarabs of the paid track: exactly the price of the next pass, so a player who completes every
-        /// season buys the pass once and keeps it for life (the free track's 10 come on top).
+        /// Golden scarabs of the paid track: half the price of the next pass, so a player who completes two seasons
+        /// and saves gets the third pass for free (the free track's 10 come on top).
         /// </summary>
-        public const int PremiumGoldPerStep = 4;
+        public const int PremiumGoldPerStep = 2;
 
         public static int PremiumGoldTotal
         {

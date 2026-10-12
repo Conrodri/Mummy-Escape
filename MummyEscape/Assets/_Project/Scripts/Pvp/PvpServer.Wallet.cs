@@ -48,6 +48,8 @@ namespace MummyEscape.Pvp
         public List<int> EndlessPaid = new List<int>();
         /// <summary>Pieces bought with scarabs or won at the scarab wheel (and those carried over).</summary>
         public List<string> Owned = new List<string>();
+        /// <summary>Turns of the scarab wheel since its last legendary (the <see cref="Casino.PityAfter"/> guarantee).</summary>
+        public int WheelSpins;
     }
 
     /// <summary>The phone's scarab economy, carried over once to the server (<see cref="PvpServer.OpenScarabsAsync"/>).</summary>

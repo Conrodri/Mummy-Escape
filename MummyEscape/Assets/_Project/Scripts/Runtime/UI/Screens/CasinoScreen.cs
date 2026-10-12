@@ -234,7 +234,7 @@ namespace MummyEscape.UI.Screens
         void Zoom(SkinDef def, bool owned)
         {
             bool worn = App.Save.IsWorn(def.Id);
-            int price = Seals ? 0 : Wheel.DirectPrice;
+            int price = Wheel.DirectPrice;
             if (owned || price <= 0)
             {
                 Router.Open<ItemZoomScreen>().Show(def, Loc.T("Légendaire"), LegendaryColor,
@@ -244,20 +244,39 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             // Players who would rather not gamble buy it outright, at what it costs on average at the wheel.
-            bool afford = App.Save.Data.Coins >= price;
+            bool seals = Seals;
+            bool afford = seals ? (App.PvpProfile?.Data?.Seals ?? 0) >= price : App.Save.Data.Coins >= price;
             Router.Open<ItemZoomScreen>().Show(def, Loc.T("Légendaire"), LegendaryColor,
-                Loc.F("Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} scarabées. Bandages animés.", price),
-                afford ? Loc.F("Acheter · {0} scarabées", price) : Loc.F("Il te faut {0} scarabées", price),
+                seals ? Loc.F("Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} sceaux. Bandages animés.", price)
+                      : Loc.F("Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} scarabées. Bandages animés.", price),
+                afford ? (seals ? Loc.F("Acheter · {0} sceaux", price) : Loc.F("Acheter · {0} scarabées", price))
+                       : (seals ? Loc.F("Il te faut {0} sceaux", price) : Loc.F("Il te faut {0} scarabées", price)),
                 afford ? () => BuyLegendary(def) : (System.Action)null);
         }
 
         async void BuyLegendary(SkinDef def)
         {
-            string error = await Monetization.ScarabWallet.RunAsync(App, p => p.BuyWheelLegendaryAsync(def.Id));
-            if (this == null) return;
+            string error;
+            if (Seals)
+            {
+                var r = await App.Pvp.BuySealLegendaryAsync(def.Id);
+                if (this == null) return;
+                error = r != null && r.Ok ? null : PvpScreen.ErrorText(r?.Error);
+                if (r != null && r.Ok)
+                {
+                    App.UpdatePvpWallet(r.Seals, r.UnlockedRewards);
+                    if (App.PvpProfile?.Data != null) App.PvpProfile.Data.UnlockedRewards = r.UnlockedRewards;
+                }
+            }
+            else
+            {
+                error = await Monetization.ScarabWallet.RunAsync(App, p => p.BuyWheelLegendaryAsync(def.Id));
+                if (this == null) return;
+                if (error != null) error = Monetization.ScarabWallet.ErrorText(error);
+            }
             if (error != null && !App.Save.Data.OwnedSkins.Contains(def.Id))
             {
-                Router.Open<OfferDialog>().Configure(Loc.T(def.Name), Monetization.ScarabWallet.ErrorText(error), ("OK", ButtonStyle.Primary, null)); // noloc
+                Router.Open<OfferDialog>().Configure(Loc.T(def.Name), error, ("OK", ButtonStyle.Primary, null)); // noloc
                 Refresh();
                 return;
             }
@@ -324,7 +343,7 @@ namespace MummyEscape.UI.Screens
                             : seg.Kind == PrizeKind.Nothing ? Loc.T("rien") : "+" + seg.Amount;
                 parts.Add($"{what} {Percent(seg.Weight)}"); // noloc
             }
-            return Loc.T("Chances :") + " " + string.Join(" · ", parts);
+            return Loc.T("Chances :") + " " + string.Join(" · ", parts) + "\n" + Loc.F("Légendaire garanti au plus tard au {0}e tour", Casino.PityAfter);
         }
 
         static string Percent(int weight)

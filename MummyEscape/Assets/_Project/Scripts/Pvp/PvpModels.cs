@@ -136,6 +136,8 @@ namespace MummyEscape.Pvp
         public League HighestLeague = League.Bronze;
         /// <summary>Identifiants des skins PvP obtenus (classement, participation, boutique PvP).</summary>
         public List<string> UnlockedRewards = new List<string>();
+        /// <summary>Tours de la roue des sceaux depuis le dernier légendaire (garantie <see cref="Casino.PityAfter"/>).</summary>
+        public int SealWheelSpins;
 
         /// <summary>Duos 2v2 du joueur (<see cref="TeamConfig.MaxDuosPerPlayer"/> au plus).</summary>
         public List<string> Duos = new List<string>();
@@ -173,11 +175,32 @@ namespace MummyEscape.Pvp
     }
 
     /// <summary>Réponse de ClaimSeasonRewards.</summary>
+    /// <summary>
+    /// État du service, écrit par l'équipe (<see cref="PvpServer.SetStatusAsync"/>) et lu par chaque jeu à sa connexion : un
+    /// message de maintenance à afficher une fois, et les duels mis en pause, sans nouvelle version.
+    /// </summary>
+    [Serializable]
+    public class ServiceStatus
+    {
+        /// <summary>Message en français ; vide : rien à dire.</summary>
+        public string Message;
+        /// <summary>Le même en anglais (sinon le français est montré à tous).</summary>
+        public string MessageEn;
+        /// <summary>Les duels et matchs ne se lancent plus.</summary>
+        public bool PvpOff;
+        public long UpdatedAtUnixMs;
+        public string Error;   // "FORBIDDEN"
+    }
+
     [Serializable]
     public class SeasonRewardsResponse
     {
         public string Season;
         public List<string> NewRewards = new List<string>();
+        /// <summary>Monnaie de la ligue finale (<see cref="SeasonRewards.Currency"/>), déjà créditée par le serveur…</summary>
+        public int Gold, Seals, Scarabs;
+        /// <summary>…sauf ces scarabées, que le téléphone garde encore lui-même : il se les ajoute.</summary>
+        public int ScarabsOnPhone;
         public string Error;   // "NOTHING_TO_CLAIM", "NOT_ELIGIBLE"
     }
 

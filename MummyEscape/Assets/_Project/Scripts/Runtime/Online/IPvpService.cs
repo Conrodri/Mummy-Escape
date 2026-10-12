@@ -19,7 +19,11 @@ namespace MummyEscape.Online
         Task<FindDuelResponse> FindDuelAsync(bool allowBots);
         Task<SubmitRunResponse> SubmitRunAsync(RunSubmission run, string playerName);
         Task<SeasonRewardsResponse> ClaimSeasonRewardsAsync();
+        /// <summary>The team's maintenance message and duel pause (null when the server cannot be reached).</summary>
+        Task<ServiceStatus> GetStatusAsync();
         Task<SealPurchaseResponse> BuyWithSealsAsync(string itemId);
+        /// <summary>A seal-wheel legendary bought outright (<see cref="WheelDef.DirectPrice"/>).</summary>
+        Task<SealPurchaseResponse> BuySealLegendaryAsync(string id);
         /// <summary>One turn of the casino's seal wheel (paid and drawn by the server).</summary>
         /// <summary>Un tour de la roue des sceaux, ou <see cref="Casino.MultiSpins"/> (payés <see cref="Casino.MultiSpinsPaid"/>).</summary>
         Task<WheelSpinResponse> SpinSealWheelAsync(int count = 1);
