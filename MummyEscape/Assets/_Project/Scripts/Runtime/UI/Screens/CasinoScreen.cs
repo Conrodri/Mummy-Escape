@@ -265,7 +265,10 @@ namespace MummyEscape.UI.Screens
                       : Loc.F("Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} scarabées. Bandages animés.", price),
                 afford ? (seals ? Loc.F("Acheter · {0} sceaux", price) : Loc.F("Acheter · {0} scarabées", price))
                        : (seals ? Loc.F("Il te faut {0} sceaux", price) : Loc.F("Il te faut {0} scarabées", price)),
-                afford ? () => BuyLegendary(def) : (System.Action)null);
+                afford ? () => Router.Open<OfferDialog>().Configure(Loc.T(def.Name),
+                    seals ? Loc.F("L'acheter pour {0} sceaux ?", price) : Loc.F("L'acheter pour {0} scarabées ?", price),
+                    (seals ? Loc.F("Acheter · {0} sceaux", price) : Loc.F("Acheter · {0} scarabées", price), ButtonStyle.Primary, () => BuyLegendary(def)),
+                    ("Annuler", ButtonStyle.Ghost, null)) : (System.Action)null);
         }
 
         async void BuyLegendary(SkinDef def)

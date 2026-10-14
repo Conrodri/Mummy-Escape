@@ -588,16 +588,22 @@ namespace MummyEscape.UI.Screens
             UIKit.Place(padlock.rectTransform, 0.5f, 0.5f, size, size);
         }
 
-        async void OnItem(SkinDef item)
+        void OnItem(SkinDef item)
         {
-            if (!App.Save.Data.OwnedSkins.Contains(item.Id))
+            if (App.Save.Data.OwnedSkins.Contains(item.Id)) { App.Save.SelectSkin(item.Id); Refresh(); return; }
+            int price = ScarabPrice(item);
+            Confirm(item.Name, Loc.F("L'acheter pour {0} scarabées ?", price), Loc.F("Acheter · {0} scarabées", price), async () =>
             {
                 // The server takes the scarabs and gives the piece (the wallet it sends back lists it).
                 if (!await BuyScarabs(item.Name, p => p.BuyScarabPieceAsync(item.Id), () => App.Save.Data.OwnedSkins.Contains(item.Id))) return;
-            }
-            App.Save.SelectSkin(item.Id);
-            Refresh();
+                App.Save.SelectSkin(item.Id);
+                Refresh();
+            });
         }
+
+        /// <summary>Every purchase asks first: a stray tap never spends.</summary>
+        void Confirm(string title, string question, string buy, Action action) =>
+            Router.Open<OfferDialog>().Configure(Loc.T(title), question, (buy, ButtonStyle.Primary, action), ("Annuler", ButtonStyle.Ghost, null));
 
         /// <summary>A scarab purchase asked to the server: true once <paramref name="done"/>, otherwise its error in a dialog.</summary>
         async System.Threading.Tasks.Task<bool> BuyScarabs(string name, Func<Online.IPvpService, System.Threading.Tasks.Task<WalletResponse>> call, Func<bool> done)
@@ -831,13 +837,16 @@ namespace MummyEscape.UI.Screens
             Refresh();
         }
 
-        async void OnSet(int act, int price)
+        void OnSet(int act, int price)
         {
             var owned = App.Save.Data.OwnedSkins;
             var set = SkinCatalog.ThemeSet(act);
             bool Complete() => set.TrueForAll(s => owned.Contains(s.Id));
-            if (!Complete() && !await BuyScarabs(ThemeName(act), p => p.BuyScarabSetAsync(act), Complete)) return;
-            Wear(set);
+            if (Complete()) { Wear(set); return; }
+            Confirm(ThemeName(act), Loc.F("Acheter l'ensemble pour {0} scarabées ?", price), Loc.F("Acheter · {0} scarabées", price), async () =>
+            {
+                if (await BuyScarabs(ThemeName(act), p => p.BuyScarabSetAsync(act), Complete)) Wear(set);
+            });
         }
 
         /// <summary>A Treasure parure: put on when complete, otherwise its missing pieces bought from the server's wallet.</summary>
@@ -920,7 +929,7 @@ namespace MummyEscape.UI.Screens
             UIFx.PopIn(card, Mathf.Min(_cardIndex++, 12) * 0.035f);
         }
 
-        async void OnSealItem(string id, bool owned)
+        void OnSealItem(string id, bool owned)
         {
             if (owned)
             {
@@ -929,6 +938,12 @@ namespace MummyEscape.UI.Screens
                 Refresh();
                 return;
             }
+            int price = SealShop.Get(id).Price;
+            Confirm(PvpSkins.ShopItem(id).Name, Loc.F("L'acheter pour {0} sceaux ?", price), Loc.F("Acheter · {0} sceaux", price), () => BuySealItem(id));
+        }
+
+        async void BuySealItem(string id)
+        {
             if (_busy || App.Pvp == null) return;
             _busy = true;
             Refresh();

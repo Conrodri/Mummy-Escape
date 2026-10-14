@@ -85,7 +85,8 @@ namespace MummyEscape.UI.Screens
             UIKit.FitText(_tiers.GetComponentInChildren<Text>(), 16);
             UIKit.Size(_tiers, -1, -1, 1);
             _tiersPrice = UIKit.Chip(buttons.transform, UIKit.Art.GoldScarab, GoldShop.TierBundlePrice.ToString(), TreasureScreen.GoldColor, 72);
-            _claimAll = UIKit.Button(buttons.transform, "Tout récupérer", ClaimAll, 28);
+            // Its own row, away from the purchases: a claim tap never lands on a buy button.
+            _claimAll = UIKit.Button(body, "Tout récupérer", ClaimAll, 28);
             UIKit.FitText(_claimAll.GetComponentInChildren<Text>(), 16);
             UIKit.Size(_claimAll, -1, -1, 1);
 
