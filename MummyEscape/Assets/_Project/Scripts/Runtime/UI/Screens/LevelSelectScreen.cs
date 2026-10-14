@@ -54,7 +54,7 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(dot, 20, 20);
             }
 
-            // Ten tombs per act: five rows of two, growing taller to fill tall phones.
+            // Ten tombs per act (plus the intro X-0 in Easy), two per row, growing taller to fill tall phones.
             _grid = (RectTransform)UIKit.FittedGrid(body, 2, new Vector2(470, 170), new Vector2(20, 18), out var slot, 240f).transform;
             UIKit.Size(slot, -1, -1, -1, 1);
 
@@ -171,21 +171,33 @@ namespace MummyEscape.UI.Screens
             var furthest = App.Save.FurthestUnlocked(_mode);
             int stars = 0;
             UIKit.ClearChildren(_grid);
+            // Easy: the act's intro corridor is its first card, X-0; while it is pending it is the one to play.
+            bool introPending = _mode == Difficulty.Easy && App.Save.NeedsIntro(new LevelId(_mode, _act, 1));
+            if (_mode == Difficulty.Easy) IntroCard(open && introPending && furthest.Equals(new LevelId(_mode, _act, 1)), theme, accent);
             for (int i = 1; i <= def.Levels; i++)
             {
                 var id = new LevelId(_mode, _act, i);
                 var rec = App.Save.GetRecord(id);
                 stars += rec?.BestStars ?? 0;
-                LevelCard(id, rec, open && id.Equals(furthest) && (rec == null || rec.Completions == 0), theme, accent, i - 1);
+                LevelCard(id, rec, open && !(i == 1 && introPending) && id.Equals(furthest) && (rec == null || rec.Completions == 0), theme, accent, i);
             }
             _actStars.text = $"{stars} / {def.Levels * 3}";
             _bar.fillAmount = stars / (float)(def.Levels * 3);
         }
 
-        void LevelCard(LevelId id, LevelRecord rec, bool current, TombTheme theme, Color accent, int index)
+        void LevelCard(LevelId id, LevelRecord rec, bool current, TombTheme theme, Color accent, int index) =>
+            TombCard(id, App.Save.IsUnlocked(id), rec != null && rec.Completions > 0, current, () => Play(id), rec, false, theme, accent, index);
+
+        /// <summary>The act's intro (X-0): open with X-1, free, no stars.</summary>
+        void IntroCard(bool current, TombTheme theme, Color accent)
         {
-            bool unlocked = App.Save.IsUnlocked(id);
-            bool done = rec != null && rec.Completions > 0;
+            int act = _act;
+            TombCard(ActIntro.Id(act), App.Save.IsUnlocked(new LevelId(Difficulty.Easy, act, 1)), App.Save.IsIntroDone(act), current,
+                () => { Router.Open<HudScreen>(); App.Game.StartIntro(act); }, null, true, theme, accent, 0);
+        }
+
+        void TombCard(LevelId id, bool unlocked, bool done, bool current, System.Action onPlay, LevelRecord rec, bool intro, TombTheme theme, Color accent, int index)
+        {
             // The card in a holder: the grid places the holder, the pulse and the pop-in scale the card.
             var holder = UIKit.Rect("Tomb " + id, _grid); // noloc
             var card = UIKit.Plate(holder, Color.white, 30, current ? UIKit.Gold : done ? new Color(accent.r, accent.g, accent.b, 0.55f) : UIKit.Rim, current, "Card"); // noloc
@@ -198,7 +210,7 @@ namespace MummyEscape.UI.Screens
             {
                 var btn = card.gameObject.AddComponent<Button>();
                 btn.targetGraphic = card;
-                btn.onClick.AddListener(() => { App.Audio.Play(Services.Sfx.Click, 0f); Play(id); });
+                btn.onClick.AddListener(() => { App.Audio.Play(Services.Sfx.Click, 0f); onPlay(); });
                 card.gameObject.AddComponent<PressScale>();
             }
             if (current)
@@ -227,9 +239,14 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(play, 50, 180, 0);
                 var t = UIKit.Label(play.transform, "À toi !", 26, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
                 UIKit.Stretch(t.rectTransform);
-                var hint = UIKit.Label(col, "Inexploré", 22, UIKit.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+                var hint = UIKit.Label(col, intro ? "Intro" : "Inexploré", 22, UIKit.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
                 hint.GetComponent<Shadow>().enabled = false;
                 UIKit.Size(hint, 32);
+                return;
+            }
+            if (intro)
+            {
+                UIKit.Size(UIKit.Label(col, "Intro", 28, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold), 48);
                 return;
             }
             UIKit.Stars(col, rec?.BestStars ?? 0, 48);

@@ -1298,7 +1298,8 @@ namespace MummyEscape
             ["Menu principal"] = "Main menu",
             ["La momie est tombée…"] = "The mummy fell…",
             // ---------------------------------------------------------------- act intros (Easy)
-            ["Intro 0-{0}"] = "Intro 0-{0}",
+            ["Intro {0}-0"] = "Intro {0}-0",
+            ["Intro"] = "Intro",
             ["Intro terminée !"] = "Intro complete!",
             ["Tu connais les pièges de cet acte.\nÀ toi de t'évader pour de vrai !"] = "You know this act's traps.\nTime to escape for real!",
             ["Jouer le tombeau {0}-1"] = "Play tomb {0}-1",

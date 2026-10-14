@@ -400,7 +400,7 @@ namespace MummyEscape.UI.Screens
         void ShowLoading(LevelId id)
         {
             var match = App.Game.Match;
-            string title = App.Game.InIntro ? Loc.F("Intro 0-{0}", App.Game.IntroAct)
+            string title = App.Game.InIntro ? Loc.F("Intro {0}-0", App.Game.IntroAct)
                          : App.Game.InEndless ? Loc.F("Sans fin · {0}", LevelNames.Mode(App.Game.EndlessMode.Value)) + " · " + Loc.F("Tombeau {0}", App.Game.EndlessTomb)
                          : App.Game.InHalloween ? Loc.T("Halloween") + " · " + Loc.F("Tombeau {0}", App.Game.HalloweenTomb)
                          : App.Game.InTower ? Loc.T("Tour de défi") + " · " + Loc.F("Étage {0}", App.Game.TowerFloor)
@@ -508,7 +508,7 @@ namespace MummyEscape.UI.Screens
             if (s == null) return;
             var level = s.Level;
             var coopTomb = App.Game.InCoop ? App.Game.Coop?.Tomb : null;
-            _level.text = coopTomb != null ? "2v2 · " + Loc.T(coopTomb.Name) : App.Game.InRelay ? "2v2" : App.Game.InIntro ? Loc.F("Intro 0-{0}", App.Game.IntroAct) : App.Game.InDuel ? Loc.T("Duel")
+            _level.text = coopTomb != null ? "2v2 · " + Loc.T(coopTomb.Name) : App.Game.InRelay ? "2v2" : App.Game.InIntro ? Loc.F("Intro {0}-0", App.Game.IntroAct) : App.Game.InDuel ? Loc.T("Duel")
                         : App.Game.InEndless ? Loc.F("Tombeau {0}", App.Game.EndlessTomb) : App.Game.InHalloween ? Loc.F("Tombeau {0}", App.Game.HalloweenTomb) : App.Game.InTower ? Loc.F("Tour · {0}", App.Game.TowerFloor) : Loc.F("Niveau {0}", level.Id); // noloc
             UpdateCounter(s);
             UpdateLesson(s);

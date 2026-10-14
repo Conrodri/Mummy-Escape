@@ -264,6 +264,8 @@ namespace MummyEscape.Services
         public bool NeedsIntro(LevelId id) =>
             id.Mode == Difficulty.Easy && id.Index == 1 && (Data.IntrosDone & (1 << (id.Act - 1))) == 0 && !IsCompleted(id);
 
+        public bool IsIntroDone(int act) => (Data.IntrosDone & (1 << (act - 1))) != 0;
+
         /// <summary>Marks an act's intro as walked or skipped.</summary>
         public void MarkIntroDone(int act)
         {
