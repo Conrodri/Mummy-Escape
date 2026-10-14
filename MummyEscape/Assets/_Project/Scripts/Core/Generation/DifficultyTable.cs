@@ -26,6 +26,9 @@ namespace MummyEscape.Core
         public int[] Currents = { 0, 0, 0 };
         public int[] CrumblingTiles = { 0, 0, 0 };
         public int[] FireJets = { 0, 0, 0 };
+        public int[] Wrappings = { 0, 0, 0 };
+        public int[] FalseWalls = { 0, 0, 0 };
+        public int[] Idols = { 0, 0, 0 };
         /// <summary>
         /// Difficulty thresholds of the act: Facile from [0] to [1], Normal from [1] to [2], Extrême from [2] to [3]. Each
         /// mode's levels climb through its band along <see cref="DifficultyTable.Sawtooth"/>.
@@ -72,7 +75,7 @@ namespace MummyEscape.Core
         /// Bump this whenever the generator or this table changes the produced levels: it is part of the level seed
         /// and of the leaderboard ids, so scores from different rules never get compared.
         /// </summary>
-        public const int GeneratorVersion = 13;
+        public const int GeneratorVersion = 14;
 
         /// <summary>Levels of each act, in every mode.</summary>
         public const int LevelsPerAct = 10;
@@ -110,7 +113,7 @@ namespace MummyEscape.Core
                 MainGates = new[] { Element.Door, Element.Portal },
                 Interactions = new[] { Element.Torch, Element.Door, Element.Portal },
                 Traps = new[] { Element.Darkness },
-                Currents = new[] { 1, 1, 2 },
+                Currents = new[] { 1, 1, 2 }, Wrappings = new[] { 1, 1, 2 },
                 Thresholds = new[] { 5, 14, 21, 30 },
             },
             new ActDefinition
@@ -120,6 +123,8 @@ namespace MummyEscape.Core
                 Interactions = new[] { Element.LockedPortal, Element.Torch, Element.Door, Element.Portal },
                 Traps = new[] { Element.Reverse, Element.Darkness },
                 CrumblingTiles = new[] { 1, 1, 2 },
+                // A mirage is only ever a shortcut: none in Facile, where the walk must be the plain one.
+                FalseWalls = new[] { 0, 1, 1 },
                 Thresholds = new[] { 5, 16, 25, 36 },
             },
             new ActDefinition
@@ -129,6 +134,7 @@ namespace MummyEscape.Core
                 MainGates = new[] { Element.Laser },
                 Interactions = new[] { Element.CursedPortal, Element.Laser, Element.Torch, Element.Door },
                 Traps = new[] { Element.Rotate, Element.Darkness, Element.Reverse },
+                Idols = new[] { 1, 1, 2 },
                 Thresholds = new[] { 4, 16, 28, 42 },
             },
             new ActDefinition
@@ -240,6 +246,9 @@ namespace MummyEscape.Core
                 Currents = act.Currents[m],
                 CrumblingTiles = act.CrumblingTiles[m],
                 FireJets = act.FireJets[m],
+                Wrappings = act.Wrappings[m],
+                FalseWalls = act.FalseWalls[m],
+                Idols = act.Idols[m],
                 BlueBarriers = mode.BlueBarriers,
                 SpikePatternNames = mode.Patterns,
                 DecoyCorridor = mode.DecoyCorridor,

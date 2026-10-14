@@ -36,7 +36,8 @@ namespace MummyEscape.Core
 
     /// <summary>
     /// Exact breadth-first search over (position, activated channels, disarmed traps, hp, blindness, torch, collapsed
-    /// slabs, flame rhythm).
+    /// slabs or burnt wrappings). Periodic traps (flame jets, idol gaze) strike in real time: the search treats their tiles
+    /// as floor, since waiting out a blast only costs time.
     /// Every action costs one move, so BFS gives the true minimum number of moves for an omniscient player.
     /// Darkness traps are never worth disarming for an omniscient player (blindness has no cost), so the solver
     /// only considers disarming spikes; this keeps the state space small without changing the optimum.
@@ -50,7 +51,7 @@ namespace MummyEscape.Core
         /// <summary>Shortest way to the exit from any situation of a run (PvP progress: moves still to go).</summary>
         public static Solution Solve(Level level, RuleState start, SolverOptions options)
         {
-            var layout = Layout(level, HasFireJets(level));
+            var layout = Layout(level);
             var startKey = layout.Pack(start);
             var parent = new Dictionary<long, (long prev, PlayerAction action)>();
             var states = new Dictionary<long, RuleState>();
@@ -79,7 +80,7 @@ namespace MummyEscape.Core
                 {
                     var r = Rules.Step(level, s, a);
                     if (r.Has(StepFlags.Blocked) || r.Has(StepFlags.Died)) continue;
-                    if (options.AvoidSpikes && r.Has(StepFlags.TrapTriggered) && r.Has(StepFlags.Damaged) && !r.Has(StepFlags.Burned)) continue;
+                    if (options.AvoidSpikes && r.Has(StepFlags.TrapTriggered) && r.Has(StepFlags.Damaged)) continue;
                     if (!options.AllowTeleporters && r.Has(StepFlags.Teleported)) r.State.Position = r.SteppedOn; // stand on the pad, no transport
                     var ns = r.State;
                     if (!options.AllowButtons) ns.Pressed = s.Pressed;
@@ -104,7 +105,7 @@ namespace MummyEscape.Core
         public static Solution SolveFastest(Level level, System.Func<RuleState, PlayerAction, StepResult, int> cost, SolverOptions options)
         {
             var start = Rules.Initial(level);
-            var layout = Layout(level, HasFireJets(level));
+            var layout = Layout(level);
             var startKey = layout.Pack(start);
             var parent = new Dictionary<long, (long prev, PlayerAction action)>();
             var best = new Dictionary<long, int>();
@@ -186,26 +187,16 @@ namespace MummyEscape.Core
         /// <summary>Limits of the packed state: tiles, channels, traps and fragile slabs.</summary>
         public const int MaxCells = 1 << 12, MaxChannels = 12, MaxTraps = 12, MaxCrumbling = 12;
 
-        /// <summary>
-        /// The packing of states for this tomb (<see cref="StateLayout"/>). The tick only matters when the tomb has flame
-        /// jets (otherwise it would triple the states for nothing).
-        /// </summary>
-        internal static StateLayout Layout(Level level, bool tick)
+        /// <summary>The packing of states for this tomb (<see cref="StateLayout"/>).</summary>
+        internal static StateLayout Layout(Level level)
         {
-            var layout = new StateLayout(level, tick);
+            var layout = new StateLayout(level);
             if (layout.Bits > 64) throw new System.InvalidOperationException($"tomb too rich to search: {layout.Bits} bits of state");
             return layout;
         }
 
         /// <summary>Whether every state of the tomb packs into 64 bits (what the generator checks before solving).</summary>
-        public static bool CanPack(Level level) => new StateLayout(level, HasFireJets(level)).Bits <= 64;
-
-        static bool HasFireJets(Level level)
-        {
-            for (int i = 0; i < level.CellCount; i++)
-                if (level[level.CellAt(i)].Type == TileType.FireJet) return true;
-            return false;
-        }
+        public static bool CanPack(Level level) => new StateLayout(level).Bits <= 64;
 
         /// <summary>
         /// Can the exit still be reached from this state, whatever it costs? Traps are ignored (a hurt mummy is not a
@@ -216,7 +207,7 @@ namespace MummyEscape.Core
             var seen = new HashSet<long>();
             var queue = new Queue<RuleState>();
             RuleState Norm(RuleState s) => new RuleState { Position = s.Position, Pressed = s.Pressed, Crumbled = s.Crumbled, Disarmed = -1, Hp = 7 };
-            var layout = Layout(level, false);
+            var layout = Layout(level);
             var start = Norm(from);
             seen.Add(layout.Pack(start));
             queue.Enqueue(start);

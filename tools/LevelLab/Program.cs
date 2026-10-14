@@ -31,7 +31,7 @@ if (args.Length >= 1 && args[0].Contains("-") && !args[0].StartsWith("--"))
     var path = new HashSet<Cell>();
     var s = Rules.Initial(level);
     foreach (var a in sol.Actions) { s = Rules.Step(level, s, a).State; path.Add(s.Position); }
-    Console.WriteLine("legend: S start E exit A-P doors a-p buttons @ portal ? hidden & locked % cursed ^ spikes ~ darkness , dust ! wall torch U/D ladders v hole {>}< currents x fragile | red = blue barrier $ switch 0-2 flame * route");
+    Console.WriteLine("legend: S start E exit A-P doors a-p buttons @ portal ? hidden & locked % cursed ^ spikes ~ darkness , dust ! wall torch U/D ladders v hole {>}< currents x fragile | red = blue barrier $ switch 0 flame w wrappings : false wall I idol * route");
     Console.WriteLine(level.ToAscii(path));
     return;
 }
@@ -81,6 +81,9 @@ if (args.Length >= 1 && args[0] == "--specs")
         if (sp.Currents > 0) mech.Add($"{sp.Currents} courant(s)");
         if (sp.CrumblingTiles > 0) mech.Add($"{sp.CrumblingTiles} dalle(s)");
         if (sp.FireJets > 0) mech.Add($"{sp.FireJets} flamme(s)");
+        if (sp.Wrappings > 0) mech.Add($"{sp.Wrappings} bandelette(s)");
+        if (sp.FalseWalls > 0) mech.Add($"{sp.FalseWalls} faux mur(s)");
+        if (sp.Idols > 0) mech.Add($"{sp.Idols} idole(s)");
         if (sp.BlueBarriers) mech.Add("bleues");
         var traps = new List<string>();
         if (sp.SpikeTraps > 0) traps.Add($"{sp.SpikeTraps} pics");

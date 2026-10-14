@@ -218,7 +218,10 @@ namespace MummyEscape.Core
                 case TileType.Crumbling: return 'x';
                 case TileType.Barrier: return t.Param == 0 ? '|' : '=';
                 case TileType.Switch: return '$';
-                case TileType.FireJet: return (char)('0' + t.Param);
+                case TileType.FireJet: return '0';
+                case TileType.Wrappings: return 'w';
+                case TileType.FalseWall: return ':';
+                case TileType.Idol: return 'I';
             }
             return highlight != null && highlight.Contains(c) ? '*' : '.';
         }

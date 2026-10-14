@@ -18,6 +18,7 @@ namespace MummyEscape.Tests
             { 11, 0xD323AB4665867852UL },
             { 12, 0x50A7922A87EB7AB5UL },
             { 13, 0x9BDC5E2884850FDAUL },
+            { 14, 0x84A7B9F32A5B6A57UL },
         };
 
         /// <summary>Variant 0 of every level, plus a few duel and 2v2 relay arenas, with their par.</summary>

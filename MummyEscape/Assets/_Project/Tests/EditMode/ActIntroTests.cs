@@ -12,7 +12,7 @@ namespace MummyEscape.Tests
             switch (act)
             {
                 case 1: return StepFlags.ButtonPressed | StepFlags.Blinded | StepFlags.Teleported;
-                case 2: return StepFlags.TorchSmothered | StepFlags.TorchRelit | StepFlags.Swept;
+                case 2: return StepFlags.TorchSmothered | StepFlags.TorchRelit | StepFlags.WrappingsBurnt | StepFlags.Swept;
                 case 3: return StepFlags.Teleported | StepFlags.Collapsed | StepFlags.Reversed;
                 case 4: return StepFlags.Switched | StepFlags.FogReset | StepFlags.Rotated;
                 default: return StepFlags.Collapsed;
@@ -28,12 +28,14 @@ namespace MummyEscape.Tests
 
             var session = new GameSession(level);
             var seen = StepFlags.None;
+            var walked = new System.Collections.Generic.List<Cell>();
             int rotations = 0;
             foreach (var a in solution.Actions)
             {
                 var r = session.Apply(a);
                 Assert.IsFalse(r.Has(StepFlags.Blocked), $"{a} blocked at {session.Position}");
                 seen |= r.Flags;
+                walked.Add(session.Position);
                 if (r.Has(StepFlags.Rotated)) rotations++;
             }
             Assert.AreEqual(SessionStatus.Won, session.Status);
@@ -43,6 +45,8 @@ namespace MummyEscape.Tests
             Assert.AreEqual(expected, seen & expected, "mechanics never met");
             if (act == 4) Assert.AreEqual(2, rotations);
             if (act == 5) Assert.IsTrue(level.AllCells().Any(c => level[c].Type == TileType.FireJet));
+            if (act == 4) Assert.IsTrue(level.AllCells().Any(c => level[c].Type == TileType.Idol && Rules.Gaze(level, c).Count > 0));
+            if (act == 3) Assert.IsTrue(walked.Any(c => level[c].Type == TileType.FalseWall), "the shortest way crosses the mirage");
         }
 
         [TestCase(1), TestCase(2), TestCase(3), TestCase(4), TestCase(5)]

@@ -29,8 +29,23 @@ namespace MummyEscape.Core
         Barrier,
         /// <summary>Toggle switch: every step onto it flips its channel (red barriers open, blue ones close, and back).</summary>
         Switch,
-        /// <summary>Flame jet (burning sanctuary): fires every third move (<see cref="Tile.Param"/> = phase 0-2); walking into the blast costs 1 HP.</summary>
+        /// <summary>
+        /// Flame jet (burning sanctuary): fires in real time, with every periodic trap of the tomb (<see cref="Rules.TrapCycleSeconds"/>);
+        /// standing on it during the blast costs 1 HP (<see cref="GameSession"/>). The rules and the solver treat it as floor.
+        /// </summary>
         FireJet,
+        /// <summary>
+        /// Mummy wrappings (flooded galleries): block the way until burnt. Moving into them with the torch lit burns them (one
+        /// move, the mummy stays put); with the torch out they stay shut. <see cref="Tile.Param"/> = bit in <see cref="RuleState.Crumbled"/>.
+        /// </summary>
+        Wrappings,
+        /// <summary>Mirage (collapsed ruins): looks like a wall but can be walked through. Only ever a shortcut.</summary>
+        FalseWall,
+        /// <summary>
+        /// Idol (city of Anubis): solid like a wall; its gaze sweeps the line it faces (<see cref="Tile.Param"/> = Dir) up to
+        /// the next solid tile, in real time like the flame jets. The rules and the solver ignore the gaze.
+        /// </summary>
+        Idol,
     }
 
     public enum TrapKind : byte
@@ -69,12 +84,12 @@ namespace MummyEscape.Core
         /// <summary>Index of this trap in the disarmed mask.</summary>
         public byte TrapIndex;
         public TeleporterKind Teleporter;
-        /// <summary>Per-type parameter: current direction, crumbling bit, barrier colour, flame phase.</summary>
+        /// <summary>Per-type parameter: current direction, crumbling / wrappings bit, barrier colour, idol gaze direction.</summary>
         public byte Param;
 
         public bool IsWalkableTerrain => !IsSolid;
-        /// <summary>Blocks movement (plain wall or wall torch).</summary>
-        public bool IsSolid => Type == TileType.Wall || Type == TileType.WallTorch;
+        /// <summary>Blocks movement (plain wall, wall torch or idol).</summary>
+        public bool IsSolid => Type == TileType.Wall || Type == TileType.WallTorch || Type == TileType.Idol;
 
         /// <summary>True for every tile the generator treats as a point of interest.</summary>
         public bool IsPointOfInterest =>
