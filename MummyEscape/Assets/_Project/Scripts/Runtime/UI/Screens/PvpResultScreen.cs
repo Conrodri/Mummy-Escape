@@ -47,7 +47,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_again, 112);
             _watch = UIKit.Button(panel, "Revoir le duel", Watch, 34);
             UIKit.Size(_watch, 92);
-            _menu = UIKit.Button(panel, "Retour aux duels", Menu, UIKit.TextSize, ButtonStyle.Ghost);
+            _menu = UIKit.Button(panel, "Retour aux duels", Menu, UIKit.TextSize, ButtonStyle.Leave);
             UIKit.Size(_menu, 76);
         }
 

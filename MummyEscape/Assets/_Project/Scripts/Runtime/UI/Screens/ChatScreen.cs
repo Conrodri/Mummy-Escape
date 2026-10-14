@@ -110,7 +110,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(report, 92);
             _menuBlock = UIKit.Button(card, "Bloquer", () => { var t = _target; CloseMenu(); AskBlock(t.From, t.FromName); }, 32, ButtonStyle.Danger);
             UIKit.Size(_menuBlock, 92);
-            UIKit.Size(UIKit.Button(card, "Annuler", CloseMenu, 30, ButtonStyle.Ghost), 80);
+            UIKit.Size(UIKit.Button(card, "Annuler", CloseMenu, 30, ButtonStyle.Leave), 80);
             _menu.gameObject.SetActive(false);
         }
 
@@ -559,7 +559,7 @@ namespace MummyEscape.UI.Screens
             _status = UIKit.Label(panel, "", 28, UIKit.Sand);
             UIKit.FitText(_status, 16);
             UIKit.Size(_status, 60);
-            UIKit.Size(UIKit.Button(panel, "Fermer", () => Router.Close(this), 30, ButtonStyle.Ghost), 80);
+            UIKit.Size(UIKit.Button(panel, "Fermer", () => Router.Close(this), 30, ButtonStyle.Leave), 80);
         }
 
         public async void Configure(string kind, string matchId)

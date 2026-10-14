@@ -99,7 +99,7 @@ namespace MummyEscape.UI.Screens
             _savedHint = UIKit.Label(list, "", 24, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(_savedHint, 16);
             UIKit.Size(_savedHint, 60);
-            _cancelReplace = UIKit.Button(list, "Annuler", () => { _replacing = null; FillHistory(); }, 28);
+            _cancelReplace = UIKit.Button(list, "Annuler", () => { _replacing = null; FillHistory(); }, 28, ButtonStyle.Leave);
             UIKit.Size(_cancelReplace, 80);
             _saved = UIKit.Rect("Saved", list); // noloc
             UIKit.Column(_saved, 12, 0);

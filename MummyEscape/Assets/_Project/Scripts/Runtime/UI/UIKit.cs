@@ -16,6 +16,8 @@ namespace MummyEscape.UI
         Ghost,
         /// <summary>Red pixel-art button: destructive actions.</summary>
         Danger,
+        /// <summary>Brown stone button, red text: every way out (menu, quit, back, close, cancel).</summary>
+        Leave,
     }
 
     /// <summary>
@@ -377,6 +379,7 @@ namespace MummyEscape.UI
                 case ButtonStyle.Primary: img = Image(parent, UISprites.PixelButton, Gold, true, "Button"); text = Ink; break; // noloc
                 case ButtonStyle.Danger: img = Image(parent, UISprites.PixelButton, Danger, true, "Button"); text = Color.white; break; // noloc
                 case ButtonStyle.Ghost: img = Image(parent, UISprites.PixelButton, new Color(1, 1, 1, 0), true, "Button"); text = Gold; break; // noloc
+                case ButtonStyle.Leave: img = Image(parent, UISprites.PixelButton, Stone, true, "Button"); text = Danger; break; // noloc
                 default: img = Image(parent, UISprites.PixelButton, Stone, true, "Button"); text = Sand; break; // noloc
             }
             Pixelated(img, UISprites.PixelButton);

@@ -367,7 +367,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Title(panel, "Thème de l'accueil", 46), 80);
             _list = UIKit.Rect("List", panel); // noloc
             UIKit.Column(_list, 12);
-            UIKit.Size(UIKit.Button(panel, "Fermer", () => Router.Close(this)), UIKit.ButtonHeight);
+            UIKit.Size(UIKit.Button(panel, "Fermer", () => Router.Close(this), UIKit.TextSize, ButtonStyle.Leave), UIKit.ButtonHeight);
         }
 
         public override void OnShow()

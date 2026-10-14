@@ -45,7 +45,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_error, 50);
 
             var row = UIKit.Row(panel, UIKit.ButtonHeight, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this)), -1, -1, 1);
+            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this), UIKit.TextSize, ButtonStyle.Leave), -1, -1, 1);
             _confirm = UIKit.Button(row.transform, "OK", Confirm, UIKit.TextSize, ButtonStyle.Primary);
             UIKit.Size(_confirm, -1, -1, 1.4f);
         }

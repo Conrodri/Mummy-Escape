@@ -63,7 +63,7 @@ namespace MummyEscape.UI.Screens
             _searchStatus = UIKit.Label(card, "", 32, UIKit.Sand);
             UIKit.FitText(_searchStatus, 20);
             UIKit.Size(_searchStatus, 120);
-            UIKit.Size(UIKit.Button(card, "Annuler", CancelSearch, UIKit.TextSize, ButtonStyle.Ghost), 80);
+            UIKit.Size(UIKit.Button(card, "Annuler", CancelSearch, UIKit.TextSize, ButtonStyle.Leave), 80);
             _searching.gameObject.SetActive(false);
         }
 
@@ -279,7 +279,7 @@ namespace MummyEscape.UI.Screens
             if (won && CoopCampaign.Get(next) != null && CoopLogic.IsOpen(o.Info.Duo, next))
                 choices.Add(("Tombeau suivant", ButtonStyle.Primary, () => Again(app, next)));
             choices.Add((won ? "Rejouer" : "Recommencer", won ? ButtonStyle.Secondary : ButtonStyle.Primary, () => Again(app, o.Tomb.Number)));
-            choices.Add(("Quitter", ButtonStyle.Ghost, () => BackToCampaign(app)));
+            choices.Add(("Quitter", ButtonStyle.Leave, () => BackToCampaign(app)));
             app.UI.Open<OfferDialog>().Configure(title, text, choices.ToArray()).OnDismissed(() => BackToCampaign(app)); // tap outside = quit
         }
 

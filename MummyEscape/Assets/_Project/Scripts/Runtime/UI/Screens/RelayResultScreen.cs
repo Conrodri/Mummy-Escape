@@ -40,9 +40,9 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_again, 112);
             _watch = UIKit.Button(panel, "Revoir le match", Watch, 34);
             UIKit.Size(_watch, 92);
-            _report = UIKit.Button(panel, "Quitter et signaler", Report, 34);
+            _report = UIKit.Button(panel, "Quitter et signaler", Report, 34, ButtonStyle.Leave);
             UIKit.Size(_report, 92);
-            _menu = UIKit.Button(panel, "Retour au 2v2", Menu, UIKit.TextSize, ButtonStyle.Ghost);
+            _menu = UIKit.Button(panel, "Retour au 2v2", Menu, UIKit.TextSize, ButtonStyle.Leave);
             UIKit.Size(_menu, 76);
         }
 

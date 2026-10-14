@@ -24,8 +24,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_skip, 72);
             UIKit.Size(UIKit.Button(panel, "Paramètres", () => Router.Open<SettingsScreen>()), UIKit.ButtonHeight);
             // A button like the others, its text in red: leaving loses the run.
-            _quit = UIKit.Button(panel, "Quitter le niveau", Quit);
-            _quit.GetComponentInChildren<Text>().color = UIKit.Danger;
+            _quit = UIKit.Button(panel, "Quitter le niveau", Quit, UIKit.TextSize, ButtonStyle.Leave);
             UIKit.FitText(_quit.GetComponentInChildren<Text>(), 20);
             UIKit.Size(_quit, UIKit.ButtonHeight);
         }

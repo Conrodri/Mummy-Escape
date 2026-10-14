@@ -97,7 +97,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Label(column, "Pub de test : ici s'affichera la vidéo de la régie publicitaire.", 34, UIKit.Dim), 120);
             _count = UIKit.Title(column, "", 140, UIKit.Sand);
             UIKit.Size(_count, 200);
-            _close = UIKit.Button(column, "Fermer", Close, UIKit.TextSize, ButtonStyle.Secondary);
+            _close = UIKit.Button(column, "Fermer", Close, UIKit.TextSize, ButtonStyle.Leave);
             UIKit.Size(_close, UIKit.ButtonHeight, 420);
         }
 

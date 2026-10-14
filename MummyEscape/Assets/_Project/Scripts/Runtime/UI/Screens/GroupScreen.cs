@@ -82,7 +82,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_coop, 100);
             _relay = UIKit.Button(body, "Duel 2v2", () => Launch(GroupLaunch.Relay), 34, ButtonStyle.Primary);
             UIKit.Size(_relay, 100);
-            _leave = UIKit.Button(body, "Quitter le groupe", Leave, 28, ButtonStyle.Ghost);
+            _leave = UIKit.Button(body, "Quitter le groupe", Leave, 28, ButtonStyle.Leave);
             UIKit.Size(_leave, 76);
 
             _list = UIKit.Scroll(body, out _scroll);

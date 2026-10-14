@@ -193,7 +193,7 @@ namespace MummyEscape.UI.Screens
             var error = UIKit.Label(_content, "", 32, UIKit.Danger);
             UIKit.Size(error, 60);
             var row = UIKit.Row(_content, UIKit.ButtonHeight, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Retour", OnBack), -1, -1, 1);
+            UIKit.Size(UIKit.Button(row.transform, "Retour", OnBack, UIKit.TextSize, ButtonStyle.Leave), -1, -1, 1);
             UIKit.Size(UIKit.Button(row.transform, "Continuer", () =>
             {
                 if (!ReadYear(year, out int y)) { error.text = Loc.T("Indique une année valide (4 chiffres)."); return; }
@@ -568,7 +568,7 @@ namespace MummyEscape.UI.Screens
             _error = UIKit.Label(_panel, "", 30, UIKit.Danger);
             UIKit.Size(_error, 80);
             var row = UIKit.Row(_panel, UIKit.ButtonHeight, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this)), -1, -1, 1);
+            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this), UIKit.TextSize, ButtonStyle.Leave), -1, -1, 1);
             _confirm = UIKit.Button(row.transform, "OK", Confirm, UIKit.TextSize, ButtonStyle.Primary);
             UIKit.Size(_confirm, -1, -1, 1.4f);
         }
@@ -647,7 +647,7 @@ namespace MummyEscape.UI.Screens
             _error = UIKit.Label(panel, "", 30, UIKit.Danger);
             UIKit.Size(_error, 60);
             var row = UIKit.Row(panel, UIKit.ButtonHeight, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this)), -1, -1, 1);
+            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this), UIKit.TextSize, ButtonStyle.Leave), -1, -1, 1);
             _confirm = UIKit.Button(row.transform, "OK", Confirm, UIKit.TextSize, ButtonStyle.Primary);
             _confirm.GetComponent<Image>().color = new Color(1f, 0.6f, 0.55f);
             UIKit.Size(_confirm, -1, -1, 1);

@@ -68,7 +68,7 @@ namespace MummyEscape.UI.Screens
                     foreach (var curse in Tower.Curses) CurseCard(row.transform, curse, run.Curses);
                 }
                 else UIKit.Size(UIKit.Button(play, Loc.F("Étage {0}", run.Floor), Continue, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
-                UIKit.Size(UIKit.Button(play, "Abandonner la course", () => { save.EndTower(); Fill(); }, UIKit.TextSize, ButtonStyle.Ghost), 72);
+                UIKit.Size(UIKit.Button(play, "Abandonner la course", () => { save.EndTower(); Fill(); }, UIKit.TextSize, ButtonStyle.Leave), 72);
             }
             else UIKit.Size(UIKit.Button(play, "Commencer", StartRun, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
             UIKit.Size(UIKit.Button(_content, "Classement", Ranking), UIKit.ButtonHeight);

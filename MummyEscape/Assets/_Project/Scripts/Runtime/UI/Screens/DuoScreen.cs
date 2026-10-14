@@ -59,7 +59,7 @@ namespace MummyEscape.UI.Screens
             _searchStatus = UIKit.Label(card, "", 32, UIKit.Sand);
             UIKit.FitText(_searchStatus, 20);
             UIKit.Size(_searchStatus, 120);
-            UIKit.Size(UIKit.Button(card, "Annuler", CancelSearch, UIKit.TextSize, ButtonStyle.Ghost), 80);
+            UIKit.Size(UIKit.Button(card, "Annuler", CancelSearch, UIKit.TextSize, ButtonStyle.Leave), 80);
             _searching.gameObject.SetActive(false);
         }
 

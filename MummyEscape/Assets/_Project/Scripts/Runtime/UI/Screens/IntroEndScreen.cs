@@ -30,7 +30,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_text, 150);
             _main = UIKit.Button(panel, "Réessayer", Main, 38, ButtonStyle.Primary); // a label now: an empty one has no Text
             UIKit.Size(_main, UIKit.ButtonHeight + 8);
-            UIKit.Size(UIKit.Button(panel, "Menu principal", Menu, UIKit.TextSize, ButtonStyle.Ghost), 72);
+            UIKit.Size(UIKit.Button(panel, "Menu principal", Menu, UIKit.TextSize, ButtonStyle.Leave), 72);
         }
 
         public void Show(bool won)
