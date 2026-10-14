@@ -172,6 +172,7 @@ namespace MummyEscape.UI.Screens
             _chat.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Chat, App.Save.IsCompleted));
             int fresh = App.Save.TakeNewUnlocks() & (int)Feature.Duel; // the casino opens without fanfare: no popup toward a game of chance
             if (fresh != 0 && !IntroPending(App.Save)) Celebrate(fresh);
+            else MaybeAskRating();
             StartCoroutine(App.Art.Warm(App.Save.FurthestUnlocked().Act)); // the next tomb's sprites, painted now
             var online = App.Online;
             _online.text = AsksSignIn ? Loc.T("Se connecter avec Google Play Jeux pour jouer en ligne ›")
@@ -208,6 +209,26 @@ namespace MummyEscape.UI.Screens
             if (Unlocks.Gate(Feature.Duel).Value.Equals(next)) return "  ·  " + Loc.T("ouvre les duels");
             if (Unlocks.Gate(Feature.Casino).Value.Equals(next)) return "  ·  " + Loc.T("ouvre le casino");
             return "";
+        }
+
+        /// <summary>Once ever, back home after act 1's last tomb is escaped (any mode). Nothing is promised in return:
+        /// Google Play forbids rewarded ratings. Android only (no Play Store in the editor or on iOS).</summary>
+        void MaybeAskRating()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            const string askedKey = "rating_asked";
+            if (PlayerPrefs.GetInt(askedKey, 0) == 1) return;
+            var endOfAct1 = Unlocks.EndOfAct(1);
+            bool cleared = false;
+            foreach (var mode in DifficultyExt.All) cleared |= App.Save.IsCompleted(endOfAct1.WithMode(mode));
+            if (!cleared) return;
+            PlayerPrefs.SetInt(askedKey, 1);
+            PlayerPrefs.Save();
+            // The https link opens the Play Store app when it is installed, the browser otherwise.
+            string url = "https://play.google.com/store/apps/details?id=" + Application.identifier;
+            Router.Open<OfferDialog>().Configure("Tu aimes Mummy Rush ?", Loc.T("Laisse une note sur le Play Store, ça nous aide beaucoup !"),
+                ("Noter", ButtonStyle.Primary, () => Application.OpenURL(url)), ("Plus tard", ButtonStyle.Ghost, null));
+#endif
         }
 
         /// <summary>Newly open rooms (a <see cref="Feature"/> bitmask): a word for each, and a way in to the first.</summary>
