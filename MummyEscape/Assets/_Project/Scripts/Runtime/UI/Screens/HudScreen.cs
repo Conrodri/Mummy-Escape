@@ -429,12 +429,11 @@ namespace MummyEscape.UI.Screens
             _intro.alpha = 0f;
             _introTimer = -1f;
             Refresh();
-            // First intro: choose how to move before the first step (once per launch, not on each restart).
-            if (App.Game.InIntro && App.Game.IntroAct == 1 && !_controlsAsked)
-            {
-                _controlsAsked = true;
-                Router.Open<ControlsChoiceScreen>();
-            }
+            if (!App.Game.InIntro) return;
+            // Each intro opens on its act's card (the clock waits); after the first one's, how to move (once per launch).
+            bool askControls = App.Game.IntroAct == 1 && !_controlsAsked;
+            _controlsAsked |= askControls;
+            Router.Open<ActIntroCardScreen>().Show(App.Game.IntroAct, askControls ? () => Router.Open<ControlsChoiceScreen>() : (System.Action)null);
         }
 
         bool _controlsAsked;
