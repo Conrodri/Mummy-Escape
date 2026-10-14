@@ -36,6 +36,7 @@ namespace MummyEscape.UI.Screens
             _grid = ModalKit.Tiles(panel, 2, Width);
             for (int i = 0; i < 4; i++) _values[i] = ModalKit.Tile(_grid, null, "", out _captions[i]);
             _chips = ModalKit.Chips(panel);
+            QuestRecap.Create(panel);
             _note = UIKit.Label(panel, "", 28, UIKit.Sand);
             UIKit.FitText(_note, 18);
             UIKit.Size(_note, 44);

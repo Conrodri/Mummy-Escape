@@ -40,6 +40,7 @@ namespace MummyEscape.UI.Screens
             _note = UIKit.Label(panel, "", 26, UIKit.Dim);
             UIKit.FitText(_note, 18);
             UIKit.Size(_note, 76);
+            QuestRecap.Create(panel);
 
             _retry = UIKit.Button(panel, "Renvoyer la course", Send, 36, ButtonStyle.Primary);
             UIKit.Size(_retry, 100);
