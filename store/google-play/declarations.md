@@ -3,7 +3,7 @@
 Play Console › Règles et programmes › **Contenu de l'application**. Réponses cohérentes avec le code (version 0.1.6 : pubs récompensées AdMob, achats intégrés Google Play, tchat, duels en ligne) et la politique de confidentialité. À revoir à chaque changement des données collectées.
 
 ## Politique de confidentialité
-URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
+URL : `https://conrodri.github.io/Mummy-Escape/confidentialite`
 
 ## Annonces
 **Oui** : publicités récompensées Google AdMob, affichées seulement quand le joueur choisit d'en regarder une pour récupérer de l'énergie.
@@ -36,7 +36,7 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
 - L'application collecte-t-elle ou partage-t-elle des données utilisateur ? **Oui** (seulement si le joueur active le mode en ligne).
 - Toutes les données sont-elles chiffrées en transit ? **Oui** (HTTPS, Unity Gaming Services).
 - Les utilisateurs peuvent-ils demander la suppression de leurs données ? **Oui** : dans l'application (Paramètres › Confidentialité) et sur le web.
-- URL de suppression du compte : `https://conrodri.github.io/Mummy-Escape/suppression-compte.html`
+- URL de suppression du compte : `https://conrodri.github.io/Mummy-Escape/suppression-compte`
 - Création de compte : **OAuth** (Google Play Games). Le compte se supprime dans l'application.
 
 ### Types de données (toutes : *collectées*, *non partagées*, traitement *facultatif* : le joueur peut refuser le mode en ligne)

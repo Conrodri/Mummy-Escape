@@ -11,7 +11,7 @@ Mummy Rush
 ## Description courte (80 caractères max)
 
 ```
-Tu es la momie : échappe-toi du tombeau plongé dans le noir, coup après coup.
+Tu es la momie : mémorise le tombeau, puis échappe-toi dans le noir.
 ```
 
 ## Description complète (4 000 caractères max)
@@ -20,26 +20,30 @@ Tu es la momie : échappe-toi du tombeau plongé dans le noir, coup après coup.
 Tu es la momie. Réveillée au fond d'un tombeau, tu dois trouver la sortie… dans le noir.
 
 MÉMORISE, PUIS AVANCE À L'AVEUGLE
-Au début de chaque niveau, le tombeau s'affiche étage par étage, 10 secondes chacun (passable). Puis l'obscurité tombe : ta torche n'éclaire plus que les cases voisines. Chaque glissement du doigt fait avancer la momie d'une case. Ton but : t'échapper en un minimum de coups.
+Au début de chaque tombeau, le plan s'affiche quelques secondes. Puis l'obscurité tombe : ta torche n'éclaire plus que les cases voisines. Glisse le doigt, ou utilise la croix ou le joystick, pour avancer d'une case. Échappe-toi en un minimum de coups pour décrocher les trois étoiles.
 
-UN NOUVEAU LABYRINTHE À CHAQUE PARTIE
-Chaque partie tire un tombeau différent, toujours vérifié par un solveur : il existe un chemin parfait, à toi de le trouver. Impossible d'apprendre les niveaux par cœur : il faut de la logique et de la mémoire.
+UN CHEMIN PARFAIT À CHAQUE TOMBEAU
+Chaque tombeau est vérifié par un solveur : il existe toujours un chemin parfait, à toi de le trouver. Ici, pas de chance : de la logique et de la mémoire.
 
-5 ACTES, 150 NIVEAUX, 5 MÉCANIQUES
-• L'Antichambre : portes, boutons, pièges et portails.
+5 ACTES, 3 DIFFICULTÉS
+• L'Antichambre : portes et portails.
 • Les Galeries inondées : des courants t'emportent jusqu'au bout du couloir.
 • Les Ruines effondrées : les dalles fissurées s'effondrent dès que tu les quittes.
-• La Cité d'Anubis : leviers et barrières laser qui s'inversent.
+• La Cité d'Anubis : barrières laser et tombeaux sur deux étages.
 • Le Sanctuaire embrasé : jets de flammes qui crachent en rythme.
-Poussière qui éteint ta torche, torches murales pour la rallumer, tombeaux sur plusieurs étages : chaque acte a son ambiance, sa lumière et sa musique.
+Chaque acte s'ouvre sur une courte intro qui présente ses nouveautés. Facile, Normal ou Extrême : 10 tombeaux par acte dans chaque mode. Campagne finie ? Le mode sans fin et la tour t'attendent.
 
-DÉFIE TES AMIS
-Trois étoiles par niveau pour le chemin parfait, des classements par niveau (coups puis temps) et des amis à ajouter avec leur code. Gagne des scarabées en décrochant des étoiles et habille ta momie dans la boutique.
+AFFRONTE LES AUTRES JOUEURS
+Duels en direct sur le même labyrinthe, matchs à deux contre deux, ligues et classements. Rejoins une guilde et discute dans le tchat modéré.
 
-RESPECTUEUX DE TA VIE PRIVÉE
-• Jouable entièrement hors ligne.
-• Aucune publicité, aucun achat intégré, aucun traceur.
-• Mode en ligne facultatif : compte sans adresse e-mail, données exportables et supprimables depuis le jeu.
+HABILLE TA MOMIE
+Gagne des scarabées en jouant et débloque tenues et titres dans la boutique. Pass de saison et événements (Halloween) apportent des récompenses exclusives.
+
+BON À SAVOIR
+• Jeu gratuit, avec des publicités facultatives (une vidéo à regarder pour récupérer de l'énergie) et des achats intégrés (scarabées dorés, pass de saison).
+• La campagne se joue hors ligne. Le mode en ligne est facultatif ; le compte passe par Google Play Games, sans adresse e-mail.
+• Tes données s'exportent et se suppriment depuis le jeu.
+• Disponible en français et en anglais.
 ```
 
 ## Catégorisation
@@ -52,7 +56,7 @@ RESPECTUEUX DE TA VIE PRIVÉE
 
 - E-mail : *(adresse de contact, la même que dans `LegalTexts.Contact`)*
 - Site web : https://conrodri.github.io/Mummy-Escape/
-- Politique de confidentialité : https://conrodri.github.io/Mummy-Escape/confidentialite.html
+- Politique de confidentialité : https://conrodri.github.io/Mummy-Escape/confidentialite
 
 ## Éléments graphiques (`graphics/`)
 

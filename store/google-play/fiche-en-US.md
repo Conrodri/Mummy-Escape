@@ -11,7 +11,7 @@ Mummy Rush
 ## Description courte (80 caractères max)
 
 ```
-You are the mummy: escape the pitch-dark tomb, one move at a time.
+You are the mummy: memorize the tomb, then escape in the dark.
 ```
 
 ## Description complète (4 000 caractères max)
@@ -20,32 +20,35 @@ You are the mummy: escape the pitch-dark tomb, one move at a time.
 You are the mummy. Awakened deep inside a tomb, you must find the way out… in the dark.
 
 MEMORIZE, THEN MOVE BLIND
-At the start of each level, the tomb is shown floor by floor, 10 seconds each (skippable). Then darkness falls: your torch only lights the tiles around you. Each swipe moves the mummy one tile. Your goal: escape in as few moves as possible.
+At the start of each tomb, the map is shown for a few seconds. Then darkness falls: your torch only lights the tiles around you. Swipe, or use the D-pad or the joystick, to move one tile. Escape in as few moves as possible to earn all three stars.
 
-A NEW MAZE EVERY GAME
-Every game draws a different tomb, always checked by a solver: there is a perfect path, and it is up to you to find it. You cannot learn the levels by heart: it takes logic and memory.
+A PERFECT PATH IN EVERY TOMB
+Every tomb is checked by a solver: there is always a perfect path, and it is up to you to find it. No luck here: just logic and memory.
 
-5 ACTS, 150 LEVELS, 5 MECHANICS
-• The Antechamber: doors, buttons, traps and portals.
+5 ACTS, 3 DIFFICULTIES
+• The Antechamber: doors and portals.
 • The Flooded Galleries: currents carry you to the end of the corridor.
 • The Collapsed Ruins: cracked slabs collapse as soon as you step off them.
-• The City of Anubis: levers and laser barriers that swap.
+• The City of Anubis: laser barriers and tombs over two floors.
 • The Blazing Sanctuary: flame jets that fire in rhythm.
-Dust that puts out your torch, wall torches to relight it, tombs over several floors: each act has its own mood, light and music.
+Each act opens with a short intro that shows what is new. Easy, Normal or Extreme: 10 tombs per act in each mode. Finished the campaign? The endless mode and the tower are waiting.
 
-CHALLENGE YOUR FRIENDS
-Three stars per level for the perfect path, per-level leaderboards (moves, then time) and friends to add with their code. Earn scarabs by winning stars and dress up your mummy in the shop.
+TAKE ON OTHER PLAYERS
+Live duels on the same maze, two-versus-two matches, leagues and leaderboards. Join a guild and talk in the moderated chat.
 
-RESPECTS YOUR PRIVACY
-• Fully playable offline.
-• No ads, no in-app purchases, no trackers.
-• Optional online mode: account without an email address, data you can export and delete from the game.
+DRESS UP YOUR MUMMY
+Earn scarabs as you play and unlock outfits and titles in the shop. The season pass and events (Halloween) bring exclusive rewards.
+
+GOOD TO KNOW
+• Free to play, with optional ads (a video you choose to watch to get energy back) and in-app purchases (golden scarabs, season pass).
+• The campaign plays offline. Online mode is optional; the account goes through Google Play Games, with no email address.
+• Your data can be exported and deleted from the game.
 • Available in English and French.
 ```
 
 ## Liens
 
-- Politique de confidentialité (anglais) : https://conrodri.github.io/Mummy-Escape/en/privacy.html
-- Suppression du compte (anglais) : https://conrodri.github.io/Mummy-Escape/en/account-deletion.html
+- Politique de confidentialité (anglais) : https://conrodri.github.io/Mummy-Escape/en/privacy
+- Suppression du compte (anglais) : https://conrodri.github.io/Mummy-Escape/en/account-deletion
 
-La Play Console n'accepte qu'une URL de politique de confidentialité par application : garder la version française (https://conrodri.github.io/Mummy-Escape/confidentialite.html), qui renvoie vers la version anglaise depuis la page d'accueil du site.
+La Play Console n'accepte qu'une URL de politique de confidentialité par application : garder la version française (https://conrodri.github.io/Mummy-Escape/confidentialite), qui renvoie vers la version anglaise depuis la page d'accueil du site.
