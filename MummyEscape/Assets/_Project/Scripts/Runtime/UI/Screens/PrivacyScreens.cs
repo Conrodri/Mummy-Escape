@@ -250,7 +250,7 @@ namespace MummyEscape.UI.Screens
             {
                 // First launch: the online choice is made here. From the chat or the settings, the online mode is already running.
                 App.Privacy.SetAnalytics(online && _analytics);
-                if (App.Privacy.OnlineAllowed) _ = App.StartOnline();
+                if (App.Privacy.OnlineAllowed) _ = App.StartOnline(true);
                 else App.StopOnline();
             }
             if (_fromSettings && Router.Get<PrivacyScreen>().gameObject.activeSelf) Router.Get<PrivacyScreen>().OnShow();
@@ -380,8 +380,7 @@ namespace MummyEscape.UI.Screens
     // ====================================================================== account
 
     /// <summary>
-    /// Optional account: Google Play Games (Android) or a username + password (no e-mail). Create, sign in, change
-    /// password, sign out, delete.
+    /// Optional account, made and signed in with Google Play Games only (Android). Create, sign in, sign out, delete.
     /// </summary>
     public sealed class AccountScreen : UIScreen
     {
@@ -413,213 +412,45 @@ namespace MummyEscape.UI.Screens
             var card = UIKit.Card(_content);
             bool google = GoogleSignIn.Supported;
 
-            if (!App.Privacy.OnlineAllowed && !online.IsDemo)
-            {
-                UIKit.SectionTitle(card, "Mode hors ligne");
-                PrivacyUI.Paragraph(card, "Le compte fait partie du mode en ligne. Active-le dans Confidentialité pour créer un compte ou te connecter.");
-                PrivacyUI.Wide(card, "Confidentialité", () => { Router.Close(this); Router.Open<PrivacyScreen>(); });
-                return;
-            }
-
             if (online.Account == AccountState.Account)
             {
                 UIKit.SectionTitle(card, "Connecté");
-                string who = online.HasPassword ? Loc.F("Identifiant : {0}", online.Username) : Loc.T("Compte Google Play Jeux");
-                if (online.HasPassword && online.GoogleLinked) who += "\n" + Loc.T("Lié à Google Play Jeux");
-                PrivacyUI.Paragraph(card, who + "\n" + Loc.F("Pseudonyme public : {0}", online.PlayerName) + "\n\n" +
-                    Loc.T(online.GoogleLinked ? "Ta progression est sauvegardée en ligne : sur un autre téléphone Android, connecte-toi avec Google Play Jeux pour la retrouver."
-                                              : "Ta progression est sauvegardée en ligne : connecte-toi avec ce compte sur un autre appareil pour la retrouver."));
-                if (google && !online.GoogleLinked) PrivacyUI.Wide(card, "Lier Google Play Jeux", LinkGoogle);
-                if (online.HasPassword) PrivacyUI.Wide(card, "Changer le mot de passe", ChangePassword);
-                GoogleError(card);
+                PrivacyUI.Paragraph(card, Loc.T("Compte Google Play Jeux") + "\n" + Loc.F("Pseudonyme public : {0}", online.PlayerName) + "\n\n" +
+                    Loc.T("Ta progression est sauvegardée en ligne : sur un autre téléphone Android, connecte-toi avec Google Play Jeux pour la retrouver."));
                 PrivacyUI.Wide(card, "Se déconnecter", async () => { await App.SignOut(); Rebuild(); });
                 PrivacyUI.Wide(card, "Supprimer mon compte", () => { Router.Close(this); Router.Open<PrivacyScreen>(); }, 34);
                 PlayerIdLine(card);
                 return;
             }
 
-            if (online.Account == AccountState.Guest || online.IsDemo)
-            {
-                UIKit.SectionTitle(card, "Tu joues en invité");
-                // New accounts are Google Play Games ones only: the password sign-in below stays for the accounts made before.
-                PrivacyUI.Paragraph(card, google
-                    ? "Ta progression n'existe que sur ce téléphone. Crée un compte avec Google Play Jeux pour la sauvegarder et la retrouver sur un autre téléphone."
-                    : "Ta progression n'existe que sur ce téléphone. Les comptes se créent avec Google Play Jeux, sur Android.");
-                if (google) PrivacyUI.Wide(card, "Continuer avec Google Play Jeux", LinkGoogle, 36, 100, ButtonStyle.Primary);
-            }
-            else
-            {
-                UIKit.SectionTitle(card, "Non connecté");
-                PrivacyUI.Paragraph(card, Loc.T(online.Status), 30, UIKit.Dim);
-                if (google) PrivacyUI.Wide(card, "Se connecter avec Google Play Jeux", SignInWithGoogle, 36, 100, ButtonStyle.Primary);
-                PrivacyUI.Wide(card, "Continuer en invité", async () => { await App.StartOnline(); Rebuild(); });
-            }
-            PrivacyUI.Wide(card, "J'ai déjà un compte", SignIn);
-            GoogleError(card);
-            PrivacyUI.Paragraph(card, "Sans e-mail, un mot de passe oublié ne peut pas être récupéré : note-le bien.", 28, UIKit.Dim);
+            // Signed out: offline play only (the editor's guest and demo land here too, with their status).
+            UIKit.SectionTitle(card, "Non connecté");
+            PrivacyUI.Paragraph(card, google
+                ? "Connecte-toi avec Google Play Jeux pour jouer en ligne (duels, amis, classements) et sauvegarder ta progression. Sans compte, tu joues hors ligne."
+                : "Les comptes se créent avec Google Play Jeux, sur Android.");
+            PrivacyUI.Paragraph(card, Loc.T(online.Status), 28, UIKit.Dim);
+            if (google) PrivacyUI.Wide(card, "Se connecter avec Google Play Jeux", SignInWithGoogle, 36, 100, ButtonStyle.Primary);
+            if (!string.IsNullOrEmpty(_googleError)) PrivacyUI.Paragraph(card, "<color=#E0903A>" + Loc.T(_googleError) + "</color>", 28);
             PlayerIdLine(card);
         }
 
         /// <summary>The player id, for the support (refunds, unblocking) and the team list (Pvp.Developers). Selectable to copy.</summary>
         void PlayerIdLine(Transform card) => PrivacyUI.PlayerIdLine(App, card);
 
-        void GoogleError(Transform card)
-        {
-            if (!string.IsNullOrEmpty(_googleError)) PrivacyUI.Paragraph(card, "<color=#E0903A>" + Loc.T(_googleError) + "</color>", 28);
-        }
-
-        /// <summary>The guest becomes a Google account; if that Google account already has its progress, offers to sign in to it.</summary>
-        async void LinkGoogle()
-        {
-            if (_busy) return;
-            _busy = true;
-            string error = await App.LinkGoogle();
-            _busy = false;
-            if (this == null) return;
-            _googleError = null;
-            if (error == IOnlineService.GoogleTaken)
-            {
-                Router.Open<ConfirmDialog>().Configure("Compte Google déjà utilisé",
-                    "Ce compte Google Play Jeux a déjà sa propre progression. T'y connecter ? Celle de ce téléphone y sera ajoutée.",
-                    "Me connecter", async () =>
-                    {
-                        string e = await App.SignInWithGoogle();
-                        if (e == null) Rebuild();
-                        return e;
-                    });
-                return;
-            }
-            _googleError = error;
-            Rebuild();
-        }
-
+        /// <summary>Links a guest kept from an earlier version, or signs in to the Google account's player (this phone's progress joins it).</summary>
         async void SignInWithGoogle()
         {
             if (_busy) return;
             _busy = true;
-            string error = await App.SignInWithGoogle();
+            string error = await App.ConnectGoogle();
             _busy = false;
             if (this == null) return;
-            if (error == null && !App.Privacy.OnlineAllowed) App.Privacy.SetOnline(true);
             _googleError = error;
             Rebuild();
         }
-
-        void SignIn() =>
-            Router.Open<FormDialog>().Configure("Se connecter",
-                App.Online.Account == AccountState.Guest ? "La progression de ce téléphone sera ajoutée à celle du compte." : "",
-                new[] { ("Identifiant", false), ("Mot de passe", true) }, "Connexion",
-                async v =>
-                {
-                    if (string.IsNullOrEmpty(v[0]) || string.IsNullOrEmpty(v[1])) return "Remplis les deux champs.";
-                    string error = await App.SignIn(v[0], v[1]);
-                    if (error == null)
-                    {
-                        if (!App.Privacy.OnlineAllowed) App.Privacy.SetOnline(true);
-                        Rebuild();
-                    }
-                    return error;
-                });
-
-        void ChangePassword() =>
-            Router.Open<FormDialog>().Configure("Changer le mot de passe", "",
-                new[] { ("Mot de passe actuel", true), ("Nouveau mot de passe", true), ("Confirme le nouveau", true) }, "Changer",
-                async v =>
-                {
-                    string error = AccountRules.CheckPassword(v[1]);
-                    if (error != null) return error;
-                    if (v[1] != v[2]) return "Les deux mots de passe diffèrent.";
-                    return await App.Online.ChangePasswordAsync(v[0], v[1]);
-                });
     }
 
     // ====================================================================== dialogs
-
-    /// <summary>Modal form with several fields (passwords hidden). The callback returns an error, or null to close.</summary>
-    public sealed class FormDialog : UIScreen
-    {
-        public override bool IsModal => true;
-        RectTransform _panel, _fields;
-        Text _title, _hint, _error;
-        Button _confirm;
-        InputField[] _inputs = new InputField[0];
-        Func<string[], Task<string>> _onConfirm;
-        bool _busy;
-
-        protected override void Build()
-        {
-            var shade = UIKit.Image(Root, UIKit.Art.White, new Color(0, 0, 0, 0.85f), true, "Shade");
-            UIKit.Stretch(shade.rectTransform, -600, -600, -600, -600);
-
-            _panel = UIKit.Card(Root, 44, 22);
-            _panel.anchorMin = _panel.anchorMax = new Vector2(0.5f, 1);
-            _panel.pivot = new Vector2(0.5f, 1);
-            _panel.anchoredPosition = new Vector2(0, -150);
-            _panel.sizeDelta = new Vector2(980, 0);
-            UIKit.FitInParent(_panel);
-            _panel.GetComponent<Image>().raycastTarget = true;
-            _panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            _title = UIKit.Title(_panel, "", 46);
-            UIKit.Size(_title, 80);
-            _hint = PrivacyUI.Paragraph(_panel, "", 28, UIKit.Dim);
-            _fields = UIKit.Rect("Fields", _panel);
-            UIKit.Column(_fields, 18);
-            _error = UIKit.Label(_panel, "", 30, UIKit.Danger);
-            UIKit.Size(_error, 80);
-            var row = UIKit.Row(_panel, UIKit.ButtonHeight, 20);
-            UIKit.Size(UIKit.Button(row.transform, "Annuler", () => Router.Close(this), UIKit.TextSize, ButtonStyle.Leave), -1, -1, 1);
-            _confirm = UIKit.Button(row.transform, "OK", Confirm, UIKit.TextSize, ButtonStyle.Primary);
-            UIKit.Size(_confirm, -1, -1, 1.4f);
-        }
-
-        public FormDialog Configure(string title, string hint, (string placeholder, bool secret)[] fields, string confirmLabel, Func<string[], Task<string>> onConfirm)
-        {
-            _title.text = Loc.T(title);
-            _hint.text = Loc.T(hint);
-            _hint.gameObject.SetActive(!string.IsNullOrEmpty(hint));
-            UIKit.ClearChildren(_fields);
-            _inputs = new InputField[fields.Length];
-            for (int i = 0; i < fields.Length; i++)
-            {
-                var f = UIKit.Input(_fields, fields[i].placeholder, 38);
-                f.characterLimit = AccountRules.PasswordMax;
-                f.contentType = fields[i].secret ? InputField.ContentType.Password : InputField.ContentType.Alphanumeric;
-                // An e-mail field: no autocorrect nor capital letter added by the keyboard, and . - _ @ allowed.
-                if (!fields[i].secret) f.contentType = InputField.ContentType.EmailAddress;
-                f.keyboardType = TouchScreenKeyboardType.ASCIICapable;
-                UIKit.Size(f, 96);
-                _inputs[i] = f;
-            }
-            UIKit.SetLabel(_confirm, confirmLabel);
-            _error.text = "";
-            _onConfirm = onConfirm;
-            if (_inputs.Length > 0) _inputs[0].ActivateInputField();
-            return this;
-        }
-
-        async void Confirm()
-        {
-            if (_busy || _onConfirm == null) return;
-            _busy = true;
-            _confirm.interactable = false;
-            _error.text = "";
-            var values = new string[_inputs.Length];
-            for (int i = 0; i < values.Length; i++) values[i] = _inputs[i].text.Trim();
-            string error;
-            try { error = await _onConfirm(values); }
-            catch (Exception e) { error = e.Message; }
-            _busy = false;
-            if (this == null) return;
-            _confirm.interactable = true;
-            if (string.IsNullOrEmpty(error))
-            {
-                foreach (var f in _inputs) f.text = ""; // never keep passwords around
-                Router.Close(this);
-            }
-            else _error.text = Loc.T(error);
-        }
-    }
 
     /// <summary>Yes / no question for destructive actions.</summary>
     public sealed class ConfirmDialog : UIScreen

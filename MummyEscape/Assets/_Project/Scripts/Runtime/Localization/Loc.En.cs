@@ -523,60 +523,27 @@ namespace MummyEscape
 
             // ---------------------------------------------------------------- account
             ["Compte"] = "Account",
-            ["Mode hors ligne"] = "Offline mode",
-            ["Le compte fait partie du mode en ligne. Active-le dans Confidentialité pour créer un compte ou te connecter."] =
-                "The account is part of online mode. Turn it on in Privacy to create an account or sign in.",
             ["Connecté"] = "Signed in",
-            ["Identifiant : {0}"] = "Login: {0}",
             ["Pseudonyme public : {0}"] = "Public nickname: {0}",
             ["Google Play Jeux"] = "Google Play Games",
             ["Compte Google Play Jeux"] = "Google Play Games account",
-            ["Lié à Google Play Jeux"] = "Linked to Google Play Games",
-            ["Lier Google Play Jeux"] = "Link Google Play Games",
-            ["Continuer avec Google Play Jeux"] = "Continue with Google Play Games",
             ["Se connecter avec Google Play Jeux"] = "Sign in with Google Play Games",
             ["Ta progression est sauvegardée en ligne : sur un autre téléphone Android, connecte-toi avec Google Play Jeux pour la retrouver."] =
                 "Your progress is backed up online: on another Android phone, sign in with Google Play Games to get it back.",
-            ["Ta progression n'existe que sur ce téléphone. Crée un compte avec Google Play Jeux pour la sauvegarder et la retrouver sur un autre téléphone."] =
-                "Your progress only exists on this phone. Create an account with Google Play Games to back it up and find it on another phone.",
-            ["Ta progression n'existe que sur ce téléphone. Les comptes se créent avec Google Play Jeux, sur Android."] =
-                "Your progress only exists on this phone. Accounts are created with Google Play Games, on Android.",
-            ["Compte Google déjà utilisé"] = "Google account already in use",
-            ["Ce compte Google Play Jeux a déjà sa propre progression. T'y connecter ? Celle de ce téléphone y sera ajoutée."] =
-                "This Google Play Games account already has its own progress. Sign in to it? This phone's progress will be added to it.",
-            ["Me connecter"] = "Sign me in",
+            ["Les comptes se créent avec Google Play Jeux, sur Android."] = "Accounts are created with Google Play Games, on Android.",
             ["Connexion à Google Play Jeux annulée ou impossible."] = "Google Play Games sign-in cancelled or unavailable.",
             ["Google Play Jeux n'a pas pu être lié à ce joueur."] = "Google Play Games could not be linked to this player.",
             ["Connexion à Google Play Jeux impossible."] = "Couldn't sign in with Google Play Games.",
             ["Google Play Jeux n'est disponible que sur Android, en ligne."] = "Google Play Games is only available on Android, online.",
-            ["Ta progression est sauvegardée en ligne : connecte-toi avec ce compte sur un autre appareil pour la retrouver."] =
-                "Your progress is backed up online: sign in with this account on another device to get it back.",
-            ["Changer le mot de passe"] = "Change password",
             ["Se déconnecter"] = "Sign out",
             ["Supprimer mon compte"] = "Delete my account",
-            ["Tu joues en invité"] = "You are playing as a guest",
             ["Non connecté"] = "Not signed in",
-            ["Continuer en invité"] = "Continue as a guest",
-            ["J'ai déjà un compte"] = "I already have an account",
-            ["Sans e-mail, un mot de passe oublié ne peut pas être récupéré : note-le bien."] =
-                "Without an email, a forgotten password cannot be recovered: write it down.",
-            ["Identifiant"] = "Login",
-            ["Mot de passe"] = "Password",
-            ["Les deux mots de passe diffèrent."] = "The two passwords don't match.",
-            ["Se connecter"] = "Sign in",
-            ["La progression de ce téléphone sera ajoutée à celle du compte."] = "This phone's progress will be added to the account's.",
-            ["Connexion"] = "Sign in",
-            ["Remplis les deux champs."] = "Fill in both fields.",
-            ["Mot de passe actuel"] = "Current password",
-            ["Nouveau mot de passe"] = "New password",
-            ["Confirme le nouveau"] = "Confirm the new one",
-            ["Changer"] = "Change",
-            ["Identifiant : {0} à {1} caractères."] = "Login: {0} to {1} characters.",
-            ["Identifiant : lettres, chiffres et . - _ @ uniquement (sans accents ni espaces)."] =
-                "Login: letters, digits and . - _ @ only (no accents or spaces).",
-            ["Mot de passe : {0} à {1} caractères."] = "Password: {0} to {1} characters.",
-            ["Mot de passe : au moins une majuscule, une minuscule, un chiffre et un symbole."] =
-                "Password: at least one uppercase letter, one lowercase letter, one digit and one symbol.",
+            ["Connecte-toi avec Google Play Jeux pour jouer en ligne (duels, amis, classements) et sauvegarder ta progression. Sans compte, tu joues hors ligne."] =
+                "Sign in with Google Play Games to play online (duels, friends, leaderboards) and back up your progress. Without an account, you play offline.",
+            ["Connecte-toi avec Google Play Jeux pour jouer en ligne."] = "Sign in with Google Play Games to play online.",
+            ["Se connecter avec Google Play Jeux pour jouer en ligne ›"] = "Sign in with Google Play Games to play online ›",
+            ["Hors ligne : connecte-toi avec Google Play Jeux pour jouer en ligne"] = "Offline: sign in with Google Play Games to play online",
+            ["Connecte-toi avec Google Play Jeux pour supprimer tes données en ligne."] = "Sign in with Google Play Games to delete your online data.",
 
             // ---------------------------------------------------------------- online statuses and errors
             ["Hors ligne (mode en ligne désactivé dans Confidentialité)"] = "Offline (online mode turned off in Privacy)",
@@ -585,14 +552,9 @@ namespace MummyEscape
             ["Données en ligne supprimées — mode hors ligne"] = "Online data deleted — offline mode",
             ["Hors ligne — configure Unity Gaming Services pour les classements et les amis."] =
                 "Offline — set up Unity Gaming Services for leaderboards and friends.",
-            ["Les comptes nécessitent une connexion à Unity Gaming Services."] = "Accounts require a connection to Unity Gaming Services.",
-            ["Identifiant ou mot de passe incorrect."] = "Wrong login or password.",
-            ["Mot de passe actuel incorrect."] = "Wrong current password.",
             ["Connexion…"] = "Connecting…",
             ["Hors ligne (projet non lié à Unity Gaming Services)"] = "Offline (project not linked to Unity Gaming Services)",
             ["Hors ligne ({0})"] = "Offline ({0})",
-            ["Ce joueur a déjà un compte."] = "This player already has an account.",
-            ["Cet identifiant est déjà pris ou invalide."] = "This login is already taken or invalid.",
             ["Déconnecté"] = "Signed out",
             ["Compte supprimé"] = "Account deleted",
             ["La suppression a échoué, réessaie plus tard."] = "Deletion failed, try again later.",
@@ -1490,7 +1452,6 @@ namespace MummyEscape
             ["Aucune collection commencée : les ensembles apparaissent ici dès leur première pièce."] = "No collection started yet: sets show up here from their first piece.",
             ["Les ensembles apparaissent ici dès leur première pièce."] = "Sets show up here from their first piece.",
             ["Promos"] = "Deals",
-            ["Invité : ta progression n'est que sur ce téléphone. Crée un compte pour ne rien perdre ›"] = "Guest: your progress is only on this phone. Create an account to keep it all ›",
             ["Chaque semaine, 3 pièces communes, 2 rares, 1 épique et 1 légendaire à -25 %. Une pièce ne revient qu'une fois toutes les autres passées."] = "Every week, 3 common pieces, 2 rare, 1 epic and 1 legendary at 25% off. A piece only comes back once all the others have been on sale.",
             ["Nouvelles promos dans {0} h {1:00} min"] = "New deals in {0} h {1:00} min",
             ["Nouvelles promos dans {0} j {1} h"] = "New deals in {0} d {1} h",

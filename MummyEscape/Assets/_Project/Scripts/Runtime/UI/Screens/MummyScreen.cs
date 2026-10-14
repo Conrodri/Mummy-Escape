@@ -65,7 +65,7 @@ namespace MummyEscape.UI.Screens
             _title = UIKit.Label(side, "", 30, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(_title, 20);
             UIKit.Size(_title, 44);
-            var shop = UIKit.Button(side, "Boutique", () => { Router.Reset<MainMenuScreen>(); Router.Open<ShopScreen>(); }, 28);
+            var shop = UIKit.Button(side, "Boutique", () => App.RequireOnline(() => { Router.Reset<MainMenuScreen>(); Router.Open<ShopScreen>(); }), 28);
             UIKit.Size(shop, 76);
 
             _tabs = new UIKit.Segmented(body, Tabs, i => { _tab = i; Refresh(); _scroll.verticalNormalizedPosition = 1f; }, 80);
@@ -240,7 +240,7 @@ namespace MummyEscape.UI.Screens
             string label = worn ? Loc.T("Équipé") : complete ? Loc.T("Tout équiper")
                          : Loc.F("{0} / {1} pièces", have, set.Count) + (sold ? " · " + Loc.T("Boutique") : ""); // noloc
             System.Action onTap = complete ? () => WearSet(set)
-                                : () => { Router.Reset<MainMenuScreen>(); Router.Open<ShopScreen>(); };
+                                : () => App.RequireOnline(() => { Router.Reset<MainMenuScreen>(); Router.Open<ShopScreen>(); });
             ShopScreen.SetCard(_list, name, set, accent, Color.Lerp(accent, Color.black, 0.75f), Color.Lerp(accent, Color.black, 0.9f),
                                false, label, !worn && (complete || sold), onTap, Zoom, index++);
         }

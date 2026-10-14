@@ -188,14 +188,14 @@ namespace MummyEscape.UI.Screens
             });
         }
 
-        void Leaderboard()
+        void Leaderboard() => App.RequireOnline(() =>
         {
             var lb = Router.Get<LeaderboardScreen>();
             lb.Focus(_result.Level);
             App.Game.Abandon();
             Router.Reset<MainMenuScreen>();
             Router.Open<LeaderboardScreen>();
-        }
+        });
 
         void Menu()
         {

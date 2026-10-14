@@ -9,7 +9,7 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite`
 **Oui** : publicités récompensées Google AdMob, affichées seulement quand le joueur choisit d'en regarder une pour récupérer de l'énergie.
 
 ## Accès à l'application
-**Toutes les fonctionnalités sont disponibles sans restrictions d'accès.** Le compte est facultatif et le jeu est entièrement jouable hors ligne : aucun identifiant de test n'est nécessaire.
+**Toutes les fonctionnalités sont disponibles sans restrictions d'accès.** La campagne solo se joue hors ligne, sans compte ; les fonctions en ligne (duels, amis, classements, guildes, tchat, boutique) demandent seulement la connexion Google Play Jeux, faite avec n'importe quel compte Google : aucun identifiant de test n'est nécessaire.
 
 ## Classification du contenu (questionnaire IARC)
 - Catégorie : **Jeu**.
@@ -43,7 +43,7 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite`
 | Catégorie Play | Donnée | Finalités | Éphémère ? |
 |---|---|---|---|
 | Informations personnelles › **Nom** | Pseudonyme public | Fonctionnement de l'appli, Gestion du compte | Non |
-| Informations personnelles › **ID utilisateur** | Identifiant de joueur Unity, identifiant de connexion | Fonctionnement de l'appli, Gestion du compte, Prévention des fraudes et sécurité | Non |
+| Informations personnelles › **ID utilisateur** | Identifiant de joueur Unity, identifiant Google Play Jeux (compte) | Fonctionnement de l'appli, Gestion du compte, Prévention des fraudes et sécurité | Non |
 | Activité dans l'appli › **Autre contenu généré par l'utilisateur** | Scores, progression, sauvegarde en ligne | Fonctionnement de l'appli | Non |
 | Activité dans l'appli › **Interactions avec l'appli** | Liste d'amis, statut en ligne | Fonctionnement de l'appli | Non |
 | Infos sur l'appli et performances › **Journaux de plantage / Diagnostics** | Journaux techniques du prestataire | Fonctionnement de l'appli, Sécurité | Non |

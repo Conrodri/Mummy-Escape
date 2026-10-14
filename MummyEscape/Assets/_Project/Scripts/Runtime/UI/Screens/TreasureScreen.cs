@@ -225,16 +225,23 @@ namespace MummyEscape.UI.Screens
         async void BuyPack(GoldPack pack)
         {
             if (_busy || !Store.Available) return;
-            if (!GoldWallet.CanPurchase(App) && GoldWallet.Available(App) && MummyEscape.Online.GoogleSignIn.Supported)
+            if (!GoldWallet.CanPurchase(App) && MummyEscape.Online.GoogleSignIn.Supported)
             {
-                // A guest links Google Play Jeux right here, then the purchase goes on; a failure falls back to the note.
+                // Golden scarabs stay tied to a Google Play Games account: signed in right here (guest or offline), then the
+                // purchase goes on.
                 _busy = true;
                 Refresh();
-                try { await App.LinkGoogle(); }
-                catch (System.Exception e) { Debug.LogWarning("[Treasure] Google sign-in failed: " + e.Message); } // noloc
+                string error;
+                try { error = await App.ConnectGoogle(); }
+                catch (System.Exception e) { error = e.Message; }
                 if (this == null) return;
                 _busy = false;
                 Refresh();
+                if (error != null)
+                {
+                    _note.text = Loc.T(error);
+                    return;
+                }
             }
             if (!GoldWallet.CanPurchase(App))
             {

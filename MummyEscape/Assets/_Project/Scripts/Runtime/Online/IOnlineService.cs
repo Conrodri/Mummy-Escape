@@ -59,44 +59,8 @@ namespace MummyEscape.Online
         public bool HasProgress => !string.IsNullOrEmpty(FurthestLevel);
     }
 
-    /// <summary>Offline = no session; Guest = anonymous player (tied to this install); Account = username + password.</summary>
+    /// <summary>Offline = no session; Guest = anonymous player (tied to this install); Account = signed in with Google Play Games.</summary>
     public enum AccountState { Offline, Guest, Account }
-
-    /// <summary>
-    /// Account rules (those of Unity Authentication "Username &amp; Password"). No e-mail is ever asked: the account
-    /// only needs a username and a password (data minimisation), the trade-off being that a forgotten password
-    /// cannot be recovered.
-    /// </summary>
-    public static class AccountRules
-    {
-        public const int UsernameMin = 3, UsernameMax = 20, PasswordMin = 8, PasswordMax = 30;
-
-        /// <summary>Error message in French, or null when valid.</summary>
-        public static string CheckUsername(string u)
-        {
-            if (string.IsNullOrEmpty(u) || u.Length < UsernameMin || u.Length > UsernameMax)
-                return Loc.F("Identifiant : {0} à {1} caractères.", UsernameMin, UsernameMax);
-            foreach (char c in u)
-                if (!(char.IsLetterOrDigit(c) && c < 128) && c != '.' && c != '-' && c != '_' && c != '@')
-                    return "Identifiant : lettres, chiffres et . - _ @ uniquement (sans accents ni espaces).";
-            return null;
-        }
-
-        public static string CheckPassword(string p)
-        {
-            if (string.IsNullOrEmpty(p) || p.Length < PasswordMin || p.Length > PasswordMax)
-                return Loc.F("Mot de passe : {0} à {1} caractères.", PasswordMin, PasswordMax);
-            bool upper = false, lower = false, digit = false, symbol = false;
-            foreach (char c in p)
-            {
-                if (char.IsUpper(c)) upper = true;
-                else if (char.IsLower(c)) lower = true;
-                else if (char.IsDigit(c)) digit = true;
-                else symbol = true;
-            }
-            return upper && lower && digit && symbol ? null : "Mot de passe : au moins une majuscule, une minuscule, un chiffre et un symbole.";
-        }
-    }
 
     /// <summary>
     /// Everything social: identity, per-level leaderboards, friends, progression sharing.
@@ -106,18 +70,13 @@ namespace MummyEscape.Online
     {
         /// <summary>Error of <see cref="LinkGoogleAsync"/>: the Google account belongs to another player.</summary>
         public const string GoogleTaken = "GOOGLE_TAKEN";
+        /// <summary>Status of a player who has not signed in with Google Play Games (online play needs it).</summary>
+        public const string NotSignedIn = "Hors ligne : connecte-toi avec Google Play Jeux pour jouer en ligne";
 
         // ---- account (all error-returning calls give a French message, or null on success)
         AccountState Account { get; }
-        /// <summary>Login of the account (empty for a guest).</summary>
+        /// <summary>What the account signs in with, for display ("Google Play Jeux"; empty for a guest).</summary>
         string Username { get; }
-        /// <summary>
-        /// Signs in to an existing account (another device, after a sign-out...). New accounts are made with Google Play Games
-        /// only (<see cref="LinkGoogleAsync"/>): this stays for the accounts created with a password before.
-        /// </summary>
-        Task<string> SignInAsync(string username, string password);
-        /// <summary>The account signs in with a password (false for an account made with Google only).</summary>
-        bool HasPassword { get; }
         /// <summary>Google Play Games is attached to this player: signing in with it on any Android phone finds it again.</summary>
         bool GoogleLinked { get; }
         /// <summary>
@@ -129,7 +88,6 @@ namespace MummyEscape.Online
         Task<string> SignInWithGoogleAsync();
         /// <summary>Ends the session on this device; online features stop until the next sign-in.</summary>
         Task SignOutAsync();
-        Task<string> ChangePasswordAsync(string current, string next);
         /// <summary>Erases the online account and all its data (GDPR art. 17, store requirements).</summary>
         Task<string> DeleteAccountAsync();
         /// <summary>Private cloud copy of the local save (accounts only), null when none; throws when it could not be read.</summary>
@@ -181,6 +139,12 @@ namespace MummyEscape.Online
     public static class OnlineServiceFactory
     {
         public static Func<IOnlineService> Create = () => new OfflineOnlineService();
+
+        /// <summary>
+        /// Online play needs a Google Play Games sign-in; only the editor and development builds (no Play Games there) still
+        /// play online as an anonymous guest, with the test profiles, so the developer can test the online features.
+        /// </summary>
+        public static bool GuestAllowed => UnityEngine.Application.isEditor || UnityEngine.Debug.isDebugBuild;
 
         /// <summary>Leaderboard id for a level. Includes the generator version so different layouts never mix.</summary>
         public static string LeaderboardId(LevelId id) => LeaderboardId(id, DifficultyTable.GeneratorVersion);

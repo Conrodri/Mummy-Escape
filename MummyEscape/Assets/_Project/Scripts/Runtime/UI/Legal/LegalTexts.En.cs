@@ -24,7 +24,7 @@ namespace MummyEscape.UI.Legal
             "• Your privacy choices: the date of your answer, online or offline mode, whether you are a minor and whether a parent gave consent. " +
             "Your year of birth is only used for this calculation: it is neither kept nor sent.\n" +
             "This data stays on the device; you can erase it at any time (Settings › Privacy) or by uninstalling the game.",
-            "# Data processed online (only if you turn on online mode)",
+            "# Data processed online (only if you turn on online mode and sign in with Google Play Games)",
             "• A random player ID, created by the authentication service, and a session token kept on your phone.\n" +
             "• Your public nickname (randomly assigned, editable). Do not use your real name.\n" +
             "• Your best scores per level (moves above the ideal path and time), public in the leaderboards, with your country only if you chose one.\n" +
@@ -38,9 +38,10 @@ namespace MummyEscape.UI.Legal
             "Your opponents and teammates see your nickname, your look, your Elo and the replays of your matches.\n" +
             "• If you buy golden scarabs: the product, the order ID and the purchase token sent by Google Play, the date, " +
             "and your wallet (golden scarabs, passes, paid items), kept by our server. We never receive your payment details: Google handles the payment.\n" +
-            "• If you create an account (optional, with Google Play Games): the player ID Google Play Games sends us to recognise you " +
+            "• Your account, needed to play online and created with Google Play Games: the player ID Google Play Games sends us to recognise you " +
             "(neither your email address nor your name), and a backup of your progress, so you can restore it on another device. " +
-            "Accounts created earlier with a login keep it and their password (stored encrypted by our provider, never readable by us).\n" +
+            "The game now signs in with Google Play Games only: accounts created earlier with a login keep it and their password " +
+            "(stored encrypted by our provider, never readable by us) until they are deleted.\n" +
             "• Technical data required by the service (IP address, device model, error logs), used for its operation and security.",
             "# Why, and on what legal basis?",
             "• Providing the online features you chose (leaderboards, friends, account, backup): performance of the terms of use (GDPR, art. 6.1.b).\n" +
@@ -129,7 +130,7 @@ namespace MummyEscape.UI.Legal
             $"These terms govern the use of the game Mummy Rush, published by {Publisher} ({Address}, {Contact}). " +
             "By playing online, you accept them.",
             "# The game",
-            "The game is free, with optional purchases. It can be played offline; the online features (leaderboards, friends, duels, guilds, chat, account, backup) are optional. " +
+            "The game is free, with optional purchases. It can be played offline; the online features (leaderboards, friends, duels, guilds, chat, shop, backup) are optional and need a Google Play Games account. " +
             "They are provided without any guarantee of permanent availability and may change or stop; your local progress then remains playable.",
             "# Energy",
             "The first act is free to play. After that, each solo game costs one energy point (10 at most) and each duel or 2v2 match one combat energy point (10 at most); " +
@@ -145,8 +146,7 @@ namespace MummyEscape.UI.Legal
             "# Age",
             "Below the digital age of consent in your country (15 in France), the chat is only available with the consent of a parent or legal guardian, asked when it first opens. Global chat is closed to minors; guild chat and messages between friends can be turned off in the game.",
             "# Your account",
-            "The account is optional and is created with Google Play Games. Accounts created earlier with a login and a password still work: " +
-            "keep them secret; since no email address is requested, a forgotten password cannot be recovered. " +
+            "The account is optional: without it, the game is played offline. It is created and signed in with Google Play Games only, and opens the online features. " +
             "You can delete your account and all your online data at any time from the game.",
             "# Code of conduct",
             "You may not choose an insulting, discriminatory or sexual nickname, or one impersonating someone else, " +
@@ -157,8 +157,8 @@ namespace MummyEscape.UI.Legal
             "# Intellectual property",
             "The game, its graphics, its music and its code are protected. You are granted a personal, non-commercial right of use.",
             "# Liability",
-            "The publisher cannot be held liable for interruptions of the online service or for progress lost because of a forgotten password " +
-            "or uninstalling the game without an account. Nothing in these terms limits the rights you have under consumer law.",
+            "The publisher cannot be held liable for interruptions of the online service or for progress lost because of " +
+            "uninstalling the game without an account. Nothing in these terms limits the rights you have under consumer law.",
             "# Personal data",
             "Its processing is described in the privacy policy, available in the game (Settings › Privacy).",
             "# Governing law",

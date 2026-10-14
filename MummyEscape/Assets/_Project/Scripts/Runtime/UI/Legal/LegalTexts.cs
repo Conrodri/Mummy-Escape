@@ -32,7 +32,7 @@ namespace MummyEscape.UI.Legal
             "• Tes choix de confidentialité : la date de ta réponse, le mode en ligne ou hors ligne, si tu es mineur et si un parent a donné son accord. " +
             "Ton année de naissance sert uniquement à ce calcul : elle n'est ni conservée ni envoyée.\n" +
             "Ces données restent sur l'appareil ; tu peux les effacer à tout moment (Paramètres › Confidentialité) ou en désinstallant le jeu.",
-            "# Données traitées en ligne (seulement si tu actives le mode en ligne)",
+            "# Données traitées en ligne (seulement si tu actives le mode en ligne et te connectes avec Google Play Jeux)",
             "• Un identifiant de joueur aléatoire, créé par le service d'authentification, et un jeton de session gardé sur ton téléphone.\n" +
             "• Ton pseudonyme, public (attribué au hasard, modifiable). N'utilise pas ton vrai nom.\n" +
             "• Tes meilleurs scores par niveau (coups au-dessus du chemin idéal et temps), publics dans les classements, avec ton pays seulement si tu l'as choisi.\n" +
@@ -46,9 +46,10 @@ namespace MummyEscape.UI.Legal
             "Tes adversaires et coéquipiers voient ton pseudonyme, ton apparence, ton Elo et les replays de vos matchs.\n" +
             "• Si tu achètes des scarabées dorés : le produit, l'identifiant de commande et le jeton d'achat transmis par Google Play, la date, " +
             "et ton portefeuille (scarabées dorés, pass, objets payants), gardés par notre serveur. Nous ne recevons jamais tes coordonnées bancaires : le paiement est traité par Google.\n" +
-            "• Si tu crées un compte (facultatif, avec Google Play Jeux) : l'identifiant de joueur que Google Play Jeux nous transmet pour te reconnaître " +
+            "• Ton compte, nécessaire pour jouer en ligne et créé avec Google Play Jeux : l'identifiant de joueur que Google Play Jeux nous transmet pour te reconnaître " +
             "(ni ton adresse e-mail ni ton nom), et une copie de sauvegarde de ta progression, pour la retrouver sur un autre appareil. " +
-            "Les comptes créés auparavant avec un identifiant de connexion gardent celui-ci et leur mot de passe (conservé chiffré par notre prestataire, jamais lisible par nous).\n" +
+            "Le jeu ne se connecte plus qu'avec Google Play Jeux : les comptes créés auparavant avec un identifiant de connexion gardent celui-ci et leur mot de passe " +
+            "(conservé chiffré par notre prestataire, jamais lisible par nous) jusqu'à leur suppression.\n" +
             "• Les données techniques indispensables au service (adresse IP, modèle d'appareil, journaux d'erreurs), utilisées pour son fonctionnement et sa sécurité.",
             "# Pourquoi et sur quelle base ?",
             "• Fournir les fonctions en ligne que tu as choisies (classements, amis, compte, sauvegarde) : exécution des conditions d'utilisation (RGPD, art. 6.1.b).\n" +
@@ -140,7 +141,7 @@ namespace MummyEscape.UI.Legal
             $"Ces conditions encadrent l'utilisation du jeu Mummy Rush, édité par {Publisher} ({Address}, {Contact}). " +
             "En jouant en ligne, tu les acceptes.",
             "# Le jeu",
-            "Le jeu est gratuit, avec des achats facultatifs. Il se joue hors ligne ; les fonctions en ligne (classements, amis, duels, guildes, tchat, compte, sauvegarde) sont facultatives. " +
+            "Le jeu est gratuit, avec des achats facultatifs. Il se joue hors ligne ; les fonctions en ligne (classements, amis, duels, guildes, tchat, boutique, sauvegarde) sont facultatives et demandent un compte Google Play Jeux. " +
             "Elles sont fournies sans garantie de disponibilité permanente et peuvent évoluer ou s'arrêter ; ta progression locale reste alors jouable.",
             "# Énergie",
             "Le premier acte se joue librement. Ensuite, chaque partie solo coûte un point d'énergie (10 au plus) et chaque duel ou match 2v2 un point d'énergie de combat (10 au plus) ; " +
@@ -156,8 +157,7 @@ namespace MummyEscape.UI.Legal
             "# Âge",
             "Sous l'âge du consentement numérique de ton pays (15 ans en France), le tchat n'est accessible qu'avec l'accord d'un parent ou tuteur légal, demandé à sa première ouverture. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.",
             "# Ton compte",
-            "Le compte est facultatif et se crée avec Google Play Jeux. Les comptes créés auparavant avec un identifiant et un mot de passe restent utilisables : " +
-            "garde-les secrets ; aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. " +
+            "Le compte est facultatif : sans lui, le jeu se joue hors ligne. Il se crée et se connecte uniquement avec Google Play Jeux, et ouvre les fonctions en ligne. " +
             "Tu peux supprimer ton compte et toutes tes données en ligne à tout moment depuis le jeu.",
             "# Règles de conduite",
             "Il est interdit de choisir un pseudonyme injurieux, discriminatoire, à caractère sexuel ou usurpant l'identité d'autrui, " +
@@ -168,8 +168,8 @@ namespace MummyEscape.UI.Legal
             "# Propriété intellectuelle",
             "Le jeu, ses graphismes, ses musiques et son code sont protégés. Tu disposes d'un droit d'usage personnel et non commercial.",
             "# Responsabilité",
-            "L'éditeur ne saurait être tenu responsable des interruptions du service en ligne ni des pertes de progression dues à un mot de passe oublié " +
-            "ou à la désinstallation du jeu sans compte. Rien dans ces conditions ne limite les droits que tu tiens de la loi en tant que consommateur.",
+            "L'éditeur ne saurait être tenu responsable des interruptions du service en ligne ni des pertes de progression dues " +
+            "à la désinstallation du jeu sans compte. Rien dans ces conditions ne limite les droits que tu tiens de la loi en tant que consommateur.",
             "# Données personnelles",
             "Leur traitement est décrit dans la politique de confidentialité, accessible dans le jeu (Paramètres › Confidentialité).",
             "# Droit applicable",

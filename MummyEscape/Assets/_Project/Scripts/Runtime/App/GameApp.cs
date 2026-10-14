@@ -134,7 +134,7 @@ namespace MummyEscape.App
             if (Privacy.Data.AcceptedPolicyVersion == 0 && string.IsNullOrEmpty(Settings.Language) && !Loc.SpeaksSystemLanguage) UI.Open<LanguagePickerScreen>();
             StudioIntro.Play(Audio); // the studio's logo, over the first screen, in silence
 
-            if (Privacy.OnlineAllowed) _ = StartOnline();
+            if (Privacy.OnlineAllowed) _ = StartOnline(true);
             Save.Changed += () => _cloudDirty = true;
         }
 
@@ -193,8 +193,11 @@ namespace MummyEscape.App
         OfflineOnlineService Offline(string reason) =>
             new OfflineOnlineService(reason) { Country = Save.Country, LocalRecord = Save.GetRecord };
 
-        /// <summary>Connects the online features (after consent, at startup or when the player turns them on).</summary>
-        public async Task StartOnline()
+        /// <summary>
+        /// Connects the online features (after consent, at startup or when the player turns them on); at startup,
+        /// <paramref name="askGoogle"/> then asks a guest to sign in with Google Play Games (<see cref="AskGoogleSignIn"/>).
+        /// </summary>
+        public async Task StartOnline(bool askGoogle = false)
         {
             var service = OnlineServiceFactory.Create();
             service.Country = Save.Country;
@@ -204,10 +207,18 @@ namespace MummyEscape.App
                 // Backend unreachable or not configured: fall back to the offline service (keeps the reason).
                 service = Offline(service.Status);
             }
+            else if (service.Account == AccountState.Guest && !OnlineServiceFactory.GuestAllowed)
+            {
+                // A guest of an earlier version: signed out until it signs in with Google Play Games (ConnectGoogle then links
+                // this very player, keeping its progress).
+                _guest = service;
+                service = Offline(IOnlineService.NotSignedIn);
+            }
             if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
             Online = service;
             Analytics.Apply(Privacy.AnalyticsAllowed && service.IsAvailable);
             await AfterAccountChange();
+            if (askGoogle) AskGoogleSignIn(); // after the menus show the new state
             await SubmitRecords();
         }
 
@@ -382,26 +393,84 @@ namespace MummyEscape.App
             if (paused && _cloudDirty && Online != null && Online.Account == AccountState.Account) _ = PushCloudSave();
         }
 
-        /// <summary>Signs in to an existing account (connects the backend first when needed).</summary>
-        public async Task<string> SignIn(string username, string password)
+        bool _googleAsked;
+        /// <summary>The anonymous session of an earlier version, kept signed out until Google Play Games is linked to it.</summary>
+        IOnlineService _guest;
+
+        /// <summary>The online features are open: signed in with Google Play Games (editor and development builds: also as a guest, or the demo).</summary>
+        public bool SignedIn => Online.IsAvailable || Online.IsDemo;
+
+        /// <summary>
+        /// The door of every online feature: runs <paramref name="then"/> when signed in; otherwise asks for the Google Play
+        /// Games sign-in first, then runs it. Without Play Games (editor, iOS) it runs at once and the screen says it is offline.
+        /// </summary>
+        public void RequireOnline(System.Action then)
         {
-            var service = Online;
-            if (service is OfflineOnlineService && !service.IsDemo) service = OnlineServiceFactory.Create();
-            service.Country = Save.Country;
-            string error = await service.SignInAsync(username, password);
+            if (SignedIn || !GoogleSignIn.Supported) { then?.Invoke(); return; }
+            AskGoogle("Connecte-toi avec Google Play Jeux pour jouer en ligne.", "Annuler", then);
+        }
+
+        /// <summary>
+        /// Startup rule: at most once per launch, after the consent screens, a signed-out player is asked to sign in with
+        /// Google Play Games ("Plus tard" plays offline for now). A player who turned the online mode off is never asked;
+        /// neither is anyone without Play Games (editor, iOS). Not over a game in progress.
+        /// </summary>
+        void AskGoogleSignIn()
+        {
+            if (_googleAsked || !GoogleSignIn.Supported || !Privacy.OnlineAllowed || SignedIn || Game.Session != null) return;
+            _googleAsked = true;
+            AskGoogle("Connecte-toi avec Google Play Jeux pour jouer en ligne (duels, amis, classements) et sauvegarder ta progression. Sans compte, tu joues hors ligne.",
+                "Plus tard", null);
+        }
+
+        void AskGoogle(string text, string cancel, System.Action then) =>
+            UI.Open<OfferDialog>().Configure("Google Play Jeux", Loc.T(text),
+                ("Se connecter avec Google Play Jeux", ButtonStyle.Primary, async () =>
+                {
+                    string error = await ConnectGoogle();
+                    if (error != null) UI.Open<OfferDialog>().Configure("Google Play Jeux", Loc.T(error), ("OK", ButtonStyle.Secondary, null)); // noloc
+                    else then?.Invoke();
+                }),
+                (cancel, ButtonStyle.Ghost, null));
+
+        /// <summary>
+        /// Google Play Games for this player, from any state: a guest (also one kept signed out) links it, or, when that Google
+        /// account already has its own player, signs in to it: this phone's progress joins it (the cloud copy is merged into
+        /// the local save, see <see cref="LoadCloudSave"/>). Offline, it signs in and turns the online mode on.
+        /// </summary>
+        public async Task<string> ConnectGoogle()
+        {
+            if (_guest == null && !Online.IsAvailable && !Online.IsDemo)
+            {
+                // Online mode off or unreachable at launch: this phone's session is resumed first, so that a guest of an
+                // earlier version keeps its player (and the scarabs the server holds for it).
+                var resumed = OnlineServiceFactory.Create();
+                resumed.Country = Save.Country;
+                await resumed.InitializeAsync();
+                if (resumed.Account == AccountState.Account) return await Connected(resumed);
+                if (resumed.Account == AccountState.Guest) _guest = resumed;
+            }
+            var guest = _guest ?? (Online.Account == AccountState.Guest ? Online : null);
+            if (guest != null)
+            {
+                string linkError = await guest.LinkGoogleAsync();
+                if (linkError == null) return await Connected(guest);
+                if (linkError != IOnlineService.GoogleTaken) return linkError;
+            }
+            string error = await SignInWithGoogle();
             if (error != null) return error;
-            if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
-            Online = service;
-            await AfterAccountChange();
+            _guest = null; // the Google player took the guest session's place
+            if (!Privacy.OnlineAllowed) Privacy.SetOnline(true);
             return null;
         }
 
-        /// <summary>Attaches Google Play Games to the current guest (it becomes an account), then backs the progression up.</summary>
-        public async Task<string> LinkGoogle()
+        async Task<string> Connected(IOnlineService service)
         {
-            string error = await Online.LinkGoogleAsync();
-            if (error == null) await AfterAccountChange();
-            return error;
+            _guest = null;
+            Online = service;
+            if (!Privacy.OnlineAllowed) Privacy.SetOnline(true);
+            await AfterAccountChange();
+            return null;
         }
 
         /// <summary>Signs in with the phone's Google Play Games account (connects the backend first when needed).</summary>
@@ -450,7 +519,10 @@ namespace MummyEscape.App
                 // Online mode off or signed out: reconnect the cached session just to delete it.
                 var service = OnlineServiceFactory.Create();
                 await service.InitializeAsync();
-                if (!service.IsAvailable) return service is OfflineOnlineService ? null : Loc.F("Connexion impossible : {0}", Loc.T(service.Status));
+                if (!service.IsAvailable)
+                    return service is OfflineOnlineService ? null
+                         : service.Status == IOnlineService.NotSignedIn ? Loc.T("Connecte-toi avec Google Play Jeux pour supprimer tes données en ligne.")
+                         : Loc.F("Connexion impossible : {0}", Loc.T(service.Status));
                 Online = service;
             }
             // The PvP server first: once the account is gone, nobody can ask it to forget the player any more.
@@ -462,6 +534,7 @@ namespace MummyEscape.App
             string error = await Online.DeleteAccountAsync();
             if (error != null) return error;
             _cloudDirty = false;
+            _guest = null;
             Privacy.SetOnline(false);
             Online = Offline("Données en ligne supprimées — mode hors ligne");
             RefreshMenus();

@@ -41,7 +41,7 @@ Gagne des scarabées en jouant et débloque tenues et titres dans la boutique. P
 
 BON À SAVOIR
 • Jeu gratuit, avec des publicités facultatives (une vidéo à regarder pour récupérer de l'énergie) et des achats intégrés (scarabées dorés, pass de saison).
-• La campagne se joue hors ligne. Le mode en ligne est facultatif ; le compte passe par Google Play Games, sans adresse e-mail.
+• La campagne se joue hors ligne. Le mode en ligne est facultatif et passe par la connexion Google Play Games, sans adresse e-mail.
 • Tes données s'exportent et se suppriment depuis le jeu.
 • Disponible en français et en anglais.
 ```

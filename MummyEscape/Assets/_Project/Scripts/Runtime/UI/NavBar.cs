@@ -68,20 +68,20 @@ namespace MummyEscape.UI
                 E("Accueil", UISprites.Home, s => s is MainMenuScreen, () => router.Reset<MainMenuScreen>()));
             bar.Add(row, UISprites.Play, "Jouer", new[] { NavTab.Solo, NavTab.Duel, NavTab.Ranking },
                 E("Campagne", UISprites.Map, s => s.Tab == NavTab.Solo && !(s is EndlessScreen) && !(s is TowerScreen), bar.Go<LevelSelectScreen>),
-                E("Duel", UISprites.Swords, s => s.Tab == NavTab.Duel, bar.Go<PvpScreen>, Gate(Feature.Duel)),
+                E("Duel", UISprites.Swords, s => s.Tab == NavTab.Duel, SignedIn(bar.Go<PvpScreen>), Gate(Feature.Duel)),
                 E("Sans fin", UISprites.Infinity, s => s is EndlessScreen, bar.Go<EndlessScreen>, Campaign),
                 E("Tour de défi", UISprites.Tower, s => s is TowerScreen, bar.Go<TowerScreen>, Campaign),
-                E("Classements", UISprites.Podium, s => s.Tab == NavTab.Ranking, bar.Go<LeaderboardScreen>));
+                E("Classements", UISprites.Podium, s => s.Tab == NavTab.Ranking, SignedIn(bar.Go<LeaderboardScreen>)));
             bar.Add(row, UISprites.User, "Momie", new[] { NavTab.Mummy },
                 E("Momie", UISprites.User, s => s is MummyScreen, bar.Go<MummyScreen>));
             bar.Add(row, UISprites.Friends, "Social", new[] { NavTab.Friends },
-                E("Amis", UISprites.Friends, s => s is FriendsScreen, bar.Go<FriendsScreen>),
-                E("Guilde", UISprites.Crown, s => s is GuildScreen, bar.Go<GuildScreen>, Gate(Feature.Guild)),
-                E("Tchat", UISprites.Chat, s => s is ChatScreen, bar.Go<ChatScreen>, Gate(Feature.Chat)));
+                E("Amis", UISprites.Friends, s => s is FriendsScreen, SignedIn(bar.Go<FriendsScreen>)),
+                E("Guilde", UISprites.Crown, s => s is GuildScreen, SignedIn(bar.Go<GuildScreen>), Gate(Feature.Guild)),
+                E("Tchat", UISprites.Chat, s => s is ChatScreen, SignedIn(bar.Go<ChatScreen>), Gate(Feature.Chat)));
             bar.Add(row, UISprites.Bag, "Boutique", new[] { NavTab.Shop, NavTab.Casino },
-                E("Boutique", UISprites.Bag, s => s is ShopScreen || s is TreasureScreen, bar.Go<ShopScreen>),
-                E("Casino", UISprites.Wheel, s => s is CasinoScreen, bar.Go<CasinoScreen>, Gate(Feature.Casino)),
-                E("Pass", UISprites.Seal, s => s is PassScreen, bar.Go<PassScreen>));
+                E("Boutique", UISprites.Bag, s => s is ShopScreen || s is TreasureScreen, SignedIn(bar.Go<ShopScreen>)),
+                E("Casino", UISprites.Wheel, s => s is CasinoScreen, SignedIn(bar.Go<CasinoScreen>), Gate(Feature.Casino)),
+                E("Pass", UISprites.Seal, s => s is PassScreen, SignedIn(bar.Go<PassScreen>)));
             bg.gameObject.SetActive(false);
             return bar;
         }
@@ -90,6 +90,9 @@ namespace MummyEscape.UI
             new Entry { Caption = caption, Icon = icon, IsCurrent = isCurrent, Open = open, Gate = gate };
 
         static System.Func<LevelId, bool> Done => App.GameApp.I.Save.IsCompleted;
+
+        /// <summary>An online room: signed out, the Google Play Games sign-in is asked first (<see cref="App.GameApp.RequireOnline"/>).</summary>
+        static System.Action SignedIn(System.Action open) => () => App.GameApp.I.RequireOnline(open);
 
         /// <summary>A room of <see cref="Unlocks"/>: its gate while locked.</summary>
         static System.Func<LevelId?> Gate(Feature feature) => () => Unlocks.IsUnlocked(feature, Done) ? (LevelId?)null : Unlocks.Gate(feature);

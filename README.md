@@ -190,7 +190,7 @@ unity command mummy_autoplay --steps 40 --until torch_out   # (en Play) saute l'
 
 Sans configuration, le jeu tourne **hors ligne** (sauvegarde locale, classement/amis désactivés proprement). Pour activer :
 1. Lier le projet : Edit › Project Settings › Services (organisation + projet UGS).
-2. Activer Authentication (anonyme + Username & Password), Leaderboards, Friends, Cloud Save dans le dashboard.
+2. Activer Authentication (Google Play Games, et anonyme pour les anciens invités et l'éditeur), Leaderboards, Friends, Cloud Save dans le dashboard.
 3. Menu **Mummy Rush › Online › Export leaderboard configs** → déployer `Assets/_Project/Online` via Services › Deployment (ou `ugs deploy`).
 
 Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = meilleur) : on trie d'abord sur l'écart au chemin optimal (« parfait », « +3 coups »), puis sur le **temps** (chronomètre lancé à la fin de l'aperçu, arrêté en pause). Chaque partie tirant un labyrinthe différent, le nombre brut de coups ne serait pas comparable. Les ids de leaderboard incluent la version du générateur et du format de score (`v2s2_1-1`). La progression des amis est publiée dans Cloud Save (clé publique `progress`).
@@ -199,7 +199,7 @@ Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = m
 
 ## Comptes et RGPD
 
-**Fonctionnement d'un compte sur mobile.** Au premier lancement en ligne, Unity Authentication crée une session **anonyme** (identifiant aléatoire, jeton gardé sur le téléphone) : c'est le mode « invité », sans aucune saisie. Le joueur peut ensuite **créer un compte** (identifiant + mot de passe, *Username & Password* d'UGS) rattaché à ce même profil. Il pourra s'y reconnecter sur un autre appareil, avec sa progression sauvegardée dans Cloud Save (clé privée `save`, fusionnée avec la progression locale à chaque connexion). Il n'y a volontairement **pas d'e-mail** (minimisation des données). La contrepartie est qu'un mot de passe oublié ne se récupère pas, ce que le jeu indique. Plus tard, on pourra ajouter « Se connecter avec Apple / Google » (UGS les gère). Apple l'exige seulement si un autre login social est proposé.
+**Fonctionnement d'un compte sur mobile.** Le jeu en ligne demande une connexion **Google Play Jeux** (ni identifiant, ni mot de passe, ni e-mail) ; sans elle, le joueur est hors ligne : campagne solo et contenu local seulement. Au premier lancement en ligne, le jeu tente la connexion silencieuse à Google Play Jeux (Android) ; à défaut, il reste hors ligne et, une fois par lancement après les écrans de consentement, propose de se connecter (« Plus tard » = jouer hors ligne pour l'instant). Chaque fonction en ligne (amis, duels 1v1/2v2, groupe et campagne 2v2, guildes et tchat, classements, boutique, casino, pass, scarabées dorés) passe par `GameApp.RequireOnline` : déconnecté, la même demande de connexion s'affiche, puis la fonction s'ouvre. La progression est sauvegardée dans Cloud Save (clé privée `save`, fusionnée avec la progression locale à chaque connexion). Un invité anonyme d'une version précédente (session Unity Authentication gardée sur le téléphone, sans Google) est repris mais traité comme déconnecté ; à sa connexion Google, `GameApp.ConnectGoogle` lie Google à ce même joueur, ou, si ce compte Google a déjà son joueur, s'y connecte en gardant la progression du téléphone. Dans l'éditeur et les builds de développement (pas de Play Games, `OnlineServiceFactory.GuestAllowed`), l'invité anonyme et les profils de test (`TestProfile`) servent à tester le mode en ligne.
 
 **Conformité intégrée (RGPD, ePrivacy, art. 8 et 25) :**
 - **Rien ne part en ligne avant un choix éclairé.** L'écran d'accueil (`WelcomeScreen`) explique les modes hors ligne et en ligne et donne accès à la politique et aux CGU. Le mode hors ligne est complet.
@@ -216,7 +216,7 @@ Score de classement = `coups au-delà du par×10⁸ + temps en ms` (plus bas = m
 **À faire avant publication :**
 1. Remplir `Runtime/UI/Legal/LegalTexts.cs` : éditeur (nom, adresse), e-mail de contact et médiateur de la consommation. Mettre à jour la date.
 2. Menu **Mummy Rush › Legal › Export privacy policy and terms to docs/**, puis publier `docs/` avec GitHub Pages (Settings › Pages › `main` / `docs`). Ces URLs publiques sont demandées par les stores.
-3. Dashboard UGS : activer **Username & Password** dans Authentication. Mettre en place la purge des profils inactifs depuis 3 ans (promise dans la politique), par exemple avec un script Cloud Code planifié ou l'Admin API.
+3. Dashboard UGS : activer **Google Play Games** dans Authentication. Mettre en place la purge des profils inactifs depuis 3 ans (promise dans la politique), par exemple avec un script Cloud Code planifié ou l'Admin API.
 4. **Google Play, section Sécurité des données :**
    - données collectées : identifiants utilisateur (ID), activité dans l'appli (contenu de jeu) et nom (pseudonyme) ;
    - finalité : fonctionnement de l'appli ; aucune donnée partagée avec des tiers ;
