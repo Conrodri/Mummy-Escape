@@ -136,9 +136,9 @@ namespace MummyEscape.UI.Screens
             AddTrigger(trigger, EventTriggerType.PointerUp, () => App.Game.SetMapView(false));
 
             // Disarm: works next to spikes the torch shows or felt underfoot (not cursed sand); 1 s cooldown after each press.
-            _disarm = UIKit.Button(bottom, "Désamorcer", () => App.Game.DisarmAdjacent(), 34, ButtonStyle.Primary);
-            UIKit.FitText(_disarm.GetComponentInChildren<Text>(), 22);
-            UIKit.Place((RectTransform)_disarm.transform, 1, 1, 330, 100, -30, 110);
+            _disarm = UIKit.Button(bottom, "Désamorcer", () => App.Game.DisarmAdjacent(), 48, ButtonStyle.Primary);
+            UIKit.FitText(_disarm.GetComponentInChildren<Text>(), 28);
+            PlaceDisarm(false);
             // Recharge: a dark veil over the button that shrinks to the right during the cooldown.
             var veil = UIKit.Image(_disarm.transform, null, new Color(0f, 0f, 0f, 0.55f), false, "Cooldown");
             _disarmCooldown = UIKit.Stretch(veil.rectTransform);
@@ -375,8 +375,15 @@ namespace MummyEscape.UI.Screens
             _controls.Apply(App.Settings.Controls);
             // A pad on the right would cover the disarm button: mirror it to the left (the map stays, below the pad).
             bool left = App.Settings.PadRight && App.Settings.Controls != MoveControl.Swipe;
-            UIKit.Place((RectTransform)_disarm.transform, left ? 0 : 1, 1, 330, 100, left ? 30 : -30, 110);
+            PlaceDisarm(left);
         }
+
+        /// <summary>
+        /// A big thumb target just above the bottom bar (y 184-364 at 1080x1920). 440 wide still leaves ~90 px to the
+        /// 340 px pad on the other side on a 21:9 phone, where the canvas is only ~940 wide.
+        /// </summary>
+        void PlaceDisarm(bool left) =>
+            UIKit.Place((RectTransform)_disarm.transform, left ? 0 : 1, 1, 440, 180, left ? 30 : -30, 190);
 
         void OnIntroEnded(bool won) => Router.Open<IntroEndScreen>().Show(won);
 
