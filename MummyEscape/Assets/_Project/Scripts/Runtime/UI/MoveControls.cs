@@ -32,7 +32,7 @@ namespace MummyEscape.UI
             return c;
         }
 
-        /// <summary>Bottom left above the bottom bar by default (the disarm button sits on the right), or bottom right.</summary>
+        /// <summary>Bottom left above the bottom bar by default, or bottom right (the HUD then moves the disarm button to the left).</summary>
         public void SetSide(bool right)
         {
             _root.anchorMin = _root.anchorMax = _root.pivot = new Vector2(right ? 1 : 0, 0);

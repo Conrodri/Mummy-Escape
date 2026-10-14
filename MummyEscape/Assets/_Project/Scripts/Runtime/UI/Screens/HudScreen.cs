@@ -373,6 +373,9 @@ namespace MummyEscape.UI.Screens
         {
             _controls.SetSide(App.Settings.PadRight);
             _controls.Apply(App.Settings.Controls);
+            // A pad on the right would cover the disarm button: mirror it to the left (the map stays, below the pad).
+            bool left = App.Settings.PadRight && App.Settings.Controls != MoveControl.Swipe;
+            UIKit.Place((RectTransform)_disarm.transform, left ? 0 : 1, 1, 330, 100, left ? 30 : -30, 110);
         }
 
         void OnIntroEnded(bool won) => Router.Open<IntroEndScreen>().Show(won);

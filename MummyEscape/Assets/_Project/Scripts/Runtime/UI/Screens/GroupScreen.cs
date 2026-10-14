@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Linq;
-using MummyEscape.Online;
 using MummyEscape.Pvp;
 using MummyEscape.Services;
 using MummyEscape.Visual;
@@ -12,8 +10,9 @@ namespace MummyEscape.UI.Screens
     /// <summary>
     /// The group: two friends side by side, their mummies in their outfits, the leader (who formed the group) on the
     /// left. The teammate presses "Prêt"; the leader then launches the 2v2 campaign or the 2v2 duel, and both phones go
-    /// straight into it. The group is the duo of the server (one per player): invitations are sent and accepted here,
-    /// nowhere else. Both phones poll the duo while this screen is open.
+    /// straight into it. The group is the duo of the server (one per player): invitations are sent and accepted in
+    /// <see cref="InviteSheet"/> (the home "+"; without a group, this screen opens it too). Both phones poll the duo while
+    /// this screen is open.
     /// </summary>
     public sealed class GroupScreen : UIScreen
     {
@@ -27,12 +26,11 @@ namespace MummyEscape.UI.Screens
         readonly Image[] _portraits = new Image[2];
         readonly Text[] _names = new Text[2], _states = new Text[2];
         readonly string[] _shown = new string[2];
-        Button _readyButton, _coop, _relay, _leave;
+        Button _readyButton, _coop, _relay, _leave, _invite;
         Text _readyLabel;
 
         TeamsResponse _teams;
         Duo _duo;
-        IReadOnlyList<FriendInfo> _friends;
         bool _busy, _ready;
         int _request;
         long _seenLaunch;
@@ -84,6 +82,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_relay, 100);
             _leave = UIKit.Button(body, "Quitter le groupe", Leave, 28, ButtonStyle.Leave);
             UIKit.Size(_leave, 76);
+            _invite = UIKit.Button(body, "Inviter un ami", () => Router.Open<InviteSheet>(), 34, ButtonStyle.Primary);
+            UIKit.Size(_invite, 100);
 
             _list = UIKit.Scroll(body, out _scroll);
             UIKit.Size(_scroll, -1, -1, -1, 1);
@@ -113,6 +113,8 @@ namespace MummyEscape.UI.Screens
 
         void Update()
         {
+            // A group formed in the invite sheet over this screen.
+            if (_duo == null && !_busy && App.Session.Group != null) { _duo = App.Session.Group; Reload(); return; }
             if (_duo == null || _busy || Time.unscaledTime < _nextPoll) return;
             _nextPoll = Time.unscaledTime + PollSeconds;
             Poll();
@@ -130,7 +132,6 @@ namespace MummyEscape.UI.Screens
             int request = ++_request;
             if (_teams == null) _info.text = Loc.T("Chargement…");
             var teams = await App.Pvp.GetTeamsAsync();
-            var friends = await App.Online.GetFriendsAsync();
             if (request != _request || this == null) return;
             if (teams == null || teams.Error != null)
             {
@@ -138,7 +139,6 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             _teams = teams;
-            _friends = friends;
             _duo = teams.Duos.FirstOrDefault();
             App.Session.SetGroup(_duo);
             if (!_busy) _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : coéquipier simulé") + "</color>" : "";
@@ -192,19 +192,7 @@ namespace MummyEscape.UI.Screens
             FillSlots();
             UIKit.ClearChildren(_list);
             if (_teams == null) return;
-            if (_teams.Invites.Count > 0)
-            {
-                UIKit.SectionTitle(_list, "Invitations");
-                foreach (var invite in _teams.Invites) InviteRow(invite);
-            }
-            if (_duo == null)
-            {
-                UIKit.SectionTitle(_list, "Inviter un ami");
-                int shown = 0;
-                foreach (var f in _friends ?? new List<FriendInfo>()) { FriendRow(f); shown++; }
-                if (shown == 0) UIKit.Size(UIKit.Label(_list, "Ajoute des amis (Social › Amis) pour les inviter.", 26, UIKit.Dim), 60);
-            }
-            else
+            if (_duo != null)
             {
                 var stats = UIKit.Label(_list, Loc.F("Elo 2v2 {0}", _duo.Elo) + "  ·  " + Loc.F("{0} V · {1} N · {2} D", _duo.Wins, _duo.Draws, _duo.Losses)
                                               + "  ·  " + Loc.F("Campagne 2v2 : {0}/{1} tombeaux", CoopLogic.Cleared(_duo), Core.CoopCampaign.Count), 24, UIKit.Dim);
@@ -236,6 +224,7 @@ namespace MummyEscape.UI.Screens
             _relay.interactable = canLaunch;
             _leave.gameObject.SetActive(mine);
             _leave.interactable = !_busy;
+            _invite.gameObject.SetActive(_duo == null && App.Pvp != null);
         }
 
         void Slot(int i, string playerId, string state)
@@ -259,49 +248,7 @@ namespace MummyEscape.UI.Screens
             _states[i].text = state;
         }
 
-        void InviteRow(DuoInvite invite)
-        {
-            UIKit.ListItem(_list, 110, null, out var h);
-            var name = UIKit.Label(h.transform, Loc.F("{0} veut faire équipe", invite.FromName), 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.FitText(name, 18);
-            UIKit.Size(name, -1, 0, 1);
-            UIKit.Size(UIKit.Button(h.transform, "Refuser", () => Respond(invite, false), 26), 80, 170);
-            UIKit.Size(UIKit.Button(h.transform, "Accepter", () => Respond(invite, true), 26, ButtonStyle.Primary), 80, 190);
-        }
-
-        void FriendRow(FriendInfo f)
-        {
-            UIKit.ListItem(_list, 100, null, out var h);
-            var name = UIKit.Label(h.transform, f.Name, 30, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
-            UIKit.FitText(name, 18);
-            UIKit.Size(name, -1, 0, 1);
-            UIKit.Size(UIKit.Button(h.transform, "Inviter", () => Invite(f), 26, ButtonStyle.Primary), 76, 180);
-        }
-
         // ------------------------------------------------------------------ actions
-
-        async void Invite(FriendInfo f)
-        {
-            if (_busy) return;
-            _busy = true;
-            var r = await App.Pvp.InviteDuoAsync(f.PlayerId, App.Online.PlayerName);
-            if (this == null) return;
-            _busy = false;
-            _info.text = r?.Ok == true ? Loc.F("Invitation envoyée à {0}.", f.Name) : TeamView.ErrorText(r?.Error);
-            Reload();
-        }
-
-        async void Respond(DuoInvite invite, bool accept)
-        {
-            if (_busy) return;
-            _busy = true;
-            var r = await App.Pvp.RespondDuoAsync(invite.Id, accept, App.Online.PlayerName);
-            if (this == null) return;
-            _busy = false;
-            _info.text = r?.Ok == true ? (accept ? Loc.F("Groupe formé avec {0} !", invite.FromName) : "") : TeamView.ErrorText(r?.Error);
-            if (r?.Ok == true && accept) App.Audio.Play(Sfx.Coin);
-            Reload();
-        }
 
         async void ToggleReady()
         {

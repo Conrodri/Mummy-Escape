@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using MummyEscape.Visual;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,6 +16,11 @@ namespace MummyEscape.UI
         const float Horizon = 0.42f;
         const float WallTile = 216f;
         static readonly Color Dim = new Color(0.55f, 0.52f, 0.5f);
+        /// <summary>Gaussian blur of the backdrop tiles (sigma, in source art pixels; a tile is 32): soft, the menu stands out.</summary>
+        const float BlurRadius = 0.6f;
+        /// <summary>The blurred copies are drawn at this multiple of the source size, bilinear-filtered.</summary>
+        const int BlurScale = 2;
+        static readonly Dictionary<Sprite, Sprite> Blurred = new Dictionary<Sprite, Sprite>();
 
         int _act;
 
@@ -85,9 +91,81 @@ namespace MummyEscape.UI
 
         static Image Tile(Transform parent, Sprite sprite, float size)
         {
-            var img = UIKit.Image(parent, sprite, Dim, false, "Tile"); // noloc
+            var img = UIKit.Image(parent, Blur(sprite), Dim, false, "Tile"); // noloc
             img.rectTransform.sizeDelta = new Vector2(size, size);
             return img;
+        }
+
+        /// <summary>
+        /// A blurred copy of a tile sprite, made once. Sampling wraps around the tile, so tiles laid edge to edge stay
+        /// seamless. Imported tiles are not CPU-readable: those go through a GPU copy first.
+        /// </summary>
+        static Sprite Blur(Sprite sprite)
+        {
+            if (sprite == null) return null;
+            if (Blurred.TryGetValue(sprite, out var done)) return done;
+            var r = sprite.textureRect;
+            int sw = (int)r.width, sh = (int)r.height, w = sw * BlurScale, h = sh * BlurScale;
+            var src = Read(sprite.texture, r);
+
+            var a = new Color[w * h];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    a[y * w + x] = src[(y / BlurScale) * sw + x / BlurScale];
+            var k = Kernel(BlurRadius * BlurScale);
+            var b = new Color[a.Length];
+            Pass(a, b, w, h, k, 1, 0);
+            Pass(b, a, w, h, k, 0, 1);
+
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Repeat };
+            tex.SetPixels(a);
+            tex.Apply(false, true);
+            return Blurred[sprite] = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), sprite.pixelsPerUnit * BlurScale, 0, SpriteMeshType.FullRect);
+        }
+
+        /// <summary>The sprite's pixels; a non-readable (imported) texture is copied through the GPU.</summary>
+        static Color[] Read(Texture2D tex, Rect r)
+        {
+            int w = (int)r.width, h = (int)r.height;
+            if (tex.isReadable) return tex.GetPixels((int)r.x, (int)r.y, w, h);
+            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB); // sRGB both ways: the colours come back as imported
+            var keep = RenderTexture.active;
+            Graphics.Blit(tex, rt, new Vector2(r.width / tex.width, r.height / tex.height), new Vector2(r.x / tex.width, r.y / tex.height));
+            RenderTexture.active = rt;
+            var copy = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            copy.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
+            RenderTexture.active = keep;
+            RenderTexture.ReleaseTemporary(rt);
+            var px = copy.GetPixels();
+            Destroy(copy);
+            return px;
+        }
+
+        static float[] Kernel(float sigma)
+        {
+            int n = Mathf.CeilToInt(sigma * 2.5f);
+            var k = new float[2 * n + 1];
+            float sum = 0f;
+            for (int i = -n; i <= n; i++) sum += k[i + n] = Mathf.Exp(-i * i / (2f * sigma * sigma));
+            for (int i = 0; i < k.Length; i++) k[i] /= sum;
+            return k;
+        }
+
+        /// <summary>One direction of the separable blur (dx, dy = 1, 0 or 0, 1), wrapping around the tile.</summary>
+        static void Pass(Color[] from, Color[] to, int w, int h, float[] k, int dx, int dy)
+        {
+            int n = k.Length / 2;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    var c = new Color(0, 0, 0, 0);
+                    for (int i = -n; i <= n; i++)
+                    {
+                        int sx = ((x + i * dx) % w + w) % w, sy = ((y + i * dy) % h + h) % h;
+                        c += from[sy * w + sx] * k[i + n];
+                    }
+                    to[y * w + x] = c;
+                }
         }
 
         static void Shade(RectTransform area, Color top, Color bottom)

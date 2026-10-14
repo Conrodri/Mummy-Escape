@@ -12,9 +12,14 @@ namespace MummyEscape.UI.Screens
         Text _stars, _coins, _gold;
         PassBanner _pass;
         Image _mummy, _mate, _chatDot;
-        Text _mateName;
-        Button _chat;
-        RectTransform _groupAction;
+        Text _mateName, _mateState, _myName, _myState, _inviteLabel, _badgeText;
+        Image _myGlow, _mateGlow, _badge;
+        Button _chat, _plus;
+        RectTransform _invite;
+        int _invites, _teamsRequest;
+        float _nextTeams;
+        string _shownPending;
+        const float TeamsSeconds = 10f, PlusSize = 120f;
         HomeScene _scene;
         RectTransform _stage;
         Text _online, _goal;
@@ -35,7 +40,7 @@ namespace MummyEscape.UI.Screens
             var layout = UIKit.Column(column, 14);
             layout.padding = new RectOffset(40, 40, 0, 0);
 
-            // Top bar: wallet chips on the left, settings on the right.
+            // Top bar: wallet chips on the left, chat, home backdrop and settings on the right.
             var top = UIKit.Row(column, 96, 14);
             top.childAlignment = TextAnchor.MiddleLeft;
             _stars = UIKit.Chip(top.transform, UIKit.Art.Star, "0");
@@ -43,6 +48,8 @@ namespace MummyEscape.UI.Screens
             // Golden scarabs: a tap opens the Treasure.
             _gold = UIKit.Chip(top.transform, UIKit.Art.GoldScarab, "0", TreasureScreen.GoldColor);
             UIKit.SameWidth(_stars, _coins, _gold);
+            // Three icon buttons leave each chip ~215 px: big numbers shrink instead of spilling over.
+            foreach (var chip in new[] { _stars, _coins, _gold }) UIKit.FitText(chip, 20);
             var goldPlate = _gold.transform.parent.gameObject;
             goldPlate.GetComponent<Image>().raycastTarget = true;
             goldPlate.AddComponent<Button>().onClick.AddListener(() => Router.Open<TreasureScreen>());
@@ -53,6 +60,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Place(_chatDot.rectTransform, 1, 1, 28, 28, -10, -10);
             _chatDot.enabled = false;
             Online.ChatState.Changed += () => { if (_chatDot != null) _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId); };
+            // The home backdrop, picked among the open acts.
+            UIKit.IconButton(top.transform, UISprites.Palette, () => Router.Open<HomeThemeDialog>().OnPicked(ApplyTheme), 92);
             UIKit.IconButton(top.transform, UISprites.Gear, () => Router.Open<SettingsScreen>(), 92);
 
             var title = UIKit.Title(column, "MUMMY\nRUSH", 150);
@@ -72,28 +81,39 @@ namespace MummyEscape.UI.Screens
             // Reserved room for the mummy; extra height goes to it too (flexible), the title shrinks first.
             var sle = UIKit.Size(_stage, 150, -1, -1, 1);
             sle.minHeight = 150;
-            _stage.gameObject.AddComponent<ResizeNotifier>().Resized = FitMummy;
+            _stage.gameObject.AddComponent<ResizeNotifier>().Resized = () => _fitPending = true; // fitted in Update: toggling objects inside a layout rebuild is not allowed
 
             _mummy = UIKit.Image(_stage, null, Color.white);
             _mummy.preserveAspect = true; // the outfit sprite is 32x40
-            var rt = _mummy.rectTransform;
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
-            // The teammate's mummy beside the player's (group of two), with his name under it.
-            _mate = UIKit.Image(_stage, null, Color.white);
+            Center(_mummy.rectTransform);
+            // The party lobby: the player in the middle, his name (and, in a group, his readiness) over his head;
+            // on his right a fixed slot, the teammate's mummy or a "+" to invite one.
+            _myGlow = Glow();
+            _mateGlow = Glow();
+            _myName = StageLabel(28, UIKit.Sand);
+            _myState = StageLabel(24, UIKit.Dim);
+            _mate = UIKit.Image(_stage, null, Color.white, true);
             _mate.preserveAspect = true;
-            var mt = _mate.rectTransform;
-            mt.anchorMin = mt.anchorMax = mt.pivot = new Vector2(0.5f, 0.5f);
-            _mateName = UIKit.Label(_stage, "", 26, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
-            _mateName.rectTransform.anchorMin = _mateName.rectTransform.anchorMax = _mateName.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            // The home backdrop, picked among the open acts (in the stage's corner: the top bar is full on narrow phones).
-            var theme = UIKit.IconAction(_stage, UISprites.Palette, "Thème", () => Router.Open<HomeThemeDialog>().OnPicked(ApplyTheme), 84);
-            UIKit.Place((RectTransform)theme.transform.parent.parent, 1f, 1f, 134, 144); // button → its slot → the action column
-            CornerPlate(theme);
-            // The group: a friend to play the 2v2 campaign and duels with, in the other corner.
-            var group = UIKit.IconAction(_stage, UISprites.Friends, "Groupe", () => Router.Open<GroupScreen>(), 84);
-            _groupAction = (RectTransform)group.transform.parent.parent;
-            UIKit.Place(_groupAction, 0f, 1f, 134, 144);
-            CornerPlate(group);
+            Center(_mate.rectTransform);
+            _mate.gameObject.AddComponent<Button>().onClick.AddListener(() => Router.Open<GroupScreen>());
+            _mateName = StageLabel(26, UIKit.Sand);
+            _mateState = StageLabel(24, UIKit.Dim);
+            _invite = UIKit.Rect("Invite", _stage); // noloc
+            Center(_invite);
+            _plus = UIKit.IconButton(_invite, UISprites.Plus, () => Router.Open<InviteSheet>(), PlusSize);
+            Center((RectTransform)_plus.transform);
+            // A round "+" like a lobby's empty spot, not a square tool button.
+            _plus.image.sprite = UISprites.Circle;
+            _plus.image.type = Image.Type.Simple;
+            _plus.image.pixelsPerUnitMultiplier = 1f;
+            _inviteLabel = UIKit.Label(_invite, "", 26, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            Center(_inviteLabel.rectTransform);
+            UIKit.FitText(_inviteLabel, 16);
+            _badge = UIKit.Plate(_invite, UIKit.Gold, 16, null, false, "Badge"); // noloc
+            Center(_badge.rectTransform);
+            _badgeText = UIKit.Label(_badge.transform, "", 22, UIKit.Ink, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Stretch(_badgeText.rectTransform, 6, 0, 6, 0);
+            UIKit.FitText(_badgeText, 14);
 
             // The dock: the pass, the next goal, the play button and the account line, framed together over the floor.
             var dock = UIKit.Panel(column, "Dock").transform; // noloc
@@ -150,7 +170,6 @@ namespace MummyEscape.UI.Screens
             MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
             // The rooms open along the campaign: hidden until then, celebrated once when they open.
             _chat.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Chat, App.Save.IsCompleted));
-            _groupAction.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted));
             int fresh = App.Save.TakeNewUnlocks() & (int)Feature.Duel; // the casino opens without fanfare: no popup toward a game of chance
             if (fresh != 0 && !IntroPending(App.Save)) Celebrate(fresh);
             StartCoroutine(App.Art.Warm(App.Save.FurthestUnlocked().Act)); // the next tomb's sprites, painted now
@@ -162,6 +181,23 @@ namespace MummyEscape.UI.Screens
             _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId);
             _ = Online.ChatState.RefreshAsync(App.Pvp);
             _ = Online.ChatState.SyncProfileAsync(App);
+            ReloadTeams();
+        }
+
+        /// <summary>The group and the invites received, as the server has them (the lobby slot follows).</summary>
+        async void ReloadTeams()
+        {
+            _nextTeams = Time.unscaledTime + TeamsSeconds;
+            if (App.Pvp == null) return;
+            int request = ++_teamsRequest;
+            var teams = await App.Pvp.GetTeamsAsync();
+            if (request != _teamsRequest || this == null) return;
+            if (teams == null || teams.Error != null) return; // keep what is shown, the next tick tries again
+            var duo = teams.Duos.Count > 0 ? teams.Duos[0] : null;
+            App.Session.SetGroup(duo);
+            _invites = teams.Invites.Count;
+            if (duo != null) InviteSheet.PendingInvite = null;
+            ShowMate();
         }
 
         /// <summary>" · ouvre les duels" when escaping this tomb opens a room (the goal card teases it).</summary>
@@ -245,53 +281,118 @@ namespace MummyEscape.UI.Screens
                 _ = App.Game.StartLevel(id);
             });
 
-        /// <summary>A dark plate under a corner button and its caption, so the word reads over the carved wall.</summary>
-        static void CornerPlate(Component action)
-        {
-            var back = UIKit.Plate(action.transform.parent.parent, new Color(0.1f, 0.07f, 0.05f, 0.8f), 22, UIKit.Rim, false, "Back"); // noloc
-            back.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-            UIKit.Stretch(back.rectTransform, -6, -6, -6, -6);
-            back.transform.SetAsFirstSibling();
-        }
+        bool _fitPending;
 
         void Update()
         {
-            if (_mummy == null || !_mummy.enabled) return;
+            if (_mummy == null) return;
+            if (_fitPending) { _fitPending = false; FitMummy(); }
+            if (App.Pvp != null && Time.unscaledTime >= _nextTeams) ReloadTeams();
+            if (InviteSheet.PendingInvite != _shownPending) ShowMate(); // an invite just sent from the sheet
+            if (!_mummy.enabled) return;
             float size = _mummy.rectTransform.sizeDelta.y;
-            bool duo = _mate.enabled;
-            _mummy.rectTransform.anchoredPosition = new Vector2(duo ? -size * 0.3f : 0, Mathf.Sin(Time.time * 1.6f) * 12f * size / 260f);
-            if (!duo) return;
+            _mummy.rectTransform.anchoredPosition = new Vector2(0, Mathf.Sin(Time.time * 1.6f) * 12f * size / 260f);
+            if (!_mate.enabled) return;
             float mate = _mate.rectTransform.sizeDelta.y;
-            _mate.rectTransform.anchoredPosition = new Vector2(size * 0.42f, -size * 0.1f + Mathf.Sin(Time.time * 1.6f + 1.2f) * 12f * mate / 260f);
-            _mateName.rectTransform.anchoredPosition = new Vector2(size * 0.42f, -size * 0.1f - mate * 0.55f);
+            _mate.rectTransform.anchoredPosition = new Vector2(SlotX(size), SlotY(size) + Mathf.Sin(Time.time * 1.6f + 1.2f) * 12f * mate / 260f);
         }
+
+        // The teammate's slot: right of the player, a step behind him.
+        static float SlotX(float size) => size * 0.78f;
+        static float SlotY(float size) => -size * 0.1f;
 
         /// <summary>The mummy fits the space left between the subtitle and the buttons (hidden when there is none).</summary>
         void FitMummy()
         {
             if (_mummy == null) return;
             // Grows with the room left (tall phones), never past a size where the pixel art turns into a poster.
-            float size = Mathf.Min(620f, _stage.rect.height * 0.8f, _stage.rect.width * 0.7f);
+            // Room is kept over the head for the name and the readiness, and on the right for the teammate's slot.
+            float size = Mathf.Min(620f, _stage.rect.height * 0.8f, _stage.rect.height - 190f, _stage.rect.width * 0.46f);
             bool show = size >= 100f;
-            _mummy.enabled = show;
-            if (!show) { _mate.enabled = _mateName.enabled = false; return; }
+            _mummy.enabled = _myGlow.enabled = _myName.enabled = show;
             _mummy.rectTransform.sizeDelta = new Vector2(size, size);
-            _mate.rectTransform.sizeDelta = new Vector2(size * 0.72f, size * 0.72f);
-            _mateName.rectTransform.sizeDelta = new Vector2(size * 0.9f, 36);
+            float mate = size * 0.72f, x = SlotX(size), y = SlotY(size), plus = size * 0.36f;
+            _mate.rectTransform.sizeDelta = new Vector2(mate, mate);
+            Put(_myGlow.rectTransform, 0, -size * 0.47f, size * 0.75f, size * 0.16f);
+            Put(_mateGlow.rectTransform, x, y - mate * 0.47f, mate * 0.75f, mate * 0.16f);
+            _plus.transform.localScale = Vector3.one * (plus / PlusSize);
+            ((RectTransform)_plus.transform).anchoredPosition = new Vector2(x, y);
+            Put(_inviteLabel.rectTransform, x, y + plus * 0.5f + 28, size * 0.6f, 40);
+            Put(_badge.rectTransform, x, y - plus * 0.5f - 30, size * 0.6f, 38);
             ShowMate();
         }
 
-        /// <summary>The group's other member, as he dresses, beside the player (nothing without a group).</summary>
+        /// <summary>
+        /// The lobby: the player's name (and readiness in a group) over his head, then on his right the teammate as he
+        /// dresses with his name and readiness, or the "+" to invite one. Everything hides with the mummy.
+        /// </summary>
         void ShowMate()
         {
+            _shownPending = InviteSheet.PendingInvite;
             var g = App.Session.Group;
+            bool shown = _mummy.enabled;
+            float size = _mummy.rectTransform.sizeDelta.y;
+            // Name on top, readiness under it, both just over the head (clear of the bobbing).
+            float head = HeadTop(App.Save.Loadout, size) + 36;
+            _myName.text = App.Online.PlayerName;
+            Put(_myName.rectTransform, 0, head + (g != null ? 34 : 0), size * 0.9f, 36);
+            _myState.enabled = shown && g != null;
+            Put(_myState.rectTransform, 0, head, size * 0.9f, 32);
+            if (g != null) _myState.text = State(g.IsReady(App.Online.PlayerId));
+            // The slot opens with the duels and the group.
+            bool slot = shown && Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted);
             string mate = g?.Members.Find(m => m != App.Online.PlayerId);
-            var look = mate == null ? null : g.LookOf(mate);
-            bool show = look != null && _mummy.enabled;
-            _mate.enabled = _mateName.enabled = show;
-            if (!show) return;
-            MummyAnimator.Show(_mate, App.Art, PvpSkins.Loadout(look));
-            _mateName.text = g.Names[g.Members.IndexOf(mate)];
+            bool duo = slot && mate != null;
+            _mate.enabled = _mateName.enabled = _mateState.enabled = _mateGlow.enabled = duo;
+            _invite.gameObject.SetActive(slot && !duo);
+            if (duo)
+            {
+                var look = PvpSkins.Loadout(g.LookOf(mate));
+                MummyAnimator.Show(_mate, App.Art, look); // the classic outfit until his look is known
+                int i = g.Members.IndexOf(mate);
+                _mateName.text = i < g.Names.Count ? g.Names[i] : "";
+                _mateState.text = State(g.IsReady(mate) || (App.Pvp != null && App.Pvp.IsDemo));
+                float top = SlotY(size) + HeadTop(look, size * 0.72f) + 36;
+                Put(_mateName.rectTransform, SlotX(size), top + 34, size * 0.6f, 36);
+                Put(_mateState.rectTransform, SlotX(size), top, size * 0.6f, 32);
+            }
+            else if (slot)
+            {
+                _inviteLabel.text = Loc.T(_shownPending != null ? "Invitation envoyée…" : "Inviter");
+                _badge.gameObject.SetActive(_invites > 0);
+                _badgeText.text = Loc.P(_invites, "{0} invitation", "{0} invitations");
+            }
+        }
+
+        /// <summary>Top of the head over the sprite's centre: the 32x40 outfit keeps its top quarter for a hat.</summary>
+        static float HeadTop(Loadout look, float size) =>
+            size * (look.Hat != null && look.Hat.Id != SkinCatalog.NoHatId ? 0.5f : 0.25f);
+
+        static string State(bool ready) => ready ? "<color=#E8C35A>" + Loc.T("Prêt") + "</color>" : Loc.T("Pas prêt");
+
+        static void Center(RectTransform rt) => rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+
+        static void Put(RectTransform rt, float x, float y, float w, float h)
+        {
+            rt.anchoredPosition = new Vector2(x, y);
+            rt.sizeDelta = new Vector2(w, h);
+        }
+
+        Text StageLabel(int size, Color color)
+        {
+            var t = UIKit.Label(_stage, "", size, color, TextAnchor.MiddleCenter, FontStyle.Bold);
+            Center(t.rectTransform);
+            UIKit.FitText(t, 16);
+            return t;
+        }
+
+        /// <summary>A soft pool of light under a slot, behind the mummies.</summary>
+        Image Glow()
+        {
+            var g = UIKit.Image(_stage, UISprites.RadialGlow, new Color(UIKit.Gold.r, UIKit.Gold.g, UIKit.Gold.b, 0.6f), false, "Glow"); // noloc
+            Center(g.rectTransform);
+            g.transform.SetAsFirstSibling();
+            return g;
         }
 
         /// <summary>Calls back when the layout resizes the rect it sits on.</summary>
