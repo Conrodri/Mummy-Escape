@@ -31,7 +31,7 @@ namespace MummyEscape.UI.Screens
         /// <summary>The ×10 tiles are dropping in; a tap shows them all at once.</summary>
         bool _revealing, _skipReveal;
         Button _spin, _spin10;
-        Text _spinLabel, _spin10Label;
+        Text _spinLabel, _spin10Label, _spinPrice, _spin10Price;
         int _tab;
         int _request;
         /// <summary>A wheel is turning: no other spin until it stops.</summary>
@@ -140,11 +140,14 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_spin, -1, -1, 1);
             _spinLabel = _spin.GetComponentInChildren<Text>();
             UIKit.FitText(_spinLabel, 20);
-            // A label is needed for the button to get its Text (Refresh writes the real one with the price).
+            // Each button is followed by its price as a chip (Refresh sets the currency and the amount).
+            _spinPrice = UIKit.Chip(buttons.transform, UIKit.Art.Scarab, "", UIKit.Gold, 72);
+            // A label is needed for the button to get its Text (Refresh writes the real one).
             _spin10 = UIKit.Button(buttons.transform, "×10", () => OnSpin(Casino.MultiSpins), 36, ButtonStyle.Primary); // noloc
             UIKit.Size(_spin10, -1, -1, 1);
             _spin10Label = _spin10.GetComponentInChildren<Text>();
             UIKit.FitText(_spin10Label, 20);
+            _spin10Price = UIKit.Chip(buttons.transform, UIKit.Art.Scarab, "", UIKit.Gold, 72);
         }
 
         public override void OnShow()
@@ -221,14 +224,25 @@ namespace MummyEscape.UI.Screens
             bool online = !seals || App.Pvp != null;
             int balance = seals ? d?.Seals ?? -1 : save.Data.Coins;
             int price10 = Casino.PriceOf(wheel, Casino.MultiSpins);
-            _spinLabel.text = !online ? Loc.T("Duels hors ligne")
-                            : seals ? Loc.F("Lancer · {0} sceaux", wheel.Price) : Loc.F("Lancer · {0} scarabées", wheel.Price);
-            _spin10Label.text = seals ? Loc.F("×10 · {0} sceaux (-10 %)", price10) : Loc.F("×10 · {0} scarabées (-10 %)", price10);
+            _spinLabel.text = Loc.T(online ? "Lancer" : "Duels hors ligne");
+            _spin10Label.text = Loc.T("×10 (-10 %)");
+            Price(_spinPrice, seals, wheel.Price, online && balance >= wheel.Price);
+            Price(_spin10Price, seals, price10, online && balance >= price10);
+            _spinPrice.transform.parent.gameObject.SetActive(online);
+            _spin10Price.transform.parent.gameObject.SetActive(online);
             _spin.interactable = !_spinning && online && balance >= wheel.Price;
             _spin10.gameObject.SetActive(online);
             _spin10.interactable = !_spinning && online && balance >= price10;
             _wheelNote.TryGetValue(wheel.Id, out var note);
             _result.text = note ?? "";
+        }
+
+        /// <summary>A spin price in the wheel's currency, red when the balance falls short.</summary>
+        static void Price(Text chip, bool seals, int price, bool afford)
+        {
+            chip.text = price.ToString();
+            chip.color = afford ? (seals ? UIKit.Turquoise : UIKit.Gold) : UIKit.Danger;
+            chip.transform.parent.Find("Icon").GetComponent<Image>().sprite = seals ? UISprites.Seal : UIKit.Art.Scarab;
         }
 
         void Zoom(SkinDef def, bool owned)

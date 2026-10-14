@@ -194,11 +194,18 @@ namespace MummyEscape.UI.Screens
             var name = UIKit.Label(card.transform, def.Name, 22, UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.FitText(name, 15);
             UIKit.Size(name, 58, 0);
-            string label = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.F("{0} dorés", ShopSale.GoldPrice(item, System.DateTime.UtcNow));
+            int price = ShopSale.GoldPrice(item, System.DateTime.UtcNow);
+            string label = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : price.ToString();
             var btn = UIKit.Button(card.transform, label, () => OnItem(item), 22, !worn ? ButtonStyle.Primary : ButtonStyle.Secondary);
             btn.interactable = !worn && !_busy;
-            UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
+            var text = UIKit.FitText(btn.GetComponentInChildren<Text>(), 16);
             UIKit.Size(btn, 66, 0);
+            if (!owned)
+            {
+                // The price as number + golden scarab (the card is too narrow for a chip beside the button).
+                text.rectTransform.offsetMin = new Vector2(64, text.rectTransform.offsetMin.y);
+                UIKit.Place(UIKit.Image(btn.transform, UIKit.Art.GoldScarab, Color.white, false, "Icon").rectTransform, 0f, 0.5f, 40, 40, 20, UISprites.PixelScale); // noloc
+            }
         }
 
         void OfferRow(ScarabOffer offer)
@@ -209,9 +216,10 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(icon, 80, 80, 0);
             var label = UIKit.Label(h.transform, Loc.F("{0} scarabées", offer.Scarabs), 34, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
             UIKit.Size(label, -1, -1, 1);
-            var btn = UIKit.Button(h.transform, Loc.F("{0} dorés", offer.Gold), () => OnOffer(offer), 30, ButtonStyle.Primary);
+            UIKit.Chip(h.transform, UIKit.Art.GoldScarab, offer.Gold.ToString(), App.Save.Gold >= offer.Gold ? GoldColor : UIKit.Danger, 72);
+            var btn = UIKit.Button(h.transform, "Échanger", () => OnOffer(offer), 30, ButtonStyle.Primary);
             btn.interactable = !_busy;
-            UIKit.Size(btn, 84, 260, 0);
+            UIKit.Size(btn, 84, 220, 0);
         }
 
         async void BuyPack(GoldPack pack)

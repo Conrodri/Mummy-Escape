@@ -133,9 +133,11 @@ namespace MummyEscape.UI.Screens
             _tag = UIKit.Input(_list, "Tag (2 à 4 lettres)");
             _tag.characterLimit = TeamConfig.GuildTagMax;
             bool afford = App.Save.Data.Coins >= TeamConfig.GuildCreationScarabs;
-            var create = UIKit.Button(_list, Loc.F("Fonder ({0} scarabées)", TeamConfig.GuildCreationScarabs), Create, 32, ButtonStyle.Primary);
-            UIKit.Size(create, 96);
+            var createRow = UIKit.Row(_list, 96, 12);
+            var create = UIKit.Button(createRow.transform, "Fonder", Create, 32, ButtonStyle.Primary);
+            UIKit.Size(create, -1, -1, 1);
             create.interactable = afford;
+            UIKit.Chip(createRow.transform, UIKit.Art.Scarab, TeamConfig.GuildCreationScarabs.ToString(), afford ? UIKit.Gold : UIKit.Danger, 72);
             if (!afford)
             {
                 var poor = UIKit.Label(_list, Loc.F("Il te faut {0} scarabées (tu en as {1}).", TeamConfig.GuildCreationScarabs, App.Save.Data.Coins), 24, UIKit.Dim);
