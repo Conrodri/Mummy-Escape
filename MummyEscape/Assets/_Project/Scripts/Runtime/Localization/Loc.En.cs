@@ -1530,6 +1530,16 @@ namespace MummyEscape
             ["{0} choisit le tombeau, tu le suis."] = "{0} picks the tomb, you follow.",
             ["Légendaire garanti au plus tard au {0}e tour"] = "A legendary guaranteed by spin {0} at the latest",
             ["Exclusivité du casino : 0,5 % de chance à chaque tour de roue, ou achat direct pour {0} sceaux. Bandages animés."] = "Casino exclusive: 0.5% chance on every spin, or buy it outright for {0} seals. Animated bandages.",
+            // 2v2 campaign skins
+            ["Bandelettes jumelles"] = "Twin bandages",
+            ["Ankh des deux souffles"] = "Ankh of the two breaths",
+            ["Diadème du duo"] = "Duo's diadem",
+            ["Sandales des deux rives"] = "Sandals of the two banks",
+            ["Pièce de la campagne 2v2, en vente aux scarabées dès {0} étoiles 2v2."] = "2v2 campaign piece, sold for scarabs from {0} 2v2 stars.",
+            ["{0} 2v2"] = "{0} 2v2",
+            ["{0} étoiles 2v2 requises"] = "{0} 2v2 stars needed",
+            ["Débloqué à {0} étoiles 2v2 (tu en as {1})."] = "Unlocked at {0} 2v2 stars (you have {1}).",
+            ["Il te faut plus d'étoiles 2v2 pour cette pièce : gagne-les dans la campagne 2v2."] = "You need more 2v2 stars for this piece: earn them in the 2v2 campaign.",
         };
     }
 }

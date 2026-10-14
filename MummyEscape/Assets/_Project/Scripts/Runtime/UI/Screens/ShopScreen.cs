@@ -38,6 +38,7 @@ namespace MummyEscape.UI.Screens
         static Color LegendaryColor => CasinoScreen.LegendaryColor;
         internal static readonly Color HalloweenColor = new Color32(255, 140, 40, 255);
         internal static readonly Color TowerColor = new Color32(170, 140, 255, 255);
+        internal static readonly Color CoopColor = new Color32(90, 230, 210, 255);
 
         // The collections by what pays for them; the sets that are won, not sold, last.
         static readonly string[] SetCategories = { "Scarabées", "Scarabées dorés", "Sceaux", "Récompenses" };
@@ -239,13 +240,20 @@ namespace MummyEscape.UI.Screens
         bool Buyable(SkinDef s)
         {
             var save = App.Save;
-            return s.Price > 0 && !save.Data.OwnedSkins.Contains(s.Id) && save.TotalStars >= s.MinStars && save.Data.Coins >= ScarabPrice(s);
+            return s.Price > 0 && !save.Data.OwnedSkins.Contains(s.Id) && save.TotalStars >= s.MinStars && !CoopLocked(s) && save.Data.Coins >= ScarabPrice(s);
         }
+
+        /// <summary>The player's 2v2 stars as the server last sent them (0 before the profile is loaded).</summary>
+        int CoopStars => CoopLogic.TotalStars(App.Session.Profile?.Data?.CoopStars);
+
+        /// <summary>A 2v2 piece the player lacks the 2v2 stars for.</summary>
+        bool CoopLocked(SkinDef s) => CoopStars < CoopSkins.MinStars(s);
 
         int BuyableIn(CosmeticSlot slot)
         {
             int n = 0;
             foreach (var s in SkinCatalog.InSlot(slot)) if (Buyable(s)) n++;
+            foreach (var s in CoopSkins.InSlot(slot)) if (Buyable(s)) n++;
             foreach (var s in HalloweenSkins.InShop(slot, App.Save.Data.OwnedSkins, DateTime.UtcNow)) if (Buyable(s)) n++;
             return n;
         }
@@ -344,6 +352,7 @@ namespace MummyEscape.UI.Screens
             // One continuous grid, classics first then act after act (each card wears its act's tag).
             var items = new List<SkinDef>(SkinCatalog.InSlot(slot));
             items.Sort((a, b) => a.Theme != b.Theme ? a.Theme.CompareTo(b.Theme) : a.Price.CompareTo(b.Price));
+            items.AddRange(CoopSkins.InSlot(slot)); // sold all year, after the act pieces
             // Duel rewards, casino legendaries, treasure exclusives and pass rewards the player owns come last, ready to wear.
             items.AddRange(PvpSkins.Owned(save.Data.OwnedSkins, slot));
             if (slot == CosmeticSlot.Color) items.AddRange(LegendarySkins.OwnedScarabLegendaries(save.Data.OwnedSkins));
@@ -390,6 +399,7 @@ namespace MummyEscape.UI.Screens
             if (item.Legendary) return (Loc.T("Légendaire"), LegendaryColor);
             if (item.Badge == HalloweenSkins.Badge) return (Loc.T(item.Badge), HalloweenColor);
             if (item.Badge == TowerSkins.Badge) return (Loc.T(item.Badge), TowerColor);
+            if (item.Badge == CoopSkins.Badge) return (Loc.T(item.Badge), CoopColor);
             if (item.Badge != null) return (Loc.T(item.Badge), TreasureScreen.GoldColor);
             if (item.Pvp) return (Loc.T("Duel"), UIKit.Turquoise);
             if (item.Theme == 0) return (Loc.T("Classique"), new Color32(200, 186, 160, 255));
@@ -419,6 +429,7 @@ namespace MummyEscape.UI.Screens
             if (item.Legendary) return Loc.T("Exclusivité du casino ou du pass : bandages animés.");
             if (item.Badge == HalloweenSkins.Badge) return HalloweenDates;
             if (item.Badge == TowerSkins.Badge) return Loc.F("Récompense de l'étage {0} de la tour de défi.", TowerSkins.FloorOf(item.Id));
+            if (item.Badge == CoopSkins.Badge) return Loc.F("Pièce de la campagne 2v2, en vente aux scarabées dès {0} étoiles 2v2.", CoopSkins.MinStars(item));
             if (item.Badge != null) return Loc.T("Exclusivité du Trésor et du Pass de saison.");
             if (item.Pvp) return Loc.T("Récompense des duels.");
             if (item.Theme == 0) return Loc.T("Pièce classique, toujours en vente.");
@@ -487,22 +498,27 @@ namespace MummyEscape.UI.Screens
             var save = App.Save;
             bool owned = save.Data.OwnedSkins.Contains(item.Id);
             bool worn = save.IsWorn(item.Id);
-            bool locked = !owned && save.TotalStars < item.MinStars;
+            int coopMin = CoopSkins.MinStars(item);
+            bool coopLocked = !owned && CoopStars < coopMin;
+            bool locked = !owned && save.TotalStars < item.MinStars || coopLocked;
             bool affordable = !locked && save.Data.Coins >= ScarabPrice(item);
             var (tag, color) = TagOf(item);
 
             Sprite icon; string price; Color priceColor;
             if (worn) { icon = UISprites.Check; price = Loc.T("Équipé"); priceColor = UIKit.Turquoise; }
             else if (owned) { icon = null; price = Loc.T("Possédé"); priceColor = UIKit.Sand; }
+            else if (coopLocked) { icon = UIKit.Art.Star; price = Loc.F("{0} 2v2", coopMin); priceColor = UIKit.Dim; }
             else if (locked) { icon = UIKit.Art.Star; price = item.MinStars.ToString(); priceColor = UIKit.Dim; }
             else { icon = UIKit.Art.Scarab; price = ScarabPrice(item).ToString(); priceColor = affordable ? UIKit.Gold : UIKit.Danger; }
 
             var card = Card(parent, item, tag, color, worn, locked, icon, price, priceColor, () =>
             {
                 string action = worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper")
+                              : coopLocked ? Loc.F("{0} étoiles 2v2 requises", coopMin)
                               : locked ? Loc.F("{0} étoiles requises", item.MinStars)
                               : affordable ? Loc.F("Acheter · {0} scarabées", ScarabPrice(item)) : Loc.F("Il te faut {0} scarabées", ScarabPrice(item));
-                string detail = Origin(item) + (locked ? "\n" + Loc.F("Débloqué à {0} étoiles (tu en as {1}).", item.MinStars, save.TotalStars) : "");
+                string detail = Origin(item) + (coopLocked ? "\n" + Loc.F("Débloqué à {0} étoiles 2v2 (tu en as {1}).", coopMin, CoopStars)
+                                              : locked ? "\n" + Loc.F("Débloqué à {0} étoiles (tu en as {1}).", item.MinStars, save.TotalStars) : "");
                 Router.Open<ItemZoomScreen>().Show(item, tag, color, detail, action,
                     !worn && (owned || affordable) ? () => OnItem(item) : (Action)null);
             });

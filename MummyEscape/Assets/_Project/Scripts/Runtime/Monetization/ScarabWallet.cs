@@ -52,6 +52,7 @@ namespace MummyEscape.Monetization
             {
                 case "SCARABS": return Loc.T("Pas assez de scarabées."); // noloc
                 case "STARS": return Loc.T("Il te faut plus d'étoiles pour cette pièce."); // noloc
+                case "COOP_STARS": return Loc.T("Il te faut plus d'étoiles 2v2 pour cette pièce : gagne-les dans la campagne 2v2."); // noloc
                 case "OFFLINE": return Loc.T("Les scarabées sont gardés en ligne : connecte-toi pour les dépenser."); // noloc
                 default: return GoldWallet.ErrorText(code);
             }
