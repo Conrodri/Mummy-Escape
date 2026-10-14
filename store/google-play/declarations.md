@@ -15,11 +15,11 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
 - Catégorie : **Jeu**.
 - Violence : **pas de violence réaliste, pas de sang**. La momie (personnage fantastique en pixel art) peut perdre la partie sur des pièges (pics, flammes) : violence fantastique très légère, sans représentation de blessure.
 - Peur : **non** (ambiance sombre, pas de contenu effrayant).
-- Sexualité, langage grossier, drogues, alcool, tabac, jeux d'argent : **non**.
+- Sexualité, langage grossier, drogues, alcool, tabac : **non**. Jeux d'argent : **jeu qui utilise une devise et verse des récompenses dans cette devise** (la roue des scarabées rend en moyenne la moitié de la mise en scarabées).
 - Interactions entre utilisateurs : **oui**. Pseudonymes publics (classements, duels), ajout d'amis par code et **tchat** (global, guilde, messages privés entre amis) avec filtre de mots, blocage et signalement. Canal global fermé aux mineurs.
 - Partage de la position : **non**. Achats numériques : **oui** (scarabées dorés, pass).
 - Objets aléatoires achetables : **oui** (roue des scarabées : les tours se paient en scarabées, monnaie qui s'obtient aussi avec de l'argent réel). Pas de mise ni de gain d'argent réel. La roue est désactivée en Belgique.
-- Résultat attendu : **PEGI 3 ou 7 / ESRB Everyone**.
+- Résultat obtenu (questionnaire du 14 octobre 2026) : PEGI 3, ESRB Tout public, USK 0, IARC 3+, mais ACB 18+ (jeux d'argent simulés), DGSC 15, Gmedia 16, ClassInd 14.
 
 ## Public cible et contenu
 - Tranche d'âge : **13 ans et plus** (13-15, 16-17, 18+). Ne pas cocher les tranches de moins de 13 ans : elles imposent le programme Familles (SDK certifiés, politique enfants, etc.).
@@ -37,7 +37,7 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite.html`
 - Toutes les données sont-elles chiffrées en transit ? **Oui** (HTTPS, Unity Gaming Services).
 - Les utilisateurs peuvent-ils demander la suppression de leurs données ? **Oui** : dans l'application (Paramètres › Confidentialité) et sur le web.
 - URL de suppression du compte : `https://conrodri.github.io/Mummy-Escape/suppression-compte.html`
-- Création de compte : **Nom d'utilisateur et mot de passe**. Le compte se supprime dans l'application.
+- Création de compte : **OAuth** (Google Play Games). Le compte se supprime dans l'application.
 
 ### Types de données (toutes : *collectées*, *non partagées*, traitement *facultatif* : le joueur peut refuser le mode en ligne)
 | Catégorie Play | Donnée | Finalités | Éphémère ? |
@@ -66,6 +66,7 @@ Exceptions, **collectées et partagées** (SDK AdMob, seulement quand le joueur 
 |---|---|---|---|
 | Appareil ou autres identifiants | Identifiant publicitaire | Publicité ou marketing, Analyse, Prévention des fraudes | Oui |
 | Infos sur l'appli et performances › Diagnostics | Informations techniques sur l'appareil | Publicité ou marketing, Prévention des fraudes | Oui |
+| Activité dans l'appli › Interactions avec l'appli | Interactions avec la pub | Publicité ou marketing, Prévention des fraudes | Oui |
 | Position › Position approximative | Déduite de l'adresse IP par AdMob | Publicité ou marketing, Prévention des fraudes | Oui |
 
 « Partagées » = **non** : Unity agit comme sous-traitant pour notre compte, ce que Google n'assimile pas à un partage.
