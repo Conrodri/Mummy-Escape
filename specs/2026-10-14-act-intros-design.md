@@ -15,7 +15,7 @@ pas : pas de nouvelle `GeneratorVersion`, pas de ré-export des leaderboards.
 
 ## Contenu des intros
 
-Ids `LevelId(Easy, act, 0)` (affiché « 1-0 »…). Couloirs d'un seul étage, comme le Facile.
+Ids `LevelId(Easy, act, 0)` (affiché « Intro 0-1 »… : 0-x, x = numéro de l'acte). Couloirs d'un seul étage, comme le Facile.
 
 | Intro | Leçons |
 |---|---|

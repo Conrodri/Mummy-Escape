@@ -29,7 +29,7 @@ namespace MummyEscape.Core
         {
             new[]
             {
-                L(0, 2, "Avance vers la droite, une case à la fois.\nGlisser, croix ou joystick : choisis dans les Réglages."),
+                L(0, 2, "Avance vers la droite, une case à la fois.\nLa sortie est au bout du couloir."),
                 L(3, 5, "Ta torche n'éclaire que les cases voisines :\nretiens bien ce que tu as vu."),
                 L(6, 10, "Porte fermée : marche sur la dalle\ndu renfoncement pour l'ouvrir."),
                 L(11, 15, "Des pics ! Chacun coûte un ankh.\nJuste à côté, appuie sur « Désamorcer »."),
