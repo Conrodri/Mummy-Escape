@@ -206,7 +206,7 @@ namespace MummyEscape.Tests
         /// The ideal route, one action every <paramref name="gapMs"/> ms, or later when the game is still animating the
         /// previous one (a portal, a trap: <see cref="RunTiming"/>).
         /// </summary>
-        static List<RunInput> Stamp(Level level, IEnumerable<PlayerAction> actions, int gapMs, int startMs = 500)
+        internal static List<RunInput> Stamp(Level level, IEnumerable<PlayerAction> actions, int gapMs, int startMs = 500)
         {
             var inputs = new List<RunInput>();
             var s = Rules.Initial(level);
@@ -222,7 +222,7 @@ namespace MummyEscape.Tests
         }
 
         /// <summary>A finished run as the game sends it: the clock stops on the last action.</summary>
-        static RunSubmission Finish(string matchId, List<RunInput> inputs) => new RunSubmission
+        internal static RunSubmission Finish(string matchId, List<RunInput> inputs) => new RunSubmission
         {
             MatchId = matchId, Outcome = RunOutcome.Finished, Progress = 1, Inputs = inputs,
             TimeMs = RunActions.MsOf(inputs[inputs.Count - 1].Tick),

@@ -279,6 +279,7 @@ namespace MummyEscape.Pvp
             {
                 gained = abandoned ? 0 : DuelBookkeeping.RecordDuelPlayed(d, run.TimeMs, utc, isTop100);
                 gained += DuelBookkeeping.ApplyResult(d, other.PlayerId, other.Elo, result);
+                CountDuel(d, result);
                 d.Ranked = true;
             });
             done.EloAfter = data.Elo;

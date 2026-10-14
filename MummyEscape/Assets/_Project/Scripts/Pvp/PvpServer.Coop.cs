@@ -55,6 +55,8 @@ namespace MummyEscape.Pvp
                 response.TotalStars = CoopLogic.TotalStars(d.CoopStars);
                 var w = WalletOf(d);
                 if (response.FirstClear && w.ScarabsOpen) w.Scarabs += CoopConfig.FirstClearScarabs;
+                // Each of the two players sends the clear: each counts it for himself.
+                CountQuest(d, QuestKind.DuoPlay);
                 response.Wallet = w;
             });
             return response;

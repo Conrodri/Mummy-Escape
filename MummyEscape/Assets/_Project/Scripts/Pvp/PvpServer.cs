@@ -251,11 +251,13 @@ namespace MummyEscape.Pvp
             {
                 gained = abandoned ? 0 : DuelBookkeeping.RecordDuelPlayed(d, durationMs, utc, isTop100);
                 gained += DuelBookkeeping.ApplyResult(d, ghost.PlayerId, oppEloBefore, resultForMe);
+                CountDuel(d, resultForMe);
                 d.Ranked = true;
             });
             var theirs = bot ? null : await Update(ghost.PlayerId, d =>
             {
                 DuelBookkeeping.ApplyResult(d, me, myEloBefore, DuelResolver.Invert(resultForMe));
+                CountDuel(d, DuelResolver.Invert(resultForMe));
                 d.Ranked = true;
             });
             await _store.SubmitEloAsync(me, mine.Elo);

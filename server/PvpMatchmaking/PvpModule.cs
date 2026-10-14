@@ -327,6 +327,17 @@ namespace MummyEscape.Pvp.Server
         public Task<WalletResponse> SubmitSoloRuns(IExecutionContext ctx, List<SoloRunReport> runs) =>
             Server(ctx).SubmitSoloRunsAsync(ctx.PlayerId, runs);
 
+        // --- Daily and weekly quests
+
+        [CloudCodeFunction("GetQuests")]
+        public Task<QuestResponse> GetQuests(IExecutionContext ctx) => Server(ctx).GetQuestsAsync(ctx.PlayerId);
+
+        [CloudCodeFunction("VisitQuest")]
+        public Task<QuestResponse> VisitQuest(IExecutionContext ctx, string id) => Server(ctx).VisitQuestAsync(ctx.PlayerId, id);
+
+        [CloudCodeFunction("ClaimQuest")]
+        public Task<QuestResponse> ClaimQuest(IExecutionContext ctx, string id) => Server(ctx).ClaimQuestAsync(ctx.PlayerId, id);
+
         // --- Duel en direct
 
         /// <summary>Crée le duel de deux joueurs de la même ligue qui se sont trouvés dans un salon (l'hôte l'appelle).</summary>

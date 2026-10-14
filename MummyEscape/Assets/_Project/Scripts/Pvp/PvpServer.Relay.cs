@@ -254,6 +254,11 @@ namespace MummyEscape.Pvp
             });
             if (!settledNow) return match;
             await RecordRelayAsync(match);
+            // Judged once: a 2v2 game for every human of both duos.
+            foreach (var side in new[] { match.A, match.B })
+                if (!side.Bot)
+                    foreach (var r in side.Runners)
+                        if (!r.Bot && IsHuman(r.PlayerId)) await Update(r.PlayerId, d => CountQuest(d, QuestKind.DuoPlay));
             if (duoA != null) await SettleRelayDuoAsync(duoA.Id, eloA + match.EloDeltaA, match.Result);
             if (duoB != null) await SettleRelayDuoAsync(duoB.Id, eloB + match.EloDeltaB, DuelResolver.Invert(match.Result));
             var winners = match.Result == DuelResult.Win ? match.A : match.Result == DuelResult.Loss ? match.B : null;

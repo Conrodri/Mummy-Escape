@@ -49,9 +49,13 @@ namespace MummyEscape.Pvp
             var data = await Update(me, d =>
             {
                 var w = WalletOf(d);
-                // A run counts once: its XP, and its scarabs (see ScarabsOf).
+                // A run counts once: its XP, its scarabs (see ScarabsOf) and its escape for the quests.
                 foreach (var (run, xp, result) in replays)
-                    if (AddXp(w, season, "run:" + run.Id, xp)) w.Scarabs += ScarabsOf(w, run, result); // noloc
+                    if (AddXp(w, season, "run:" + run.Id, xp)) // noloc
+                    {
+                        w.Scarabs += ScarabsOf(w, run, result);
+                        if (result?.Won == true) CountQuest(d, run.EndlessMode >= 0 ? QuestKind.EndlessWin : QuestKind.CampaignWin);
+                    }
             });
             return new WalletResponse { Wallet = WalletOf(data) };
         }

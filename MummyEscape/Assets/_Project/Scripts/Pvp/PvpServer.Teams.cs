@@ -477,7 +477,8 @@ namespace MummyEscape.Pvp
             var mySide = mineA ? battle.A : battle.B;
             int slotResult = battle.SlotResults[pending.Slot];
             int delta = battle.Applied ? (mineA ? battle.EloDeltaA : battle.EloDeltaB) : 0;
-            var data = await Update(me);
+            // A round run stored for the first time counts as a duel played (its round may be decided later).
+            var data = recorded ? await Update(me, d => CountQuest(d, QuestKind.DuelPlay)) : await Update(me);
             return new SubmitRunResponse
             {
                 Resolved = recorded && slotResult >= 0,

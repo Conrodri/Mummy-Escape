@@ -13,7 +13,7 @@ générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne 
   `GetChat`, `SendChat`, `GetChatInbox`, `BlockChat`, `SyncChatProfile`, `ReportChat`, `ShareReplay`, `GetSharedReplay`,
   `RefillPvpEnergy`, `GetWallet`, `VerifyPurchase`, `BuyPass`, `BuyTiers`, `BuyScarabs`, `BuyGoldItem`, `ClaimPassRewards`,
   `OpenScarabs`, `BuyScarabPiece`, `BuyScarabSet`, `SpinScarabWheel`, `BuyWheelLegendary`,
-  `ExportPvpData`, `DeletePvpData` ;
+  `GetQuests`, `VisitQuest`, `ClaimQuest`, `ExportPvpData`, `DeletePvpData` ;
 - `CloudSavePvpStore.cs` : le stockage (Cloud Save, Leaderboards) ;
 - `GooglePlayVerifier.cs` : la vérification des achats Google Play (API Android Publisher).
 
@@ -110,6 +110,16 @@ une fois), le pass (`ClaimPassRewards`), le premier passage d'un tombeau 2v2 (`S
 (`BuyScarabs`). Toute dépense passe par lui : `BuyScarabPiece`, `BuyScarabSet` (collection d'un acte à -20 %),
 `SpinScarabWheel`, `BuyWheelLegendary` et `CreateGuild` (500). Les prix sont ceux de `Pvp/ScarabShop.cs`, que le catalogue
 du jeu lit aussi. Erreurs : `CLOSED` (pas encore reporté), `SCARABS` (il en manque), `STARS` (étoiles de l'acte manquantes).
+
+## Quêtes
+
+Les quêtes du jour (remises à zéro à 00:00 UTC) et la quête de la semaine (lundi 00:00 UTC) sont dans
+`PlayerPvpData.Quests` (`Pvp/Quests.cs`). Le serveur compte lui-même ce qu'il vérifie : niveau de campagne ou tombeau sans
+fin réussi (`SubmitSoloRuns`, une fois par course), duel 1v1 jugé et gagné (duel asynchrone, en direct, contre un bot ;
+une manche de combat de guilde compte comme duel joué), partie 2v2 (tombeau de la campagne 2v2 `SubmitCoop`, relais
+jugé). Les visites sont signalées par le téléphone (`VisitQuest`). `ClaimQuest` paie une quête terminée une fois (XP du
+pass, scarabées, sceaux, or) ; erreurs `UNKNOWN_QUEST`, `NOT_DONE`, `CLAIMED`, et `CLOSED` pour des scarabées pas encore
+reportés (la quête reste à réclamer).
 
 ## Énergie
 
