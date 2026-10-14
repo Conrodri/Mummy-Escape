@@ -14,12 +14,25 @@ namespace MummyEscape.Tests
         static readonly DateTime Wednesday = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
         static DateTime _now;
 
-        static (PvpServer, MemoryPvpStore) NewServer()
+        /// <summary>Noon of the first day of the week of <see cref="Wednesday"/> whose deal has these quests.</summary>
+        static DateTime DayWith(params string[] ids)
+        {
+            for (int i = 0; i < 7; i++)
+            {
+                var t = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc).AddDays(i);
+                var today = Quests.Today(Quests.DayOf(t));
+                if (Array.TrueForAll(ids, id => new List<QuestDef>(today).Contains(Q(id)))) return t;
+            }
+            Assert.Fail("no day of the week deals " + string.Join(", ", ids));
+            return default;
+        }
+
+        static (PvpServer, MemoryPvpStore) NewServer(params string[] need)
         {
             var store = new MemoryPvpStore();
             store.SoloStars["alice"] = 40;
             int seed = 3003;
-            _now = Wednesday;
+            _now = DayWith(need);
             return (new PvpServer(store, () => _now, () => seed++), store);
         }
 
@@ -35,6 +48,21 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Today_Deals2Pve_2Pvp_1Visit_TheSameForADay()
+        {
+            for (int i = 0; i < 30; i++)
+            {
+                string day = Quests.DayOf(Wednesday.AddDays(i));
+                var today = new List<QuestDef>(Quests.Today(day));
+                Assert.AreEqual(2, today.FindAll(q => q.Group == QuestGroup.Pve).Count, day);
+                Assert.AreEqual(2, today.FindAll(q => q.Group == QuestGroup.Pvp).Count, day);
+                Assert.AreEqual(1, today.FindAll(q => q.Group == QuestGroup.Visit).Count, day);
+                Quests.Today(Quests.DayOf(Wednesday));
+                CollectionAssert.AreEqual(today, Quests.Today(day), "dealt again the same");
+            }
+        }
+
+        [Test]
         public void Days_AndWeeks_AreUtc_WeeksStartOnMonday()
         {
             Assert.AreEqual("2026-10-14", Quests.DayOf(Wednesday));
@@ -47,6 +75,7 @@ namespace MummyEscape.Tests
         [Test]
         public void Roll_ResetsTheDay_AtMidnight_AndTheWeek_OnMonday()
         {
+            var Wednesday = DayWith("duel_play");
             var b = new QuestBook();
             Quests.Add(b, QuestKind.DuelPlay, 2, Wednesday);
             b.Claimed.Add("duel_win");
@@ -70,6 +99,7 @@ namespace MummyEscape.Tests
         [Test]
         public void Add_CountsItsKind_CappedAtTheTarget_AndTellsWhatBecameDone()
         {
+            var Wednesday = DayWith(Quests.VisitSale);
             var b = new QuestBook();
             Assert.IsEmpty(Quests.Add(b, QuestKind.CampaignWin, 2, Wednesday));
             Assert.AreEqual(2, Quests.CountOf(b, Q("campaign_win")));
@@ -100,10 +130,11 @@ namespace MummyEscape.Tests
             {
                 Assert.IsFalse(Quests.IsDone(b, Quests.Weekly));
                 var t = monday.AddDays(day);
+                last = new List<QuestDef>();
                 foreach (var kind in new[] { QuestKind.CampaignWin, QuestKind.EndlessWin, QuestKind.DuelPlay, QuestKind.DuelWin, QuestKind.DuoPlay })
-                    Quests.Add(b, kind, 10, t);
-                Quests.Visit(b, Quests.VisitSale, t);
-                last = Quests.Visit(b, Quests.VisitDuoBoard, t);
+                    last.AddRange(Quests.Add(b, kind, 10, t));
+                last.AddRange(Quests.Visit(b, Quests.VisitSale, t));
+                last.AddRange(Quests.Visit(b, Quests.VisitDuoBoard, t));
             }
             Assert.IsTrue(Quests.IsDone(b, Quests.Weekly), "five days");
             Assert.IsTrue(last.Contains(Quests.Weekly), "became done with the last daily");
@@ -112,9 +143,37 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public async Task WeeklyGames_CountPveAndPvpGames_PaidInScarabsAndSeals()
+        {
+            var b = new QuestBook();
+            var monday = new DateTime(2026, 10, 12, 8, 0, 0, DateTimeKind.Utc);
+            Quests.Add(b, QuestKind.CampaignPlay, 30, monday);
+            Quests.Add(b, QuestKind.CampaignWin, 30, monday);
+            Quests.Add(b, QuestKind.EndlessWin, 19, monday.AddDays(2));
+            Assert.AreEqual(49, Quests.CountOf(b, Q("weekly_pve")), "campaign runs and endless escapes, a win not twice");
+            Assert.AreEqual("weekly_pve", Quests.Add(b, QuestKind.EndlessWin, 1, monday.AddDays(3)).Find(q => q.Weekly)?.Id);
+            Quests.Add(b, QuestKind.DuelPlay, 20, monday);
+            Quests.Add(b, QuestKind.DuelWin, 20, monday);
+            Quests.Add(b, QuestKind.DuoPlay, 10, monday.AddDays(6));
+            Assert.AreEqual(30, Quests.CountOf(b, Q("weekly_pvp")), "duels and 2v2 games, a win not twice");
+            Quests.Roll(b, monday.AddDays(7));
+            Assert.AreEqual(0, Quests.CountOf(b, Q("weekly_pvp")), "a new week");
+
+            var (server, store) = NewServer();
+            await server.OpenScarabsAsync("alice", new ScarabSeed());
+            await store.UpdatePlayerAsync("alice", d =>
+            {
+                Quests.Add(d.Quests = new QuestBook(), QuestKind.CampaignPlay, 50, _now);
+                Quests.Add(d.Quests, QuestKind.DuelPlay, 30, _now);
+            });
+            Assert.AreEqual(150, (await server.ClaimQuestAsync("alice", "weekly_pve")).Wallet.Scarabs);
+            Assert.AreEqual(25, (await server.ClaimQuestAsync("alice", "weekly_pvp")).Seals);
+        }
+
+        [Test]
         public async Task Claim_PaysEachRewardOnce()
         {
-            var (server, store) = NewServer();
+            var (server, store) = NewServer("campaign_win", "duel_play", "endless_win");
             await server.OpenScarabsAsync("alice", new ScarabSeed());
             Assert.AreEqual("UNKNOWN_QUEST", (await server.ClaimQuestAsync("alice", "nope")).Error);
             Assert.AreEqual("NOT_DONE", (await server.ClaimQuestAsync("alice", "duel_play")).Error);
@@ -123,9 +182,13 @@ namespace MummyEscape.Tests
             {
                 d.Quests = new QuestBook();
                 AllDailies(d.Quests, _now);
-                d.Quests.DaysDone.AddRange(new[] { "2026-10-12", "2026-10-13", "2026-10-15", "2026-10-16" });
+                for (int i = 0; d.Quests.DaysDone.Count < Quests.WeeklyDays; i++)
+                {
+                    string day = Quests.DayOf(new DateTime(2026, 10, 12, 0, 0, 0, DateTimeKind.Utc).AddDays(i));
+                    if (!d.Quests.DaysDone.Contains(day)) d.Quests.DaysDone.Add(day);
+                }
             });
-            Assert.AreEqual(Quests.Daily.Count + 1, Quests.Claimable((await server.GetQuestsAsync("alice")).Quests, _now));
+            Assert.AreEqual(Quests.Today(Quests.DayOf(_now)).Count + 1, Quests.Claimable((await server.GetQuestsAsync("alice")).Quests, _now));
 
             var r = await server.ClaimQuestAsync("alice", "campaign_win");
             Assert.IsNull(r.Error);
@@ -152,7 +215,7 @@ namespace MummyEscape.Tests
         [Test]
         public async Task Claim_Scarabs_BeforeTheyAreHeldHere_IsClosed_AndStaysClaimable()
         {
-            var (server, store) = NewServer();
+            var (server, store) = NewServer("duo_play");
             await store.UpdatePlayerAsync("alice", d => Quests.Add(d.Quests = new QuestBook(), QuestKind.DuoPlay, 1, _now));
             Assert.AreEqual("CLOSED", (await server.ClaimQuestAsync("alice", "duo_play")).Error);
             await server.OpenScarabsAsync("alice", new ScarabSeed());
@@ -162,7 +225,7 @@ namespace MummyEscape.Tests
         [Test]
         public async Task Visit_OnlyVisitQuests()
         {
-            var (server, _) = NewServer();
+            var (server, _) = NewServer(Quests.VisitSale);
             Assert.AreEqual("UNKNOWN_QUEST", (await server.VisitQuestAsync("alice", "duel_win")).Error);
             Assert.AreEqual("UNKNOWN_QUEST", (await server.VisitQuestAsync("alice", "made_up")).Error);
             var r = await server.VisitQuestAsync("alice", Quests.VisitSale);
@@ -227,7 +290,7 @@ namespace MummyEscape.Tests
         [Test]
         public async Task BotDuel_CountsPlayedAndWon_Once()
         {
-            var (server, _) = NewServer();
+            var (server, _) = NewServer("duel_play", "duel_win");
             var duel = await server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion, true);
             if (duel.Searching)
             {

@@ -55,6 +55,7 @@ namespace MummyEscape.Pvp
                     {
                         w.Scarabs += ScarabsOf(w, run, result);
                         if (result?.Won == true) CountQuest(d, run.EndlessMode >= 0 ? QuestKind.EndlessWin : QuestKind.CampaignWin);
+                        if (result != null && run.EndlessMode < 0) CountQuest(d, QuestKind.CampaignPlay);
                     }
             });
             return new WalletResponse { Wallet = WalletOf(data) };

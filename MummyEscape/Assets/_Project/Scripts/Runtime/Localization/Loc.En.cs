@@ -1554,7 +1554,6 @@ namespace MummyEscape
             // quests
             ["Quêtes"] = "Quests",
             ["Quêtes du jour"] = "Daily quests",
-            ["Quête de la semaine"] = "Weekly quest",
             ["Dernier jour"] = "Last day",
             ["Termine tes quêtes du jour aujourd'hui pour gagner {0} scarabées dorés."] = "Finish today's daily quests to win {0} golden scarabs.",
             ["Il te reste {0} quête du jour à terminer."] = "{0} daily quest left to finish.",
@@ -1578,6 +1577,9 @@ namespace MummyEscape
             ["Va voir les soldes de la boutique"] = "Check out the shop's deals",
             ["Va voir le classement 2v2"] = "Check out the 2v2 leaderboard",
             ["Termine les quêtes du jour {0} jours cette semaine"] = "Finish the daily quests on {0} days this week",
+            ["Joue {0} parties PvP cette semaine"] = "Play {0} PvP games this week",
+            ["Joue {0} parties PvE cette semaine"] = "Play {0} PvE games this week",
+            ["Quêtes de la semaine"] = "Weekly quests",
         };
     }
 }

@@ -71,10 +71,10 @@ namespace MummyEscape.UI.Screens
 
             UIKit.ClearChildren(_list);
             _dailyLeft = Heading("Quêtes du jour");
-            foreach (var q in Quests.Daily) Row(q, book);
+            foreach (var q in Quests.Today(Quests.DayOf(DateTime.UtcNow))) Row(q, book);
             UIKit.Size(UIKit.Rect("Gap", _list), 16); // noloc
-            _weeklyLeft = Heading("Quête de la semaine");
-            Row(Quests.Weekly, book);
+            _weeklyLeft = Heading("Quêtes de la semaine");
+            foreach (var q in Quests.Weeklies) Row(q, book);
             SetClocks();
         }
 
@@ -130,7 +130,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(bar.transform.parent, 24, -1, 1);
             bar.fillAmount = count / (float)q.Target;
             var progress = UIKit.Label(line.transform, "", 26, UIKit.Sand, TextAnchor.MiddleRight, FontStyle.Bold);
-            progress.text = q.Weekly ? Loc.F("{0}/{1} jours", count, q.Target) : count + "/" + q.Target; // noloc
+            progress.text = q.Kind == QuestKind.DailyDays ? Loc.F("{0}/{1} jours", count, q.Target) : count + "/" + q.Target; // noloc
             UIKit.Size(progress, 30, q.Weekly ? 140 : 80);
 
             var (icon, tint) = RewardLook(q.Reward);
@@ -206,8 +206,9 @@ namespace MummyEscape.UI.Screens
         {
             int done = 0;
             var book = quests.Available ? quests.Book : null;
-            if (book != null) foreach (var q in Quests.Daily) if (Quests.IsDone(book, q)) done++;
-            return (done, Quests.Daily.Count);
+            var today = Quests.Today(Quests.DayOf(DateTime.UtcNow));
+            if (book != null) foreach (var q in today) if (Quests.IsDone(book, q)) done++;
+            return (done, today.Count);
         }
     }
 

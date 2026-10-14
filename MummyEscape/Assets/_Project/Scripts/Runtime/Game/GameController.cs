@@ -914,6 +914,7 @@ namespace MummyEscape.Game
             _ = _app.SendSoloRuns(false);
             // The server counts the escapes it replays (intro levels are not sent): the same here, before the result shows.
             if (result.Won) _app.Quests.Record(endless.HasValue ? QuestKind.EndlessWin : QuestKind.CampaignWin);
+            if (!endless.HasValue) _app.Quests.Record(QuestKind.CampaignPlay);
         }
 
         IEnumerator Finish()

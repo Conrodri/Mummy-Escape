@@ -80,7 +80,7 @@ namespace MummyEscape.Services
                 if (at <= now) continue;
                 bool today = Quests.DayOf(at) == book.Day;
                 int left = 0;
-                foreach (var q in Quests.Daily) if (!today || !Quests.IsDone(book, q)) left++;
+                foreach (var q in Quests.Today(Quests.DayOf(at))) if (!today || !Quests.IsDone(book, q)) left++;
                 if (left == 0) continue;
                 bool sameWeek = Quests.WeekOf(at) == book.Week;
                 int days = sameWeek ? Quests.CountOf(book, Quests.Weekly) : 0;
