@@ -41,6 +41,17 @@ namespace MummyEscape.UI
             f.Period = period;
         }
 
+        /// <summary>
+        /// Pops the element in, then makes it rise by <paramref name="rise"/> while fading out over
+        /// <paramref name="seconds"/>, and destroys it (a "+5" flying off). Place it first; no layout group may place it.
+        /// </summary>
+        public static void FloatAway(Component c, float rise = 180f, float seconds = 1f)
+        {
+            var f = c.gameObject.AddComponent<FloatAway>();
+            f.Rise = rise;
+            f.Seconds = seconds;
+        }
+
         /// <summary>Alternates the graphic's alpha between low and full (phase in turns, 0-1).</summary>
         public static void Blink(Graphic g, float period, float phase, float low = 0.25f)
         {
@@ -174,6 +185,45 @@ namespace MummyEscape.UI
 
         void Update() =>
             ((RectTransform)transform).anchoredPosition = _base + new Vector2(0, Height * Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f / Period));
+    }
+
+    public sealed class FloatAway : MonoBehaviour
+    {
+        public float Rise = 180f;
+        public float Seconds = 1f;
+        const float PopSeconds = 0.18f, SettleSeconds = 0.12f;
+        float _t;
+        Vector2 _base;
+        CanvasGroup _group;
+
+        void OnEnable()
+        {
+            _t = 0f;
+            _base = ((RectTransform)transform).anchoredPosition;
+            _group = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            _group.blocksRaycasts = false;
+            _group.interactable = false;
+            Apply();
+        }
+
+        void Update()
+        {
+            _t += Time.unscaledDeltaTime;
+            Apply();
+            if (_t >= Seconds) Destroy(gameObject);
+        }
+
+        void Apply()
+        {
+            // Pops up to 1.15, settles back to 1.
+            float pop = Mathf.Clamp01(_t / PopSeconds);
+            float s = pop < 1f ? Mathf.Lerp(0.5f, 1.15f, pop) : Mathf.Lerp(1.15f, 1f, (_t - PopSeconds) / SettleSeconds);
+            transform.localScale = new Vector3(s, s, 1f);
+            float k = Mathf.Clamp01(_t / Seconds);
+            ((RectTransform)transform).anchoredPosition = _base + new Vector2(0, Rise * (1f - (1f - k) * (1f - k)));
+            // Fully visible for the first 40 %, then fades out.
+            _group.alpha = Mathf.Min(pop * 2f, 1f - Mathf.Clamp01((k - 0.4f) / 0.6f));
+        }
     }
 
     public sealed class Blink : MonoBehaviour

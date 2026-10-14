@@ -165,6 +165,7 @@ namespace MummyEscape.UI.Screens
                 App.Audio.Play(q.Reward == QuestRewardKind.Gold ? Sfx.Win : Sfx.Coin);
                 _note.color = UIKit.Gold;
                 _note.text = Loc.F("Récompense récupérée : {0}", RewardText(q));
+                FlyReward(q); // before Refresh rebuilds the rows
             }
             else
             {
@@ -175,6 +176,32 @@ namespace MummyEscape.UI.Screens
             }
             UIFx.PopIn(_note);
             if (isActiveAndEnabled) Refresh();
+        }
+
+        /// <summary>The collected reward ("+5" and its icon) pops over the quest's row, then rises and fades away.</summary>
+        void FlyReward(QuestDef q)
+        {
+            var (icon, tint) = RewardLook(q.Reward);
+            var fly = UIKit.Rect("Reward Fly", Root); // noloc
+            fly.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Place(fly, 0.5f, 0.5f, 420, 130);
+            var row = _list.Find("Quest " + q.Id); // noloc
+            if (row != null)
+            {
+                var p = Root.InverseTransformPoint(row.position);
+                fly.localPosition = new Vector3(p.x, p.y, 0f);
+            }
+            var h = fly.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = 14;
+            h.childAlignment = TextAnchor.MiddleCenter;
+            h.childControlWidth = h.childControlHeight = true;
+            h.childForceExpandWidth = h.childForceExpandHeight = false;
+            UIKit.Size(UIKit.Image(fly, icon, Color.white, false, "Icon"), 110, 110); // noloc
+            var amount = UIKit.Label(fly, "", 84, tint, TextAnchor.MiddleLeft, FontStyle.Bold);
+            amount.text = "+" + q.Amount; // noloc
+            amount.horizontalOverflow = HorizontalWrapMode.Overflow;
+            UIKit.Size(amount, 110);
+            UIFx.FloatAway(fly);
         }
 
         /// <summary>The quest's text with its target.</summary>
