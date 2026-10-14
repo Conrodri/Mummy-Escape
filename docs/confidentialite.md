@@ -16,7 +16,7 @@ Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 
 • Tes choix de confidentialité : la date de ta réponse, le mode en ligne ou hors ligne, si tu es mineur et si un parent a donné son accord. Ton année de naissance sert uniquement à ce calcul : elle n'est ni conservée ni envoyée.  
 Ces données restent sur l'appareil ; tu peux les effacer à tout moment (Paramètres › Confidentialité) ou en désinstallant le jeu.
 
-## Données traitées en ligne (seulement si tu actives le mode en ligne)
+## Données traitées en ligne (seulement si tu actives le mode en ligne et te connectes avec Google Play Jeux)
 
 • Un identifiant de joueur aléatoire, créé par le service d'authentification, et un jeton de session gardé sur ton téléphone.  
 • Ton pseudonyme, public (attribué au hasard, modifiable). N'utilise pas ton vrai nom.  
@@ -26,7 +26,7 @@ Ces données restent sur l'appareil ; tu peux les effacer à tout moment (Param�
 • Si tu utilises le tchat : tes messages, leur date et les replays que tu y partages, visibles des membres du canal (global, ta guilde, ou l'ami à qui tu écris). Chaque canal garde ses 100 derniers messages, les plus anciens sont effacés au fur et à mesure. Tes blocages et tes signalements sont aussi conservés, pour la modération. Les messages privés ne sont possibles qu'entre amis : le jeu envoie au serveur la liste de tes amis et l'indication que tu es mineur (pour te fermer le canal global).  
 • Si tu affrontes d'autres joueurs (duels, 2v2, guildes) : tes courses (actions et temps, rejouées par le serveur pour vérifier qu'elles sont possibles), ton classement Elo, tes résultats et ton historique de matchs, tes sceaux et récompenses, ton énergie de combat, tes duos et ta guilde. Tes adversaires et coéquipiers voient ton pseudonyme, ton apparence, ton Elo et les replays de vos matchs.  
 • Si tu achètes des scarabées dorés : le produit, l'identifiant de commande et le jeton d'achat transmis par Google Play, la date, et ton portefeuille (scarabées dorés, pass, objets payants), gardés par notre serveur. Nous ne recevons jamais tes coordonnées bancaires : le paiement est traité par Google.  
-• Si tu crées un compte (facultatif, avec Google Play Jeux) : l'identifiant de joueur que Google Play Jeux nous transmet pour te reconnaître (ni ton adresse e-mail ni ton nom), et une copie de sauvegarde de ta progression, pour la retrouver sur un autre appareil. Les comptes créés auparavant avec un identifiant de connexion gardent celui-ci et leur mot de passe (conservé chiffré par notre prestataire, jamais lisible par nous).  
+• Ton compte, nécessaire pour jouer en ligne et créé avec Google Play Jeux : l'identifiant de joueur que Google Play Jeux nous transmet pour te reconnaître (ni ton adresse e-mail ni ton nom), et une copie de sauvegarde de ta progression, pour la retrouver sur un autre appareil. Le jeu ne se connecte plus qu'avec Google Play Jeux : les comptes créés auparavant avec un identifiant de connexion gardent celui-ci et leur mot de passe (conservé chiffré par notre prestataire, jamais lisible par nous) jusqu'à leur suppression.  
 • Les données techniques indispensables au service (adresse IP, modèle d'appareil, journaux d'erreurs), utilisées pour son fonctionnement et sa sécurité.
 
 ## Pourquoi et sur quelle base ?

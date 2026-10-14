@@ -8,7 +8,7 @@ Ces conditions encadrent l'utilisation du jeu Mummy Rush, édité par Peak Devel
 
 ## Le jeu
 
-Le jeu est gratuit, avec des achats facultatifs. Il se joue hors ligne ; les fonctions en ligne (classements, amis, duels, guildes, tchat, compte, sauvegarde) sont facultatives. Elles sont fournies sans garantie de disponibilité permanente et peuvent évoluer ou s'arrêter ; ta progression locale reste alors jouable.
+Le jeu est gratuit, avec des achats facultatifs. Il se joue hors ligne ; les fonctions en ligne (classements, amis, duels, guildes, tchat, boutique, sauvegarde) sont facultatives et demandent un compte Google Play Jeux. Elles sont fournies sans garantie de disponibilité permanente et peuvent évoluer ou s'arrêter ; ta progression locale reste alors jouable.
 
 ## Énergie
 
@@ -27,7 +27,7 @@ Sous l'âge du consentement numérique de ton pays (15 ans en France), le tchat 
 
 ## Ton compte
 
-Le compte est facultatif et se crée avec Google Play Jeux. Les comptes créés auparavant avec un identifiant et un mot de passe restent utilisables : garde-les secrets ; aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. Tu peux supprimer ton compte et toutes tes données en ligne à tout moment depuis le jeu.
+Le compte est facultatif : sans lui, le jeu se joue hors ligne. Il se crée et se connecte uniquement avec Google Play Jeux, et ouvre les fonctions en ligne. Tu peux supprimer ton compte et toutes tes données en ligne à tout moment depuis le jeu.
 
 ## Règles de conduite
 
@@ -41,7 +41,7 @@ Le jeu, ses graphismes, ses musiques et son code sont protégés. Tu disposes d'
 
 ## Responsabilité
 
-L'éditeur ne saurait être tenu responsable des interruptions du service en ligne ni des pertes de progression dues à un mot de passe oublié ou à la désinstallation du jeu sans compte. Rien dans ces conditions ne limite les droits que tu tiens de la loi en tant que consommateur.
+L'éditeur ne saurait être tenu responsable des interruptions du service en ligne ni des pertes de progression dues à la désinstallation du jeu sans compte. Rien dans ces conditions ne limite les droits que tu tiens de la loi en tant que consommateur.
 
 ## Données personnelles
 

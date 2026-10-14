@@ -16,7 +16,7 @@ Peak Development (Constant Rodriguez, entrepreneur individuel — EI, SIREN 131 
 • Your privacy choices: the date of your answer, online or offline mode, whether you are a minor and whether a parent gave consent. Your year of birth is only used for this calculation: it is neither kept nor sent.  
 This data stays on the device; you can erase it at any time (Settings › Privacy) or by uninstalling the game.
 
-## Data processed online (only if you turn on online mode)
+## Data processed online (only if you turn on online mode and sign in with Google Play Games)
 
 • A random player ID, created by the authentication service, and a session token kept on your phone.  
 • Your public nickname (randomly assigned, editable). Do not use your real name.  
@@ -26,7 +26,7 @@ This data stays on the device; you can erase it at any time (Settings › Privac
 • If you use the chat: your messages, their date and the replays you share there, visible to the members of the channel (global, your guild, or the friend you write to). Each channel keeps its last 100 messages, the oldest ones being erased as new ones arrive. Your blocks and reports are kept too, for moderation. Private messages are only possible between friends: the game sends the server your list of friends and whether you are a minor (to close the global channel to you).  
 • If you play against others (duels, 2v2, guilds): your runs (moves and times, replayed by the server to check they are possible), your Elo rating, your results and match history, your seals and rewards, your combat energy, your duos and your guild. Your opponents and teammates see your nickname, your look, your Elo and the replays of your matches.  
 • If you buy golden scarabs: the product, the order ID and the purchase token sent by Google Play, the date, and your wallet (golden scarabs, passes, paid items), kept by our server. We never receive your payment details: Google handles the payment.  
-• If you create an account (optional, with Google Play Games): the player ID Google Play Games sends us to recognise you (neither your email address nor your name), and a backup of your progress, so you can restore it on another device. Accounts created earlier with a login keep it and their password (stored encrypted by our provider, never readable by us).  
+• Your account, needed to play online and created with Google Play Games: the player ID Google Play Games sends us to recognise you (neither your email address nor your name), and a backup of your progress, so you can restore it on another device. The game now signs in with Google Play Games only: accounts created earlier with a login keep it and their password (stored encrypted by our provider, never readable by us) until they are deleted.  
 • Technical data required by the service (IP address, device model, error logs), used for its operation and security.
 
 ## Why, and on what legal basis?

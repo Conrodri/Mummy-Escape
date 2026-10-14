@@ -8,7 +8,7 @@ These terms govern the use of the game Mummy Rush, published by Peak Development
 
 ## The game
 
-The game is free, with optional purchases. It can be played offline; the online features (leaderboards, friends, duels, guilds, chat, account, backup) are optional. They are provided without any guarantee of permanent availability and may change or stop; your local progress then remains playable.
+The game is free, with optional purchases. It can be played offline; the online features (leaderboards, friends, duels, guilds, chat, shop, backup) are optional and need a Google Play Games account. They are provided without any guarantee of permanent availability and may change or stop; your local progress then remains playable.
 
 ## Energy
 
@@ -27,7 +27,7 @@ Below the digital age of consent in your country (15 in France), the chat is onl
 
 ## Your account
 
-The account is optional and is created with Google Play Games. Accounts created earlier with a login and a password still work: keep them secret; since no email address is requested, a forgotten password cannot be recovered. You can delete your account and all your online data at any time from the game.
+The account is optional: without it, the game is played offline. It is created and signed in with Google Play Games only, and opens the online features. You can delete your account and all your online data at any time from the game.
 
 ## Code of conduct
 
@@ -41,7 +41,7 @@ The game, its graphics, its music and its code are protected. You are granted a 
 
 ## Liability
 
-The publisher cannot be held liable for interruptions of the online service or for progress lost because of a forgotten password or uninstalling the game without an account. Nothing in these terms limits the rights you have under consumer law.
+The publisher cannot be held liable for interruptions of the online service or for progress lost because of uninstalling the game without an account. Nothing in these terms limits the rights you have under consumer law.
 
 ## Personal data
 
