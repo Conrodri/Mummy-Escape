@@ -133,9 +133,6 @@ namespace MummyEscape.UI.Screens
             progress.text = q.Kind == QuestKind.DailyDays ? Loc.F("{0}/{1} jours", count, q.Target) : count + "/" + q.Target; // noloc
             UIKit.Size(progress, 30, q.Weekly ? 140 : 80);
 
-            var (icon, tint) = RewardLook(q.Reward);
-            UIKit.Chip(plate.transform, icon, "+" + q.Amount, tint, 64);
-
             if (claimed)
                 UIKit.Size(UIKit.Image(plate.transform, UISprites.Check, UIKit.Success, false, "Check"), 52, 52); // noloc
             else if (ready)
@@ -150,6 +147,10 @@ namespace MummyEscape.UI.Screens
                 plate.gameObject.AddComponent<PressScale>().Amount = 0.97f;
                 UIFx.Pulse(go, 0.06f, 1.2f); // the plate itself shrinks when pressed (PressScale)
             }
+
+            // The reward always ends the row: "Récupérer" or the check sits on its left.
+            var (icon, tint) = RewardLook(q.Reward);
+            UIKit.Chip(plate.transform, icon, "+" + q.Amount, tint, 64);
         }
 
         async void Claim(QuestDef q)
