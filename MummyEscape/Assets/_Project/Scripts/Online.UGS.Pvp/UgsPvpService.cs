@@ -206,6 +206,10 @@ namespace MummyEscape.Online
         public Task<WalletResponse> SubmitSoloRunsAsync(List<SoloRunReport> runs) =>
             Call("SubmitSoloRuns", Args("runs", runs), e => new WalletResponse { Error = e });
 
+        public Task<QuestResponse> GetQuestsAsync() => Call("GetQuests", null, e => new QuestResponse { Error = e });
+        public Task<QuestResponse> VisitQuestAsync(string id) => Call("VisitQuest", Args("id", id), e => new QuestResponse { Error = e });
+        public Task<QuestResponse> ClaimQuestAsync(string id) => Call("ClaimQuest", Args("id", id), e => new QuestResponse { Error = e });
+
         public Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b) =>
             Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b, "draftVersion", PvpDraft.Version), e => new LiveDuelResponse { Error = e });
 

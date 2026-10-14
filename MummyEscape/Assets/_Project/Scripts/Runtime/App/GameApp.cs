@@ -33,6 +33,8 @@ namespace MummyEscape.App
         public UIRouter UI { get; private set; }
         /// <summary>What the server told this session: duel profile, group, service status.</summary>
         public PvpSession Session { get; private set; }
+        /// <summary>The daily and weekly quests, counted and paid by the server.</summary>
+        public QuestService Quests { get; private set; }
         /// <summary>Lit sprite material of the world (tiles, mummies), for views built later (duel replays).</summary>
         public Material SpriteMaterial { get; private set; }
 
@@ -61,6 +63,7 @@ namespace MummyEscape.App
 
             SpriteMaterial = spriteMaterial;
             Session = new PvpSession(this);
+            Quests = new QuestService(this);
             Settings = new SettingsService();
             Settings.Load();
             Application.targetFrameRate = Settings.BatterySaver ? 30 : 60;
@@ -293,6 +296,7 @@ namespace MummyEscape.App
             if (Developers.Is(Online.PlayerId)) Save.GrantSkins(Developers.Skins);
             // Purchases paid while the game was stopped get credited; the team gets its season pass with the wallet.
             _ = Monetization.GoldWallet.RefreshAsync(this);
+            _ = Quests.RefreshAsync();
             _cloudLoaded = false;
             if (Online.Account == AccountState.Account) await LoadCloudSave();
             _syncedStars = -1;
@@ -389,6 +393,7 @@ namespace MummyEscape.App
         void OnApplicationPause(bool paused)
         {
             if (paused) _ = SendSoloRuns(true);
+            else if (Quests != null) _ = Quests.RefreshAsync(); // back from the background: maybe a new day, or runs the server replayed since
             if (paused) Notifications.Plan(this);
             if (paused && _cloudDirty && Online != null && Online.Account == AccountState.Account) _ = PushCloudSave();
         }

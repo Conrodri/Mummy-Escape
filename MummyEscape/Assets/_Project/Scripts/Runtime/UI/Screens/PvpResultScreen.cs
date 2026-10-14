@@ -158,6 +158,13 @@ namespace MummyEscape.UI.Screens
                 SetButtons(true, false);
                 return;
             }
+            if (r.Resolved)
+            {
+                // The server counted this duel for the quests: the same here before the verdict shows, then its copy.
+                App.Quests.Record(QuestKind.DuelPlay);
+                if (r.Result == DuelResult.Win) App.Quests.Record(QuestKind.DuelWin);
+                _ = App.Quests.RefreshAsync();
+            }
             if (!r.Resolved)
             {
                 _title.text = Loc.T("COURSE ENREGISTRÉE");

@@ -259,6 +259,8 @@ namespace MummyEscape.UI.Screens
             if (r != null && r.Error == null)
             {
                 if (r.Wallet != null) app.Save.ApplyWallet(r.Wallet); // the server paid the first clear once it holds the scarabs
+                app.Quests.Record(QuestKind.DuoPlay); // the server counted the clear: the same here, then its copy
+                _ = app.Quests.RefreshAsync();
                 if (r.FirstClear)
                 {
                     if (!app.Save.Data.ScarabsHeld) app.Save.EarnCoins(CoopConfig.FirstClearScarabs);

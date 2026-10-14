@@ -131,6 +131,8 @@ namespace MummyEscape.UI.Screens
                 if (_outcome.PartnerQuit == null) _note.text = Loc.T("Le duo adverse n'a pas encore envoyé son relais : ton Elo bougera dans une minute.");
                 return;
             }
+            App.Quests.Record(QuestKind.DuoPlay); // the server counted the match: the same here before the verdict, then its copy
+            _ = App.Quests.RefreshAsync();
             ShowVerdict(r.Result);
             if (r.Result == DuelResult.Win) App.Save.AddPassXp(Monetization.BattlePass.WinBonusXp);
             string sign = r.EloDelta > 0 ? "+" : "";
