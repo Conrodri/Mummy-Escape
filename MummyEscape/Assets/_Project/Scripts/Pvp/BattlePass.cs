@@ -44,7 +44,7 @@ namespace MummyEscape.Monetization
         {
             new PassSeason
             {
-                Id = "s1", Name = "Le Pass de Thot", StartUtc = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), // noloc
+                Id = "s1", Name = "Le Pass de Thot", StartUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc), // noloc
                 Legendary = "pass_s1_leg", // noloc
                 Set = new[]
                 {
@@ -52,15 +52,15 @@ namespace MummyEscape.Monetization
                     "pass_s1_crescent", "pass_s1_wings", "pass_s1_khepresh", "pass_s1_hermopolis", "pass_s1_disc", // noloc
                 },
             },
-            Season("s2", "Le Pass d'Anubis", 2026, 11, "pass_s2", // noloc
+            Season("s2", "Le Pass d'Anubis", 2026, 12, "pass_s2", // noloc
                 "obsidian", "sandals", "was", "nemes", "natron", "lamp", "greaves", "vulture", "duat", "circlet"), // noloc
-            Season("s3", "Le Pass d'Hathor", 2026, 12, "pass_s3", // noloc
+            Season("s3", "Le Pass d'Hathor", 2027, 1, "pass_s3", // noloc
                 "turquoise", "mules", "sistrum", "horns", "copper", "mirror", "malachite", "lotus", "rose", "disc"), // noloc
-            Season("s4", "Le Pass de Sobek", 2027, 1, "pass_s4", // noloc
+            Season("s4", "Le Pass de Sobek", 2027, 2, "pass_s4", // noloc
                 "fayum", "claws", "crook", "atef", "reeds", "cobra", "clogs", "plumes", "deep", "helm"), // noloc
-            Season("s5", "Le Pass de Bastet", 2027, 2, "pass_s5", // noloc
+            Season("s5", "Le Pass de Bastet", 2027, 3, "pass_s5", // noloc
                 "amber", "slippers", "lantern", "crown", "night", "scepter", "babouches", "turban", "sand", "pschent"), // noloc
-            Season("s6", "Le Pass d'Osiris", 2027, 3, "pass_s6", // noloc
+            Season("s6", "Le Pass d'Osiris", 2027, 4, "pass_s6", // noloc
                 "field", "sandals", "ankh", "atef", "wheat", "flail", "greaves", "feather", "duat", "nemes"), // noloc
         };
 
