@@ -48,7 +48,8 @@ namespace MummyEscape.UI.Legal
             "et ton portefeuille (scarabées dorés, pass, objets payants), gardés par notre serveur. Nous ne recevons jamais tes coordonnées bancaires : le paiement est traité par Google.\n" +
             "• Si tu crées un compte (facultatif, avec Google Play Jeux) : l'identifiant de joueur que Google Play Jeux nous transmet pour te reconnaître " +
             "(ni ton adresse e-mail ni ton nom), et une copie de sauvegarde de ta progression, pour la retrouver sur un autre appareil. " +
-            "Les comptes créés auparavant avec un identifiant de connexion gardent celui-ci et leur mot de passe (conservé chiffré par notre prestataire, jamais lisible par nous).\n" +
+            "Le jeu ne se connecte plus qu'avec Google Play Jeux : les comptes créés auparavant avec un identifiant de connexion gardent celui-ci et leur mot de passe " +
+            "(conservé chiffré par notre prestataire, jamais lisible par nous) jusqu'à leur suppression.\n" +
             "• Les données techniques indispensables au service (adresse IP, modèle d'appareil, journaux d'erreurs), utilisées pour son fonctionnement et sa sécurité.",
             "# Pourquoi et sur quelle base ?",
             "• Fournir les fonctions en ligne que tu as choisies (classements, amis, compte, sauvegarde) : exécution des conditions d'utilisation (RGPD, art. 6.1.b).\n" +
@@ -156,8 +157,7 @@ namespace MummyEscape.UI.Legal
             "# Âge",
             "Sous l'âge du consentement numérique de ton pays (15 ans en France), le tchat n'est accessible qu'avec l'accord d'un parent ou tuteur légal, demandé à sa première ouverture. Le tchat global est fermé aux joueurs mineurs ; le tchat de guilde et les messages entre amis peuvent être désactivés dans le jeu.",
             "# Ton compte",
-            "Le compte est facultatif et se crée avec Google Play Jeux. Les comptes créés auparavant avec un identifiant et un mot de passe restent utilisables : " +
-            "garde-les secrets ; aucune adresse e-mail n'étant demandée, un mot de passe oublié ne peut pas être récupéré. " +
+            "Le compte est facultatif ; il se crée et se connecte uniquement avec Google Play Jeux. " +
             "Tu peux supprimer ton compte et toutes tes données en ligne à tout moment depuis le jeu.",
             "# Règles de conduite",
             "Il est interdit de choisir un pseudonyme injurieux, discriminatoire, à caractère sexuel ou usurpant l'identité d'autrui, " +
@@ -168,8 +168,8 @@ namespace MummyEscape.UI.Legal
             "# Propriété intellectuelle",
             "Le jeu, ses graphismes, ses musiques et son code sont protégés. Tu disposes d'un droit d'usage personnel et non commercial.",
             "# Responsabilité",
-            "L'éditeur ne saurait être tenu responsable des interruptions du service en ligne ni des pertes de progression dues à un mot de passe oublié " +
-            "ou à la désinstallation du jeu sans compte. Rien dans ces conditions ne limite les droits que tu tiens de la loi en tant que consommateur.",
+            "L'éditeur ne saurait être tenu responsable des interruptions du service en ligne ni des pertes de progression dues " +
+            "à la désinstallation du jeu sans compte. Rien dans ces conditions ne limite les droits que tu tiens de la loi en tant que consommateur.",
             "# Données personnelles",
             "Leur traitement est décrit dans la politique de confidentialité, accessible dans le jeu (Paramètres › Confidentialité).",
             "# Droit applicable",

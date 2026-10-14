@@ -40,7 +40,8 @@ namespace MummyEscape.UI.Legal
             "and your wallet (golden scarabs, passes, paid items), kept by our server. We never receive your payment details: Google handles the payment.\n" +
             "• If you create an account (optional, with Google Play Games): the player ID Google Play Games sends us to recognise you " +
             "(neither your email address nor your name), and a backup of your progress, so you can restore it on another device. " +
-            "Accounts created earlier with a login keep it and their password (stored encrypted by our provider, never readable by us).\n" +
+            "The game now signs in with Google Play Games only: accounts created earlier with a login keep it and their password " +
+            "(stored encrypted by our provider, never readable by us) until they are deleted.\n" +
             "• Technical data required by the service (IP address, device model, error logs), used for its operation and security.",
             "# Why, and on what legal basis?",
             "• Providing the online features you chose (leaderboards, friends, account, backup): performance of the terms of use (GDPR, art. 6.1.b).\n" +
@@ -145,8 +146,7 @@ namespace MummyEscape.UI.Legal
             "# Age",
             "Below the digital age of consent in your country (15 in France), the chat is only available with the consent of a parent or legal guardian, asked when it first opens. Global chat is closed to minors; guild chat and messages between friends can be turned off in the game.",
             "# Your account",
-            "The account is optional and is created with Google Play Games. Accounts created earlier with a login and a password still work: " +
-            "keep them secret; since no email address is requested, a forgotten password cannot be recovered. " +
+            "The account is optional; it is created and signed in with Google Play Games only. " +
             "You can delete your account and all your online data at any time from the game.",
             "# Code of conduct",
             "You may not choose an insulting, discriminatory or sexual nickname, or one impersonating someone else, " +
@@ -157,8 +157,8 @@ namespace MummyEscape.UI.Legal
             "# Intellectual property",
             "The game, its graphics, its music and its code are protected. You are granted a personal, non-commercial right of use.",
             "# Liability",
-            "The publisher cannot be held liable for interruptions of the online service or for progress lost because of a forgotten password " +
-            "or uninstalling the game without an account. Nothing in these terms limits the rights you have under consumer law.",
+            "The publisher cannot be held liable for interruptions of the online service or for progress lost because of " +
+            "uninstalling the game without an account. Nothing in these terms limits the rights you have under consumer law.",
             "# Personal data",
             "Its processing is described in the privacy policy, available in the game (Settings › Privacy).",
             "# Governing law",

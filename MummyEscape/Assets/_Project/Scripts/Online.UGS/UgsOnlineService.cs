@@ -321,10 +321,11 @@ namespace MummyEscape.Online
             }
         }
 
-        /// <summary>The login, or "Google Play Jeux" for an account made with Google only.</summary>
-        public string Username => HasPassword ? AuthenticationService.Instance.PlayerInfo.Username : GoogleLinked ? Loc.T("Google Play Jeux") : "";
-
-        public bool HasPassword => IsAvailable && !string.IsNullOrEmpty(AuthenticationService.Instance.PlayerInfo?.Username);
+        /// <summary>
+        /// Accounts are Google Play Games ones: a player made earlier with a login and a password counts as a guest until
+        /// it links Google Play Games (its session goes on; the game no longer signs in with a password).
+        /// </summary>
+        public string Username => GoogleLinked ? Loc.T("Google Play Jeux") : "";
 
         public bool GoogleLinked => IsAvailable && !string.IsNullOrEmpty(AuthenticationService.Instance.PlayerInfo?.GetGooglePlayGamesId());
 
@@ -375,30 +376,6 @@ namespace MummyEscape.Online
                 return null;
             }
             catch (RequestFailedException e) { return Explain(e, "Connexion à Google Play Jeux impossible."); }
-        }
-
-        public async Task<string> SignInAsync(string username, string password)
-        {
-            if (string.IsNullOrEmpty(Application.cloudProjectId)) return Status;
-            try
-            {
-                if (!IsAvailable) await UnityServices.InitializeAsync();
-                var auth = AuthenticationService.Instance;
-                // Keep the current session token: if the sign-in fails, the previous player resumes.
-                if (auth.IsSignedIn) auth.SignOut(false);
-                try
-                {
-                    await auth.SignInWithUsernamePasswordAsync(username, password);
-                }
-                catch (Exception)
-                {
-                    if (!auth.IsSignedIn && auth.SessionTokenExists) await auth.SignInAnonymouslyAsync();
-                    throw;
-                }
-                await AfterSignIn();
-                return null;
-            }
-            catch (RequestFailedException e) { return Explain(e, "Identifiant ou mot de passe incorrect."); }
         }
 
         async Task AfterSignIn()
@@ -456,17 +433,6 @@ namespace MummyEscape.Online
             PlayerName = "";
             Status = "Déconnecté";
             return Task.CompletedTask;
-        }
-
-        public async Task<string> ChangePasswordAsync(string current, string next)
-        {
-            if (!IsAvailable) return Status;
-            try
-            {
-                await AuthenticationService.Instance.UpdatePasswordAsync(current, next);
-                return null;
-            }
-            catch (RequestFailedException e) { return Explain(e, "Mot de passe actuel incorrect."); }
         }
 
         public async Task<string> DeleteAccountAsync()

@@ -20,7 +20,7 @@ Ce qui est **déjà prêt** dans le dépôt :
    - reconstruire l'AAB.
 3. **Unity Gaming Services :**
    - lier le projet (*Edit › Project Settings › Services*) ;
-   - activer Authentication (anonyme + Username & Password), Leaderboards, Friends et Cloud Save ;
+   - activer Authentication (anonyme + Google Play Games), Leaderboards, Friends et Cloud Save ;
    - déployer les leaderboards (voir le README).
    Sans cela, le mode en ligne affiche « hors ligne », mais le jeu reste jouable.
 

@@ -132,60 +132,23 @@ namespace MummyEscape.Online
             return Task.CompletedTask;
         }
 
-        // ---- account: simulated in the editor / development builds (to test the screens), unavailable otherwise.
+        // ---- account: none offline (accounts are Google Play Games ones, through the backend).
 
-        public AccountState Account { get; private set; } = AccountState.Offline;
-        public string Username { get; private set; } = "";
-        string _demoPassword = "";
-        string _demoCloudSave;
-
-        string Unavailable => IsDemo ? null : "Les comptes nécessitent une connexion à Unity Gaming Services.";
-
-        public Task<string> SignInAsync(string username, string password)
-        {
-            if (Unavailable != null) return Task.FromResult(Unavailable);
-            if (Username != "" && (username != Username || password != _demoPassword)) return Task.FromResult("Identifiant ou mot de passe incorrect.");
-            Account = AccountState.Account;
-            Username = username;
-            _demoPassword = password;
-            return Task.FromResult<string>(null);
-        }
-
-        public bool HasPassword => Username != "";
+        public AccountState Account => AccountState.Offline;
+        public string Username => "";
         public bool GoogleLinked => false;
         public Task<string> LinkGoogleAsync() => Task.FromResult("Google Play Jeux n'est disponible que sur Android, en ligne.");
         public Task<string> SignInWithGoogleAsync() => LinkGoogleAsync();
-
-        public Task SignOutAsync()
-        {
-            Account = AccountState.Offline;
-            return Task.CompletedTask;
-        }
-
-        public Task<string> ChangePasswordAsync(string current, string next)
-        {
-            if (Unavailable != null) return Task.FromResult(Unavailable);
-            if (current != _demoPassword) return Task.FromResult("Mot de passe actuel incorrect.");
-            _demoPassword = next;
-            return Task.FromResult<string>(null);
-        }
+        public Task SignOutAsync() => Task.CompletedTask;
 
         public Task<string> DeleteAccountAsync()
         {
-            Account = AccountState.Offline;
-            Username = _demoPassword = "";
-            _demoCloudSave = null;
             _best.Clear();
             return Task.FromResult<string>(null);
         }
 
-        public Task<string> LoadCloudSaveAsync() => Task.FromResult(_demoCloudSave);
-
-        public Task<bool> SaveCloudSaveAsync(string json)
-        {
-            if (Account == AccountState.Account) _demoCloudSave = json;
-            return Task.FromResult(true);
-        }
+        public Task<string> LoadCloudSaveAsync() => Task.FromResult<string>(null);
+        public Task<bool> SaveCloudSaveAsync(string json) => Task.FromResult(true);
 
         public Task ClearPublishedProgressAsync() => Task.CompletedTask;
 

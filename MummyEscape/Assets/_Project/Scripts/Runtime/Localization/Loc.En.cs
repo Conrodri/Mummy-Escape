@@ -530,12 +530,9 @@ namespace MummyEscape
             ["Le compte fait partie du mode en ligne. Active-le dans Confidentialité pour créer un compte ou te connecter."] =
                 "The account is part of online mode. Turn it on in Privacy to create an account or sign in.",
             ["Connecté"] = "Signed in",
-            ["Identifiant : {0}"] = "Login: {0}",
             ["Pseudonyme public : {0}"] = "Public nickname: {0}",
             ["Google Play Jeux"] = "Google Play Games",
             ["Compte Google Play Jeux"] = "Google Play Games account",
-            ["Lié à Google Play Jeux"] = "Linked to Google Play Games",
-            ["Lier Google Play Jeux"] = "Link Google Play Games",
             ["Continuer avec Google Play Jeux"] = "Continue with Google Play Games",
             ["Se connecter avec Google Play Jeux"] = "Sign in with Google Play Games",
             ["Ta progression est sauvegardée en ligne : sur un autre téléphone Android, connecte-toi avec Google Play Jeux pour la retrouver."] =
@@ -552,34 +549,13 @@ namespace MummyEscape
             ["Google Play Jeux n'a pas pu être lié à ce joueur."] = "Google Play Games could not be linked to this player.",
             ["Connexion à Google Play Jeux impossible."] = "Couldn't sign in with Google Play Games.",
             ["Google Play Jeux n'est disponible que sur Android, en ligne."] = "Google Play Games is only available on Android, online.",
-            ["Ta progression est sauvegardée en ligne : connecte-toi avec ce compte sur un autre appareil pour la retrouver."] =
-                "Your progress is backed up online: sign in with this account on another device to get it back.",
-            ["Changer le mot de passe"] = "Change password",
             ["Se déconnecter"] = "Sign out",
             ["Supprimer mon compte"] = "Delete my account",
             ["Tu joues en invité"] = "You are playing as a guest",
             ["Non connecté"] = "Not signed in",
             ["Continuer en invité"] = "Continue as a guest",
-            ["J'ai déjà un compte"] = "I already have an account",
-            ["Sans e-mail, un mot de passe oublié ne peut pas être récupéré : note-le bien."] =
-                "Without an email, a forgotten password cannot be recovered: write it down.",
-            ["Identifiant"] = "Login",
-            ["Mot de passe"] = "Password",
-            ["Les deux mots de passe diffèrent."] = "The two passwords don't match.",
-            ["Se connecter"] = "Sign in",
-            ["La progression de ce téléphone sera ajoutée à celle du compte."] = "This phone's progress will be added to the account's.",
-            ["Connexion"] = "Sign in",
-            ["Remplis les deux champs."] = "Fill in both fields.",
-            ["Mot de passe actuel"] = "Current password",
-            ["Nouveau mot de passe"] = "New password",
-            ["Confirme le nouveau"] = "Confirm the new one",
-            ["Changer"] = "Change",
-            ["Identifiant : {0} à {1} caractères."] = "Login: {0} to {1} characters.",
-            ["Identifiant : lettres, chiffres et . - _ @ uniquement (sans accents ni espaces)."] =
-                "Login: letters, digits and . - _ @ only (no accents or spaces).",
-            ["Mot de passe : {0} à {1} caractères."] = "Password: {0} to {1} characters.",
-            ["Mot de passe : au moins une majuscule, une minuscule, un chiffre et un symbole."] =
-                "Password: at least one uppercase letter, one lowercase letter, one digit and one symbol.",
+            ["Connecte-toi avec Google Play Jeux pour sauvegarder ta progression et la retrouver sur un autre téléphone. Tu peux aussi jouer sans et te connecter plus tard."] =
+                "Sign in with Google Play Games to back up your progress and find it on another phone. You can also play without it and sign in later.",
 
             // ---------------------------------------------------------------- online statuses and errors
             ["Hors ligne (mode en ligne désactivé dans Confidentialité)"] = "Offline (online mode turned off in Privacy)",
@@ -588,14 +564,9 @@ namespace MummyEscape
             ["Données en ligne supprimées — mode hors ligne"] = "Online data deleted — offline mode",
             ["Hors ligne — configure Unity Gaming Services pour les classements et les amis."] =
                 "Offline — set up Unity Gaming Services for leaderboards and friends.",
-            ["Les comptes nécessitent une connexion à Unity Gaming Services."] = "Accounts require a connection to Unity Gaming Services.",
-            ["Identifiant ou mot de passe incorrect."] = "Wrong login or password.",
-            ["Mot de passe actuel incorrect."] = "Wrong current password.",
             ["Connexion…"] = "Connecting…",
             ["Hors ligne (projet non lié à Unity Gaming Services)"] = "Offline (project not linked to Unity Gaming Services)",
             ["Hors ligne ({0})"] = "Offline ({0})",
-            ["Ce joueur a déjà un compte."] = "This player already has an account.",
-            ["Cet identifiant est déjà pris ou invalide."] = "This login is already taken or invalid.",
             ["Déconnecté"] = "Signed out",
             ["Compte supprimé"] = "Account deleted",
             ["La suppression a échoué, réessaie plus tard."] = "Deletion failed, try again later.",

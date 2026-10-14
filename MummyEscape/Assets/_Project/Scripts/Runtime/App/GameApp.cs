@@ -134,7 +134,7 @@ namespace MummyEscape.App
             if (Privacy.Data.AcceptedPolicyVersion == 0 && string.IsNullOrEmpty(Settings.Language) && !Loc.SpeaksSystemLanguage) UI.Open<LanguagePickerScreen>();
             StudioIntro.Play(Audio); // the studio's logo, over the first screen, in silence
 
-            if (Privacy.OnlineAllowed) _ = StartOnline();
+            if (Privacy.OnlineAllowed) _ = StartOnline(true);
             Save.Changed += () => _cloudDirty = true;
         }
 
@@ -193,8 +193,11 @@ namespace MummyEscape.App
         OfflineOnlineService Offline(string reason) =>
             new OfflineOnlineService(reason) { Country = Save.Country, LocalRecord = Save.GetRecord };
 
-        /// <summary>Connects the online features (after consent, at startup or when the player turns them on).</summary>
-        public async Task StartOnline()
+        /// <summary>
+        /// Connects the online features (after consent, at startup or when the player turns them on); at startup,
+        /// <paramref name="askGoogle"/> then asks a guest to sign in with Google Play Games (<see cref="AskGoogleSignIn"/>).
+        /// </summary>
+        public async Task StartOnline(bool askGoogle = false)
         {
             var service = OnlineServiceFactory.Create();
             service.Country = Save.Country;
@@ -208,6 +211,7 @@ namespace MummyEscape.App
             Online = service;
             Analytics.Apply(Privacy.AnalyticsAllowed && service.IsAvailable);
             await AfterAccountChange();
+            if (askGoogle) AskGoogleSignIn(); // after the menus show the new state
             await SubmitRecords();
         }
 
@@ -382,18 +386,42 @@ namespace MummyEscape.App
             if (paused && _cloudDirty && Online != null && Online.Account == AccountState.Account) _ = PushCloudSave();
         }
 
-        /// <summary>Signs in to an existing account (connects the backend first when needed).</summary>
-        public async Task<string> SignIn(string username, string password)
+        bool _googleAsked;
+
+        /// <summary>
+        /// Startup rule: at most once per launch, after the consent screens, the player is asked to sign in with Google Play
+        /// Games while the online mode is on and they play as a guest (the silent Play Games sign-in of a fresh install
+        /// failed, or a guest session was resumed). A player who chose to play offline is never asked; neither is anyone
+        /// without Play Games (editor, iOS: the anonymous guest stays the way to test online). Not over a game in progress.
+        /// </summary>
+        void AskGoogleSignIn()
         {
-            var service = Online;
-            if (service is OfflineOnlineService && !service.IsDemo) service = OnlineServiceFactory.Create();
-            service.Country = Save.Country;
-            string error = await service.SignInAsync(username, password);
-            if (error != null) return error;
-            if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
-            Online = service;
-            await AfterAccountChange();
-            return null;
+            if (_googleAsked || !GoogleSignIn.Supported || !Privacy.OnlineAllowed || Online.Account != AccountState.Guest || Game.Session != null) return;
+            _googleAsked = true;
+            UI.Open<OfferDialog>().Configure("Google Play Jeux",
+                Loc.T("Connecte-toi avec Google Play Jeux pour sauvegarder ta progression et la retrouver sur un autre téléphone. Tu peux aussi jouer sans et te connecter plus tard."),
+                ("Se connecter avec Google Play Jeux", ButtonStyle.Primary, async () =>
+                {
+                    string error = await ConnectGoogle();
+                    if (error != null) UI.Open<OfferDialog>().Configure("Google Play Jeux", Loc.T(error), ("OK", ButtonStyle.Secondary, null)); // noloc
+                }),
+                ("Plus tard", ButtonStyle.Ghost, null));
+        }
+
+        /// <summary>
+        /// Google Play Games for this player, from any state: a guest links it (or, when that Google account already has its own
+        /// player, signs in to it: this phone's progress joins it); offline, it signs in and turns the online mode on.
+        /// </summary>
+        public async Task<string> ConnectGoogle()
+        {
+            if (Online.Account == AccountState.Guest)
+            {
+                string linkError = await LinkGoogle();
+                if (linkError != IOnlineService.GoogleTaken) return linkError;
+            }
+            string error = await SignInWithGoogle();
+            if (error == null && !Privacy.OnlineAllowed) Privacy.SetOnline(true);
+            return error;
         }
 
         /// <summary>Attaches Google Play Games to the current guest (it becomes an account), then backs the progression up.</summary>

@@ -43,7 +43,7 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite`
 | Catégorie Play | Donnée | Finalités | Éphémère ? |
 |---|---|---|---|
 | Informations personnelles › **Nom** | Pseudonyme public | Fonctionnement de l'appli, Gestion du compte | Non |
-| Informations personnelles › **ID utilisateur** | Identifiant de joueur Unity, identifiant de connexion | Fonctionnement de l'appli, Gestion du compte, Prévention des fraudes et sécurité | Non |
+| Informations personnelles › **ID utilisateur** | Identifiant de joueur Unity, identifiant Google Play Jeux (compte) | Fonctionnement de l'appli, Gestion du compte, Prévention des fraudes et sécurité | Non |
 | Activité dans l'appli › **Autre contenu généré par l'utilisateur** | Scores, progression, sauvegarde en ligne | Fonctionnement de l'appli | Non |
 | Activité dans l'appli › **Interactions avec l'appli** | Liste d'amis, statut en ligne | Fonctionnement de l'appli | Non |
 | Infos sur l'appli et performances › **Journaux de plantage / Diagnostics** | Journaux techniques du prestataire | Fonctionnement de l'appli, Sécurité | Non |
