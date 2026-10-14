@@ -554,6 +554,7 @@ namespace MummyEscape.UI.Screens
         /// <summary>The Promos tab: this week's 7 pieces at -25 %, the rarest first, and when the next ones come.</summary>
         void FillSale()
         {
+            App.Quests.Visit(Quests.VisitSale);
             Intro("Chaque semaine, 3 pièces communes, 2 rares, 1 épique et 1 légendaire à -25 %. Une pièce ne revient qu'une fois toutes les autres passées.");
             var left = Monetization.ShopSale.Ends(DateTime.UtcNow) - DateTime.UtcNow;
             string when = left.Days > 0 ? Loc.F("Nouvelles promos dans {0} j {1} h", left.Days, left.Hours) : Loc.F("Nouvelles promos dans {0} h {1:00} min", left.Hours, left.Minutes);

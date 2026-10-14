@@ -22,7 +22,8 @@ namespace MummyEscape.UI.Screens
         const float TeamsSeconds = 10f, PlusSize = 120f;
         HomeScene _scene;
         RectTransform _stage;
-        Text _online, _goal;
+        Text _online, _goal, _questHint, _questCount;
+        Image _questBadge;
         System.Action _goalAction;
 
         // Vertical column that adapts to any portrait height (tall 20:9 phones down to 4:3 tablets):
@@ -123,8 +124,10 @@ namespace MummyEscape.UI.Screens
             // The season pass, with what is waiting to be collected.
             _pass = new PassBanner(dock, 150, () => App.RequireOnline(() => Router.Open<PassScreen>()));
 
-            // What to aim for next, one tap away.
-            var goal = UIKit.ListItem(dock, 116, () => _goalAction?.Invoke(), out var gh);
+            // What to aim for next, one tap away, and the day's quests beside it.
+            var goals = UIKit.Row(dock, 116, 12);
+            var goal = UIKit.ListItem(goals.transform, 116, () => _goalAction?.Invoke(), out var gh);
+            UIKit.Size(goal, -1, -1, 1);
             var flag = UIKit.Image(gh.transform, UISprites.Flag, UIKit.Gold, false, "Icon"); // noloc
             flag.preserveAspect = true;
             UIKit.Size(flag, 56, 56);
@@ -137,6 +140,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_goal, 44);
             var arrow = UIKit.Image(gh.transform, UISprites.Next, UIKit.Dim, false, "Arrow"); // noloc
             UIKit.Size(arrow, 40, 40);
+            QuestTile(goals.transform);
 
             var play = UIKit.Rect("PlayRow", dock);
             UIKit.Size(play, 124);
@@ -167,6 +171,7 @@ namespace MummyEscape.UI.Screens
             _gold.text = App.Save.Gold.ToString();
             _pass.Refresh(App);
             RefreshGoal();
+            RefreshQuests();
             MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
             // The rooms open along the campaign: hidden until then, celebrated once when they open.
             _chat.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Chat, App.Save.IsCompleted));
@@ -186,6 +191,43 @@ namespace MummyEscape.UI.Screens
         }
 
         bool AsksSignIn => !App.SignedIn && Online.GoogleSignIn.Supported;
+
+        /// <summary>The quests button beside the next goal: today's progress, and a badge with the rewards waiting.</summary>
+        void QuestTile(Transform parent)
+        {
+            var tile = UIKit.ListItem(parent, 116, () => Router.Open<QuestsScreen>(), out var h);
+            UIKit.Size(tile, -1, 230);
+            h.padding = new RectOffset(18, 18, 8, 8);
+            h.spacing = 12;
+            var icon = UIKit.Image(h.transform, UISprites.Check, UIKit.Gold, false, "Icon"); // noloc
+            UIKit.Size(icon, 48, 48);
+            var col = UIKit.Rect("Text", h.transform); // noloc
+            UIKit.Column(col, 2, 0, TextAnchor.MiddleLeft).childForceExpandHeight = false;
+            UIKit.Size(col, -1, -1, 1);
+            UIKit.FitText(UIKit.SectionTitle(col, "Quêtes"), 16);
+            _questHint = UIKit.Label(col, "", 32, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(_questHint, 20);
+            UIKit.Size(_questHint, 44);
+
+            _questBadge = UIKit.Image(tile.transform, UISprites.Circle, UIKit.Danger, false, "Badge"); // noloc
+            _questBadge.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            UIKit.Place(_questBadge.rectTransform, 1f, 1f, 50, 50, 8, 8);
+            UIFx.Pulse(_questBadge, 0.08f, 1.2f);
+            _questCount = UIKit.Label(_questBadge.transform, "", 26, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+            UIKit.Stretch(_questCount.rectTransform);
+
+            App.Quests.Changed += () => { if (this != null && isActiveAndEnabled) RefreshQuests(); };
+        }
+
+        void RefreshQuests()
+        {
+            var quests = App.Quests;
+            var (done, total) = QuestsScreen.DailyProgress(quests);
+            _questHint.text = quests.Available ? done + "/" + total : "–"; // noloc
+            int claimable = quests.Available ? quests.Claimable : 0;
+            _questBadge.gameObject.SetActive(claimable > 0);
+            _questCount.text = claimable.ToString();
+        }
 
         /// <summary>The group and the invites received, as the server has them (the lobby slot follows).</summary>
         async void ReloadTeams()

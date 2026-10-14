@@ -35,6 +35,7 @@ namespace MummyEscape.UI.Screens
             _note = UIKit.Label(panel, "", 26, UIKit.Dim);
             UIKit.FitText(_note, 18);
             UIKit.Size(_note, 90);
+            QuestRecap.Create(panel);
 
             _again = UIKit.Button(panel, "Nouveau match", Again, 40, ButtonStyle.Primary);
             UIKit.Size(_again, 112);

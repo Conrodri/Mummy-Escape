@@ -88,6 +88,7 @@ namespace MummyEscape.UI.Screens
             }
             else
             {
+                App.Quests.Visit(Quests.VisitDuoBoard);
                 var board = await pvp.GetDuoBoardAsync(Top);
                 foreach (var d in board.Rows)
                     rows.Add((d.Name, "<color=#40E0D0>" + Loc.F("{0} V", d.Wins) + "</color> · " + Loc.F("{0} N", d.Draws) + " · <color=#D65440>" + Loc.F("{0} D", d.Losses) + "</color>", d.Elo.ToString())); // noloc

@@ -45,6 +45,7 @@ namespace MummyEscape.UI.Screens
 
             // Rewards: chips on as many lines as they need (a record and the expert's time rarely fit side by side).
             _rewards = ModalKit.Chips(panel);
+            QuestRecap.Create(panel);
 
             _primary = UIKit.Button(panel, "Niveau suivant", OnPrimary, 40, ButtonStyle.Primary);
             UIKit.Size(_primary, 112);

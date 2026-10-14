@@ -269,6 +269,7 @@ namespace MummyEscape.UI.Screens
                 }
                 if (r.NewStars > 0) summary += "\n" + Loc.F("+{0} étoiles 2v2 (total {1})", r.NewStars, r.TotalStars);
                 if (app.Session.Profile?.Data != null) _ = app.Session.RefreshProfile();
+                summary += QuestRecap.Text(app);
             }
             else summary += "\n" + Loc.T("Le passage n'a pas pu être enregistré.");
             Choices(app, o, "Évadés !", summary, true);
