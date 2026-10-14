@@ -163,6 +163,12 @@ namespace MummyEscape.Online
         Task<WalletResponse> ClaimPassRewardsAsync(string season, List<int> freeTiers, List<int> premiumTiers);
         /// <summary>Solo runs (actions and times) the server replays to grant their pass XP, in batches.</summary>
         Task<WalletResponse> SubmitSoloRunsAsync(List<SoloRunReport> runs);
+        /// <summary>Today's quests and this week's, counted by the server from the games it checks.</summary>
+        Task<QuestResponse> GetQuestsAsync();
+        /// <summary>A screen seen (<see cref="Quests.VisitSale"/>, <see cref="Quests.VisitDuoBoard"/>).</summary>
+        Task<QuestResponse> VisitQuestAsync(string id);
+        /// <summary>The reward of a finished quest, paid by the server (errors UNKNOWN_QUEST, NOT_DONE, CLAIMED).</summary>
+        Task<QuestResponse> ClaimQuestAsync(string id);
 
     }
 
