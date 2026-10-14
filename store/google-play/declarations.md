@@ -9,7 +9,7 @@ URL : `https://conrodri.github.io/Mummy-Escape/confidentialite`
 **Oui** : publicités récompensées Google AdMob, affichées seulement quand le joueur choisit d'en regarder une pour récupérer de l'énergie.
 
 ## Accès à l'application
-**Toutes les fonctionnalités sont disponibles sans restrictions d'accès.** Le compte est facultatif et le jeu est entièrement jouable hors ligne : aucun identifiant de test n'est nécessaire.
+**Toutes les fonctionnalités sont disponibles sans restrictions d'accès.** La campagne solo se joue hors ligne, sans compte ; les fonctions en ligne (duels, amis, classements, guildes, tchat, boutique) demandent seulement la connexion Google Play Jeux, faite avec n'importe quel compte Google : aucun identifiant de test n'est nécessaire.
 
 ## Classification du contenu (questionnaire IARC)
 - Catégorie : **Jeu**.

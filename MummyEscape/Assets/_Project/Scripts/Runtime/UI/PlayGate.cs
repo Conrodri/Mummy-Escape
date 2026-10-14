@@ -83,7 +83,7 @@ namespace MummyEscape.UI
                    : (Loc.T("Pub indisponible pour le moment"), ButtonStyle.Ghost, (Action)null);
             app.UI.Open<OfferDialog>().Configure("Plus d'énergie", text,
                 ad,
-                ("Voir le Pass", ButtonStyle.Secondary, () => app.UI.Open<PassScreen>()),
+                ("Voir le Pass", ButtonStyle.Secondary, () => app.RequireOnline(() => app.UI.Open<PassScreen>())),
                 ("Plus tard", ButtonStyle.Ghost, null));
         }
 

@@ -52,9 +52,9 @@ namespace MummyEscape.UI.Screens
             foreach (var chip in new[] { _stars, _coins, _gold }) UIKit.FitText(chip, 20);
             var goldPlate = _gold.transform.parent.gameObject;
             goldPlate.GetComponent<Image>().raycastTarget = true;
-            goldPlate.AddComponent<Button>().onClick.AddListener(() => Router.Open<TreasureScreen>());
+            goldPlate.AddComponent<Button>().onClick.AddListener(() => App.RequireOnline(() => Router.Open<TreasureScreen>()));
             // The chat, with a dot when a friend or the guild wrote.
-            _chat = UIKit.IconButton(top.transform, UISprites.Chat, () => Router.Open<ChatScreen>(), 92);
+            _chat = UIKit.IconButton(top.transform, UISprites.Chat, () => App.RequireOnline(() => Router.Open<ChatScreen>()), 92);
             var chat = _chat;
             _chatDot = UIKit.Image(chat.transform, UISprites.Circle, UIKit.Danger, false, "Dot"); // noloc
             UIKit.Place(_chatDot.rectTransform, 1, 1, 28, 28, -10, -10);
@@ -95,12 +95,12 @@ namespace MummyEscape.UI.Screens
             _mate = UIKit.Image(_stage, null, Color.white, true);
             _mate.preserveAspect = true;
             Center(_mate.rectTransform);
-            _mate.gameObject.AddComponent<Button>().onClick.AddListener(() => Router.Open<GroupScreen>());
+            _mate.gameObject.AddComponent<Button>().onClick.AddListener(() => App.RequireOnline(() => Router.Open<GroupScreen>()));
             _mateName = StageLabel(26, UIKit.Sand);
             _mateState = StageLabel(24, UIKit.Dim);
             _invite = UIKit.Rect("Invite", _stage); // noloc
             Center(_invite);
-            _plus = UIKit.IconButton(_invite, UISprites.Plus, () => Router.Open<InviteSheet>(), PlusSize);
+            _plus = UIKit.IconButton(_invite, UISprites.Plus, () => App.RequireOnline(() => Router.Open<InviteSheet>()), PlusSize);
             Center((RectTransform)_plus.transform);
             // A round "+" like a lobby's empty spot, not a square tool button.
             _plus.image.sprite = UISprites.Circle;
@@ -121,7 +121,7 @@ namespace MummyEscape.UI.Screens
             dockLayout.padding = new RectOffset(22, 22, 22, 18);
 
             // The season pass, with what is waiting to be collected.
-            _pass = new PassBanner(dock, 150, () => Router.Open<PassScreen>());
+            _pass = new PassBanner(dock, 150, () => App.RequireOnline(() => Router.Open<PassScreen>()));
 
             // What to aim for next, one tap away.
             var goal = UIKit.ListItem(dock, 116, () => _goalAction?.Invoke(), out var gh);
@@ -148,11 +148,11 @@ namespace MummyEscape.UI.Screens
             _online = UIKit.Label(dock, "", 22, UIKit.Dim, TextAnchor.MiddleCenter);
             UIKit.Size(_online, 40);
             UIKit.FitText(_online, 16);
-            // A guest's progress lives on this phone only: the line leads to the account screen.
+            // Signed out, the line asks for the Google Play Games sign-in that opens the online features.
             _online.raycastTarget = true;
             _online.gameObject.AddComponent<Button>().onClick.AddListener(() =>
             {
-                if (App.Online.Account == Online.AccountState.Guest) Router.Open<AccountScreen>();
+                if (AsksSignIn) App.RequireOnline(null);
             });
         }
 
@@ -174,15 +174,17 @@ namespace MummyEscape.UI.Screens
             if (fresh != 0 && !IntroPending(App.Save)) Celebrate(fresh);
             StartCoroutine(App.Art.Warm(App.Save.FurthestUnlocked().Act)); // the next tomb's sprites, painted now
             var online = App.Online;
-            _online.text = !online.IsAvailable ? Loc.T(online.Status)
+            _online.text = AsksSignIn ? Loc.T("Se connecter avec Google Play Jeux pour jouer en ligne ›")
                 : online.Account == Online.AccountState.Account ? Loc.F("Compte {0} · {1}", online.Username, online.PlayerName)
-                : Loc.T("Invité : ta progression n'est que sur ce téléphone. Crée un compte pour ne rien perdre ›");
-            _online.color = online.IsAvailable && online.Account == Online.AccountState.Guest ? UIKit.Gold : UIKit.Dim;
+                : Loc.T(online.Status);
+            _online.color = AsksSignIn ? UIKit.Gold : UIKit.Dim;
             _chatDot.enabled = Online.ChatState.AnyUnread(App.Online.PlayerId);
             _ = Online.ChatState.RefreshAsync(App.Pvp);
             _ = Online.ChatState.SyncProfileAsync(App);
             ReloadTeams();
         }
+
+        bool AsksSignIn => !App.SignedIn && Online.GoogleSignIn.Supported;
 
         /// <summary>The group and the invites received, as the server has them (the lobby slot follows).</summary>
         async void ReloadTeams()
@@ -218,7 +220,7 @@ namespace MummyEscape.UI.Screens
                 if ((fresh & (int)f) == 0) continue;
                 switch (f)
                 {
-                    case Feature.Duel: lines.Add(Loc.T("Les duels et le groupe")); first ??= () => Router.Open<PvpScreen>(); break;
+                    case Feature.Duel: lines.Add(Loc.T("Les duels et le groupe")); first ??= () => App.RequireOnline(() => Router.Open<PvpScreen>()); break;
                 }
             }
             App.Audio.Play(Services.Sfx.Win);
@@ -254,7 +256,7 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             _goal.text = Loc.T("Grimpe au classement des duels");
-            _goalAction = () => Router.Open<PvpScreen>();
+            _goalAction = () => App.RequireOnline(() => Router.Open<PvpScreen>());
         }
 
         /// <summary>Draws the chosen act's tomb behind the menu (the default act when none is chosen or it is no longer open).</summary>

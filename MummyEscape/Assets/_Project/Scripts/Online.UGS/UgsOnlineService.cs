@@ -63,7 +63,14 @@ namespace MummyEscape.Online
                         try { await auth.SignInWithGooglePlayGamesAsync(code); }
                         catch (Exception e) { Debug.LogWarning("[Online] Google Play Games sign-in failed, playing as a guest: " + e.Message); }
                     }
-                    if (!auth.IsSignedIn) await auth.SignInAnonymouslyAsync();
+                    // A guest session of an earlier version resumes (GameApp keeps it signed out until it links Google Play Games);
+                    // a new anonymous player is only made where guests may play online (editor, development builds).
+                    if (!auth.IsSignedIn && (auth.SessionTokenExists || OnlineServiceFactory.GuestAllowed)) await auth.SignInAnonymouslyAsync();
+                    if (!auth.IsSignedIn)
+                    {
+                        Status = IOnlineService.NotSignedIn;
+                        return;
+                    }
                 }
                 await AuthenticationService.Instance.GetPlayerInfoAsync();
                 PlayerName = await AuthenticationService.Instance.GetPlayerNameAsync();

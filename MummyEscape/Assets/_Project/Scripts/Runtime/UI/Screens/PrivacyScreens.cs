@@ -412,14 +412,6 @@ namespace MummyEscape.UI.Screens
             var card = UIKit.Card(_content);
             bool google = GoogleSignIn.Supported;
 
-            if (!App.Privacy.OnlineAllowed && !online.IsDemo)
-            {
-                UIKit.SectionTitle(card, "Mode hors ligne");
-                PrivacyUI.Paragraph(card, "Le compte fait partie du mode en ligne. Active-le dans Confidentialité pour créer un compte ou te connecter.");
-                PrivacyUI.Wide(card, "Confidentialité", () => { Router.Close(this); Router.Open<PrivacyScreen>(); });
-                return;
-            }
-
             if (online.Account == AccountState.Account)
             {
                 UIKit.SectionTitle(card, "Connecté");
@@ -431,66 +423,28 @@ namespace MummyEscape.UI.Screens
                 return;
             }
 
-            if (online.Account == AccountState.Guest || online.IsDemo)
-            {
-                UIKit.SectionTitle(card, "Tu joues en invité");
-                PrivacyUI.Paragraph(card, google
-                    ? "Ta progression n'existe que sur ce téléphone. Crée un compte avec Google Play Jeux pour la sauvegarder et la retrouver sur un autre téléphone."
-                    : "Ta progression n'existe que sur ce téléphone. Les comptes se créent avec Google Play Jeux, sur Android.");
-                if (google) PrivacyUI.Wide(card, "Continuer avec Google Play Jeux", LinkGoogle, 36, 100, ButtonStyle.Primary);
-            }
-            else
-            {
-                UIKit.SectionTitle(card, "Non connecté");
-                PrivacyUI.Paragraph(card, Loc.T(online.Status), 30, UIKit.Dim);
-                if (google) PrivacyUI.Wide(card, "Se connecter avec Google Play Jeux", SignInWithGoogle, 36, 100, ButtonStyle.Primary);
-                PrivacyUI.Wide(card, "Continuer en invité", async () => { await App.StartOnline(); Rebuild(); });
-            }
-            GoogleError(card);
+            // Signed out: offline play only (the editor's guest and demo land here too, with their status).
+            UIKit.SectionTitle(card, "Non connecté");
+            PrivacyUI.Paragraph(card, google
+                ? "Connecte-toi avec Google Play Jeux pour jouer en ligne (duels, amis, classements) et sauvegarder ta progression. Sans compte, tu joues hors ligne."
+                : "Les comptes se créent avec Google Play Jeux, sur Android.");
+            PrivacyUI.Paragraph(card, Loc.T(online.Status), 28, UIKit.Dim);
+            if (google) PrivacyUI.Wide(card, "Se connecter avec Google Play Jeux", SignInWithGoogle, 36, 100, ButtonStyle.Primary);
+            if (!string.IsNullOrEmpty(_googleError)) PrivacyUI.Paragraph(card, "<color=#E0903A>" + Loc.T(_googleError) + "</color>", 28);
             PlayerIdLine(card);
         }
 
         /// <summary>The player id, for the support (refunds, unblocking) and the team list (Pvp.Developers). Selectable to copy.</summary>
         void PlayerIdLine(Transform card) => PrivacyUI.PlayerIdLine(App, card);
 
-        void GoogleError(Transform card)
-        {
-            if (!string.IsNullOrEmpty(_googleError)) PrivacyUI.Paragraph(card, "<color=#E0903A>" + Loc.T(_googleError) + "</color>", 28);
-        }
-
-        /// <summary>The guest becomes a Google account; if that Google account already has its progress, offers to sign in to it.</summary>
-        async void LinkGoogle()
-        {
-            if (_busy) return;
-            _busy = true;
-            string error = await App.LinkGoogle();
-            _busy = false;
-            if (this == null) return;
-            _googleError = null;
-            if (error == IOnlineService.GoogleTaken)
-            {
-                Router.Open<ConfirmDialog>().Configure("Compte Google déjà utilisé",
-                    "Ce compte Google Play Jeux a déjà sa propre progression. T'y connecter ? Celle de ce téléphone y sera ajoutée.",
-                    "Me connecter", async () =>
-                    {
-                        string e = await App.SignInWithGoogle();
-                        if (e == null) Rebuild();
-                        return e;
-                    });
-                return;
-            }
-            _googleError = error;
-            Rebuild();
-        }
-
+        /// <summary>Links a guest kept from an earlier version, or signs in to the Google account's player (this phone's progress joins it).</summary>
         async void SignInWithGoogle()
         {
             if (_busy) return;
             _busy = true;
-            string error = await App.SignInWithGoogle();
+            string error = await App.ConnectGoogle();
             _busy = false;
             if (this == null) return;
-            if (error == null && !App.Privacy.OnlineAllowed) App.Privacy.SetOnline(true);
             _googleError = error;
             Rebuild();
         }

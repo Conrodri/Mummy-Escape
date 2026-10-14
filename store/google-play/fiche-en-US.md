@@ -41,7 +41,7 @@ Earn scarabs as you play and unlock outfits and titles in the shop. The season p
 
 GOOD TO KNOW
 • Free to play, with optional ads (a video you choose to watch to get energy back) and in-app purchases (golden scarabs, season pass).
-• The campaign plays offline. Online mode is optional; the account goes through Google Play Games, with no email address.
+• The campaign plays offline. Online mode is optional and goes through Google Play Games sign-in, with no email address.
 • Your data can be exported and deleted from the game.
 • Available in English and French.
 ```

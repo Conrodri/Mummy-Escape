@@ -159,12 +159,12 @@ namespace MummyEscape.UI.Screens
                 _ = App.Game.StartEndless(mode);
             });
 
-        void Ranking()
+        void Ranking() => App.RequireOnline(() =>
         {
             var mode = Difficulty.Easy;
             foreach (var m in DifficultyExt.All) if (App.Save.IsEndlessUnlocked(m)) mode = m;
             Router.Get<LeaderboardScreen>().FocusEndless(mode); // before it opens: it loads the board it shows
             Router.Open<LeaderboardScreen>();
-        }
+        });
     }
 }

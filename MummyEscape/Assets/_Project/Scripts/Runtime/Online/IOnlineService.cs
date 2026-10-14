@@ -70,6 +70,8 @@ namespace MummyEscape.Online
     {
         /// <summary>Error of <see cref="LinkGoogleAsync"/>: the Google account belongs to another player.</summary>
         public const string GoogleTaken = "GOOGLE_TAKEN";
+        /// <summary>Status of a player who has not signed in with Google Play Games (online play needs it).</summary>
+        public const string NotSignedIn = "Hors ligne : connecte-toi avec Google Play Jeux pour jouer en ligne";
 
         // ---- account (all error-returning calls give a French message, or null on success)
         AccountState Account { get; }
@@ -137,6 +139,12 @@ namespace MummyEscape.Online
     public static class OnlineServiceFactory
     {
         public static Func<IOnlineService> Create = () => new OfflineOnlineService();
+
+        /// <summary>
+        /// Online play needs a Google Play Games sign-in; only the editor and development builds (no Play Games there) still
+        /// play online as an anonymous guest, with the test profiles, so the developer can test the online features.
+        /// </summary>
+        public static bool GuestAllowed => UnityEngine.Application.isEditor || UnityEngine.Debug.isDebugBuild;
 
         /// <summary>Leaderboard id for a level. Includes the generator version so different layouts never mix.</summary>
         public static string LeaderboardId(LevelId id) => LeaderboardId(id, DifficultyTable.GeneratorVersion);
