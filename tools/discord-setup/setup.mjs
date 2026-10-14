@@ -70,6 +70,31 @@ const LAYOUT = [
       { name: "suggestions", topic: "Tes idées pour le jeu." },
     ],
   },
+  // English side: same sections, distinct channel names so each can be addressed by name.
+  {
+    category: "🇬🇧 Info", readOnly: true, channels: [
+      { name: "welcome", topic: "Welcome to the tombs of Mummy Rush!" },
+      { name: "rules", topic: "The server rules." },
+      { name: "announcements", topic: "Game news." },
+      { name: "patch-notes", topic: "What changes in each version." },
+    ],
+  },
+  {
+    category: "🇬🇧 Community", channels: [
+      { name: "general", topic: "Everything about Mummy Rush." },
+      { name: "find-a-duo", topic: "Find a 2v2 partner (share your friend code Name#1234)." },
+      { name: "guilds", topic: "Show off your guild, recruit, find a guild." },
+      { name: "highlights", topic: "Share your best duels and escapes." },
+      { name: "off-topic", topic: "To talk about something else." },
+    ],
+  },
+  {
+    category: "🇬🇧 Help", channels: [
+      { name: "help", topic: "A question about the game? Ask here." },
+      { name: "bug-reports", topic: "Found a bug? Say what you were doing, what happened, your game version and your phone." },
+      { name: "ideas", topic: "Your ideas for the game." },
+    ],
+  },
   {
     category: "🧪 Testeurs", only: ["Testeur", "Développeur", "Modérateur"], channels: [
       { name: "tests-internes", topic: "Retours sur les versions de test." },
