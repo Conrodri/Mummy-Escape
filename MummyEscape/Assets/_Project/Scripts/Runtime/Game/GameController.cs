@@ -62,6 +62,7 @@ namespace MummyEscape.Game
             _input = input;
             _input.Swiped += OnSwipe;
             _input.Tapped += OnTap;
+            _input.Held += d => HoldMove(d, SwipeInput.HoldDelay);
             _app.Guard.ScreenshotTaken += OnPreviewScreenshot;
             _player.gameObject.SetActive(false);
         }
@@ -502,6 +503,7 @@ namespace MummyEscape.Game
 
         Dir? _held;
         bool _heldBlocked;
+        float _heldFrom;
 
         /// <summary>A direction pressed on the on-screen pad or joystick: the same as a swipe.</summary>
         public void PressMove(Dir d)
@@ -510,18 +512,21 @@ namespace MummyEscape.Game
         }
 
         /// <summary>
-        /// The joystick held in a direction (null: let go). That move repeats at the game's own pace, each step as soon as
-        /// the last one is shown, until a wall stops it (pushing the other way, or again, goes on).
+        /// The joystick, a pad key or a swipe's finger held in a direction (null: let go). That move repeats at the game's
+        /// own pace, each step as soon as the last one is shown, until a wall stops it (pushing the other way, or again,
+        /// goes on). A held swipe waits <paramref name="delay"/> seconds first (<see cref="SwipeInput.HoldDelay"/>).
         /// </summary>
-        public void HoldMove(Dir? d)
+        public void HoldMove(Dir? d, float delay = 0f)
         {
             if (d != _held) _heldBlocked = false;
             _held = d;
+            _heldFrom = Time.unscaledTime + delay;
         }
 
         void RepeatHeld()
         {
             if (!_held.HasValue || _heldBlocked || _busy || !_input.Enabled || Previewing) return;
+            if (Time.unscaledTime < _heldFrom) return;
             if (Session == null || Session.Status != SessionStatus.Playing) return;
             Submit(PlayerAction.Move(_held.Value));
         }

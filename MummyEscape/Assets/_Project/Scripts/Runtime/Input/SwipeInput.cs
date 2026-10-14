@@ -10,12 +10,22 @@ namespace MummyEscape.Input
     /// <summary>
     /// One swipe = one move. A swipe fires as soon as the finger travels far enough (responsive), and a short tap
     /// is reported separately (used to disarm the trap you are looking at). Keyboard arrows / WASD (ZQSD on AZERTY,
-    /// the Input System maps physical keys) work in the editor and on desktop.
+    /// the Input System maps physical keys) work in the editor and on desktop. A finger left down after its swipe holds
+    /// that direction (<see cref="Held"/>, repeated by the game like the joystick); dragged a swipe's length another way
+    /// it turns, lifted it stops.
     /// </summary>
     public sealed class SwipeInput : MonoBehaviour
     {
         public event Action<Dir> Swiped;
         public event Action<Vector2> Tapped;
+        /// <summary>Raised just before the swipe it holds; null when the finger lifts or input is turned off.</summary>
+        public event Action<Dir?> Held;
+
+        /// <summary>
+        /// Seconds a swipe's finger must stay down before its move repeats: a quick flick lifts well within this and stays
+        /// one move, even when the step animation ends sooner.
+        /// </summary>
+        public const float HoldDelay = 0.25f;
 
         public bool Enabled { get; set; }
 
@@ -32,6 +42,8 @@ namespace MummyEscape.Input
         bool _tracking;
         bool _consumed;
         bool _fresh;
+        Dir? _held;
+        Vector2 _anchor; // where the held direction was last confirmed: a turn is measured from here
         readonly List<RaycastResult> _hits = new List<RaycastResult>();
 
         static float Dpi => Screen.dpi > 0 ? Screen.dpi : 200f;
@@ -39,7 +51,7 @@ namespace MummyEscape.Input
 
         void Update()
         {
-            if (!Enabled) { _tracking = false; return; }
+            if (!Enabled) { _tracking = false; Release(); return; }
 
             ReadKeyboard();
 
@@ -70,8 +82,10 @@ namespace MummyEscape.Input
             }
             else return;
 
+            if (!pressed) Release(); // released, cancelled, or a release frame missed
             if (down)
             {
+                Release();
                 _tracking = !IsOverUi(start);
                 _consumed = false;
                 _start = start;
@@ -92,10 +106,15 @@ namespace MummyEscape.Input
                 if (delta.magnitude >= SwipePixels)
                 {
                     _consumed = true;
-                    Swiped?.Invoke(Mathf.Abs(delta.x) > Mathf.Abs(delta.y)
-                        ? (delta.x > 0 ? Dir.Right : Dir.Left)
-                        : (delta.y > 0 ? Dir.Up : Dir.Down));
+                    Hold(ToDir(delta), pos);
                 }
+            }
+            else if (pressed && _held.HasValue && (pos - _anchor).magnitude >= SwipePixels)
+            {
+                // Still down: dragging on the same way keeps going, a swipe's length another way turns (and moves at once).
+                var dir = ToDir(pos - _anchor);
+                _anchor = pos;
+                if (dir != _held) Hold(dir, pos);
             }
 
             if (up)
@@ -105,6 +124,27 @@ namespace MummyEscape.Input
                 _touchId = -1;
             }
         }
+
+        static Dir ToDir(Vector2 delta) => Mathf.Abs(delta.x) > Mathf.Abs(delta.y)
+            ? (delta.x > 0 ? Dir.Right : Dir.Left)
+            : (delta.y > 0 ? Dir.Up : Dir.Down);
+
+        void Hold(Dir dir, Vector2 pos)
+        {
+            _held = dir;
+            _anchor = pos;
+            Held?.Invoke(dir); // before the move, so a bump into a wall stops the repeat
+            Swiped?.Invoke(dir);
+        }
+
+        void Release()
+        {
+            if (!_held.HasValue) return;
+            _held = null;
+            Held?.Invoke(null);
+        }
+
+        void OnDisable() => Release();
 
         void ReadKeyboard()
         {
