@@ -27,10 +27,10 @@ Every tomb is checked by a solver: there is always a perfect path, and it is up 
 
 5 ACTS, 3 DIFFICULTIES
 • The Antechamber: doors and portals.
-• The Flooded Galleries: currents carry you to the end of the corridor.
-• The Collapsed Ruins: cracked slabs collapse as soon as you step off them.
-• The City of Anubis: laser barriers and tombs over two floors.
-• The Blazing Sanctuary: flame jets that fire in rhythm.
+• The Flooded Galleries: currents carry you to the end of the corridor, and wrappings must be burnt with your torch.
+• The Collapsed Ruins: cracked slabs collapse as soon as you step off them, and some walls are only a mirage.
+• The City of Anubis: laser barriers, idols with a burning gaze and tombs over two floors.
+• The Blazing Sanctuary: flame jets that fire every second.
 Each act opens with a short intro that shows what is new. Easy, Normal or Extreme: 10 tombs per act in each mode. Finished the campaign? The endless mode and the tower are waiting.
 
 TAKE ON OTHER PLAYERS

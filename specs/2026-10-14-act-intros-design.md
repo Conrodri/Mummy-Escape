@@ -88,3 +88,5 @@ son acte :
   - à adapter : `Rules`, `GameSession` (reçoit le temps), `RunReplay`, bots `HumanPlayer`/PvpSim, `CoopSolver`.
   Jusque-là, les jets restent au tour par tour et l'intro 5-0 les montre ainsi ; elle sera mise à jour avec cette
   livraison.
+
+**Livré en générateur v14** (2026-10-14) : règles exactes dans `GENERATEUR.md` (v14) et le README. Faux mur à l'acte 3 (Normal et Extrême), intros 2-0, 3-0, 4-0 et 5-0 mises à jour.
