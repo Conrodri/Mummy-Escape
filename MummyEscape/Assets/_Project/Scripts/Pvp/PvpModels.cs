@@ -132,6 +132,8 @@ namespace MummyEscape.Pvp
 
         /// <summary>Sceaux de Maât : monnaie PvP, gagnée seulement en jouant.</summary>
         public int Seals;
+        /// <summary>Daily and weekly quests (<see cref="MummyEscape.Pvp.Quests"/>); null until the first quest event.</summary>
+        public QuestBook Quests;
         /// <summary>Meilleure ligue jamais atteinte (débloque des articles de la boutique PvP).</summary>
         public League HighestLeague = League.Bronze;
         /// <summary>Identifiants des skins PvP obtenus (classement, participation, boutique PvP).</summary>
