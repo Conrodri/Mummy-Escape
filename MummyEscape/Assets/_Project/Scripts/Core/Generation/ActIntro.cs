@@ -29,7 +29,8 @@ namespace MummyEscape.Core
         {
             new[]
             {
-                L(0, 5, "Glisse vers la droite pour avancer d'une case.\nTa torche n'éclaire que les cases voisines."),
+                L(0, 2, "Avance vers la droite, une case à la fois.\nGlisser, croix ou joystick : choisis dans les Réglages."),
+                L(3, 5, "Ta torche n'éclaire que les cases voisines :\nretiens bien ce que tu as vu."),
                 L(6, 10, "Porte fermée : marche sur la dalle\ndu renfoncement pour l'ouvrir."),
                 L(11, 15, "Des pics ! Chacun coûte un ankh.\nJuste à côté, appuie sur « Désamorcer »."),
                 L(16, 19, "Sable maudit : il t'aveugle 3 pas\net ne se désamorce pas. Continue tout droit."),
@@ -53,7 +54,7 @@ namespace MummyEscape.Core
             {
                 L(0, 5, "Barrière rouge : l'interrupteur l'ouvre.\nChaque passage dessus l'inverse."),
                 L(6, 9, "Portail maudit : il fonctionne,\nmais efface ta mémoire de la carte."),
-                L(10, 14, "Dalle tournante : le tombeau pivote.\nGlisse selon ce que tu vois à l'écran."),
+                L(10, 14, "Dalle tournante : le tombeau pivote.\nDéplace-toi selon ce que tu vois à l'écran."),
                 L(15, 18, "Une autre dalle le remet droit."),
                 L(19, 23, ExitB),
             },
