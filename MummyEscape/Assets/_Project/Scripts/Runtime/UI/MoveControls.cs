@@ -9,7 +9,7 @@ namespace MummyEscape.UI
 {
     /// <summary>
     /// On-screen movement, for the players who prefer it to swiping (Settings › Déplacements): a directional pad (one press,
-    /// one move) or a joystick (held in a direction, the mummy keeps going). Swipes still work beside them.
+    /// one move, repeated while held) or a joystick (held in a direction, the mummy keeps going). Swipes still work beside them.
     /// </summary>
     public sealed class MoveControls : MonoBehaviour
     {
@@ -20,6 +20,7 @@ namespace MummyEscape.UI
         RectTransform _root;
         GameObject _pad, _stick;
         MoveControl _mode = (MoveControl)(-1);
+        PadKey _heldKey;
 
         public static MoveControls Create(Transform parent, GameController game)
         {
@@ -44,6 +45,7 @@ namespace MummyEscape.UI
         {
             if (mode == _mode) return;
             _mode = mode;
+            Hold(null);
             _game.HoldMove(null);
             if (mode == MoveControl.Pad && _pad == null) _pad = BuildPad();
             if (mode == MoveControl.Joystick && _stick == null) _stick = BuildStick();
@@ -53,7 +55,24 @@ namespace MummyEscape.UI
 
         void OnDisable()
         {
+            Hold(null);
             if (_game != null) _game.HoldMove(null);
+        }
+
+        /// <summary>The pad key under the held finger (null: let go): lit, and its move repeats like the joystick's.</summary>
+        void Hold(PadKey key)
+        {
+            if (key == _heldKey) return;
+            if (_heldKey != null) _heldKey.Image.color = Base;
+            _heldKey = key;
+            if (key == null)
+            {
+                if (_game != null) _game.HoldMove(null);
+                return;
+            }
+            key.Image.color = new Color(UIKit.Gold.r, UIKit.Gold.g, UIKit.Gold.b, 0.8f);
+            _game.HoldMove(key.Dir);
+            _game.PressMove(key.Dir);
         }
 
         GameObject BuildPad()
@@ -73,7 +92,8 @@ namespace MummyEscape.UI
                 arrow.rectTransform.sizeDelta = new Vector2(b * 0.55f, b * 0.55f);
                 arrow.rectTransform.localRotation = Quaternion.Euler(0, 0, -90f * i);
                 var press = key.gameObject.AddComponent<PadKey>();
-                press.Pressed = () => _game.PressMove(dir);
+                press.Owner = this;
+                press.Dir = dir;
                 press.Image = key;
             }
             return pad.gameObject;
@@ -93,19 +113,22 @@ namespace MummyEscape.UI
             return ring.gameObject;
         }
 
-        /// <summary>A pad key: moves on press (not on release, for speed), lit while held.</summary>
-        sealed class PadKey : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+        /// <summary>
+        /// A pad key: moves on press (not on release, for speed) and repeats while held, like the joystick; sliding the
+        /// finger onto another key turns the mummy, off the keys it stops.
+        /// </summary>
+        sealed class PadKey : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerEnterHandler, IPointerExitHandler
         {
-            public System.Action Pressed;
+            public MoveControls Owner;
+            public Dir Dir;
             public Image Image;
 
-            public void OnPointerDown(PointerEventData e)
-            {
-                Image.color = new Color(UIKit.Gold.r, UIKit.Gold.g, UIKit.Gold.b, 0.8f);
-                Pressed?.Invoke();
-            }
-
-            public void OnPointerUp(PointerEventData e) => Image.color = Base;
+            public void OnPointerDown(PointerEventData e) => Owner.Hold(this);
+            // Up goes to the key first pressed, wherever the finger is now.
+            public void OnPointerUp(PointerEventData e) => Owner.Hold(null);
+            // pointerPress is set only while a finger or button is down: a bare mouse hover does nothing.
+            public void OnPointerEnter(PointerEventData e) { if (e.pointerPress != null) Owner.Hold(this); }
+            public void OnPointerExit(PointerEventData e) { if (Owner._heldKey == this) Owner.Hold(null); }
         }
 
         /// <summary>
