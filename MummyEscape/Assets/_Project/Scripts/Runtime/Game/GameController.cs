@@ -68,6 +68,7 @@ namespace MummyEscape.Game
 
         public async Task StartLevel(LevelId id)
         {
+            if (_app.Save.NeedsIntro(id)) { StartIntro(id.Act); return; } // Easy F{a}-1 opens on its act's intro
             int token = ++_loadToken;
             ResetForLoad();
             DetachDuelLink();
@@ -102,13 +103,15 @@ namespace MummyEscape.Game
             StartCoroutine(PreviewRoutine());
         }
 
-        /// <summary>The tutorial corridor is being played (no preview, no record, no energy).</summary>
-        public bool InTutorial { get; private set; }
-        /// <summary>The tutorial run is over: true when the mummy got out.</summary>
-        public event Action<bool> TutorialEnded;
+        /// <summary>An act intro corridor is being played (no preview, no record, no energy).</summary>
+        public bool InIntro { get; private set; }
+        /// <summary>Act of the intro being played (or last played).</summary>
+        public int IntroAct { get; private set; }
+        /// <summary>The intro run is over: true when the mummy got out.</summary>
+        public event Action<bool> IntroEnded;
 
-        /// <summary>Starts the tutorial: a hand-made corridor that meets every mechanic, lit and without preview.</summary>
-        public void StartTutorial()
+        /// <summary>Starts an act's intro: a short hand-made corridor that meets the act's new mechanics, lit and without preview.</summary>
+        public void StartIntro(int act)
         {
             ++_loadToken;
             ResetForLoad();
@@ -116,10 +119,11 @@ namespace MummyEscape.Game
             ClearCoop();
             Match = null;
             Pace = null;
-            InTutorial = true;
-            CurrentLevel = Tutorial.Id;
-            LevelLoading?.Invoke(Tutorial.Id);
-            Setup(Tutorial.Build());
+            InIntro = true;
+            IntroAct = act;
+            CurrentLevel = ActIntro.Id(act);
+            LevelLoading?.Invoke(CurrentLevel);
+            Setup(ActIntro.Build(act));
             LevelStarted?.Invoke();
             _input.Enabled = !_paused;
             PreviewChanged?.Invoke();
@@ -128,7 +132,7 @@ namespace MummyEscape.Game
 
         void ResetForLoad()
         {
-            InTutorial = false;
+            InIntro = false;
             EndlessMode = null;
             HalloweenTomb = 0;
             TowerFloor = 0;
@@ -242,7 +246,7 @@ namespace MummyEscape.Game
         void Setup(Level level, GameSession session = null)
         {
             Session = session ?? new GameSession(level);
-            _soloRun = session == null && Match == null && !InTutorial ? new RunRecorder(level) : null;
+            _soloRun = session == null && Match == null && !InIntro ? new RunRecorder(level) : null;
             ApplyTheme(TombTheme.ForAct(InHalloween ? Halloween.Theme : level.Id.Act));
             IndexMechanisms(level);
             _maze.Build(Session);
@@ -416,31 +420,23 @@ namespace MummyEscape.Game
 
         public void Restart()
         {
-            if (InTutorial) StartTutorial();
+            if (InIntro) StartIntro(IntroAct);
             else if (InEndless) _ = StartEndless(EndlessMode.Value);
             else if (InHalloween) _ = StartHalloween(HalloweenTomb);
             else if (InTower) _ = StartTower();
             else if (Match == null && !InCoop) _ = StartLevel(CurrentLevel);
         }
 
-        /// <summary>Walked once, won, lost or left: JOUER must not send the player back into the corridor forever.</summary>
-        void MarkTutorialDone()
-        {
-            if (_app.Save.Data.TutorialDone) return;
-            _app.Save.Data.TutorialDone = true;
-            _app.Save.Save();
-        }
-
         public void Abandon()
         {
-            if (InTutorial) MarkTutorialDone();
+            if (InIntro) _app.Save.MarkIntroDone(IntroAct); // left = skipped: F{a}-1 must not loop back into it
             _loadToken++;
             ClearRelay();
             ClearCoop();
             DetachDuelLink();
             EndPreviewVisuals();
             StopAllCoroutines();
-            InTutorial = false;
+            InIntro = false;
             EndlessMode = null;
             HalloweenTomb = 0;
             TowerFloor = 0;
@@ -897,10 +893,10 @@ namespace MummyEscape.Game
             }
             yield return new WaitForSeconds(0.35f);
 
-            if (InTutorial)
+            if (InIntro)
             {
-                MarkTutorialDone();
-                TutorialEnded?.Invoke(result.Won);
+                if (result.Won) _app.Save.MarkIntroDone(IntroAct); // a fall is retried; leaving (Abandon) counts as a skip
+                IntroEnded?.Invoke(result.Won);
                 yield break;
             }
             if (Match != null)

@@ -120,7 +120,7 @@ namespace MummyEscape.UI.Screens
 
             var play = UIKit.Rect("PlayRow", dock);
             UIKit.Size(play, 124);
-            var playBtn = UIKit.Button(play, Loc.T("JOUER"), () => { if (TutorialPending(App.Save)) StartTutorial(); else Router.Open<LevelSelectScreen>(); }, 50, ButtonStyle.Primary);
+            var playBtn = UIKit.Button(play, Loc.T("JOUER"), () => { if (IntroPending(App.Save)) StartIntro(); else Router.Open<LevelSelectScreen>(); }, 50, ButtonStyle.Primary);
             UIKit.Place((RectTransform)playBtn.transform, 0.5f, 0.5f, 620, 124);
 
             // Duel, solo, rankings, friends and the shop are in the bottom bar (NavBar).
@@ -152,7 +152,7 @@ namespace MummyEscape.UI.Screens
             _chat.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Chat, App.Save.IsCompleted));
             _groupAction.gameObject.SetActive(Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted));
             int fresh = App.Save.TakeNewUnlocks() & (int)Feature.Duel; // the casino opens without fanfare: no popup toward a game of chance
-            if (fresh != 0 && !TutorialPending(App.Save)) Celebrate(fresh);
+            if (fresh != 0 && !IntroPending(App.Save)) Celebrate(fresh);
             StartCoroutine(App.Art.Warm(App.Save.FurthestUnlocked().Act)); // the next tomb's sprites, painted now
             var online = App.Online;
             _online.text = !online.IsAvailable ? Loc.T(online.Status)
@@ -196,11 +196,11 @@ namespace MummyEscape.UI.Screens
             var save = App.Save;
             var next = save.FurthestUnlocked();
             var rec = save.GetRecord(next);
-            // A new player meets the traps in the tutorial corridor first (JOUER goes there too).
-            if (TutorialPending(save))
+            // Each act's traps are met in its intro corridor first (JOUER goes there too).
+            if (IntroPending(save))
             {
-                _goal.text = Loc.T("Apprends à déjouer les pièges : tutoriel");
-                _goalAction = StartTutorial;
+                _goal.text = Loc.F("Apprends les pièges de l'acte {0} : intro", next.Act);
+                _goalAction = StartIntro;
                 return;
             }
             if (rec == null || rec.Completions == 0)
@@ -229,18 +229,13 @@ namespace MummyEscape.UI.Screens
             _scene.Show(App.Art, entry.Act);
         }
 
-        /// <summary>A first-time player: the tutorial not walked yet and the first tomb never escaped.</summary>
-        static bool TutorialPending(Services.SaveService save)
-        {
-            var first = Progression.First(Difficulty.Easy);
-            var rec = save.GetRecord(first);
-            return !save.Data.TutorialDone && save.FurthestUnlocked().Equals(first) && (rec == null || rec.Completions == 0);
-        }
+        /// <summary>The next tomb opens an Easy act whose intro is neither walked nor skipped.</summary>
+        static bool IntroPending(Services.SaveService save) => save.NeedsIntro(save.FurthestUnlocked());
 
-        void StartTutorial()
+        void StartIntro()
         {
             Router.Open<HudScreen>();
-            App.Game.StartTutorial();
+            App.Game.StartIntro(App.Save.FurthestUnlocked().Act);
         }
 
         void PlayLevel(LevelId id) =>

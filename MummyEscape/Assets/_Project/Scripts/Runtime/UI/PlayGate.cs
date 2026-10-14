@@ -19,6 +19,7 @@ namespace MummyEscape.UI
         /// <summary>Spends a point for that level and starts it; when none is left, offers more (then starts).</summary>
         public static void Solo(GameApp app, LevelId level, Action start)
         {
+            if (app.Save.NeedsIntro(level)) { start(); return; } // StartLevel plays the act's intro instead, which is free
             if (!app.Save.CanPlaySolo(level))
             {
                 Offer(app, PlayMode.Solo, () => Solo(app, level, start));
@@ -29,7 +30,7 @@ namespace MummyEscape.UI
         }
 
         /// <summary>A Halloween tomb costs a solo point like a campaign tomb past act 1 (its stored tombs all are, see HalloweenTests).</summary>
-        public static void HalloweenRun(GameApp app, Action start) => Solo(app, new LevelId(Difficulty.Easy, 2, 1), start);
+        public static void HalloweenRun(GameApp app, Action start) => Solo(app, new LevelId(Difficulty.Easy, 2, 2), start); // not x-1: that one may stand for a free intro
 
         /// <summary>Spends the point of one endless tomb and starts it; when none is left, offers more (then starts).</summary>
         public static void EndlessRun(GameApp app, Action start)

@@ -23,10 +23,10 @@ namespace MummyEscape.UI.Screens
         RectTransform _disarmCooldown;
         bool _disarmCooling;
         MoveControls _controls;
-        // Tutorial: what the stretch the mummy walks in teaches.
+        // Act intro: what the stretch the mummy walks in teaches.
         RectTransform _lesson;
         Text _lessonText;
-        TutorialLesson _shownLesson;
+        IntroLesson _shownLesson;
         CanvasGroup _preview;
         Text _previewTitle;
         Text _previewCount;
@@ -353,7 +353,7 @@ namespace MummyEscape.UI.Screens
             App.Game.RelayChanged += OnRelayChanged;
             App.Game.SetPaused(false);
             App.Settings.Changed += ApplyControls;
-            App.Game.TutorialEnded += OnTutorialEnded;
+            App.Game.IntroEnded += OnIntroEnded;
             ApplyControls();
             Refresh();
         }
@@ -366,7 +366,7 @@ namespace MummyEscape.UI.Screens
             App.Game.LevelStarted -= ShowIntro;
             App.Game.RelayChanged -= OnRelayChanged;
             App.Settings.Changed -= ApplyControls;
-            App.Game.TutorialEnded -= OnTutorialEnded;
+            App.Game.IntroEnded -= OnIntroEnded;
         }
 
         void ApplyControls()
@@ -375,13 +375,13 @@ namespace MummyEscape.UI.Screens
             _controls.Apply(App.Settings.Controls);
         }
 
-        void OnTutorialEnded(bool won) => Router.Open<TutorialEndScreen>().Show(won);
+        void OnIntroEnded(bool won) => Router.Open<IntroEndScreen>().Show(won);
 
-        /// <summary>Tutorial: the lesson of the stretch the mummy walks in, popping in as each new one starts.</summary>
+        /// <summary>Act intro: the lesson of the stretch the mummy walks in, popping in as each new one starts.</summary>
         void UpdateLesson(GameSession s)
         {
-            if (!App.Game.InTutorial) { _shownLesson = null; _lesson.gameObject.SetActive(false); return; }
-            var lesson = Tutorial.LessonAt(s.Position) ?? _shownLesson;
+            if (!App.Game.InIntro) { _shownLesson = null; _lesson.gameObject.SetActive(false); return; }
+            var lesson = ActIntro.LessonAt(App.Game.IntroAct, s.Position) ?? _shownLesson;
             if (lesson != _shownLesson && lesson != null)
             {
                 _lessonText.text = Loc.T(lesson.Text);
@@ -400,7 +400,7 @@ namespace MummyEscape.UI.Screens
         void ShowLoading(LevelId id)
         {
             var match = App.Game.Match;
-            string title = App.Game.InTutorial ? Loc.T("Tutoriel")
+            string title = App.Game.InIntro ? Loc.F("Intro · acte {0}", App.Game.IntroAct)
                          : App.Game.InEndless ? Loc.F("Sans fin · {0}", LevelNames.Mode(App.Game.EndlessMode.Value)) + " · " + Loc.F("Tombeau {0}", App.Game.EndlessTomb)
                          : App.Game.InHalloween ? Loc.T("Halloween") + " · " + Loc.F("Tombeau {0}", App.Game.HalloweenTomb)
                          : App.Game.InTower ? Loc.T("Tour de défi") + " · " + Loc.F("Étage {0}", App.Game.TowerFloor)
@@ -500,7 +500,7 @@ namespace MummyEscape.UI.Screens
             if (s == null) return;
             var level = s.Level;
             var coopTomb = App.Game.InCoop ? App.Game.Coop?.Tomb : null;
-            _level.text = coopTomb != null ? "2v2 · " + Loc.T(coopTomb.Name) : App.Game.InRelay ? "2v2" : App.Game.InTutorial ? Loc.T("Tutoriel") : App.Game.InDuel ? Loc.T("Duel")
+            _level.text = coopTomb != null ? "2v2 · " + Loc.T(coopTomb.Name) : App.Game.InRelay ? "2v2" : App.Game.InIntro ? Loc.F("Intro · acte {0}", App.Game.IntroAct) : App.Game.InDuel ? Loc.T("Duel")
                         : App.Game.InEndless ? Loc.F("Tombeau {0}", App.Game.EndlessTomb) : App.Game.InHalloween ? Loc.F("Tombeau {0}", App.Game.HalloweenTomb) : App.Game.InTower ? Loc.F("Tour · {0}", App.Game.TowerFloor) : Loc.F("Niveau {0}", level.Id); // noloc
             UpdateCounter(s);
             UpdateLesson(s);
@@ -559,7 +559,7 @@ namespace MummyEscape.UI.Screens
             string Controls = Loc.T("Glisse pour avancer d'une case.\nTa torche éclaire les cases voisines.");
             string Map = Loc.T("Maintiens « Carte » pour revoir ce que tu as exploré.");
             string mechanic = ActHint(level.Id.Act);
-            _hint.text = preview || App.Game.InTutorial ? ""
+            _hint.text = preview || App.Game.InIntro ? ""
                 : coopTomb != null ? (s.Moves < 6 ? Loc.T(coopTomb.Lesson) : "")
                 : mechanic == null ? (s.Moves == 0 ? Controls : s.Moves < 4 ? Map : "")
                 : s.Moves < 4 ? mechanic

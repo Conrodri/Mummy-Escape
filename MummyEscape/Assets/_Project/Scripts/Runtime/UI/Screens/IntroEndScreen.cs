@@ -1,11 +1,12 @@
+using MummyEscape.App;
 using MummyEscape.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace MummyEscape.UI.Screens
 {
-    /// <summary>End of the tutorial: out of the corridor, on to the first tomb; fallen in it, once more.</summary>
-    public sealed class TutorialEndScreen : UIScreen
+    /// <summary>End of an act intro: out of the corridor, on to the act's first tomb; fallen in it, once more.</summary>
+    public sealed class IntroEndScreen : UIScreen
     {
         public override bool IsModal => true;
 
@@ -35,24 +36,30 @@ namespace MummyEscape.UI.Screens
         public void Show(bool won)
         {
             _won = won;
-            _title.text = Loc.T(won ? "Tutoriel terminé !" : "La momie est tombée…");
+            _title.text = Loc.T(won ? "Intro terminée !" : "La momie est tombée…");
             _text.text = Loc.T(won
-                ? "Tu connais maintenant tous les pièges des tombeaux.\nÀ toi de t'évader pour de vrai !"
-                : "Pas de panique : le tutoriel ne coûte rien.\nRecommence et lis bien chaque panneau.");
-            UIKit.SetLabel(_main, won ? "Jouer le tombeau 1-1" : "Réessayer");
+                ? "Tu connais les pièges de cet acte.\nÀ toi de t'évader pour de vrai !"
+                : "Pas de panique : l'intro ne coûte rien.\nRecommence et lis bien chaque panneau.");
+            UIKit.SetLabel(_main, won ? Loc.F("Jouer le tombeau {0}-1", App.Game.IntroAct) : "Réessayer");
         }
 
         void Main()
         {
             Router.Close(this);
             if (!_won) { App.Game.Restart(); return; }
-            var first = Progression.First(Difficulty.Easy);
-            App.Game.Abandon();
-            Router.Reset<MainMenuScreen>();
-            PlayGate.Solo(App, first, () =>
+            PlayAct(App, Router, App.Game.IntroAct);
+        }
+
+        /// <summary>Leaves the intro (done by now) for the act's first Easy tomb: the end screen's button and Pause › Passer.</summary>
+        public static void PlayAct(GameApp app, UIRouter router, int act)
+        {
+            var first = new LevelId(Difficulty.Easy, act, 1);
+            app.Game.Abandon();
+            router.Reset<MainMenuScreen>();
+            PlayGate.Solo(app, first, () =>
             {
-                Router.Open<HudScreen>();
-                _ = App.Game.StartLevel(first);
+                router.Open<HudScreen>();
+                _ = app.Game.StartLevel(first);
             });
         }
 

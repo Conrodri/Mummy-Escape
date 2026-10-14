@@ -7,7 +7,7 @@ namespace MummyEscape.UI.Screens
     {
         public override bool IsModal => true;
 
-        Button _restart, _quit;
+        Button _restart, _skip, _quit;
         Text _duelNote;
 
         protected override void Build()
@@ -20,6 +20,8 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(UIKit.Button(panel, "Reprendre", Resume, 38, ButtonStyle.Primary), UIKit.ButtonHeight + 8);
             _restart = UIKit.Button(panel, "Recommencer", Restart);
             UIKit.Size(_restart, UIKit.ButtonHeight);
+            _skip = UIKit.Button(panel, "Passer l'intro", Skip, UIKit.TextSize, ButtonStyle.Ghost);
+            UIKit.Size(_skip, 72);
             UIKit.Size(UIKit.Button(panel, "Paramètres", () => Router.Open<SettingsScreen>()), UIKit.ButtonHeight);
             // A button like the others, its text in red: leaving loses the run.
             _quit = UIKit.Button(panel, "Quitter le niveau", Quit);
@@ -33,6 +35,7 @@ namespace MummyEscape.UI.Screens
             bool duel = App.Game.InDuel, relay = App.Game.InRelay, coop = App.Game.InCoop, tower = App.Game.InTower;
             _duelNote.gameObject.SetActive(duel || relay || coop);
             _duelNote.text = Loc.T(relay || coop ? "2v2 : le chrono continue de tourner !" : "Duel : le chrono continue de tourner !");
+            _skip.gameObject.SetActive(App.Game.InIntro);
             _restart.gameObject.SetActive(!duel && !relay && !coop && !tower); // a tower floor is played once: its preview is already seen
             UIKit.SetLabel(_quit, tower ? "Abandonner la course (fin de la tour)" : coop ? "Quitter (la partie s'arrête pour vous deux)" : relay ? "Quitter le match (défaite du duo)" : duel ? "Abandonner le duel (défaite)" : "Quitter le niveau");
             App.Game.SetPaused(true);
@@ -44,9 +47,18 @@ namespace MummyEscape.UI.Screens
 
         void Restart()
         {
-            if (App.Game.InTutorial) { Router.Close(this); App.Game.Restart(); return; } // the tutorial costs no energy
+            if (App.Game.InIntro) { Router.Close(this); App.Game.Restart(); return; } // an intro costs no energy
             if (App.Game.InEndless) { PlayGate.EndlessRun(App, () => { Router.Close(this); App.Game.Restart(); }); return; }
             PlayGate.Solo(App, App.Game.CurrentLevel, () => { Router.Close(this); App.Game.Restart(); });
+        }
+
+        /// <summary>Act intro: counts it as walked and goes straight to the act's first tomb.</summary>
+        void Skip()
+        {
+            int act = App.Game.IntroAct;
+            App.Save.MarkIntroDone(act);
+            Router.Close(this);
+            IntroEndScreen.PlayAct(App, Router, act);
         }
 
         void Quit()

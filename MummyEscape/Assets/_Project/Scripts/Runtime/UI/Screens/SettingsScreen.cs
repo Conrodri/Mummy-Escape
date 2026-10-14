@@ -28,7 +28,6 @@ namespace MummyEscape.UI.Screens
             scroll.GetComponent<Image>().color = Color.clear;
             body.GetComponent<VerticalLayoutGroup>().spacing = 36;
             var s = App.Settings;
-            bool inGame = App.Game.Session != null;
 
             var sound = UIKit.Card(body);
             UIKit.SectionTitle(sound, "Son");
@@ -44,7 +43,6 @@ namespace MummyEscape.UI.Screens
             controls.Select((int)s.Controls);
             UIKit.Toggle(game, "Croix et joystick à droite", s.PadRight, s.SetPadRight);
             UIKit.Toggle(game, "Aperçu du tombeau au départ", s.ShowPreview, s.SetShowPreview);
-            if (!inGame) UIKit.Size(UIKit.Button(game, "Rejouer le tutoriel", ReplayTutorial, UIKit.TextSize, ButtonStyle.Secondary), UIKit.ButtonHeight);
 
             var image = UIKit.Card(body);
             UIKit.SectionTitle(image, "Image");
@@ -84,13 +82,6 @@ namespace MummyEscape.UI.Screens
 
             var version = UIKit.Label(Root, $"Mummy Rush v{Application.version} · " + Loc.F("générateur v{0}", Core.DifficultyTable.GeneratorVersion), 28, UIKit.Dim); // noloc
             UIKit.BottomBand(version.rectTransform, 50, 30);
-        }
-
-        void ReplayTutorial()
-        {
-            Router.Close(this);
-            Router.Open<HudScreen>();
-            App.Game.StartTutorial();
         }
 
         /// <summary>Asks the store for the purchases paid but not credited, and the server for the wallet of truth.</summary>

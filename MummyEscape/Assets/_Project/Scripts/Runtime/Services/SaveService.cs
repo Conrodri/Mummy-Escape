@@ -37,8 +37,8 @@ namespace MummyEscape.Services
         public string Country = "";
         /// <summary>The name and country were chosen at the first online connection (<see cref="UI.Screens.ProfileSetupScreen"/>).</summary>
         public bool ProfileDone;
-        /// <summary>The tutorial corridor was walked to its exit once.</summary>
-        public bool TutorialDone;
+        /// <summary>Act intros (Easy) walked or skipped, bit (act - 1).</summary>
+        public int IntrosDone;
         /// <summary>Features (Core.Feature bitmask) already celebrated on the home screen.</summary>
         public int SeenUnlocks;
         /// <summary>Best scores the leaderboards confirmed ("level_f1_1:score"): any other record is sent again when online.</summary>
@@ -133,7 +133,7 @@ namespace MummyEscape.Services
             if (Data.Version < SaveData.CurrentVersion)
             {
                 // v3: the campaign became three modes of 5 levels per act; v4: generator v13, 10 levels per act. The old
-                // tombs are gone, progress starts over (scarabs, skins and the tutorial are kept), and the scores the old
+                // tombs are gone, progress starts over (scarabs, skins and the intros are kept), and the scores the old
                 // leaderboards confirmed say nothing of the new ones.
                 Data.Records.Clear();
                 Data.SubmittedScores.Clear();
@@ -210,7 +210,7 @@ namespace MummyEscape.Services
             foreach (var s in other.OwnedSkins) if (!Data.OwnedSkins.Contains(s) && !Monetization.GoldShop.IsPaid(s)) Data.OwnedSkins.Add(s);
             if (string.IsNullOrEmpty(Data.Country)) Data.Country = other.Country ?? "";
             Data.ProfileDone |= other.ProfileDone;
-            Data.TutorialDone |= other.TutorialDone;
+            Data.IntrosDone |= other.IntrosDone;
             MergeEconomy(other);
             Data.HalloweenCleared = Math.Max(Data.HalloweenCleared, other.HalloweenCleared);
             Data.TowerBest.MergeWith(other.TowerBest); // the run in progress stays on its device
@@ -256,6 +256,22 @@ namespace MummyEscape.Services
         }
 
         public bool IsCompleted(LevelId id) => GetRecord(id)?.Completions > 0;
+
+        /// <summary>
+        /// Starting this level plays its act's intro first: Easy F{a}-1 while that intro is neither walked nor skipped.
+        /// A player who already escaped F{a}-1 (before the intros existed) is never sent back to it.
+        /// </summary>
+        public bool NeedsIntro(LevelId id) =>
+            id.Mode == Difficulty.Easy && id.Index == 1 && (Data.IntrosDone & (1 << (id.Act - 1))) == 0 && !IsCompleted(id);
+
+        /// <summary>Marks an act's intro as walked or skipped.</summary>
+        public void MarkIntroDone(int act)
+        {
+            int bit = 1 << (act - 1);
+            if ((Data.IntrosDone & bit) != 0) return;
+            Data.IntrosDone |= bit;
+            Save();
+        }
 
         /// <summary>Features opened since the last call (a <see cref="Feature"/> bitmask), so each is celebrated once.</summary>
         public int TakeNewUnlocks()

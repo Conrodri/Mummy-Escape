@@ -22,7 +22,7 @@ namespace MummyEscape.UI.Screens
         UIKit.Segmented _modes;
         Image _glow, _banner, _bannerRim, _bar;
         Text _actNumber, _actTitle, _actInfo, _actStars;
-        Button _prev, _next, _continue;
+        Button _prev, _next, _continue, _intro;
         RectTransform _grid, _dots;
 
         protected override void Build()
@@ -33,10 +33,7 @@ namespace MummyEscape.UI.Screens
             _glow.preserveAspect = false;
             UIKit.Place(_glow.rectTransform, 0.5f, 1f, 2200, 1600, 0, -250);
 
-            var title = Header("Campagne");
-            // The tutorial corridor, to walk again whenever a trap is forgotten.
-            var tutorial = UIKit.IconButton(title.transform.parent, UISprites.Hand, () => { Router.Open<HudScreen>(); App.Game.StartTutorial(); }, 92);
-            UIKit.Place((RectTransform)tutorial.transform, 1, 0.5f, 92, 92, -148, 0);
+            Header("Campagne");
             var body = Body(190, 40);
             UIKit.Column(body, 22);
             // A horizontal swipe anywhere on the page changes the act.
@@ -98,6 +95,9 @@ namespace MummyEscape.UI.Screens
             UIKit.Place((RectTransform)_prev.transform, 0f, 0.5f, 84, 84, 66, 20);
             _next = UIKit.IconButton(inner, UISprites.Next, () => SetAct(_act + 1, true), 84);
             UIKit.Place((RectTransform)_next.transform, 1f, 0.5f, 84, 84, -66, 20);
+            // Easy: the act's intro corridor, to walk again whenever a trap is forgotten.
+            _intro = UIKit.Button(inner, "Intro", () => { Router.Open<HudScreen>(); App.Game.StartIntro(_act); }, 26);
+            UIKit.Place((RectTransform)_intro.transform, 1f, 1f, 130, 56, -24, -22);
 
             var col = UIKit.Rect("Texts", inner); // noloc
             UIKit.Stretch(col, 160, 26, 160, 24);
@@ -160,6 +160,7 @@ namespace MummyEscape.UI.Screens
             _actTitle.text = Loc.T(def.Name);
             _prev.gameObject.SetActive(_act > 1);
             _next.gameObject.SetActive(_act < DifficultyTable.ActCount);
+            _intro.gameObject.SetActive(_mode == Difficulty.Easy && App.Save.IsUnlocked(new LevelId(Difficulty.Easy, _act, 1)));
             _actInfo.text = open
                 ? Loc.P(DifficultyTable.Floors(_mode, _act), "{0} étage", "{0} étages") + "  ·  " + Loc.P(def.Levels, "{0} crypte", "{0} cryptes")
                 : Loc.F("Termine le mode {0} pour l'ouvrir", LevelNames.Mode(_mode - 1));
