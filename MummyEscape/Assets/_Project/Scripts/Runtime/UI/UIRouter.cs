@@ -161,6 +161,7 @@ namespace MummyEscape.UI
             while (_history.Count > 0) Deactivate(_history.Pop());
             foreach (var s in _screens.Values) if (s != null) Destroy(s.gameObject);
             _screens.Clear();
+            _nav.Relabel();
             UpdateNav();
         }
 
