@@ -13,7 +13,7 @@ namespace MummyEscape.UI.Screens
         PassBanner _pass;
         Image _mummy, _mate, _chatDot;
         Text _mateName, _mateState, _myName, _myState, _inviteLabel, _badgeText;
-        Image _myGlow, _mateGlow, _badge;
+        Image _myShadow, _mateShadow, _badge;
         Button _chat, _plus;
         RectTransform _invite;
         int _invites, _teamsRequest;
@@ -88,8 +88,8 @@ namespace MummyEscape.UI.Screens
             Center(_mummy.rectTransform);
             // The party lobby: the player in the middle, his name (and, in a group, his readiness) over his head;
             // on his right a fixed slot, the teammate's mummy or a "+" to invite one.
-            _myGlow = Glow();
-            _mateGlow = Glow();
+            _myShadow = FootShadow();
+            _mateShadow = FootShadow();
             _myName = StageLabel(28, UIKit.Sand);
             _myState = StageLabel(24, UIKit.Dim);
             _mate = UIKit.Image(_stage, null, Color.white, true);
@@ -309,12 +309,12 @@ namespace MummyEscape.UI.Screens
             // Room is kept over the head for the name and the readiness, and on the right for the teammate's slot.
             float size = Mathf.Min(620f, _stage.rect.height * 0.8f, _stage.rect.height - 190f, _stage.rect.width * 0.46f);
             bool show = size >= 100f;
-            _mummy.enabled = _myGlow.enabled = _myName.enabled = show;
+            _mummy.enabled = _myShadow.enabled = _myName.enabled = show;
             _mummy.rectTransform.sizeDelta = new Vector2(size, size);
             float mate = size * 0.72f, x = SlotX(size), y = SlotY(size), plus = size * 0.36f;
             _mate.rectTransform.sizeDelta = new Vector2(mate, mate);
-            Put(_myGlow.rectTransform, 0, -size * 0.47f, size * 0.75f, size * 0.16f);
-            Put(_mateGlow.rectTransform, x, y - mate * 0.47f, mate * 0.75f, mate * 0.16f);
+            Put(_myShadow.rectTransform, 0, -size * 0.47f, size * 1.7f, size * 0.2f);
+            Put(_mateShadow.rectTransform, x, y - mate * 0.47f, mate * 1.7f, mate * 0.2f);
             _plus.transform.localScale = Vector3.one * (plus / PlusSize);
             ((RectTransform)_plus.transform).anchoredPosition = new Vector2(x, y);
             Put(_inviteLabel.rectTransform, x, y + plus * 0.5f + 28, size * 0.6f, 40);
@@ -343,7 +343,7 @@ namespace MummyEscape.UI.Screens
             bool slot = shown && Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted);
             string mate = g?.Members.Find(m => m != App.Online.PlayerId);
             bool duo = slot && mate != null;
-            _mate.enabled = _mateName.enabled = _mateState.enabled = _mateGlow.enabled = duo;
+            _mate.enabled = _mateName.enabled = _mateState.enabled = _mateShadow.enabled = duo;
             _invite.gameObject.SetActive(slot && !duo);
             if (duo)
             {
@@ -386,10 +386,10 @@ namespace MummyEscape.UI.Screens
             return t;
         }
 
-        /// <summary>A soft pool of light under a slot, behind the mummies.</summary>
-        Image Glow()
+        /// <summary>A soft dark ellipse at a mummy's feet: sets it apart from the (blurred) tomb behind.</summary>
+        Image FootShadow()
         {
-            var g = UIKit.Image(_stage, UISprites.RadialGlow, new Color(UIKit.Gold.r, UIKit.Gold.g, UIKit.Gold.b, 0.6f), false, "Glow"); // noloc
+            var g = UIKit.Image(_stage, UISprites.RadialGlow, Color.black, false, "Shadow"); // noloc
             Center(g.rectTransform);
             g.transform.SetAsFirstSibling();
             return g;
