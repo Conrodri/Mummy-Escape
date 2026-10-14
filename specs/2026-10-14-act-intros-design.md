@@ -75,6 +75,16 @@ son acte :
   la poussière : il faut d'abord la rallumer à une torche murale.
 - **Faux mur (mirage)** : mur traversable qui miroite quand la torche l'éclaire ; raccourci seulement, jamais requis
   en Facile.
-- **Regard d'idole (acte 4)** : une idole dans un mur balaie sa ligne jusqu'au prochain mur un tour sur 3 (−1 PV si on
-  s'y trouve) ; yeux qui brillent le tour d'avant ; rayon visible même dans le noir. Le solveur gère déjà
-  `Tick mod 3` (jets de flammes).
+- **Regard d'idole (acte 4)** : une idole dans un mur balaie sa ligne jusqu'au prochain mur (−1 PV si on s'y trouve
+  pendant le tir) ; yeux qui brillent pendant la charge ; rayon visible même dans le noir. Rythme temps réel, comme les
+  jets de feu ci-dessous.
+- **Pièges périodiques en temps réel** (jets de feu existants + idole), décidé le 2026-10-14 : le tour par tour
+  (`Tick mod 3`) rendait les coups subis dépendants du hasard de la solution. Nouveau rythme :
+  - cycle d'**1 s pile** : 0,85 s de charge (lueur visible même dans le noir) puis 0,15 s de tir ; constantes dans Core ;
+  - **tous les pièges d'un tombeau synchrones** ;
+  - horloge en ticks depuis la chute du brouillard (même origine que `RunInput.Tick`), arrêtée en pause ;
+  - −1 PV si la momie est sur la case pendant le tir (entrée ou immobile), un seul coup par salve ;
+  - le solveur traite ces cases comme du sol (on peut toujours attendre) ; attendre coûte seulement du temps ;
+  - à adapter : `Rules`, `GameSession` (reçoit le temps), `RunReplay`, bots `HumanPlayer`/PvpSim, `CoopSolver`.
+  Jusque-là, les jets restent au tour par tour et l'intro 5-0 les montre ainsi ; elle sera mise à jour avec cette
+  livraison.
