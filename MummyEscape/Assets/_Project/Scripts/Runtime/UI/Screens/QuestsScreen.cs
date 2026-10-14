@@ -213,7 +213,8 @@ namespace MummyEscape.UI.Screens
     }
 
     /// <summary>
-    /// "Quête terminée" lines on a result screen: the quests the game just ended completed (<see cref="QuestService.TakeCompleted"/>),
+    /// Quest lines on a result screen: the progress of the quests the game just moved forward ("Quête terminée" once done,
+    /// <see cref="QuestService.TakeProgress"/>),
     /// also those the server reports a moment later, while the screen is up. Takes no room when there are none.
     /// </summary>
     public sealed class QuestRecap : MonoBehaviour
@@ -233,14 +234,22 @@ namespace MummyEscape.UI.Screens
             return recap;
         }
 
-        /// <summary>The same lines as text, one per completed quest, each after a line break ("" when none).</summary>
+        /// <summary>The same lines as text, one per quest that moved forward, each after a line break ("" when none).</summary>
         public static string Text(App.GameApp app)
         {
-            var done = app.Quests?.TakeCompleted();
-            if (done == null || done.Count == 0) return "";
+            var moved = app.Quests?.TakeProgress();
+            if (moved == null || moved.Count == 0) return "";
             var lines = "";
-            foreach (var q in done) lines += "\n" + Loc.F("Quête terminée : {0}", QuestsScreen.TextOf(q));
+            foreach (var q in moved) lines += "\n" + LineOf(app.Quests.Book, q);
             return lines;
+        }
+
+        /// <summary>"Quête terminée : …" once done, otherwise the quest and its progress.</summary>
+        static string LineOf(QuestBook book, QuestDef q)
+        {
+            int count = Quests.CountOf(book, q);
+            return Quests.IsDone(book, q) ? Loc.F("Quête terminée : {0}", QuestsScreen.TextOf(q))
+                : QuestsScreen.TextOf(q) + " · " + (q.Kind == QuestKind.DailyDays ? Loc.F("{0}/{1} jours", count, q.Target) : count + "/" + q.Target); // noloc
         }
 
         void OnEnable()
@@ -271,11 +280,13 @@ namespace MummyEscape.UI.Screens
         void Pull()
         {
             if (this == null || !isActiveAndEnabled) return;
-            var done = App.GameApp.I.Quests.TakeCompleted();
+            var quests = App.GameApp.I.Quests;
+            var done = quests.TakeProgress();
             if (done == null) return;
             foreach (var q in done)
             {
-                var label = UIKit.Chip(transform, UISprites.Check, Loc.F("Quête terminée : {0}", QuestsScreen.TextOf(q)), UIKit.Gold, 56);
+                bool finished = Quests.IsDone(quests.Book, q);
+                var label = UIKit.Chip(transform, finished ? UISprites.Check : null, LineOf(quests.Book, q), finished ? UIKit.Gold : UIKit.Sand, 56);
                 label.horizontalOverflow = HorizontalWrapMode.Wrap;
                 UIKit.FitText(label, 16);
                 UIKit.Size(label, 40, 0, 1);
@@ -284,7 +295,7 @@ namespace MummyEscape.UI.Screens
             }
             if (done.Count == 0) return;
             _layout.ignoreLayout = false;
-            App.GameApp.I.Audio.Play(Sfx.Coin, 0f);
+            if (done.Exists(q => Quests.IsDone(quests.Book, q))) App.GameApp.I.Audio.Play(Sfx.Coin, 0f);
         }
     }
 }

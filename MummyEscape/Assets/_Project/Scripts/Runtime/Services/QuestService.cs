@@ -17,7 +17,7 @@ namespace MummyEscape.Services
     {
         readonly GameApp _app;
         QuestBook _book = new QuestBook();
-        readonly List<QuestDef> _completed = new List<QuestDef>();
+        readonly List<QuestDef> _moved = new List<QuestDef>();
 
         public QuestService(GameApp app) => _app = app;
 
@@ -91,15 +91,21 @@ namespace MummyEscape.Services
         public void Record(QuestKind kind, int n = 1)
         {
             if (!Available) return;
-            _completed.AddRange(Quests.Add(Book, kind, n, Now));
+            var book = Book;
+            var before = new Dictionary<QuestDef, int>();
+            foreach (var q in Quests.Today(book.Day)) before[q] = Quests.CountOf(book, q);
+            foreach (var q in Quests.Weeklies) before[q] = Quests.CountOf(book, q);
+            Quests.Add(book, kind, n, Now);
+            foreach (var pair in before)
+                if (Quests.CountOf(book, pair.Key) > pair.Value && !Quests.IsClaimed(book, pair.Key) && !_moved.Contains(pair.Key)) _moved.Add(pair.Key);
             Changed?.Invoke();
         }
 
-        /// <summary>The quests finished since the last call (the result screens show them).</summary>
-        public List<QuestDef> TakeCompleted()
+        /// <summary>The quests that moved forward since the last call (the result screens show their progress).</summary>
+        public List<QuestDef> TakeProgress()
         {
-            var done = new List<QuestDef>(_completed);
-            _completed.Clear();
+            var done = new List<QuestDef>(_moved);
+            _moved.Clear();
             return done;
         }
 
