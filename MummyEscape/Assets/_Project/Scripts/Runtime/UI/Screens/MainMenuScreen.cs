@@ -233,7 +233,7 @@ namespace MummyEscape.UI.Screens
         async void ReloadTeams()
         {
             _nextTeams = Time.unscaledTime + TeamsSeconds;
-            if (App.Pvp == null) return;
+            if (App.Pvp == null || App.Connecting) return; // not the startup placeholder's (demo) group
             int request = ++_teamsRequest;
             var teams = await App.Pvp.GetTeamsAsync();
             if (request != _teamsRequest || this == null) return;

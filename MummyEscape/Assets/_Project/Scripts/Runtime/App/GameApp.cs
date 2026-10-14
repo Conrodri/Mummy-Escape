@@ -156,6 +156,7 @@ namespace MummyEscape.App
                     _pvpOnline = Online;
                     _pvp = PvpServiceFactory.For(Online, () => Save.TotalStars);
                     Session.Profile = null;
+                    Session.SetGroup(null); // the group belonged to the previous service
                 }
                 if (_pvp is LocalPvpService local) local.PlayerName = Online.PlayerName;
                 return _pvp;
@@ -193,6 +194,9 @@ namespace MummyEscape.App
 
         string OfflineReason => Privacy.NeedsAnswer ? "Hors ligne" : "Hors ligne (mode en ligne désactivé dans Confidentialité)";
 
+        /// <summary>The online features are being connected: the placeholder service (offline, or the editor's demo) must not be read as the player's.</summary>
+        public bool Connecting { get; private set; }
+
         OfflineOnlineService Offline(string reason) =>
             new OfflineOnlineService(reason) { Country = Save.Country, LocalRecord = Save.GetRecord };
 
@@ -202,9 +206,11 @@ namespace MummyEscape.App
         /// </summary>
         public async Task StartOnline(bool askGoogle = false)
         {
+            Connecting = true;
             var service = OnlineServiceFactory.Create();
             service.Country = Save.Country;
-            await service.InitializeAsync();
+            try { await service.InitializeAsync(); }
+            finally { Connecting = false; }
             if (!service.IsAvailable && !(service is OfflineOnlineService))
             {
                 // Backend unreachable or not configured: fall back to the offline service (keeps the reason).
