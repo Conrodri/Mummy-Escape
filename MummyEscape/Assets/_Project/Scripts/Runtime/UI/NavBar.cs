@@ -35,6 +35,7 @@ namespace MummyEscape.UI
             public Entry[] Entries;
             public Image Icon, Pill;
             public Text Caption;
+            public string Key;
             public RectTransform Menu, Choices;
         }
 
@@ -106,7 +107,7 @@ namespace MummyEscape.UI
 
         void Add(RectTransform row, Sprite sprite, string caption, NavTab[] tabs, params Entry[] entries)
         {
-            var group = new Group { Tabs = tabs, Entries = entries };
+            var group = new Group { Tabs = tabs, Entries = entries, Key = caption };
             int index = _groups.Count;
             _groups.Add(group);
 
@@ -223,6 +224,12 @@ namespace MummyEscape.UI
                 g.Caption.color = lit ? UIKit.Gold : UIKit.Dim;
                 g.Pill.gameObject.SetActive(lit);
             }
+        }
+
+        /// <summary>After a language change: the tab captions are built once (the menus are refilled at each opening).</summary>
+        public void Relabel()
+        {
+            foreach (var g in _groups) g.Caption.text = Loc.T(g.Key);
         }
 
         void Go<T>() where T : UIScreen

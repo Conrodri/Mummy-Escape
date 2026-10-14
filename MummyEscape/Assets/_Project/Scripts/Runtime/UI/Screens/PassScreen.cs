@@ -21,7 +21,7 @@ namespace MummyEscape.UI.Screens
         /// <summary>Ten tiers fit on a phone at once.</summary>
         const float RowHeight = 116;
 
-        Text _season, _tier, _xp, _gold, _note, _perks;
+        Text _season, _tier, _xp, _gold, _note, _perks, _buyPrice, _tiersPrice;
         Image _bar, _legendary;
         Button _buy, _tiers, _claimAll;
         RectTransform _list;
@@ -80,9 +80,11 @@ namespace MummyEscape.UI.Screens
             _buy = UIKit.Button(buttons.transform, "Pass premium", BuyPass, 28, ButtonStyle.Primary);
             UIKit.FitText(_buy.GetComponentInChildren<Text>(), 16);
             UIKit.Size(_buy, -1, -1, 1.3f);
+            _buyPrice = UIKit.Chip(buttons.transform, UIKit.Art.GoldScarab, GoldShop.PassPrice.ToString(), TreasureScreen.GoldColor, 72);
             _tiers = UIKit.Button(buttons.transform, "Paliers", BuyTiers, 28);
             UIKit.FitText(_tiers.GetComponentInChildren<Text>(), 16);
             UIKit.Size(_tiers, -1, -1, 1);
+            _tiersPrice = UIKit.Chip(buttons.transform, UIKit.Art.GoldScarab, GoldShop.TierBundlePrice.ToString(), TreasureScreen.GoldColor, 72);
             _claimAll = UIKit.Button(buttons.transform, "Tout récupérer", ClaimAll, 28);
             UIKit.FitText(_claimAll.GetComponentInChildren<Text>(), 16);
             UIKit.Size(_claimAll, -1, -1, 1);
@@ -142,10 +144,14 @@ namespace MummyEscape.UI.Screens
                   + "\n" + Loc.F("XP : partie solo {0} à {1}, duel ou 2v2 {2} ({3} en cas de victoire).",
                                  BattlePass.SoloXp(false, 0), BattlePass.SoloXp(true, 3), BattlePass.MatchXp, BattlePass.MatchXp + BattlePass.WinBonusXp);
 
-            UIKit.SetLabel(_buy, save.HasPass ? Loc.T("Pass premium actif") : Loc.F("Pass premium · {0} dorés", GoldShop.PassPrice));
+            UIKit.SetLabel(_buy, save.HasPass ? "Pass premium actif" : "Pass premium");
             _buy.interactable = !save.HasPass;
-            UIKit.SetLabel(_tiers, Loc.F("+{0} paliers · {1} dorés", GoldShop.TierBundleSize, GoldShop.TierBundlePrice));
+            _buyPrice.transform.parent.gameObject.SetActive(!save.HasPass);
+            _buyPrice.color = save.Gold >= GoldShop.PassPrice ? TreasureScreen.GoldColor : UIKit.Danger;
+            UIKit.SetLabel(_tiers, Loc.F("+{0} paliers", GoldShop.TierBundleSize));
             _tiers.interactable = !max;
+            _tiersPrice.transform.parent.gameObject.SetActive(!max);
+            _tiersPrice.color = save.Gold >= GoldShop.TierBundlePrice ? TreasureScreen.GoldColor : UIKit.Danger;
             int claimable = save.ClaimableCount;
             UIKit.SetLabel(_claimAll, claimable > 0 ? Loc.F("Tout récupérer ({0})", claimable) : Loc.T("Tout récupérer"));
             _claimAll.interactable = claimable > 0;
