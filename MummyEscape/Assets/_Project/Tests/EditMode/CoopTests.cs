@@ -233,6 +233,32 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void Server_SellsTheCoopPiecesForScarabsOnlyWithEnough2v2Stars()
+        {
+            var (server, duo) = ServerWithDuo();
+            Assert.IsNull(server.OpenScarabsAsync("a", new ScarabSeed { Scarabs = 1000 }).Result.Error);
+            var piece = Monetization.ScarabShop.CoopItems[0];
+            Assert.AreEqual(6, piece.MinCoopStars);
+            foreach (var i in Monetization.ScarabShop.CoopItems) Assert.LessOrEqual(i.MinCoopStars, 3 * CoopCampaign.Count, i.Id + " is reachable");
+            Assert.IsFalse(new List<Monetization.ScarabItem>(Monetization.ScarabShop.Items).Contains(piece), "not in the weekly sale");
+            Assert.AreEqual("COOP_STARS", server.BuyScarabPieceAsync("a", piece.Id).Result.Error);
+
+            // Two tombs at three stars: the 6 stars the first piece asks for.
+            for (int n = 1; n <= 2; n++)
+            {
+                var t = CoopCampaign.Get(n);
+                Assert.AreEqual(3, server.SubmitCoopAsync("a", duo, n, Inputs(t), t.TargetMs).Result.Stars);
+            }
+            int before = server.GetWalletAsync("a").Result.Wallet.Scarabs;
+            var r = server.BuyScarabPieceAsync("a", piece.Id).Result;
+            Assert.IsNull(r.Error);
+            Assert.AreEqual(before - piece.Price, r.Wallet.Scarabs);
+            CollectionAssert.Contains(r.Wallet.Owned, piece.Id);
+            Assert.AreEqual("COOP_STARS", server.BuyScarabPieceAsync("b", piece.Id).Result.Error, "the stars are the player's: b sent no clear");
+            Assert.AreEqual("COOP_STARS", server.BuyScarabPieceAsync("a", Monetization.ScarabShop.CoopItems[1].Id).Result.Error);
+        }
+
+        [Test]
         public void StarsFollowMovesAndTime()
         {
             var tomb = CoopCampaign.Get(1);
