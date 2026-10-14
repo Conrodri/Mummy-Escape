@@ -80,8 +80,14 @@ namespace MummyEscape.Core
         public int Currents;
         /// <summary>Fragile slabs on the route: a one-time crossing, with a longer way around once they are rubble.</summary>
         public int CrumblingTiles;
-        /// <summary>Flame jets on the route, each with its own beat.</summary>
+        /// <summary>Flame jets on the route, all on the same real-time beat.</summary>
         public int FireJets;
+        /// <summary>Wrappings across the route, to burn with the lit torch.</summary>
+        public int Wrappings;
+        /// <summary>False walls: shortcuts through the rock beside the route (never needed to get out).</summary>
+        public int FalseWalls;
+        /// <summary>Idols in the rock, staring across the route.</summary>
+        public int Idols;
         /// <summary>Laser gates also raise a blue barrier on the way back when their switch is flipped.</summary>
         public bool BlueBarriers;
 
@@ -147,6 +153,6 @@ namespace MummyEscape.Core
         public override string ToString() =>
             $"{Id} moves[{MinMoves}-{MaxMoves}] floors:{Floors} cells:{CellsX}x{CellsY} gates:[{string.Join(",", Gates)}] " +
             $"spikes:{SpikeTraps} shortcuts:{SpikeShortcuts} dark:{DarknessTraps} mirror:{ReverseTraps} turn:{RotateTraps} dust:{DustPatches} loops:{ExtraLoops}" +
-            $" currents:{Currents} crumbling:{CrumblingTiles} fire:{FireJets}{(BlueBarriers ? " blue" : "")} score:[{MinScore}-{(MaxScore == int.MaxValue ? "" : MaxScore.ToString())}]";
+            $" currents:{Currents} crumbling:{CrumblingTiles} fire:{FireJets} wrappings:{Wrappings} mirages:{FalseWalls} idols:{Idols}{(BlueBarriers ? " blue" : "")} score:[{MinScore}-{(MaxScore == int.MaxValue ? "" : MaxScore.ToString())}]";
     }
 }

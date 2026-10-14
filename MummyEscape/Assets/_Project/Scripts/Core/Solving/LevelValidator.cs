@@ -45,6 +45,8 @@ namespace MummyEscape.Core
             if (pads != null) return pads;
             var unused = CheckEverythingUsed(level, solution);
             if (unused != null) return unused;
+            var mirage = CheckFalseWalls(level);
+            if (mirage != null) return mirage;
             var pocket = CheckNoPocket(level, solution);
             if (pocket != null) return pocket;
             var torches = CheckTorches(level, solution);
@@ -94,6 +96,20 @@ namespace MummyEscape.Core
                 if (interests[f] < minInterests) return $"floor: {f} has {interests[f]} points of interest < {minInterests}";
             }
             return null;
+        }
+
+        /// <summary>
+        /// A false wall is a shortcut, never the only way: with every mirage turned to rock, the exit can still be reached
+        /// (the player who never spots one still gets out).
+        /// </summary>
+        public static string CheckFalseWalls(Level level)
+        {
+            var mirages = new List<Cell>();
+            foreach (var c in level.AllCells()) if (level[c].Type == TileType.FalseWall) mirages.Add(c);
+            if (mirages.Count == 0) return null;
+            foreach (var c in mirages) level[c] = Tile.Wall;
+            try { return Solver.Solve(level) == null ? "mirage: the exit cannot be reached without a false wall" : null; }
+            finally { foreach (var c in mirages) level[c] = new Tile { Type = TileType.FalseWall }; }
         }
 
         /// <summary>The way round a spike trap costs at least this many moves more than walking across it.</summary>
@@ -195,8 +211,17 @@ namespace MummyEscape.Core
             return false;
         }
 
+        /// <summary>Every wrappings of the tomb burnt (<see cref="RuleState.Crumbled"/> bits): for the walks that only ask where one can go.</summary>
+        static int BurntWrappings(Level level)
+        {
+            int bits = 0;
+            foreach (var c in level.AllCells()) if (level[c].Type == TileType.Wrappings) bits |= 1 << level[c].Param;
+            return bits;
+        }
+
         static int SpikeFreeDistance(Level level, Cell from, Cell to)
         {
+            int burnt = BurntWrappings(level);
             var dist = new Dictionary<Cell, int> { [from] = 0 };
             var q = new Queue<Cell>();
             q.Enqueue(from);
@@ -205,7 +230,7 @@ namespace MummyEscape.Core
                 var c = q.Dequeue();
                 if (c == to) return dist[c];
                 if (level[c].Type == TileType.Exit) continue;
-                var s = new RuleState { Position = c, Pressed = -1, Hp = 99 };
+                var s = new RuleState { Position = c, Pressed = -1, Hp = 99, Crumbled = burnt };
                 foreach (var d in DirExt.All)
                 {
                     var r = Rules.Step(level, s, PlayerAction.Move(d));
@@ -359,7 +384,8 @@ namespace MummyEscape.Core
 
         /// <summary>
         /// Every element of the tomb serves the ideal route: each button / switch is pressed, each portal and ladder
-        /// taken, each door, barrier, current, fragile slab, trap, dust patch and flame jet lies on the way. Wall torches
+        /// taken, each door, barrier, current, fragile slab, trap, dust patch, flame jet, wrappings and false wall lies on the
+        /// way, each idol stares across it. Wall torches
         /// are the exception, see <see cref="CheckTorches"/>. A button with a door that leads nowhere is a design error,
         /// not a lure.
         /// </summary>
@@ -396,6 +422,10 @@ namespace MummyEscape.Core
                         continue;
                     case TileType.WallTorch:
                         continue; // off the walk on purpose (CheckTorches)
+                    case TileType.Idol:
+                        // Solid itself: its gaze has to sweep the walk.
+                        if (!Rules.Gaze(level, c).Exists(used.Contains)) return $"unused: idol {c} stares at nothing on the ideal route";
+                        continue;
                     default:
                         if (!used.Contains(c)) return $"unused: {t.Type} {c} is off the ideal route";
                         continue;
@@ -408,7 +438,7 @@ namespace MummyEscape.Core
         /// The tomb can never wall the player in: from every situation a player can reach (position, channels on,
         /// collapsed slabs), whatever the moves that led there, a way to the exit is left. Currents, fragile slabs and
         /// barriers may cost a detour, never the run.
-        /// With <paramref name="hazards"/>, life, torch, blindness, disarmed traps and the flame beat count too: no
+        /// With <paramref name="hazards"/>, life, torch, blindness and disarmed traps count too: no
         /// situation may leave death as the only way on (say 1 life left, the torch smothered by dust, and spikes that
         /// can't be seen to disarm across the only way back).
         /// With <paramref name="darkTolls"/> (spikes barring the way past the dust, <see cref="TollSpikes"/>), the dark is the
@@ -416,9 +446,6 @@ namespace MummyEscape.Core
         /// </summary>
         public static string CheckNoDeadLock(Level level, bool hazards = false, int maxStates = 400_000, bool darkTolls = false)
         {
-            bool tick = false;
-            if (hazards)
-                foreach (var c in level.AllCells()) tick |= level[c].Type == TileType.FireJet;
             var ids = new Dictionary<long, int>();
             var states = new List<RuleState>();
             var preds = new List<List<int>>();
@@ -427,12 +454,11 @@ namespace MummyEscape.Core
             RuleState Norm(RuleState x)
             {
                 if (!hazards) return new RuleState { Position = x.Position, Pressed = x.Pressed, Crumbled = x.Crumbled, Disarmed = -1, Hp = 7 };
-                if (!tick) x.Tick = 0;
                 x.Rotation = 0;
                 x.Reversed = 0;
                 return x;
             }
-            var layout = Solver.Layout(level, tick);
+            var layout = Solver.Layout(level);
             long Key(RuleState x) => layout.Pack(x);
             int Id(RuleState x)
             {
@@ -551,6 +577,7 @@ namespace MummyEscape.Core
 
         static bool[] Reachable(Level level, int pressed)
         {
+            int burnt = BurntWrappings(level);
             var seen = new bool[level.CellCount];
             var q = new Queue<Cell>();
             seen[level.IndexOf(level.Start)] = true;
@@ -558,7 +585,7 @@ namespace MummyEscape.Core
             while (q.Count > 0)
             {
                 var c = q.Dequeue();
-                var s = new RuleState { Position = c, Pressed = pressed, Disarmed = -1, Hp = 99 };
+                var s = new RuleState { Position = c, Pressed = pressed, Disarmed = -1, Hp = 99, Crumbled = burnt };
                 foreach (var d in DirExt.All)
                 {
                     var r = Rules.Step(level, s, PlayerAction.Move(d));

@@ -22,6 +22,8 @@ namespace MummyEscape.Core
     public static class LevelGenerator
     {
         public const int MaxAttempts = 3000;
+        /// <summary>Attempts that must fit the false walls of the spec before tombs without one are accepted.</summary>
+        public const int MirageAttempts = 150;
         /// <summary>Fallback searches with a wider par window when the spec itself finds no tomb.</summary>
         public const int MaxRelaxSteps = 3, RelaxMoves = 3;
 
@@ -45,9 +47,12 @@ namespace MummyEscape.Core
             {
                 var s = relax == 0 ? spec : spec.WithMoreMoves(relax * RelaxMoves);
                 int attempts = relax == 0 ? MaxAttempts : MaxAttempts / 2;
+                // A false wall is a bonus shortcut: the tombs where none fits are let through after a while.
+                var plain = s.FalseWalls > 0 ? s.WithMoreMoves(0) : s;
+                plain.FalseWalls = 0;
                 for (int attempt = 0; attempt < attempts; attempt++)
                 {
-                    var level = TryAttempt(s, seed, attempt, out string failure);
+                    var level = TryAttempt(relax == 0 && attempt < MirageAttempts ? s : plain, seed, attempt, out string failure);
                     if (level != null) return level;
                     string bucket = failure.Split(':')[0];
                     failures[bucket] = failures.TryGetValue(bucket, out int n) ? n + 1 : 1;
@@ -152,6 +157,14 @@ namespace MummyEscape.Core
                 AddLoops(_spec.ExtraLoops);
                 AddBypasses(_spec.ExtraLoops + 3);
 
+                // False walls cut across the walk before it is planned for good: the shortcut becomes the walk.
+                for (int k = 0; k < _spec.FalseWalls; k++)
+                {
+                    var before = PlannedWalk();
+                    if (before == null) { failure = "route: lost after braiding"; return null; }
+                    if (!PlaceFalseWall(before)) { failure = "mirage: no shortcut through the rock"; return null; }
+                }
+
                 // Mechanics and traps go on the walk the chain asks for (backtracking included).
                 var route = PlannedWalk();
                 if (route == null) { failure = "route: lost after braiding"; return null; }
@@ -180,6 +193,10 @@ namespace MummyEscape.Core
                     if (!PlaceCrumbling(route)) { failure = "crumbling: no spot that cannot wall the player in"; return null; }
                 for (int k = 0; k < _spec.FireJets; k++)
                     if (!PlaceFireJet(route)) { failure = "fire: no spot"; return null; }
+                for (int k = 0; k < _spec.Wrappings; k++)
+                    if (!PlaceWrappings(route)) { failure = "wrappings: no spot"; return null; }
+                for (int k = 0; k < _spec.Idols; k++)
+                    if (!PlaceIdol(route)) { failure = "idol: no line across the route"; return null; }
 
                 // The spikes past the dust bar the way: they are spike traps of the spec, to disarm by torchlight.
                 int barring = 0;
@@ -1083,16 +1100,98 @@ namespace MummyEscape.Core
                 return false;
             }
 
-            /// <summary>A flame jet on the route with a random beat: the route has to be walked in rhythm.</summary>
+            /// <summary>A flame jet on the route: crossed between two blasts (every periodic trap shares the real-time beat).</summary>
             bool PlaceFireJet(List<Cell> route)
             {
                 var spots = new List<int>();
                 for (int i = 2; i < route.Count - 1; i++) if (IsRouteCorridor(route, i)) spots.Add(i);
                 if (spots.Count == 0) return false;
                 var c = route[_rng.Pick(spots)];
-                _level[c] = new Tile { Type = TileType.FireJet, Param = (byte)_rng.Range(0, Rules.FlameCycle) };
+                _level[c] = new Tile { Type = TileType.FireJet };
                 _reserved[_level.IndexOf(c)] = true;
                 _hazards.Add(c);
+                return true;
+            }
+
+            /// <summary>
+            /// Wrappings across a corridor of the route: the lit torch burns them (a move). Dust on the way before them makes
+            /// relighting at a wall torch part of the walk (the validator checks the tomb stays solvable).
+            /// </summary>
+            bool PlaceWrappings(List<Cell> route)
+            {
+                var spots = new List<int>();
+                for (int i = 2; i < route.Count - 2; i++) if (IsRouteCorridor(route, i)) spots.Add(i);
+                if (spots.Count == 0) return false;
+                var c = route[_rng.Pick(spots)];
+                _level[c] = new Tile { Type = TileType.Wrappings, Param = (byte)_crumbling++ };
+                _reserved[_level.IndexOf(c)] = true;
+                _hazards.Add(c);
+                return true;
+            }
+
+            /// <summary>
+            /// An idol in the rock beside the route, staring across it: its gaze (up to the next rock) blasts on the beat of the
+            /// periodic traps. Only over plain ground, never over the start.
+            /// </summary>
+            bool PlaceIdol(List<Cell> route)
+            {
+                var spots = new List<(Cell idol, Dir dir)>();
+                var seen = new HashSet<Cell>();
+                for (int i = 2; i < route.Count - 1; i++)
+                {
+                    var r = route[i];
+                    if (!seen.Add(r)) continue;
+                    foreach (var d in DirExt.All)
+                    {
+                        var w = r.Step(d);
+                        if (_level.InBounds(w) && IsInterior(w) && _level[w].Type == TileType.Wall) spots.Add((w, d.Opposite()));
+                    }
+                }
+                _rng.Shuffle(spots);
+                foreach (var (w, dir) in spots)
+                {
+                    _level[w] = new Tile { Type = TileType.Idol, Param = (byte)dir };
+                    var gaze = Rules.Gaze(_level, w);
+                    bool ok = gaze.Count >= 2;
+                    foreach (var g in gaze) ok &= _level[g].Type == TileType.Floor && g != _level.Start && !_hazards.Contains(g);
+                    if (ok)
+                    {
+                        _hazards.AddRange(gaze);
+                        return true;
+                    }
+                    _level[w] = Tile.Wall;
+                }
+                return false;
+            }
+
+            /// <summary>
+            /// A false wall: the rock between two points of the walk turns to a mirage, a shortcut of
+            /// <see cref="LevelValidator.MinSpikeDetour"/> to <see cref="MaxSpikeDetour"/> moves. Only across a stretch walked with
+            /// the same doors open and no portal, so the shortcut skips nothing the walk needs.
+            /// </summary>
+            bool PlaceFalseWall(List<Cell> walk)
+            {
+                var spots = new List<(Cell wall, int saving)>();
+                for (int i = 0; i < walk.Count; i++)
+                    foreach (var d in DirExt.All)
+                    {
+                        var w = walk[i].Step(d);
+                        var b = w.Step(d);
+                        if (!_level.InBounds(w) || !IsInterior(w) || _level[w].Type != TileType.Wall || _patternRock.Contains(w)) continue;
+                        if (Walkable(w.Step(d.Turn(1))) || Walkable(w.Step(d.Turn(-1)))) continue; // a clean passage, no crossroads
+                        if (!IsFloorType(walk[i]) || !IsFloorType(b)) continue;
+                        int j = walk.IndexOf(b, i);
+                        if (j < 0) continue;
+                        int saving = j - i - 2;
+                        if (saving < LevelValidator.MinSpikeDetour || saving > MaxSpikeDetour || _walkMasks[i] != _walkMasks[j]) continue;
+                        bool portal = false;
+                        for (int k = i; k < j && !portal; k++) portal = walk[k].Floor != walk[k + 1].Floor || walk[k].Manhattan(walk[k + 1]) != 1;
+                        if (!portal) spots.Add((w, saving));
+                    }
+                if (spots.Count == 0) return false;
+                var (wall, _) = spots[_rng.Range(0, spots.Count)];
+                _level[wall] = new Tile { Type = TileType.FalseWall };
+                _reserved[_level.IndexOf(wall)] = true;
                 return true;
             }
 

@@ -8,7 +8,8 @@ namespace MummyEscape.Tests
         /// 1-floor level from ASCII rows (top row first): S start, E exit, # wall, . floor, A-P doors, a-p buttons,
         /// ^ spikes, ~ darkness, X mirror (reversed controls), R W turning slab (clockwise, anticlockwise),
         /// , dust, ! wall torch, {>}< currents (up right down left), x fragile slab,
-        /// | red barrier and = blue barrier (channel 0), $ switch (channel 0), 0-2 flame jet phase.
+        /// | red barrier and = blue barrier (channel 0), $ switch (channel 0), 0 flame jet,
+        /// w wrappings, : false wall, v idol staring down.
         /// </summary>
         public static Level FromAscii(params string[] rows)
         {
@@ -37,7 +38,10 @@ namespace MummyEscape.Tests
                     else if (ch == '|') t = new Tile { Type = TileType.Barrier, Param = 0 };
                     else if (ch == '=') t = new Tile { Type = TileType.Barrier, Param = 1 };
                     else if (ch == '$') t = new Tile { Type = TileType.Switch };
-                    else if (ch >= '0' && ch <= '2') t = new Tile { Type = TileType.FireJet, Param = (byte)(ch - '0') };
+                    else if (ch == '0') t = new Tile { Type = TileType.FireJet };
+                    else if (ch == 'w') t = new Tile { Type = TileType.Wrappings, Param = (byte)crumbling++ };
+                    else if (ch == ':') t = new Tile { Type = TileType.FalseWall };
+                    else if (ch == 'v') t = new Tile { Type = TileType.Idol, Param = (byte)Dir.Down };
                     level[c] = t;
                 }
             level.ChannelCount = channels;

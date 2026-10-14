@@ -32,9 +32,7 @@ namespace MummyEscape.Core
         static CoopSolution Search(CoopRules rules, CoopState start, int alone, int maxStates)
         {
             var level = rules.Level;
-            bool tick = false;
-            foreach (var c in level.AllCells()) tick |= level[c].Type == TileType.FireJet;
-            var layout = Solver.Layout(level, tick);
+            var layout = Solver.Layout(level);
             (long, long) Key(CoopState s) => (layout.Pack(s.A), layout.Pack(s.B));
 
             var parent = new Dictionary<(long, long), ((long, long) prev, int mummy, PlayerAction action)>();

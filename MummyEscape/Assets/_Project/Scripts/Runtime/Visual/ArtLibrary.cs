@@ -14,7 +14,7 @@ namespace MummyEscape.Visual
         /// <summary>Corridor runs left-right: barriers and doors span it vertically.</summary>
         public bool Vertical;
         public bool Open, Active, Armed, Collapsed;
-        /// <summary>Flame jet: 0 idle, 1 about to fire, 2 firing.</summary>
+        /// <summary>Flame jet or idol: 0 idle, 1 charging, 2 firing.</summary>
         public int Fire;
         /// <summary>Animation frame (currents).</summary>
         public int Frame;
@@ -181,6 +181,12 @@ namespace MummyEscape.Visual
                     return Tiled(bk, () => Turn(PaintBarrier(t.Param == 0, l.Open), l.Vertical));
                 case TileType.Switch: return Tiled(l.Active ? "switch_on" : "switch_off", () => PaintSwitch(l.Active));
                 case TileType.FireJet: return Tiled($"fire{l.Fire}", () => PaintFireJet(l.Fire));
+                case TileType.Wrappings: return Tiled(l.Collapsed ? "wraps_ash" : "wraps", () => PaintWrappings(l.Collapsed));
+                case TileType.FalseWall:
+                    // A wall like the others, but the light runs over it: only a careful eye tells.
+                    return l.WallFace ? Tiled($"mirage{v % 2}", () => PaintWallFace(v % 2).With(PaintMirage))
+                                      : Tiled("mirage_top", () => PaintWallTop(0).With(PaintMirage));
+                case TileType.Idol: return Tiled($"idol{l.Fire}", () => PaintIdol(l.Fire));
             }
             return FloorSprite(v);
         }
@@ -317,6 +323,7 @@ namespace MummyEscape.Visual
                     return t.Param == 0 ? new Color(1f, 0.2f, 0.25f) : new Color(0.25f, 0.45f, 1f);
                 case TileType.Switch: return l.Active ? new Color(0.3f, 1f, 0.9f) : new Color(1f, 0.4f, 0.3f);
                 case TileType.FireJet: return l.Fire == 2 ? new Color(1f, 0.55f, 0.15f) : l.Fire == 1 ? new Color(0.9f, 0.25f, 0.05f) : (Color?)null;
+                case TileType.Idol: return l.Fire == 2 ? new Color(1f, 0.9f, 0.55f) : l.Fire == 1 ? new Color(0.95f, 0.2f, 0.1f) : (Color?)null;
                 case TileType.Current: return null;
             }
             return null;
@@ -1018,6 +1025,59 @@ namespace MummyEscape.Visual
             for (int y = 0; y < 32; y++) { p.Set(0, y, SandDark); p.Set(31, y, SandDark); p.Set(1, y, Px.Shade(deep, -0.3f)); p.Set(30, y, Px.Shade(deep, -0.3f)); }
             int turns = dir == Dir.Up ? 0 : dir == Dir.Right ? 3 : dir == Dir.Down ? 2 : 1;
             return p.Rotated(turns);
+        }
+
+        /// <summary>Mummy wrappings strung across the way (linen strips, knotted); once burnt, a smear of ash on the slab.</summary>
+        static Px PaintWrappings(bool burnt)
+        {
+            var p = PaintFloor(2);
+            if (burnt)
+            {
+                var ash = new Color32(40, 36, 34, 255);
+                for (int k = 0; k < 18; k++)
+                {
+                    int x = 6 + (int)(Px.Hash(k, 5, 41) * 20), y = 6 + (int)(Px.Hash(5, k, 41) * 20);
+                    p.Rect(x, y, x + 1, y + 1, k % 3 == 0 ? Black : ash);
+                }
+                return p;
+            }
+            var linen = new Color32(214, 200, 168, 255);
+            var shade = new Color32(150, 134, 104, 255);
+            for (int k = 0; k < 4; k++)
+            {
+                int y0 = 4 + k * 7;
+                p.Line(0, y0, 31, y0 + 6 - k * 3, shade);
+                p.Line(0, y0 + 1, 31, y0 + 7 - k * 3, linen);
+                p.Line(0, y0 + 2, 31, y0 + 8 - k * 3, linen);
+            }
+            p.Line(4, 30, 28, 2, shade);
+            p.Line(5, 30, 29, 2, linen);
+            p.Ellipse(16, 16, 3, 2, shade); // the knot
+            return p;
+        }
+
+        /// <summary>A false wall: thin pale glints run diagonally over the stone, as if the rock wavered.</summary>
+        static void PaintMirage(Px p)
+        {
+            var glint = Px.Lerp(StoneLight, new Color32(255, 250, 230, 255), 0.35f);
+            for (int k = 0; k < 3; k++)
+                for (int i = 0; i < 6; i++)
+                    p.Set(6 + k * 9 + i, 6 + k * 7 + i, glint);
+        }
+
+        /// <summary>An idol's head carved in the rock: dark eyes at rest, red while charging, white-gold when it strikes.</summary>
+        static Px PaintIdol(int state)
+        {
+            var p = PaintWallFace(1);
+            var carve = Px.Shade(Stone, -0.35f);
+            p.Rect(8, 6, 23, 27, Px.Shade(Stone, 0.12f));
+            p.Rect(6, 20, 25, 27, Px.Shade(Stone, 0.05f)); // headdress
+            p.Rect(13, 8, 18, 12, carve);                   // mouth and chin
+            var eye = state == 0 ? Black : state == 1 ? new Color32(230, 50, 30, 255) : new Color32(255, 245, 200, 255);
+            p.Rect(10, 15, 13, 17, eye);
+            p.Rect(18, 15, 21, 17, eye);
+            if (state == 2) { p.Rect(9, 14, 14, 18, new Color32(255, 220, 120, 255)); p.Rect(17, 14, 22, 18, new Color32(255, 220, 120, 255)); p.Rect(10, 15, 13, 17, eye); p.Rect(18, 15, 21, 17, eye); }
+            return p;
         }
 
         static Px PaintCrumbling(bool collapsed)

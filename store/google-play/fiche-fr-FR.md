@@ -27,10 +27,10 @@ Chaque tombeau est vérifié par un solveur : il existe toujours un chemin parfa
 
 5 ACTES, 3 DIFFICULTÉS
 • L'Antichambre : portes et portails.
-• Les Galeries inondées : des courants t'emportent jusqu'au bout du couloir.
-• Les Ruines effondrées : les dalles fissurées s'effondrent dès que tu les quittes.
-• La Cité d'Anubis : barrières laser et tombeaux sur deux étages.
-• Le Sanctuaire embrasé : jets de flammes qui crachent en rythme.
+• Les Galeries inondées : des courants t'emportent jusqu'au bout du couloir, des bandelettes à brûler avec ta torche.
+• Les Ruines effondrées : les dalles fissurées s'effondrent dès que tu les quittes, et certains murs ne sont qu'un mirage.
+• La Cité d'Anubis : barrières laser, idoles au regard brûlant et tombeaux sur deux étages.
+• Le Sanctuaire embrasé : jets de flammes qui crachent chaque seconde.
 Chaque acte s'ouvre sur une courte intro qui présente ses nouveautés. Facile, Normal ou Extrême : 10 tombeaux par acte dans chaque mode. Campagne finie ? Le mode sans fin et la tour t'attendent.
 
 AFFRONTE LES AUTRES JOUEURS

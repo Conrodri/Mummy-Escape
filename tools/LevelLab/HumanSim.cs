@@ -64,7 +64,6 @@ namespace LevelLab
         readonly HashSet<long> _triedBranches = new HashSet<long>();
         readonly HumanProfile _p;
         readonly Random _rng;
-        readonly bool _tick;
         bool _dirty = true;
 
         HumanSim(Level level, HumanProfile p, Random rng)
@@ -83,7 +82,6 @@ namespace LevelLab
             {
                 var c = level.CellAt(i);
                 var t = level[c];
-                if (t.Type == TileType.FireJet) _tick = true;
                 bool border = c.X == 0 || c.Y == 0 || c.X == level.Width - 1 || c.Y == level.Height - 1;
                 bool plain = t.Type == TileType.Wall || t.Type == TileType.WallTorch || t.Type == TileType.Floor;
                 double keep = plain ? p.Memory : p.PoiMemory;
@@ -150,7 +148,7 @@ namespace LevelLab
         bool Dangerous(GameSession s, Cell c)
         {
             var t = _belief.Get(c);
-            return Rules.IsTrapArmed(t, s.State.Disarmed) || Rules.IsFiring(t, (s.State.Tick + 1) % Rules.FlameCycle);
+            return Rules.IsTrapArmed(t, s.State.Disarmed); // periodic traps strike in real time: the simulation has no clock
         }
 
         List<PlayerAction> Plan(RuleState from)
@@ -246,8 +244,7 @@ namespace LevelLab
             | ((long)(s.Hp & 0x7) << 36)
             | ((long)(s.Blind & 0x3) << 39)
             | (s.TorchOut ? 1L << 41 : 0)
-            | ((long)(s.Crumbled & 0xFFF) << 42)
-            | (_tick ? (long)(s.Tick & 0x3) << 54 : 0);
+            | ((long)(s.Crumbled & 0xFFF) << 42);
 
         long BranchKey(Cell c, Dir d) => (long)_real.IndexOf(c) * 4 + (int)d;
 

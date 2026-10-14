@@ -96,7 +96,11 @@ namespace MummyEscape.Pvp
             StepResult? last = null;
             while (_next < _inputs.Count && _inputs[_next].Tick <= tick && !Invalid)
             {
-                var input = _inputs[_next++];
+                var input = _inputs[_next];
+                // Les pièges périodiques (jets de feu, regard d'idole) frappent en temps réel : l'horloge suit les horodatages.
+                ClockTo(input.Tick);
+                if (Session.Status == SessionStatus.Dead) break; // tombée dans un tir avant cette action : la course s'arrête là
+                _next++;
                 if (IsOver || !RunActions.TryDecode(input.Direction, out var action)) { Invalid = true; break; }
                 var before = Session.State;
                 var r = Session.Apply(action);
@@ -109,6 +113,9 @@ namespace MummyEscape.Pvp
             return last;
         }
 
+        /// <summary>Avance l'horloge du tombeau jusqu'à <paramref name="tick"/> (les tirs subis sans bouger comptent).</summary>
+        void ClockTo(int tick) => Session.Tick(tick / (double)PvpConfig.TickRate - Session.Clock);
+
         public float Progress => Session.Status == SessionStatus.Won ? 1f : PvpProgress.Of(Session.Level, LastAlive);
 
         /// <summary>
@@ -120,6 +127,8 @@ namespace MummyEscape.Pvp
             if (run.Outcome == RunOutcome.Abandoned) return run;
             var replay = new RunReplay(level, run.Inputs);
             replay.AdvanceTo(int.MaxValue);
+            // Après la dernière action, la momie reste où elle est jusqu'à la limite de temps : un tir peut encore la tuer.
+            if (!replay.IsOver && !replay.Invalid) replay.ClockTo(RunActions.TickOf(PvpConfig.TimeLimitMs));
             if (replay.Invalid || replay.TooFast || RunActions.MsOf(replay.LastTick) > PvpConfig.TimeLimitMs) return null;
             var verified = new RunSubmission { MatchId = run.MatchId, Inputs = run.Inputs };
             var status = replay.Session.Status;
@@ -136,10 +145,17 @@ namespace MummyEscape.Pvp
             if (status == SessionStatus.Dead)
             {
                 verified.Outcome = RunOutcome.Died;
+                // Mort dans un tir après la dernière action : l'instant du tir (GameSession arrête l'horloge dessus).
+                verified.TimeMs = Math.Max(RunActions.MsOf(replay.LastTick), replay.Session.ElapsedMs);
+                return verified;
+            }
+            // Mort annoncée mais pas rejouée : un tir à 20 ms près (horodatages au 1/50 s). Se dire mort ne rapporte rien.
+            if (run.Outcome == RunOutcome.Died)
+            {
+                verified.Outcome = RunOutcome.Died;
                 verified.TimeMs = RunActions.MsOf(replay.LastTick);
                 return verified;
             }
-            if (run.Outcome == RunOutcome.Died) return null;
             // Ni sortie ni mort : la limite de temps.
             verified.Outcome = RunOutcome.TimedOut;
             verified.TimeMs = PvpConfig.TimeLimitMs;

@@ -246,6 +246,9 @@ namespace MummyEscape.Game
         void Setup(Level level, GameSession session = null)
         {
             Session = session ?? new GameSession(level);
+            Session.Struck -= OnStruck;
+            Session.Struck += OnStruck;
+            _lastBlast = -1;
             _soloRun = session == null && Match == null && !InIntro ? new RunRecorder(level) : null;
             ApplyTheme(TombTheme.ForAct(InHalloween ? Halloween.Theme : level.Id.Act));
             IndexMechanisms(level);
@@ -467,6 +470,7 @@ namespace MummyEscape.Game
                 else Session.Tick(Time.deltaTime);
             }
             if (duel) UpdateDuel();
+            TrapsBeat();
             RepeatHeld();
         }
 
@@ -591,7 +595,9 @@ namespace MummyEscape.Game
             if (InCoop) { yield return PlayCoop(action); yield break; }
             var before = Session.State;
             var from = Session.Position;
+            _applying = true;
             var r = Session.Apply(action);
+            _applying = false;
             var fx = _app.Fx;
             if (r.Has(StepFlags.Blocked))
             {
@@ -629,6 +635,16 @@ namespace MummyEscape.Game
                 Haptic();
                 _maze.RefreshSprites();
                 yield return new WaitForSeconds(RunTiming.DisarmMs / 1000f);
+            }
+            else if (r.Has(StepFlags.WrappingsBurnt))
+            {
+                // The torch sets the wrappings ahead alight; the mummy stays where it is (a move, as long as a step).
+                var burnt = MazeView.CellToWorld(from.Step(r.Dir));
+                audio.Play(Sfx.Fire, 0.15f);
+                fx.FireBlast(burnt, false);
+                fx.Flash(burnt, new Color(1f, 0.55f, 0.2f));
+                _maze.RefreshSprites();
+                yield return new WaitForSeconds(RunTiming.WalkMs / 1000f);
             }
             else
             {
@@ -784,7 +800,6 @@ namespace MummyEscape.Game
                 }
             }
 
-            FlameJetsBeat(r);
             _player.SetBlind(Session.IsBlind);
             _player.SetReversed(Session.State.Reversed);
             _player.SetTorchLit(Session.TorchLit);
@@ -833,18 +848,49 @@ namespace MummyEscape.Game
             return at;
         }
 
-        /// <summary>Flame jets in sight blast on their beat, whether or not the mummy stands in them.</summary>
-        void FlameJetsBeat(StepResult r)
+        /// <summary>The last blast of the periodic traps shown (one burst of flames per beat).</summary>
+        long _lastBlast = -1;
+        /// <summary>A step is being applied: a blast it walks into is shown with the step, which ends the run if needed.</summary>
+        bool _applying;
+
+        /// <summary>Flame jets in sight blast on the real-time beat, whether or not the mummy stands in them.</summary>
+        void TrapsBeat()
         {
+            if (Session == null || Session.Status != SessionStatus.Playing || !Session.TrapsFiring) return;
+            long salvo = Rules.TrapSalvo(Session.Clock);
+            if (salvo == _lastBlast) return;
+            _lastBlast = salvo;
             bool any = false;
             foreach (var c in _fireJets)
             {
-                if (c.Floor != Session.Position.Floor || !Session.IsVisible(c) || !Session.IsFiring(c)) continue;
-                if (r.Has(StepFlags.Burned) && c.Equals(r.SteppedOn)) continue; // already shown, bigger
+                if (c.Floor != Session.Position.Floor || !Session.IsVisible(c)) continue;
                 _app.Fx.FireBlast(MazeView.CellToWorld(c), false);
                 any = true;
             }
             if (any) _app.Audio.Play(Sfx.Fire, 0.2f);
+        }
+
+        /// <summary>A flame jet or an idol's gaze hit the mummy where it stands (real time, between two steps or during one).</summary>
+        void OnStruck(StepResult r)
+        {
+            var here = MazeView.CellToWorld(r.SteppedOn);
+            bool idol = Session.Level[r.SteppedOn].Type != TileType.FireJet;
+            _app.Audio.Play(idol ? Sfx.Laser : Sfx.Fire);
+            _app.Fx.FireBlast(here, true);
+            _app.Lighting.Flash(idol ? new Color(1f, 0.85f, 0.45f) : new Color(1f, 0.45f, 0.1f));
+            _app.Camera.Shake(0.7f);
+            Haptic();
+            Changed?.Invoke();
+            // Mid-step, the step's own presentation ends the run if needed; standing still, this does.
+            if (!_busy && !_applying) StartCoroutine(StruckStanding());
+        }
+
+        IEnumerator StruckStanding()
+        {
+            _busy = true;
+            yield return _player.Hurt();
+            if (Session != null && Session.Status != SessionStatus.Playing) yield return Finish();
+            _busy = false;
         }
 
         /// <summary>The solo run's timed actions, for the server's replay (it grants the pass XP); null in a duel or a 2v2.</summary>

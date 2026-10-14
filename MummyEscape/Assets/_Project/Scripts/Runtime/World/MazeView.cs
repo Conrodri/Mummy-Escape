@@ -26,6 +26,8 @@ namespace MummyEscape.World
             public SpriteRenderer Renderer;
             public SpriteRenderer Shadow;
             public SpriteRenderer Beam;
+            /// <summary>Idol gaze over this tile: a band of light that glows during the charge and blazes during the blast.</summary>
+            public SpriteRenderer Ray;
             public Light2D Glow;
             public ParticleSystem Loop;
             public FxRig.Loop LoopKind;
@@ -43,6 +45,10 @@ namespace MummyEscape.World
         readonly List<TileView[]> _floors = new List<TileView[]>();
         readonly List<GameObject> _floorRoots = new List<GameObject>();
         readonly List<TileView> _animated = new List<TileView>();
+        /// <summary>Flame jets and idols (their sprite follows the beat), and the tiles an idol stares across.</summary>
+        readonly List<TileView> _periodic = new List<TileView>();
+        readonly List<TileView> _rays = new List<TileView>();
+        int _beat = -1;
         int _shownFloor = -1;
         int _currentFrame = -1;
 
@@ -85,7 +91,7 @@ namespace MummyEscape.World
                         tiles[y * level.Width + x] = tv;
 
                         var tile = level[cell];
-                        if (!tile.IsSolid)
+                        if (!tile.IsSolid && tile.Type != TileType.FalseWall)
                         {
                             var shadow = _art.Shadow(ShadowMask(level, cell));
                             if (shadow != null)
@@ -100,6 +106,7 @@ namespace MummyEscape.World
                             }
                         }
                         if (tile.Type == TileType.Current || tile.Type == TileType.WallTorch) _animated.Add(tv);
+                        if (tile.Type == TileType.FireJet || tile.Type == TileType.Idol) _periodic.Add(tv);
                         if (tile.Type == TileType.Exit)
                         {
                             var bgo = new GameObject("Beam");
@@ -114,6 +121,7 @@ namespace MummyEscape.World
                     }
                 _floors.Add(tiles);
             }
+            BuildRays(level);
             _shownFloor = -1;
             _currentFrame = -1;
             RefreshSprites();
@@ -132,7 +140,7 @@ namespace MummyEscape.World
         /// <summary>The parts of a tile's look that never change during a run (variant, orientation...).</summary>
         static TileLook StaticLook(Level level, Cell c)
         {
-            bool Solid(int dx, int dy) => level.Get(new Cell(c.Floor, c.X + dx, c.Y + dy)).IsSolid;
+            bool Solid(int dx, int dy) => LooksSolid(level.Get(new Cell(c.Floor, c.X + dx, c.Y + dy)));
             return new TileLook
             {
                 // The maze variant reshuffles details, so two runs of the same level never look identical.
@@ -147,7 +155,7 @@ namespace MummyEscape.World
 
         static int ShadowMask(Level level, Cell c)
         {
-            bool Solid(int dx, int dy) => level.Get(new Cell(c.Floor, c.X + dx, c.Y + dy)).IsSolid;
+            bool Solid(int dx, int dy) => LooksSolid(level.Get(new Cell(c.Floor, c.X + dx, c.Y + dy)));
             return (Solid(0, 1) ? 1 : 0) | (Solid(1, 0) ? 2 : 0) | (Solid(0, -1) ? 4 : 0) | (Solid(-1, 0) ? 8 : 0);
         }
 
@@ -167,7 +175,7 @@ namespace MummyEscape.World
         {
             var t = _session.PerceivedTile(cell);
             if (!Spectator || t.Type == TileType.Exit || t.Type == TileType.Floor || t.Type == TileType.Wall || t.Type == TileType.Current) return t;
-            return new Tile { Type = t.Type == TileType.WallTorch ? TileType.Wall : TileType.Floor };
+            return new Tile { Type = LooksSolid(t) ? TileType.Wall : TileType.Floor };
         }
 
         /// <summary>Hides the whole map at once (screen capture detected during the preview).</summary>
@@ -227,6 +235,9 @@ namespace MummyEscape.World
             _floorRoots.Clear();
             _floors.Clear();
             _animated.Clear();
+            _periodic.Clear();
+            _rays.Clear();
+            _beat = -1;
             Preview = false;
             Concealed = false;
             _session = null;
@@ -256,8 +267,8 @@ namespace MummyEscape.World
             l.Active = (t.Type == TileType.Door || t.Type == TileType.Button || t.Type == TileType.Teleporter || t.Type == TileType.Switch)
                        && _session.IsChannelActive(t.Channel);
             l.Armed = _session.IsTrapArmed(tv.Cell);
-            l.Collapsed = t.Type == TileType.Crumbling && _session.IsCollapsed(tv.Cell);
-            l.Fire = t.Type != TileType.FireJet ? 0 : _session.IsFiring(tv.Cell) ? 2 : _session.IsAboutToFire(tv.Cell) ? 1 : 0;
+            l.Collapsed = t.Type == TileType.Crumbling ? _session.IsCollapsed(tv.Cell) : t.Type == TileType.Wrappings && !_session.IsWrapped(tv.Cell);
+            l.Fire = t.Type == TileType.FireJet || t.Type == TileType.Idol ? Beat() : 0;
             l.Frame = CurrentFrame();
             tv.Look = l;
             tv.Renderer.sprite = _art.ForTile(t, l);
@@ -367,6 +378,53 @@ namespace MummyEscape.World
             if (!on) tv.Loop.Clear();
         }
 
+        /// <summary>Drawn as rock: walls, idols, and the false walls that pass for them.</summary>
+        static bool LooksSolid(Tile t) => t.IsSolid || t.Type == TileType.FalseWall;
+
+        /// <summary>Beat of the periodic traps: 0 quiet, 1 charging (second half of the charge), 2 blasting.</summary>
+        int Beat() => _session == null ? 0 : _session.TrapsFiring ? 2 : _session.TrapCharge >= 0.5f ? 1 : 0;
+
+        /// <summary>A band of light over every tile an idol stares across, along its line.</summary>
+        void BuildRays(Level level)
+        {
+            foreach (var c in level.AllCells())
+            {
+                if (level[c].Type != TileType.Idol) continue;
+                var dir = (Dir)(level[c].Param & 3);
+                bool across = dir == Dir.Left || dir == Dir.Right;
+                foreach (var g in Rules.Gaze(level, c))
+                {
+                    var tv = _floors[g.Floor][g.Y * level.Width + g.X];
+                    if (tv.Ray != null) continue;
+                    var go = new GameObject("Ray");
+                    go.transform.SetParent(tv.Renderer.transform, false);
+                    // The white sprite is 4 px = 1/8 of a tile: a full tile long, 0.3 wide, along the gaze.
+                    go.transform.localScale = across ? new Vector3(8f, 2.4f, 1f) : new Vector3(2.4f, 8f, 1f);
+                    tv.Ray = go.AddComponent<SpriteRenderer>();
+                    tv.Ray.sprite = _art.White;
+                    tv.Ray.sortingOrder = 5; // over the floor, under the mummy
+                    if (_fx != null && _fx.Unlit != null) tv.Ray.sharedMaterial = _fx.Unlit;
+                    tv.Ray.color = Color.clear;
+                    _rays.Add(tv);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The gaze shows through the dark on every tile the player knows (never on unknown ones: no map for free): a red
+        /// glow while the idol charges, a blinding band when it strikes.
+        /// </summary>
+        void PaintRays()
+        {
+            foreach (var tv in _rays)
+            {
+                bool known = !Concealed && (Preview || _session.IsExplored(tv.Cell) || _session.IsVisible(tv.Cell));
+                tv.Ray.color = !known || _beat == 0 ? Color.clear
+                             : _beat == 1 ? new Color(1f, 0.25f, 0.15f, 0.3f)
+                             : new Color(1f, 0.92f, 0.6f, 0.9f);
+            }
+        }
+
         void Update()
         {
             if (_session == null) return;
@@ -384,6 +442,14 @@ namespace MummyEscape.World
                         var l = tv.Look; l.Frame = frame; tv.Look = l;
                         tv.Renderer.sprite = _art.ForTile(_session.PerceivedTile(tv.Cell), l);
                     }
+            }
+
+            int beat = Beat();
+            if (beat != _beat)
+            {
+                _beat = beat;
+                foreach (var tv in _periodic) Refresh(tv);
+                PaintRays();
             }
 
             if (Preview)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace MummyEscape.Core
 {
@@ -36,10 +37,8 @@ namespace MummyEscape.Core
         public bool TorchOut;
         /// <summary>Bit i set = spikes with TrapIndex i walked on: the mummy knows where they are, it can disarm them in the dark.</summary>
         public int Felt;
-        /// <summary>Bit i set = fragile slab with Param i has collapsed (impassable rubble).</summary>
+        /// <summary>Bit i set = fragile slab with Param i has collapsed (impassable rubble), or wrappings with Param i burnt (open).</summary>
         public int Crumbled;
-        /// <summary>Actions taken, modulo 3: the rhythm of the flame jets.</summary>
-        public int Tick;
         /// <summary>Quarter turns (clockwise) of the tomb on screen, from turning slabs: a swipe moves the way it points on screen.</summary>
         public int Rotation;
         /// <summary>Steps left with reversed controls (mirror of Seth).</summary>
@@ -52,11 +51,11 @@ namespace MummyEscape.Core
         public Dir WorldDir(Dir swipe) => swipe.Turn(-Rotation + (Reversed > 0 ? 2 : 0));
 
         public bool Equals(RuleState o) => Position == o.Position && Pressed == o.Pressed && Disarmed == o.Disarmed && Hp == o.Hp && Blind == o.Blind
-                                           && TorchOut == o.TorchOut && Felt == o.Felt && Crumbled == o.Crumbled && Tick == o.Tick
+                                           && TorchOut == o.TorchOut && Felt == o.Felt && Crumbled == o.Crumbled
                                            && Rotation == o.Rotation && Reversed == o.Reversed;
         public override bool Equals(object obj) => obj is RuleState s && Equals(s);
         public override int GetHashCode() => Position.GetHashCode() ^ (Pressed * 397) ^ (Disarmed * 7919) ^ Hp ^ (Blind << 20) ^ (TorchOut ? 1 << 24 : 0)
-                                             ^ (Felt * 104729) ^ (Crumbled * 1543) ^ (Tick << 28) ^ (Rotation << 26) ^ (Reversed << 16);
+                                             ^ (Felt * 104729) ^ (Crumbled * 1543) ^ (Rotation << 26) ^ (Reversed << 16);
     }
 
     [Flags]
@@ -86,7 +85,7 @@ namespace MummyEscape.Core
         Collapsed = 1 << 18,
         /// <summary>A toggle switch flipped its channel (also flagged ButtonPressed).</summary>
         Switched = 1 << 19,
-        /// <summary>Walked into a firing flame jet (also flagged Damaged).</summary>
+        /// <summary>Hit by a periodic trap (flame jet, idol gaze) during its blast, in real time (<see cref="GameSession.Struck"/>; also flagged Damaged).</summary>
         Burned = 1 << 20,
         /// <summary>Set by the session: no way to the exit is left (currents, collapsed slabs, barriers).</summary>
         Trapped = 1 << 21,
@@ -94,6 +93,8 @@ namespace MummyEscape.Core
         Rotated = 1 << 22,
         /// <summary>A mirror of Seth reversed the controls.</summary>
         Reversed = 1 << 23,
+        /// <summary>The lit torch burnt the wrappings ahead: one move, the mummy stays where it was.</summary>
+        WrappingsBurnt = 1 << 24,
     }
 
     public struct StepResult
@@ -145,10 +146,47 @@ namespace MummyEscape.Core
 
         public static bool IsCollapsed(Tile t, int crumbled) => t.Type == TileType.Crumbling && (crumbled & (1 << t.Param)) != 0;
 
-        /// <summary>The flame jet is blasting in this state (a player standing in it at this tick gets burned).</summary>
-        public static bool IsFiring(Tile t, int tick) => t.Type == TileType.FireJet && t.Param == tick;
+        /// <summary>Wrappings not burnt yet: they block the way.</summary>
+        public static bool IsWrapped(Tile t, int crumbled) => t.Type == TileType.Wrappings && (crumbled & (1 << t.Param)) == 0;
 
-        public const int FlameCycle = 3;
+        // ---- Periodic traps (flame jets, idol gaze), in real time: every one of a tomb on the same beat, from the fog's fall.
+
+        /// <summary>One beat of the periodic traps: <see cref="TrapChargeSeconds"/> of glowing charge, then the blast.</summary>
+        public const double TrapCycleSeconds = 1.0;
+        public const double TrapChargeSeconds = 0.85;
+
+        /// <summary>Number of the beat at <paramref name="seconds"/> of play (one blast per beat).</summary>
+        public static long TrapSalvo(double seconds) => (long)Math.Floor(seconds / TrapCycleSeconds);
+
+        /// <summary>The periodic traps are blasting at <paramref name="seconds"/> of play.</summary>
+        public static bool IsTrapFiring(double seconds) => seconds - TrapSalvo(seconds) * TrapCycleSeconds >= TrapChargeSeconds;
+
+        /// <summary>How far the charge has gone, 0 right after a blast to 1 when the next one starts (1 during the blast).</summary>
+        public static float TrapCharge(double seconds) =>
+            (float)Math.Min(1.0, (seconds - TrapSalvo(seconds) * TrapCycleSeconds) / TrapChargeSeconds);
+
+        /// <summary>The line an idol stares along: from the tile it faces to the next solid tile (or the tomb's edge).</summary>
+        public static List<Cell> Gaze(Level level, Cell idol)
+        {
+            var line = new List<Cell>();
+            var dir = (Dir)(level[idol].Param & 3);
+            for (var c = idol.Step(dir); level.InBounds(c) && !level[c].IsSolid && line.Count < 64; c = c.Step(dir)) line.Add(c);
+            return line;
+        }
+
+        /// <summary>Tiles a periodic trap blasts (flame jets and idol gaze), indexed by <see cref="Level.IndexOf"/>; null when none.</summary>
+        public static bool[] BlastedTiles(Level level)
+        {
+            bool[] hit = null;
+            foreach (var c in level.AllCells())
+            {
+                var t = level[c].Type;
+                if (t == TileType.FireJet) (hit = hit ?? new bool[level.CellCount])[level.IndexOf(c)] = true;
+                else if (t == TileType.Idol)
+                    foreach (var g in Gaze(level, c)) (hit = hit ?? new bool[level.CellCount])[level.IndexOf(g)] = true;
+            }
+            return hit;
+        }
 
         public static bool CanEnter(Level level, Cell c, int pressed) => CanEnter(level, c, new RuleState { Pressed = pressed });
 
@@ -158,7 +196,7 @@ namespace MummyEscape.Core
             var t = level[c];
             if (t.IsSolid) return false;
             if (t.IsGate && !IsGateOpen(t, s.Pressed)) return false;
-            if (IsCollapsed(t, s.Crumbled)) return false;
+            if (IsCollapsed(t, s.Crumbled) || IsWrapped(t, s.Crumbled)) return false;
             return true;
         }
 
@@ -167,7 +205,6 @@ namespace MummyEscape.Core
             var r = new StepResult { State = s, SteppedOn = s.Position };
             // Every accepted action ticks blindness down; a fresh darkness trap resets it below.
             r.State.Blind = s.Blind > 0 ? s.Blind - 1 : 0;
-            r.State.Tick = (s.Tick + 1) % FlameCycle;
             // A swipe follows the screen (turned tomb) and the mirror; the disarm button names the trap's side directly.
             r.Dir = action.Kind == ActionKind.Move ? s.WorldDir(action.Dir) : action.Dir;
             var target = s.Position.Step(r.Dir);
@@ -178,6 +215,17 @@ namespace MummyEscape.Core
                 if (!IsDisarmable(tt, s.Disarmed) || !CanFeelFor(s, tt)) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
                 r.State.Disarmed |= 1 << tt.TrapIndex;
                 r.Flags = StepFlags.Disarmed;
+                return r;
+            }
+
+            // Wrappings ahead: the lit torch burns them (a move spent in place); with the torch out, they hold.
+            var ahead = level.Get(target);
+            if (IsWrapped(ahead, s.Crumbled))
+            {
+                if (s.TorchOut) { r.State = s; r.Flags = StepFlags.Blocked; return r; }
+                r.State.Crumbled |= 1 << ahead.Param;
+                r.State.Reversed = s.Reversed > 0 ? s.Reversed - 1 : 0;
+                r.Flags = StepFlags.WrappingsBurnt;
                 return r;
             }
 
@@ -226,15 +274,6 @@ namespace MummyEscape.Core
                     r.State.Pressed ^= 1 << t.Channel;
                     r.Flags |= StepFlags.ButtonPressed | StepFlags.Switched;
                     r.Channel = t.Channel;
-                    break;
-
-                case TileType.FireJet:
-                    if (IsFiring(t, r.State.Tick))
-                    {
-                        r.State.Hp--;
-                        r.Flags |= StepFlags.TrapTriggered | StepFlags.Damaged | StepFlags.Burned;
-                        if (r.State.Hp <= 0) r.Flags |= StepFlags.Died;
-                    }
                     break;
 
                 case TileType.Trap:

@@ -395,19 +395,120 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void FireJet_BurnsOnItsBeat()
+        public void FireJet_BurnsInRealTime()
         {
-            // Phase 1 fires right after the first move: walking straight in burns.
-            var burnt = new GameSession(FromAscii("######", "#S1.E#", "######"));
-            Assert.IsTrue(burnt.IsAboutToFire(burnt.Position.Step(Dir.Right)));
-            var r = burnt.Move(Dir.Right);
-            Assert.IsTrue(r.Has(StepFlags.Burned) && r.Has(StepFlags.Damaged));
-            Assert.AreEqual(1, burnt.Hp);
-            Assert.IsTrue(burnt.IsFiring(burnt.Position));
+            // Crossed during the charge: no harm. Standing on it when it fires: -1 HP, once per blast.
+            var s = new GameSession(FromAscii("######", "#S0.E#", "######"));
+            int struck = 0;
+            s.Struck += r => struck++;
+            s.Tick(0.2);
+            Assert.IsFalse(s.Move(Dir.Right).Has(StepFlags.Damaged), "the rules treat the jet as floor");
+            Assert.IsFalse(s.TrapsFiring);
+            s.Tick(0.7); // 0.9 s: blasting
+            Assert.IsTrue(s.IsFiring(s.Position));
+            Assert.AreEqual(1, s.Hp);
+            s.Tick(0.05);
+            Assert.AreEqual(1, s.Hp, "one hit per blast");
+            Assert.AreEqual(1, struck);
+            s.Move(Dir.Right);
+            s.Tick(1.0);
+            Assert.AreEqual(1, s.Hp, "off the jet");
 
-            var safe = new GameSession(FromAscii("######", "#S0.E#", "######"));
-            Assert.IsFalse(safe.Move(Dir.Right).Has(StepFlags.Burned), "phase 0 is quiet on that move");
-            Assert.AreEqual(2, safe.Hp);
+            // Walking into a blast hurts at once; a long frame over several blasts counts each.
+            var t = new GameSession(FromAscii("######", "#S0.E#", "######"));
+            t.Tick(0.9);
+            Assert.IsTrue(t.Move(Dir.Right).Has(StepFlags.Blocked) == false && t.Hp == 1);
+            t.Tick(2.5);
+            Assert.AreEqual(SessionStatus.Dead, t.Status);
+            Assert.AreEqual(1850.0, t.ElapsedMs, 1.0, "the run ends on the blast that killed");
+            Assert.AreEqual(3, Solver.Solve(FromAscii("######", "#S0.E#", "######")).Moves);
+        }
+
+        [Test]
+        public void RunReplay_PeriodicTrapsStrikeOnTheRunClock()
+        {
+            // One step onto the jet at 0.1 s, then nothing: the server's replay sees the blasts at 0.85 s and 1.85 s kill.
+            var lvl = FromAscii("######", "#S0.E#", "######");
+            var inputs = new System.Collections.Generic.List<Pvp.RunInput>
+            {
+                new Pvp.RunInput { Tick = 5, Direction = Pvp.RunActions.Encode(PlayerAction.Move(Dir.Right)) },
+            };
+            var died = Pvp.RunReplay.Verify(lvl, new Pvp.RunSubmission { Outcome = Pvp.RunOutcome.Died, Inputs = inputs });
+            Assert.AreEqual(Pvp.RunOutcome.Died, died.Outcome);
+            Assert.AreEqual(1850.0, died.TimeMs, 1.0);
+            var claimed = Pvp.RunReplay.Verify(lvl, new Pvp.RunSubmission { Outcome = Pvp.RunOutcome.TimedOut, Inputs = inputs });
+            Assert.AreEqual(Pvp.RunOutcome.Died, claimed.Outcome, "standing in the blast is a death, whatever the client says");
+
+            // Crossed between two blasts: out alive.
+            var quick = new System.Collections.Generic.List<Pvp.RunInput>
+            {
+                new Pvp.RunInput { Tick = 5, Direction = Pvp.RunActions.Encode(PlayerAction.Move(Dir.Right)) },
+                new Pvp.RunInput { Tick = 15, Direction = Pvp.RunActions.Encode(PlayerAction.Move(Dir.Right)) },
+                new Pvp.RunInput { Tick = 25, Direction = Pvp.RunActions.Encode(PlayerAction.Move(Dir.Right)) },
+            };
+            var replay = new Pvp.RunReplay(lvl, quick);
+            replay.AdvanceTo(int.MaxValue);
+            Assert.AreEqual(SessionStatus.Won, replay.Session.Status);
+            Assert.AreEqual(2, replay.Session.Hp);
+        }
+
+        [Test]
+        public void IdolGaze_SweepsItsLineUntilTheRock()
+        {
+            var lvl = FromAscii(
+                "#####",
+                "#.v.#",
+                "#S..#",
+                "#...#",
+                "##.##",
+                "#..E#",
+                "#####");
+            var gaze = Rules.Gaze(lvl, new Cell(0, 2, 5));
+            Assert.AreEqual(4, gaze.Count, "down the column through the opening, stopped by the rock");
+            var s = new GameSession(lvl);
+            s.Move(Dir.Right); // into the gaze
+            s.Tick(0.9);
+            Assert.AreEqual(1, s.Hp);
+            Assert.IsTrue(lvl[new Cell(0, 2, 5)].IsSolid, "an idol is rock");
+        }
+
+        [Test]
+        public void Wrappings_BurnWithTheLitTorch()
+        {
+            var s = new GameSession(FromAscii("######", "#Sw.E#", "######"));
+            var burn = s.Move(Dir.Right);
+            Assert.IsTrue(burn.Has(StepFlags.WrappingsBurnt));
+            Assert.AreEqual(new Cell(0, 1, 1), s.Position, "burning costs a move in place");
+            Assert.IsFalse(s.IsWrapped(new Cell(0, 2, 1)));
+            s.Move(Dir.Right);
+            s.Move(Dir.Right);
+            s.Move(Dir.Right);
+            Assert.AreEqual(SessionStatus.Won, s.Status);
+            Assert.AreEqual(4, Solver.Solve(FromAscii("######", "#Sw.E#", "######")).Moves);
+
+            // With the torch smothered by dust they hold, until a wall torch relights it.
+            var dark = new GameSession(FromAscii("########", "#S,.w.E#", "########"));
+            dark.Move(Dir.Right);
+            dark.Move(Dir.Right);
+            Assert.IsFalse(dark.TorchLit);
+            Assert.IsTrue(dark.Move(Dir.Right).Has(StepFlags.Blocked));
+            Assert.IsNull(Solver.Solve(FromAscii("########", "#S,.w.E#", "########")));
+            Assert.IsNotNull(Solver.Solve(FromAscii("########", "#S,.w.E#", "###!####")), "relit beside the wall torch");
+        }
+
+        [Test]
+        public void FalseWall_IsAShortcut()
+        {
+            var lvl = FromAscii(
+                "#####",
+                "#...#",
+                "#S:E#",
+                "#####");
+            Assert.AreEqual(2, Solver.Solve(lvl).Moves, "straight through the mirage");
+            Assert.IsNull(LevelValidator.CheckFalseWalls(lvl), "the way round is left");
+            Assert.AreEqual(TileType.FalseWall, lvl[new Cell(0, 2, 1)].Type, "the check puts the mirage back");
+            var only = FromAscii("#####", "#S:E#", "#####");
+            Assert.IsNotNull(LevelValidator.CheckFalseWalls(only), "a mirage may never be the only way");
         }
 
         [Test]

@@ -40,27 +40,30 @@ namespace MummyEscape.Core
             new[]
             {
                 L(0, 9, "La poussière éteint ta torche.\nLonge une torche murale pour la rallumer."),
-                L(10, 15, "Un courant t'emporte jusqu'au bout\net ne se remonte pas."),
-                L(16, 20, ExitB),
+                L(10, 13, "Des bandelettes barrent le passage :\navance dessus torche allumée pour les brûler."),
+                L(14, 19, "Un courant t'emporte jusqu'au bout\net ne se remonte pas."),
+                L(20, 24, ExitB),
             },
             new[]
             {
                 L(0, 6, "Portail scellé : active d'abord\nle levier du renfoncement."),
                 L(7, 10, CrumblingText),
-                L(11, 16, "Miroir de Seth : tes commandes\nsont inversées pendant 10 pas."),
-                L(17, 21, ExitB),
+                L(11, 15, "Ce mur miroite : c'est un mirage.\nTraverse-le, il raccourcit le chemin."),
+                L(16, 21, "Miroir de Seth : tes commandes\nsont inversées pendant 10 pas."),
+                L(22, 26, ExitB),
             },
             new[]
             {
                 L(0, 5, "Barrière rouge : l'interrupteur l'ouvre.\nChaque passage dessus l'inverse."),
                 L(6, 9, "Portail maudit : il fonctionne,\nmais efface ta mémoire de la carte."),
-                L(10, 14, "Dalle tournante : le tombeau pivote.\nDéplace-toi selon ce que tu vois à l'écran."),
-                L(15, 18, "Une autre dalle le remet droit."),
-                L(19, 23, ExitB),
+                L(10, 14, "Idole : ses yeux se chargent, puis son regard\nfrappe sa ligne chaque seconde. Passe juste après."),
+                L(15, 19, "Dalle tournante : le tombeau pivote.\nDéplace-toi selon ce que tu vois à l'écran."),
+                L(20, 23, "Une autre dalle le remet droit."),
+                L(24, 28, ExitB),
             },
             new[]
             {
-                L(0, 5, "Jet de flammes : il crache un pas sur trois.\nAttends qu'il s'éteigne pour passer."),
+                L(0, 5, "Jet de flammes : il crache chaque seconde.\nPasse juste après une flamme, sans t'arrêter."),
                 L(6, 9, CrumblingText),
                 L(10, 14, ExitB),
             },
@@ -112,40 +115,46 @@ namespace MummyEscape.Core
                     Portal(22, 24, TeleporterKind.Visible);
                     Exit(28);
                     break;
-                case 2: // dust and a wall torch, a current
-                    Corridor(1, 18);
+                case 2: // dust and a wall torch, wrappings to burn, a current
+                    Corridor(1, 22);
                     Set(3, Row, new Tile { Type = TileType.Dust });
                     Set(4, Row, new Tile { Type = TileType.Dust });
                     Set(9, Row + 1, new Tile { Type = TileType.WallTorch });
-                    for (int x = 12; x <= 14; x++) Set(x, Row, new Tile { Type = TileType.Current, Param = (byte)Dir.Right });
-                    Exit(19);
+                    Set(12, Row, new Tile { Type = TileType.Wrappings, Param = 0 });
+                    for (int x = 16; x <= 18; x++) Set(x, Row, new Tile { Type = TileType.Current, Param = (byte)Dir.Right });
+                    Exit(23);
                     break;
-                case 3: // sealed portal and its lever, fragile slab, mirror
+                case 3: // sealed portal and its lever, fragile slab, a mirage (shortcut past a bend), mirror
                     level.ChannelCount = 1;
                     level.TrapCount = 1;
                     Corridor(1, 4);
-                    Corridor(6, 19);
+                    Corridor(6, 24);
                     Set(3, Row + 1, new Tile { Type = TileType.Button, Channel = 0 }); // the lever and the sealed portal seen from the same tile
                     Portal(4, 6, TeleporterKind.Locked, 0);
                     Set(9, Row, new Tile { Type = TileType.Crumbling, Param = 0 });
-                    Set(13, Row, Trap(TrapKind.Reverse, 0));
-                    Exit(20);
+                    for (int x = 12; x <= 14; x++) Set(x, Row - 1, Tile.Floor); // the way round
+                    Set(13, Row, new Tile { Type = TileType.FalseWall });
+                    Set(18, Row, Trap(TrapKind.Reverse, 0));
+                    Exit(25);
                     break;
-                case 4: // barrier and switch, cursed portal, two turning slabs (the second sets the tomb straight)
+                case 4: // barrier and switch, cursed portal, an idol, two turning slabs (the second sets the tomb straight)
                     level.ChannelCount = 1;
                     level.TrapCount = 2;
                     Corridor(1, 7);
-                    Corridor(9, 21);
+                    Corridor(9, 26);
                     Set(3, Row + 1, new Tile { Type = TileType.Switch, Channel = 0 });
                     Set(4, Row, new Tile { Type = TileType.Barrier, Channel = 0, Param = 0 });
                     Portal(7, 9, TeleporterKind.Cursed);
-                    Set(12, Row, Trap(TrapKind.Rotate, 0, 1));
-                    Set(16, Row, Trap(TrapKind.Rotate, 1, 3));
-                    Exit(22);
+                    Set(12, Row - 1, Tile.Floor);
+                    Set(12, Row + 1, Tile.Floor);
+                    Set(12, 0, new Tile { Type = TileType.Idol, Param = (byte)Dir.Up }); // its gaze crosses the corridor
+                    Set(17, Row, Trap(TrapKind.Rotate, 0, 1));
+                    Set(21, Row, Trap(TrapKind.Rotate, 1, 3));
+                    Exit(27);
                     break;
-                case 5: // flame jet (turn-based, Param = phase), fragile slab
+                case 5: // flame jet (real time), fragile slab
                     Corridor(1, 12);
-                    Set(4, Row, new Tile { Type = TileType.FireJet, Param = 0 });
+                    Set(4, Row, new Tile { Type = TileType.FireJet });
                     Set(8, Row, new Tile { Type = TileType.Crumbling, Param = 0 });
                     Exit(13);
                     break;

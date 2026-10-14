@@ -46,14 +46,65 @@ namespace MummyEscape.Core
             State = start;
             _explored = new bool[level.CellCount];
             _revealedHidden = new bool[level.CellCount];
+            _blasted = Rules.BlastedTiles(level);
             for (int i = 0; i < level.CellCount && !_canGetStuck; i++) _canGetStuck = level[level.CellAt(i)].IsIrreversible;
             RevealAround(State.Position);
         }
 
-        /// <summary>Advances the run clock. Ignored once the run is over.</summary>
+        /// <summary>Raised when a periodic trap (flame jet, idol gaze) hits the mummy in real time, with what happened.</summary>
+        public event Action<StepResult> Struck;
+
+        /// <summary>Tiles the periodic traps blast (<see cref="Rules.BlastedTiles"/>), null in a tomb without any.</summary>
+        readonly bool[] _blasted;
+        /// <summary>The last blast that hit the mummy: one hit per blast at most.</summary>
+        long _lastHitSalvo = -1;
+
+        /// <summary>
+        /// Advances the run clock (and with it the periodic traps, on the beat of <see cref="Rules.TrapCycleSeconds"/> from
+        /// the fog's fall). Ignored once the run is over.
+        /// </summary>
         public void Tick(double seconds)
         {
-            if (Status == SessionStatus.Playing && seconds > 0) _elapsed += seconds;
+            if (Status != SessionStatus.Playing || seconds <= 0) return;
+            double before = _elapsed;
+            _elapsed += seconds;
+            if (_blasted == null) return;
+            // Every blast that overlaps (before, now]: a long frame, or a replay jumping to the next action, stood through them all.
+            long last = Rules.TrapSalvo(_elapsed);
+            if (!Rules.IsTrapFiring(_elapsed)) last--;
+            for (long k = Math.Max(_lastHitSalvo + 1, Rules.TrapSalvo(before)); k <= last && Status == SessionStatus.Playing; k++)
+                Strike(k, Math.Max(before, k * Rules.TrapCycleSeconds + Rules.TrapChargeSeconds));
+        }
+
+        /// <summary>Seconds of play since the fog fell (pauses excluded): the clock of the periodic traps.</summary>
+        public double Clock => _elapsed;
+        /// <summary>The periodic traps of the tomb are blasting right now.</summary>
+        public bool TrapsFiring => Rules.IsTrapFiring(_elapsed);
+        /// <summary>The charge of the next blast, 0 to 1 (1 while blasting).</summary>
+        public float TrapCharge => Rules.TrapCharge(_elapsed);
+        /// <summary>A periodic trap blasts this tile (flame jet, or the line an idol stares along).</summary>
+        public bool IsBlasted(Cell c) => _blasted != null && Level.InBounds(c) && _blasted[Level.IndexOf(c)];
+        /// <summary>Flame jet or idol gaze blasting this tile right now.</summary>
+        public bool IsFiring(Cell c) => TrapsFiring && IsBlasted(c);
+
+        /// <summary>The mummy stands in a blast of number <paramref name="salvo"/> at <paramref name="at"/> s: -1 HP, once per blast.</summary>
+        void Strike(long salvo, double at)
+        {
+            if (Status != SessionStatus.Playing || salvo == _lastHitSalvo || !IsBlasted(Position)) return;
+            _lastHitSalvo = salvo;
+            var s = State;
+            s.Hp--;
+            State = s;
+            TrapsTriggered++;
+            var r = new StepResult { State = s, SteppedOn = Position, Flags = StepFlags.TrapTriggered | StepFlags.Damaged | StepFlags.Burned };
+            if (s.Hp <= 0)
+            {
+                r.Flags |= StepFlags.Died;
+                Status = SessionStatus.Dead;
+                Defeat = DefeatCause.Wounds;
+                _elapsed = at; // the run's time is the blast that ended it (a long frame or a replay may have gone past)
+            }
+            Struck?.Invoke(r);
         }
 
         public Cell Position => State.Position;
@@ -111,6 +162,8 @@ namespace MummyEscape.Core
             }
 
             Stepped?.Invoke(r);
+            // Walked into a blast.
+            if (TrapsFiring) Strike(Rules.TrapSalvo(_elapsed), _elapsed);
             return r;
         }
 
@@ -143,10 +196,8 @@ namespace MummyEscape.Core
 
         public bool IsDoorOpen(Cell c) => Level.Get(c).IsGate && Rules.IsGateOpen(Level[c], State.Pressed);
         public bool IsCollapsed(Cell c) => Rules.IsCollapsed(Level.Get(c), State.Crumbled);
-        /// <summary>Flame jet blasting right now.</summary>
-        public bool IsFiring(Cell c) => Rules.IsFiring(Level.Get(c), State.Tick);
-        /// <summary>Flame jet that will blast on the next move: stepping onto it now burns.</summary>
-        public bool IsAboutToFire(Cell c) => Rules.IsFiring(Level.Get(c), (State.Tick + 1) % Rules.FlameCycle);
+        /// <summary>Wrappings still blocking this tile.</summary>
+        public bool IsWrapped(Cell c) => Rules.IsWrapped(Level.Get(c), State.Crumbled);
         public bool IsChannelActive(int channel) => (State.Pressed & (1 << channel)) != 0;
         public bool IsTrapArmed(Cell c) => Rules.IsTrapArmed(Level.Get(c), State.Disarmed);
 

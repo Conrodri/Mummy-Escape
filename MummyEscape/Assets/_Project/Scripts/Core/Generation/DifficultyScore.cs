@@ -38,6 +38,12 @@ namespace MummyEscape.Core
         Current,
         Crumbling,
         FireJet,
+        /// <summary>Wrappings across the way, burnt by the lit torch.</summary>
+        Wrappings,
+        /// <summary>A false wall: a mirage to remember, a shortcut through the rock.</summary>
+        FalseWall,
+        /// <summary>An idol staring along a line, a blast every second.</summary>
+        Idol,
         // ---- Drawn patterns ----
         /// <summary>The corridor of decoy alcoves after a turning slab.</summary>
         DecoyCorridor,
@@ -70,6 +76,9 @@ namespace MummyEscape.Core
                 case Element.Current: return 2;
                 case Element.Crumbling: return 2;
                 case Element.FireJet: return 3;
+                case Element.Wrappings: return 2;
+                case Element.FalseWall: return 0; // a bonus shortcut, never needed: it adds nothing to clear the tomb
+                case Element.Idol: return 3;
                 case Element.DecoyCorridor: return 3;
                 default: return 0;
             }
@@ -88,7 +97,7 @@ namespace MummyEscape.Core
 
         public static bool IsTrap(Element e) => e >= Element.Spikes && e <= Element.Rotate;
         public static bool IsInteraction(Element e) => e >= Element.Door && e <= Element.Torch;
-        public static bool IsActMechanic(Element e) => e >= Element.Current && e <= Element.FireJet;
+        public static bool IsActMechanic(Element e) => e >= Element.Current && e <= Element.Idol;
 
         public static Element ElementOf(Gate g) =>
             g.Kind == GateKind.Door ? Element.Door
@@ -116,6 +125,9 @@ namespace MummyEscape.Core
             c.Add(Element.Current, spec.Currents);
             c.Add(Element.Crumbling, spec.CrumblingTiles);
             c.Add(Element.FireJet, spec.FireJets);
+            c.Add(Element.Wrappings, spec.Wrappings);
+            c.Add(Element.FalseWall, spec.FalseWalls);
+            c.Add(Element.Idol, spec.Idols);
             return c;
         }
 
@@ -156,6 +168,9 @@ namespace MummyEscape.Core
                         break;
                     case TileType.Crumbling: c.Add(Element.Crumbling, 1); break;
                     case TileType.FireJet: c.Add(Element.FireJet, 1); break;
+                    case TileType.Wrappings: c.Add(Element.Wrappings, 1); break;
+                    case TileType.FalseWall: c.Add(Element.FalseWall, 1); break;
+                    case TileType.Idol: c.Add(Element.Idol, 1); break;
                 }
             }
             c.Add(Element.Portal, portals / 2);

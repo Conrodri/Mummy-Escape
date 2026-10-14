@@ -586,7 +586,7 @@ namespace MummyEscape.UI.Screens
                 case 2: return Loc.T("Les courants t'emportent jusqu'au bout\net ne se remontent pas.");
                 case 3: return Loc.T("Les dalles fissurées s'effondrent\ndès que tu les quittes.");
                 case 4: return Loc.T("Un levier inverse les barrières :\nrouges ouvertes, bleues fermées.");
-                case 5: return Loc.T("Les jets de flammes crachent un pas sur trois :\nobserve leur rythme.");
+                case 5: return Loc.T("Les jets de flammes crachent chaque seconde :\npasse juste après une flamme.");
             }
             return null;
         }
