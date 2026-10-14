@@ -10,6 +10,8 @@ namespace MummyEscape.Monetization
         public string Id;
         public int Price;
         public int Theme;
+        /// <summary>2v2 stars (held by the server, see Pvp.CoopStar) the player must have before buying it: 2v2 pieces only.</summary>
+        public int MinCoopStars;
 
         /// <summary>Stars the player must have won before buying it: <see cref="ScarabShop.StarsPerTheme"/> per act of its theme.</summary>
         public int MinStars => Theme * ScarabShop.StarsPerTheme;
@@ -48,6 +50,18 @@ namespace MummyEscape.Monetization
         /// <summary>Halloween's scarab piece, sold only while the event is open.</summary>
         public static readonly ScarabItem HalloweenItem = new ScarabItem { Id = Halloween.ShopSkin, Price = 350 };
 
+        /// <summary>
+        /// The 2v2 campaign's pieces, sold all year for ordinary scarabs once the player has their 2v2 stars (the campaign
+        /// gives 3 per tomb). Kept out of <see cref="Items"/>: they are not in the weekly sale.
+        /// </summary>
+        public static readonly IReadOnlyList<ScarabItem> CoopItems = new[]
+        {
+            new ScarabItem { Id = "coop_bandages", Price = 150, MinCoopStars = 6 }, // noloc
+            new ScarabItem { Id = "coop_torch", Price = 200, MinCoopStars = 15 }, // noloc
+            new ScarabItem { Id = "coop_hat", Price = 250, MinCoopStars = 30 }, // noloc
+            new ScarabItem { Id = "coop_shoes", Price = 300, MinCoopStars = 45 }, // noloc
+        };
+
         static List<ScarabItem> Parse()
         {
             var list = new List<ScarabItem>();
@@ -63,6 +77,7 @@ namespace MummyEscape.Monetization
         public static ScarabItem Get(string id)
         {
             foreach (var i in Items) if (i.Id == id) return i;
+            foreach (var i in CoopItems) if (i.Id == id) return i;
             return id == HalloweenItem.Id ? HalloweenItem : null;
         }
 

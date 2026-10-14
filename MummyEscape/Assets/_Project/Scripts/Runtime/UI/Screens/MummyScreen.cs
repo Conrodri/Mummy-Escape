@@ -224,6 +224,7 @@ namespace MummyEscape.UI.Screens
                 Collection(Loc.T(gold.Name), SkinSets.Pieces(gold.SkinIds), TreasureScreen.GoldColor, true, ref index);
             Collection(Loc.T("Nuit d'Halloween"), SkinSets.Halloween, ShopScreen.HalloweenColor, false, ref index);
             Collection(Loc.T("Tour de défi"), TowerSkins.All, ShopScreen.TowerColor, false, ref index);
+            Collection(Loc.T("Campagne 2v2"), CoopSkins.All, ShopScreen.CoopColor, true, ref index);
             Collection(Loc.T("Équipe de Mummy Rush"), SkinSets.Team, new Color32(90, 255, 190, 255), false, ref index);
             var more = UIKit.Label(_list, index == 0 ? "Aucune collection commencée : les ensembles apparaissent ici dès leur première pièce."
                                                      : "Les ensembles apparaissent ici dès leur première pièce.", 26, UIKit.Dim);

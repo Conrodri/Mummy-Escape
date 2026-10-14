@@ -116,13 +116,18 @@ namespace MummyEscape.Pvp
 
         // ------------------------------------------------------------------ spends
 
-        /// <summary>A shop piece, at today's price, once the player has the stars its act asks for.</summary>
-        public Task<WalletResponse> BuyScarabPieceAsync(string me, string id)
+        /// <summary>A shop piece, at today's price, once the player has the stars its act asks for (the 2v2 stars for a 2v2 piece).</summary>
+        public async Task<WalletResponse> BuyScarabPieceAsync(string me, string id)
         {
             var item = ScarabShop.Get(id);
-            if (item == null) return Task.FromResult(new WalletResponse { Error = "UNKNOWN_PRODUCT" });
-            if (!ScarabShop.OnSale(item, _utcNow())) return Task.FromResult(new WalletResponse { Error = "EVENT" });
-            return SpendAsync(me, _ => ScarabShop.PriceNow(item, _utcNow()), w =>
+            if (item == null) return new WalletResponse { Error = "UNKNOWN_PRODUCT" };
+            if (!ScarabShop.OnSale(item, _utcNow())) return new WalletResponse { Error = "EVENT" };
+            if (item.MinCoopStars > 0)
+            {
+                var data = await Update(me); // 2v2 stars only grow: reading them before the spend is enough
+                if (CoopLogic.TotalStars(data.CoopStars) < item.MinCoopStars) return new WalletResponse { Wallet = WalletOf(data), Error = "COOP_STARS" };
+            }
+            return await SpendAsync(me, _ => ScarabShop.PriceNow(item, _utcNow()), w =>
             {
                 if (w.Owned.Contains(id)) return "OWNED";
                 if (TotalStars(w) < item.MinStars) return "STARS";

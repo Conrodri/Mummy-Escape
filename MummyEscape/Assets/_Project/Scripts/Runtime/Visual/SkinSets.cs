@@ -27,7 +27,7 @@ namespace MummyEscape.Visual
             if (item.Theme > 0) return SkinCatalog.ThemeSet(item.Theme);
             foreach (var gold in Monetization.GoldShop.Sets)
                 if (Array.IndexOf(gold.SkinIds, item.Id) >= 0) return Pieces(gold.SkinIds);
-            foreach (var set in new[] { Halloween, TowerSkins.All, Team })
+            foreach (var set in new[] { Halloween, TowerSkins.All, CoopSkins.All, Team })
                 foreach (var s in set) if (s.Id == item.Id) return set;
             // A pass piece: every piece of its season ("pass_s3_…").
             if (item.Id.StartsWith("pass_s", StringComparison.Ordinal)) // noloc
