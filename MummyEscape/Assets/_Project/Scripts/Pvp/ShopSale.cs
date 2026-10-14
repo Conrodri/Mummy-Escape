@@ -5,9 +5,9 @@ using MummyEscape.Core;
 namespace MummyEscape.Monetization
 {
     /// <summary>
-    /// The daily sale, the same on every device and on the server: each UTC day, 3 commons, 2 rares, 1 epic and 1 legendary
-    /// at -25 %. Each pool is dealt like a shuffled deck: an item comes back only once all the others of its pool have been
-    /// on sale, and never two days running across two decks. The server only prices the golden scarab items (epic and
+    /// The weekly sale, the same on every device and on the server: each week (Monday 00:00 UTC), 3 commons, 2 rares,
+    /// 1 epic and 1 legendary at -25 %. Each pool is dealt like a shuffled deck: an item comes back only once all the
+    /// others of its pool have been on sale, and never two weeks running across two decks. The server only prices the golden scarab items (epic and
     /// legendary Treasure exclusives); the scarab pieces are priced by <see cref="ScarabShop"/>.
     /// </summary>
     public static class ShopSale
@@ -16,17 +16,21 @@ namespace MummyEscape.Monetization
         public const int Commons = 3, Rares = 2, Epics = 1, Legendaries = 1;
         public const ulong CommonSalt = 1, RareSalt = 2, EpicSalt = 3, LegendarySalt = 4;
 
-        /// <summary>A purchase started just before midnight still gets the price it was shown.</summary>
+        /// <summary>A purchase started just before the change still gets the price it was shown.</summary>
         public static readonly TimeSpan Grace = TimeSpan.FromMinutes(10);
 
-        static readonly DateTime Epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        /// <summary>Length of one sale.</summary>
+        public const int PeriodDays = 7;
+
+        static readonly DateTime Epoch = new DateTime(2025, 12, 29, 0, 0, 0, DateTimeKind.Utc); // a Monday
 
         public static int Price(int full) => full - full * PercentOff / 100;
 
-        public static int Day(DateTime utc) => Math.Max(0, (int)Math.Floor((utc - Epoch).TotalDays));
+        /// <summary>Number of the sale running at <paramref name="utc"/> (one per week).</summary>
+        public static int Day(DateTime utc) => Math.Max(0, (int)Math.Floor((utc - Epoch).TotalDays / PeriodDays));
 
-        /// <summary>When today's sale ends (the next UTC midnight).</summary>
-        public static DateTime Ends(DateTime utc) => Epoch.AddDays(Day(utc) + 1);
+        /// <summary>When this week's sale ends (next Monday 00:00 UTC).</summary>
+        public static DateTime Ends(DateTime utc) => Epoch.AddDays((Day(utc) + 1) * PeriodDays);
 
         /// <summary>The treasure exclusives the sale deals from (event items stay out: they are only sold during their event).</summary>
         public static readonly IReadOnlyList<GoldItem> GoldEpics = Exclusives(false);
@@ -40,7 +44,7 @@ namespace MummyEscape.Monetization
             return list;
         }
 
-        /// <summary>The golden scarab items on sale that day: the epic then the legendary.</summary>
+        /// <summary>The golden scarab items on sale that week: the epic then the legendary.</summary>
         public static List<GoldItem> GoldOnSale(DateTime utc)
         {
             int day = Day(utc);

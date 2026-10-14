@@ -73,7 +73,7 @@ namespace MummyEscape.UI.Screens
             var title = UIKit.Title(info, Loc.T("Halloween"), 56, accent, TextAnchor.MiddleLeft);
             UIKit.FitText(title, 30);
             UIKit.Size(title, 70);
-            var dates = UIKit.Label(info, open ? Loc.T("Jusqu'au 7 novembre") : Loc.T("De retour le 24 octobre"), 26, open ? UIKit.Sand : UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Bold);
+            var dates = UIKit.Label(info, open ? Loc.T("Jusqu'au 28 novembre") : Loc.T("De retour le 24 octobre"), 26, open ? UIKit.Sand : UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Bold);
             UIKit.Size(dates, 36);
             var bar = UIFx.Bar(info, 22, accent);
             bar.fillAmount = save.HalloweenDone ? 1f : save.Data.HalloweenCleared / (float)Halloween.TombCount;

@@ -134,7 +134,7 @@ namespace MummyEscape.Tests
             CollectionAssert.Contains(r.Wallet.Skins, item.SkinId);
             r = await server.BuyGoldItemAsync("alice", item.SkinId);
             Assert.AreEqual("OWNED", r.Error);
-            Assert.AreEqual(item.Gold, r.Wallet.Gold);
+            Assert.AreEqual(item.Gold * 2 - ShopSale.GoldPrice(item, Now), r.Wallet.Gold, "paid once (at the sale price when it is on sale)");
         }
 
         [Test]

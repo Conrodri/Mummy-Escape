@@ -81,7 +81,7 @@ namespace MummyEscape.Monetization
             return list;
         }
 
-        /// <summary>Today's scarab pieces at -25 %: the classics then the act pieces.</summary>
+        /// <summary>This week's scarab pieces at -25 %: the classics then the act pieces.</summary>
         public static List<ScarabItem> Sale(DateTime utc)
         {
             int day = ShopSale.Day(utc);

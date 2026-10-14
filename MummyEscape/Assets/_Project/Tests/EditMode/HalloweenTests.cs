@@ -52,18 +52,18 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void Window_Is24OctoberTo7NovemberIncluded_ParisTime()
+        public void Window_Is24OctoberTo28NovemberIncluded_ParisTime()
         {
-            // 24 October 00:00 Paris is still summer time (UTC+2); 8 November 00:00 is winter time (UTC+1).
+            // 24 October 00:00 Paris is still summer time (UTC+2); 29 November 00:00 is winter time (UTC+1).
             Assert.IsFalse(Halloween.IsOpen(Utc(2026, 10, 23, 21, 59, 59)));
             Assert.IsTrue(Halloween.IsOpen(Utc(2026, 10, 23, 22, 0)));
             Assert.IsTrue(Halloween.IsOpen(Utc(2026, 10, 25, 1, 30)), "across the change of time");
-            Assert.IsTrue(Halloween.IsOpen(Utc(2026, 11, 7, 22, 59, 59)));
-            Assert.IsFalse(Halloween.IsOpen(Utc(2026, 11, 7, 23, 0)));
+            Assert.IsTrue(Halloween.IsOpen(Utc(2026, 11, 28, 22, 59, 59)));
+            Assert.IsFalse(Halloween.IsOpen(Utc(2026, 11, 28, 23, 0)));
             Assert.IsFalse(Halloween.IsOpen(Utc(2026, 10, 11, 12)));
             // Another year, the same rule.
             Assert.IsTrue(Halloween.IsOpen(Utc(2027, 10, 23, 22, 0)));
-            Assert.IsFalse(Halloween.IsOpen(Utc(2027, 11, 7, 23, 0)));
+            Assert.IsFalse(Halloween.IsOpen(Utc(2027, 11, 28, 23, 0)));
         }
 
         [Test]
@@ -85,7 +85,7 @@ namespace MummyEscape.Tests
         [Test]
         public async Task GoldItem_IsSoldByTheServer_OnlyDuringTheEvent()
         {
-            var now = Utc(2026, 11, 8, 12);
+            var now = Utc(2026, 11, 29, 12);
             var store = new MemoryPvpStore();
             var server = new PvpServer(store, () => now);
             await store.UpdatePlayerAsync("alice", d => (d.Wallet ??= new Wallet()).Gold = 100);
@@ -108,7 +108,7 @@ namespace MummyEscape.Tests
         public void Bots_WearTheEventPieces_OnlyDuringTheEvent()
         {
             long inside = new DateTimeOffset(Utc(2026, 10, 30, 12)).ToUnixTimeMilliseconds();
-            long outside = new DateTimeOffset(Utc(2026, 11, 8, 12)).ToUnixTimeMilliseconds();
+            long outside = new DateTimeOffset(Utc(2026, 11, 29, 12)).ToUnixTimeMilliseconds();
             Assert.IsNull(PvpBots.LookOf("bot_42", outside), "the classic outfit");
             var hats = new System.Collections.Generic.HashSet<string>();
             for (int i = 0; i < 40; i++)

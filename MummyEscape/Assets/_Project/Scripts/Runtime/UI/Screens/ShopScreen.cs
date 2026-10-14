@@ -322,8 +322,7 @@ namespace MummyEscape.UI.Screens
             var pvp = App.Session.Profile?.Data;
             _seals.transform.parent.gameObject.SetActive(App.Pvp != null);
             _seals.text = (pvp?.Seals ?? 0).ToString();
-            // The pass only where golden scarabs are spent: the other tabs keep their room for the items.
-            _pass.Root.gameObject.SetActive(_section == TreasureSection);
+            // The pass banner stays on top of every tab.
             _pass.Refresh(App);
             RefreshCounts(pvp);
 
@@ -405,7 +404,7 @@ namespace MummyEscape.UI.Screens
             return item.Pvp || item.Theme > 0 ? 1 : 0;
         }
 
-        static string HalloweenDates => Loc.T("Événement Halloween, du 24 octobre au 7 novembre.");
+        static string HalloweenDates => Loc.T("Événement Halloween, du 24 octobre au 28 novembre.");
 
         internal static string Origin(SkinDef item)
         {
@@ -536,12 +535,13 @@ namespace MummyEscape.UI.Screens
         internal static int ScarabPrice(SkinDef item) =>
             Monetization.ScarabShop.Get(item.Id) is Monetization.ScarabItem i ? Monetization.ScarabShop.PriceNow(i, DateTime.UtcNow) : item.Price;
 
-        /// <summary>The Promos tab: today's 7 pieces at -25 %, the rarest first, and when the next ones come.</summary>
+        /// <summary>The Promos tab: this week's 7 pieces at -25 %, the rarest first, and when the next ones come.</summary>
         void FillSale()
         {
-            Intro("Chaque jour, 3 pièces communes, 2 rares, 1 épique et 1 légendaire à -25 %. Une pièce ne revient qu'une fois toutes les autres passées.");
+            Intro("Chaque semaine, 3 pièces communes, 2 rares, 1 épique et 1 légendaire à -25 %. Une pièce ne revient qu'une fois toutes les autres passées.");
             var left = Monetization.ShopSale.Ends(DateTime.UtcNow) - DateTime.UtcNow;
-            var countdown = UIKit.Label(_list, Loc.F("Nouvelles promos dans {0} h {1:00} min", (int)left.TotalHours, left.Minutes), 28, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            string when = left.Days > 0 ? Loc.F("Nouvelles promos dans {0} j {1} h", left.Days, left.Hours) : Loc.F("Nouvelles promos dans {0} h {1:00} min", left.Hours, left.Minutes);
+            var countdown = UIKit.Label(_list, when, 28, UIKit.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
             UIKit.Size(countdown, 44);
 
             var cards = new List<Action<Transform>>();

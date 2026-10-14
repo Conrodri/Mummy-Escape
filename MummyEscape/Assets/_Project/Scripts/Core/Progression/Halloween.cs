@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace MummyEscape.Core
 {
     /// <summary>
-    /// The Halloween event: a seasonal act outside the campaign, open from 24 October to 7 November included (Paris time),
+    /// The Halloween event: a seasonal act outside the campaign, open from 24 October to 28 November included (Paris time),
     /// hidden the rest of the year (progress kept). Its 10 tombs are stored (<see cref="TombArchive"/>, drawn once by
     /// LevelLab <c>--halloween</c>), so they never change with the generator. The same window rule runs in the game and on
     /// the server (golden item, wheel legendary).
@@ -56,12 +56,12 @@ namespace MummyEscape.Core
         /// <summary>Opens the event whatever the date: set by the game in the editor and test builds, never by the server.</summary>
         public static bool TestOpen;
 
-        /// <summary>Open from 24 October 00:00 to 7 November 23:59:59, Paris time (always with <see cref="TestOpen"/>).</summary>
+        /// <summary>Open from 24 October 00:00 to 28 November 23:59:59, Paris time (always with <see cref="TestOpen"/>).</summary>
         public static bool IsOpen(DateTime utc)
         {
             if (TestOpen) return true;
             var paris = ParisTime(utc);
-            return paris.Month == 10 && paris.Day >= 24 || paris.Month == 11 && paris.Day <= 7;
+            return paris.Month == 10 && paris.Day >= 24 || paris.Month == 11 && paris.Day <= 28;
         }
 
         /// <summary>The next 24 October 00:00 Paris time, as a UTC instant (24 October is always in summer time: UTC+2).</summary>
