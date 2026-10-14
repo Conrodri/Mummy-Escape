@@ -56,6 +56,7 @@ namespace MummyEscape.UI.Screens
                 UIKit.SectionTitle(notif, "Notifications");
                 UIKit.Toggle(notif, "Énergie pleine", s.NotifyEnergy, on => { s.SetNotifyEnergy(on); if (on) Notifications.Ask(); });
                 UIKit.Toggle(notif, "Événements (Halloween…)", s.NotifyEvents, on => { s.SetNotifyEvents(on); if (on) Notifications.Ask(); });
+                UIKit.Toggle(notif, "Quêtes du jour", s.NotifyQuests, on => { s.SetNotifyQuests(on); if (on) Notifications.Ask(); });
             }
 
             var account = UIKit.Card(body);

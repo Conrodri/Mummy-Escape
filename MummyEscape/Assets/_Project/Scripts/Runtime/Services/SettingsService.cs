@@ -34,6 +34,8 @@ namespace MummyEscape.Services
         public bool NotifyEnergy { get; private set; }
         /// <summary>A notification when a seasonal event opens.</summary>
         public bool NotifyEvents { get; private set; }
+        /// <summary>A reminder at 18:00 while the daily quests are not all done.</summary>
+        public bool NotifyQuests { get; private set; }
 
         public event Action Changed;
 
@@ -53,6 +55,7 @@ namespace MummyEscape.Services
             BatterySaver = PlayerPrefs.GetInt("battery", 0) == 1;
             NotifyEnergy = PlayerPrefs.GetInt("notif_energy", 1) == 1;
             NotifyEvents = PlayerPrefs.GetInt("notif_events", 1) == 1;
+            NotifyQuests = PlayerPrefs.GetInt("notif_quests", 1) == 1;
         }
 
         public void SetMusicVolume(float v) { MusicVolume = Mathf.Clamp01(v); PlayerPrefs.SetFloat("music", MusicVolume); Commit(); }
@@ -68,6 +71,7 @@ namespace MummyEscape.Services
         public void SetBatterySaver(bool on) { BatterySaver = on; PlayerPrefs.SetInt("battery", on ? 1 : 0); Commit(); }
         public void SetNotifyEnergy(bool on) { NotifyEnergy = on; PlayerPrefs.SetInt("notif_energy", on ? 1 : 0); Commit(); }
         public void SetNotifyEvents(bool on) { NotifyEvents = on; PlayerPrefs.SetInt("notif_events", on ? 1 : 0); Commit(); }
+        public void SetNotifyQuests(bool on) { NotifyQuests = on; PlayerPrefs.SetInt("notif_quests", on ? 1 : 0); Commit(); }
         public void SetLanguage(string code) { Language = code ?? ""; PlayerPrefs.SetString("lang", Language); Commit(); Loc.Apply(Language); }
 
         void Commit()
