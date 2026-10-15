@@ -120,6 +120,13 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("LaunchGroup")]
         public Task<DuoResponse> LaunchGroup(IExecutionContext ctx, string duoId, string mode) => Server(ctx).LaunchGroupAsync(ctx.PlayerId, duoId, mode);
 
+        /// <summary>Recherche d'un coéquipier (redemandée par le téléphone tant qu'il cherche) : le groupe une fois formé.</summary>
+        [CloudCodeFunction("SearchMate")]
+        public Task<DuoResponse> SearchMate(IExecutionContext ctx, string playerName, string mode) => Server(ctx).SearchMateAsync(ctx.PlayerId, playerName, mode);
+
+        [CloudCodeFunction("CancelMateSearch")]
+        public Task<TeamActionResponse> CancelMateSearch(IExecutionContext ctx) => Server(ctx).CancelMateSearchAsync(ctx.PlayerId);
+
         [CloudCodeFunction("LeaveDuo")]
         public Task<TeamActionResponse> LeaveDuo(IExecutionContext ctx, string duoId) => Server(ctx).LeaveDuoAsync(ctx.PlayerId, duoId);
 

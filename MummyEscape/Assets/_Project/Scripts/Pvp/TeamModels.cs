@@ -21,6 +21,7 @@ namespace MummyEscape.Pvp
         public const int MaxDuosPerPlayer = 1;         // le groupe : un seul duo à la fois
         public const int MaxDuoInvites = 10;
         public const int DuoStartingElo = PvpConfig.StartingElo; // a duo of new players starts in Bronze too
+        public const long MateSearchStaleMs = 15_000;  // un chercheur de coéquipier qui ne redemande plus depuis 15 s quitte la file
 
         // --- Guildes ---
         public const int GuildMaxMembers = 30;
@@ -156,6 +157,8 @@ namespace MummyEscape.Pvp
         /// <summary>Dernier lancement du chef : <see cref="GroupLaunch.Coop"/> ou <see cref="GroupLaunch.Relay"/>, suivi par les deux téléphones.</summary>
         public string Launch;
         public long LaunchAtUnixMs;
+        /// <summary>Groupe formé par la recherche de coéquipier : le mode choisi par les deux (<see cref="GroupLaunch"/>) ; null pour un groupe d'amis.</summary>
+        public string Mode;
 
         public string Name => Names.Count >= 2 ? Names[0] + " & " + Names[1] : Id;
         /// <summary>Le chef du groupe : son créateur.</summary>
@@ -183,6 +186,20 @@ namespace MummyEscape.Pvp
     {
         public Duo Duo;
         public string Error;   // "UNKNOWN", "LEADER", "NOT_READY", "MODE"
+    }
+
+    /// <summary>Un joueur qui cherche un coéquipier pour un mode, dans la file partagée.</summary>
+    [Serializable]
+    public class MateSearch
+    {
+        public string PlayerId;
+        public string Name;
+        public string Mode;
+        /// <summary>Début de la recherche : le plus ancien des deux devient le chef.</summary>
+        public long SinceUnixMs;
+        public long SeenAtUnixMs;
+        /// <summary>Le duo formé avec un autre chercheur, pas encore vu par ce joueur ; null tant qu'il cherche.</summary>
+        public string DuoId;
     }
 
     [Serializable]

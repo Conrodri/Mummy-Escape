@@ -359,6 +359,8 @@ namespace MummyEscape.Online
         public Task<DuoResponse> GetDuoAsync(string duoId, PlayerLook look) => Run(() => _server.GetDuoAsync(Me, duoId, look));
         public Task<DuoResponse> SetGroupReadyAsync(string duoId, bool ready, PlayerLook look) => Run(() => _server.SetGroupReadyAsync(Me, duoId, ready, look));
         public Task<DuoResponse> LaunchGroupAsync(string duoId, string mode) => Run(() => _server.LaunchGroupAsync(Me, duoId, mode));
+        public Task<DuoResponse> SearchMateAsync(string mode, string playerName) => Run(() => _server.SearchMateAsync(Me, playerName, mode));
+        public Task<TeamActionResponse> CancelMateSearchAsync() => Run(() => _server.CancelMateSearchAsync(Me));
 
         public Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst) => Run(() => _server.FindDuoMatchAsync(Me, duoId, meFirst, Gen));
 

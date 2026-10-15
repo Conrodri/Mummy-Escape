@@ -54,6 +54,9 @@ namespace MummyEscape.Online
         Task<DuoResponse> GetDuoAsync(string duoId, PlayerLook look);
         Task<DuoResponse> SetGroupReadyAsync(string duoId, bool ready, PlayerLook look);
         Task<DuoResponse> LaunchGroupAsync(string duoId, string mode);
+        /// <summary>Looks for a teammate for this mode (called again every few seconds while searching): the group once formed.</summary>
+        Task<DuoResponse> SearchMateAsync(string mode, string playerName);
+        Task<TeamActionResponse> CancelMateSearchAsync();
         /// <summary>Starts a 2v2 battle; <paramref name="meFirst"/>: the player runs rounds 1 and 3, the partner round 2.</summary>
         Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst);
         Task<DuoBoardResponse> GetDuoBoardAsync(int limit);

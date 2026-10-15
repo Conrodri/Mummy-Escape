@@ -46,6 +46,56 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public void MateSearch_PairsTheSameMode_TheLongestSearchingLeads()
+        {
+            var now = new System.DateTime(2026, 10, 12, 12, 0, 0, System.DateTimeKind.Utc);
+            var server = new PvpServer(new MemoryPvpStore(), () => now);
+            Assert.AreEqual("MODE", server.SearchMateAsync("a", "Ana", "guild").Result.Error);
+            Assert.IsNull(server.SearchMateAsync("b", "Bob", GroupLaunch.Relay).Result.Duo);
+            now = now.AddSeconds(2);
+            Assert.IsNull(server.SearchMateAsync("c", "Cid", GroupLaunch.Coop).Result.Duo, "another mode");
+            now = now.AddSeconds(2);
+            Assert.IsNull(server.SearchMateAsync("b", "Bob", GroupLaunch.Relay).Result.Duo, "still alone in its mode");
+
+            now = now.AddSeconds(2);
+            var duo = server.SearchMateAsync("d", "Dan", GroupLaunch.Relay).Result.Duo;
+            Assert.IsNotNull(duo);
+            Assert.AreEqual("b", duo.Leader, "b searched first");
+            CollectionAssert.AreEqual(new[] { "Bob", "Dan" }, duo.Names);
+            Assert.AreEqual(GroupLaunch.Relay, duo.Mode);
+            Assert.AreEqual(duo.Id, server.SearchMateAsync("b", "Bob", GroupLaunch.Relay).Result.Duo.Id, "b's phone finds the group");
+            Assert.AreEqual(duo.Id, server.GetTeamsAsync("d").Result.Duos[0].Id);
+
+            now = now.AddSeconds(2);
+            Assert.IsNull(server.SearchMateAsync("e", "Eve", GroupLaunch.Relay).Result.Duo, "b and d are no longer searching");
+        }
+
+        [Test]
+        public void MateSearch_ForgetsWhoStoppedAsking_AndWhoCancelled()
+        {
+            var now = new System.DateTime(2026, 10, 12, 12, 0, 0, System.DateTimeKind.Utc);
+            var server = new PvpServer(new MemoryPvpStore(), () => now);
+            server.SearchMateAsync("a", "Ana", GroupLaunch.Coop).Wait();
+            now = now.AddMilliseconds(TeamConfig.MateSearchStaleMs + 1);
+            Assert.IsNull(server.SearchMateAsync("b", "Bob", GroupLaunch.Coop).Result.Duo, "a stopped asking");
+            Assert.IsTrue(server.CancelMateSearchAsync("b").Result.Ok);
+            Assert.IsNull(server.SearchMateAsync("c", "Cid", GroupLaunch.Coop).Result.Duo, "b cancelled");
+        }
+
+        [Test]
+        public void MateSearch_Offline_ASimulatedMateComes_AndTheSearcherLeads()
+        {
+            var now = new System.DateTime(2026, 10, 12, 12, 0, 0, System.DateTimeKind.Utc);
+            var server = new PvpServer(new MemoryPvpStore(), () => now) { IsBot = id => id != "a", BotName = id => "Bot" };
+            Assert.IsNull(server.SearchMateAsync("a", "Ana", GroupLaunch.Coop).Result.Duo);
+            now = now.AddSeconds(5);
+            var duo = server.SearchMateAsync("a", "Ana", GroupLaunch.Coop).Result.Duo;
+            Assert.AreEqual("a", duo.Leader);
+            Assert.AreEqual("Bot", duo.Names[1]);
+            Assert.IsNull(server.LaunchGroupAsync("a", duo.Id, GroupLaunch.Coop).Result.Error);
+        }
+
+        [Test]
         public void BotMate_IsAlwaysReady()
         {
             var (server, id) = ServerWithDuo();

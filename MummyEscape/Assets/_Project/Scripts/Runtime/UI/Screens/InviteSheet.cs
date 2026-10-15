@@ -9,8 +9,9 @@ using UnityEngine.UI;
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// The party invite sheet, sliding up over the home screen: the duo invitations received (accept forms the group)
-    /// and the friends to invite, online ones first. Invitations are sent and accepted here only.
+    /// The party invite sheet, sliding up over the home screen: the search for a teammate (2v2 duel or campaign, with
+    /// another player searching the same; the longest searching leads), the duo invitations received (accept forms the
+    /// group) and the friends to invite, online ones first. Invitations are sent and accepted here only.
     /// </summary>
     public sealed class InviteSheet : UIScreen
     {
@@ -19,13 +20,16 @@ namespace MummyEscape.UI.Screens
         /// <summary>Name of the friend invited during this app session; local only, the server does not return sent invites.</summary>
         public static string PendingInvite;
 
-        const float Height = 1400, SlideSeconds = 0.22f;
+        const float Height = 1400, SlideSeconds = 0.22f, SearchPollSeconds = 3f;
 
         RectTransform _panel, _list;
-        Text _info;
-        bool _busy;
+        HorizontalLayoutGroup _modes, _searching;
+        Text _info, _searchText;
+        bool _busy, _polling;
         int _request;
-        float _slide;
+        float _slide, _searchSince, _nextSearch;
+        /// <summary>The mode searched for (<see cref="GroupLaunch"/>), null when not searching.</summary>
+        string _searchMode;
 
         protected override void Build()
         {
@@ -41,6 +45,17 @@ namespace MummyEscape.UI.Screens
             _info = UIKit.Label(_panel, "", 28, UIKit.Sand);
             UIKit.FitText(_info, 18);
             UIKit.Size(_info, 56);
+
+            UIKit.SectionTitle(_panel, "Chercher un coéquipier");
+            _modes = UIKit.Row(_panel, 90, 16);
+            UIKit.Size(UIKit.Button(_modes.transform, "Duel 2v2", () => Search(GroupLaunch.Relay), 28, ButtonStyle.Primary), 90, -1, 1);
+            UIKit.Size(UIKit.Button(_modes.transform, "Campagne 2v2", () => Search(GroupLaunch.Coop), 28, ButtonStyle.Primary), 90, -1, 1);
+            _searching = UIKit.Row(_panel, 90, 16);
+            _searchText = UIKit.Label(_searching.transform, "", 28, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+            UIKit.FitText(_searchText, 18);
+            UIKit.Size(_searchText, -1, 0, 1);
+            UIKit.Size(UIKit.Button(_searching.transform, "Annuler", StopSearch, 26, ButtonStyle.Leave), 80, 190);
+
             _list = UIKit.Scroll(_panel, out var scroll);
             UIKit.Size(scroll, -1, -1, -1, 1);
             _list.GetComponent<VerticalLayoutGroup>().spacing = 12;
@@ -52,12 +67,22 @@ namespace MummyEscape.UI.Screens
             _busy = false;
             _slide = 0;
             _info.text = "";
+            _searchMode = null;
+            ShowSearch();
             UIKit.ClearChildren(_list);
             Reload();
         }
 
+        public override void OnHide() => StopSearch();
+
         void Update()
         {
+            if (_searchMode != null)
+            {
+                int s = (int)(Time.unscaledTime - _searchSince);
+                _searchText.text = Loc.F("Recherche : {0}… {1}", _searchMode == GroupLaunch.Relay ? Loc.T("Duel 2v2") : Loc.T("Campagne 2v2"), $"{s / 60}:{s % 60:00}"); // noloc
+                if (!_polling && Time.unscaledTime >= _nextSearch) PollSearch();
+            }
             if (_slide >= 1) return;
             _slide = Mathf.Min(1, _slide + Time.unscaledDeltaTime / SlideSeconds);
             float t = 1 - (1 - _slide) * (1 - _slide);
@@ -123,6 +148,49 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(online, -1, 130);
             }
             UIKit.Size(UIKit.Button(h.transform, "Inviter", () => Invite(f), 26, ButtonStyle.Primary), 76, 180);
+        }
+
+        void ShowSearch()
+        {
+            _modes.gameObject.SetActive(_searchMode == null);
+            _searching.gameObject.SetActive(_searchMode != null);
+        }
+
+        void Search(string mode)
+        {
+            if (App.Pvp == null) return;
+            if (App.Session.Group != null) { _info.text = Loc.T("Tu es déjà dans un groupe."); return; }
+            _searchMode = mode;
+            _searchSince = Time.unscaledTime;
+            _nextSearch = 0;
+            ShowSearch();
+        }
+
+        void StopSearch()
+        {
+            if (_searchMode == null) return;
+            _searchMode = null;
+            ShowSearch();
+            _ = App.Pvp?.CancelMateSearchAsync();
+        }
+
+        /// <summary>Asks the server again; once a teammate is found, the group opens (its leader launches the mode).</summary>
+        async void PollSearch()
+        {
+            _polling = true;
+            _nextSearch = Time.unscaledTime + SearchPollSeconds;
+            string mode = _searchMode;
+            var r = await App.Pvp.SearchMateAsync(mode, App.Online.PlayerName);
+            if (this == null) return;
+            _polling = false;
+            if (_searchMode != mode) return; // cancelled meanwhile
+            if (r == null || r.Error != null) { StopSearch(); _info.text = TeamView.ErrorText(r?.Error); return; }
+            if (r.Duo == null) return;
+            _searchMode = null;
+            App.Audio.Play(Sfx.Coin);
+            App.Session.SetGroup(r.Duo);
+            Close();
+            Router.Open<GroupScreen>();
         }
 
         async void Invite(FriendInfo f)

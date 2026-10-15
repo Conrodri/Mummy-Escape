@@ -110,7 +110,7 @@ namespace MummyEscape.Pvp
             return new TeamActionResponse { Ok = true };
         }
 
-        async Task CreateDuoAsync(DuoInvite invite, string partnerId, string partnerName)
+        async Task<Duo> CreateDuoAsync(DuoInvite invite, string partnerId, string partnerName, string duoId = null, string mode = null)
         {
             // Un nouveau duo part du niveau 2v2 que ses joueurs ont déjà montré (pas de remise à 1000 en changeant de partenaire).
             var known = new List<int>();
@@ -118,7 +118,7 @@ namespace MummyEscape.Pvp
                 if (IsHuman(id) && await KnownDuoEloAsync(id) is int elo) known.Add(elo);
             var duo = new Duo
             {
-                Id = NewId(), CreatedAtUnixMs = NowMs,
+                Id = duoId ?? NewId(), CreatedAtUnixMs = NowMs, Mode = mode,
                 Members = new List<string> { invite.FromId, partnerId },
                 Names = new List<string> { invite.FromName ?? "", partnerName ?? "" },
                 Elo = known.Count > 0 ? (int)Math.Round(known.Average()) : PvpConfig.StartingElo,
@@ -128,6 +128,7 @@ namespace MummyEscape.Pvp
                 if (IsBot?.Invoke(id) != true)
                     await Update(id, d => { if (!d.Duos.Contains(duo.Id)) d.Duos.Add(duo.Id); });
             await IndexDuoAsync(duo);
+            return duo;
         }
 
         /// <summary>Le meilleur Elo 2v2 d'un joueur : ses duos qui ont joué, sinon le dernier duo qu'il a quitté ; null s'il n'a jamais joué en 2v2.</summary>

@@ -10,8 +10,8 @@ namespace MummyEscape.UI.Screens
     /// <summary>
     /// The group: two friends side by side, their mummies in their outfits, the leader (who formed the group) on the
     /// left. The teammate presses "Prêt"; the leader then launches the 2v2 campaign or the 2v2 duel, and both phones go
-    /// straight into it. The group is the duo of the server (one per player): invitations are sent and accepted in
-    /// <see cref="InviteSheet"/> (the home "+"; without a group, this screen opens it too). Both phones poll the duo while
+    /// straight into it (a group formed by the teammate search: only the mode both chose). The group is the duo of the
+    /// server (one per player): invitations are sent and accepted, and teammates searched, in <see cref="InviteSheet"/> (the home "+"; without a group, this screen opens it too). Both phones poll the duo while
     /// this screen is open.
     /// </summary>
     public sealed class GroupScreen : UIScreen
@@ -217,8 +217,9 @@ namespace MummyEscape.UI.Screens
             _readyButton.gameObject.SetActive(mine && !leader);
             _readyLabel.text = Loc.T(_ready ? "Prêt ✓" : "Je suis prêt");
             _readyButton.interactable = !_busy;
-            _coop.gameObject.SetActive(mine && leader);
-            _relay.gameObject.SetActive(mine && leader);
+            // A group formed by the teammate search launches the mode both chose.
+            _coop.gameObject.SetActive(mine && leader && _duo.Mode != GroupLaunch.Relay);
+            _relay.gameObject.SetActive(mine && leader && _duo.Mode != GroupLaunch.Coop);
             bool canLaunch = mine && leader && MateReady && !_busy;
             _coop.interactable = canLaunch;
             _relay.interactable = canLaunch;

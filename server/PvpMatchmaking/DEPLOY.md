@@ -7,7 +7,7 @@ générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne 
 - `PvpModule.cs` : les points d'entrée (duels, 2v2, guildes, tchat, énergie, porte-monnaie, données personnelles) :
   `FindDuel`, `SubmitRun`, `GetPvpProfile`, `ClaimSeasonRewards`, `BuyWithSeals`, `SpinSealWheel`, `GetPvpBoard`,
   `GetDuelHistory`, `ReportCheat`, `StartLiveDuel`, `GetLiveDuel`, `StartLiveBotDuel`, `SubmitLiveDuel`, `GetLiveDuelResult`,
-  `GetTeams`, `InviteDuo`, `RespondDuo`, `LeaveDuo`, `FindDuoMatch`, `GetDuoBoard`, `StartBattleRun`, `GetBattle`,
+  `GetTeams`, `InviteDuo`, `RespondDuo`, `SearchMate`, `CancelMateSearch`, `LeaveDuo`, `FindDuoMatch`, `GetDuoBoard`, `StartBattleRun`, `GetBattle`,
   `GetGuild`, `CreateGuild`, `SearchGuilds`, `GetGuildBoard`, `JoinGuild`, `LeaveGuild`, `SetGuildRole`, `KickGuildMember`,
   `StartWar`, `StartRelayMatch`, `StartRelayBots`, `SubmitRelay`, `GetRelayResult`, `ReportRelayQuit`, `GetRelayHistory`,
   `GetChat`, `SendChat`, `GetChatInbox`, `BlockChat`, `SyncChatProfile`, `ReportChat`, `ShareReplay`, `GetSharedReplay`,
