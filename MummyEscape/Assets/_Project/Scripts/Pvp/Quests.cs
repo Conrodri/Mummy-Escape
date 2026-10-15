@@ -90,7 +90,6 @@ namespace MummyEscape.Pvp
             new QuestDef { Id = "endless_win", Kind = QuestKind.EndlessWin, Group = QuestGroup.Pve, Target = 2, Reward = QuestRewardKind.PassXp, Amount = 50, Text = "Échappe-toi de {0} tombeaux sans fin" }, // noloc
             new QuestDef { Id = "duel_play", Kind = QuestKind.DuelPlay, Group = QuestGroup.Pvp, Target = 3, Reward = QuestRewardKind.Seals, Amount = 5, Text = "Joue {0} duels" }, // noloc
             new QuestDef { Id = "duel_win", Kind = QuestKind.DuelWin, Group = QuestGroup.Pvp, Target = 1, Reward = QuestRewardKind.Seals, Amount = 5, Text = "Gagne {0} duel" }, // noloc
-            new QuestDef { Id = "duo_play", Kind = QuestKind.DuoPlay, Group = QuestGroup.Pvp, Target = 1, Reward = QuestRewardKind.Scarabs, Amount = 30, Text = "Joue {0} partie en 2v2" }, // noloc
             new QuestDef { Id = VisitSale, Kind = QuestKind.Visit, Group = QuestGroup.Visit, Target = 1, Reward = QuestRewardKind.PassXp, Amount = 20, Text = "Va voir les soldes de la boutique" },
             new QuestDef { Id = VisitDuoBoard, Kind = QuestKind.Visit, Group = QuestGroup.Visit, Target = 1, Reward = QuestRewardKind.PassXp, Amount = 20, Text = "Va voir le classement 2v2" },
         };

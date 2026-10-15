@@ -215,11 +215,11 @@ namespace MummyEscape.Tests
         [Test]
         public async Task Claim_Scarabs_BeforeTheyAreHeldHere_IsClosed_AndStaysClaimable()
         {
-            var (server, store) = NewServer("duo_play");
-            await store.UpdatePlayerAsync("alice", d => Quests.Add(d.Quests = new QuestBook(), QuestKind.DuoPlay, 1, _now));
-            Assert.AreEqual("CLOSED", (await server.ClaimQuestAsync("alice", "duo_play")).Error);
+            var (server, store) = NewServer("campaign_win");
+            await store.UpdatePlayerAsync("alice", d => Quests.Add(d.Quests = new QuestBook(), QuestKind.CampaignWin, 3, _now));
+            Assert.AreEqual("CLOSED", (await server.ClaimQuestAsync("alice", "campaign_win")).Error);
             await server.OpenScarabsAsync("alice", new ScarabSeed());
-            Assert.AreEqual(30, (await server.ClaimQuestAsync("alice", "duo_play")).Wallet.Scarabs);
+            Assert.AreEqual(30, (await server.ClaimQuestAsync("alice", "campaign_win")).Wallet.Scarabs);
         }
 
         [Test]

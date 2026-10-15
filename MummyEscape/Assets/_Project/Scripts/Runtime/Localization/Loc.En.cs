@@ -1576,7 +1576,6 @@ namespace MummyEscape
             ["Échappe-toi de {0} tombeaux sans fin"] = "Escape {0} endless tombs",
             ["Joue {0} duels"] = "Play {0} duels",
             ["Gagne {0} duel"] = "Win {0} duel",
-            ["Joue {0} partie en 2v2"] = "Play {0} 2v2 game",
             ["Va voir les soldes de la boutique"] = "Check out the shop's deals",
             ["Va voir le classement 2v2"] = "Check out the 2v2 leaderboard",
             ["Termine les quêtes du jour {0} jours cette semaine"] = "Finish the daily quests on {0} days this week",
