@@ -1,6 +1,8 @@
-Ambiance sonore du jeu
+Musiques du jeu
 
-Le jeu joue une seule boucle d'ambiance, partout (menus et tombeaux). Déposer ici un fichier
-(ex. ambiance.mp3, .ogg ou .wav) : le premier fichier du dossier remplace la boucle synthétisée
-(drone grave + vent). Conseil : boucle propre (fin qui s'enchaîne au début), 1 à 3 min,
-import Unity "Load Type: Streaming" pour économiser la mémoire.
+Deux thèmes, avec un fondu enchaîné entre eux :
+- menu.(mp3|ogg|wav) : les menus (tout écran avec la barre de navigation) ;
+- game.(mp3|ogg|wav) : en jeu (tombeau, duels, écrans de résultat).
+Sans "game", le thème du menu joue partout ; sans "menu", le premier fichier du dossier, sinon la
+boucle synthétisée (drone grave + vent). Conseil : boucle propre (fin qui s'enchaîne au début),
+1 à 3 min, import Unity "Load Type: Streaming" pour économiser la mémoire.

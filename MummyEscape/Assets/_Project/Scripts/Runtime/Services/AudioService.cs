@@ -7,9 +7,10 @@ namespace MummyEscape.Services
     public enum Sfx { Step, Bump, Button, Door, Spikes, Darkness, Disarm, Teleport, Curse, Fall, Climb, Win, Death, Click, Coin, Splash, Crumble, Laser, Fire, Mirror, Turn, Versus }
 
     /// <summary>
-    /// Sound effects and one ambient loop for the whole game, menus and tombs alike: the serialized override on
-    /// <see cref="App.GameBootstrap"/>, else the first file of <c>Resources/Music</c> (see its LISEZMOI), else a
-    /// synthesized drone-and-wind loop. The effects are synthesized placeholders; drop real clips into the overrides.
+    /// Sound effects and two themes, one for the menus and one in game: <c>Resources/Music/menu</c> and
+    /// <c>Resources/Music/game</c> (see its LISEZMOI). Missing, the menu theme falls back to the serialized override on
+    /// <see cref="App.GameBootstrap"/>, else the first file of the folder, else a synthesized drone-and-wind loop; the
+    /// game theme falls back to the menu one. The effects are synthesized placeholders; drop real clips into the overrides.
     /// </summary>
     public sealed class AudioService : MonoBehaviour
     {
@@ -20,6 +21,7 @@ namespace MummyEscape.Services
         AudioSource _sfx;
         SettingsService _settings;
         readonly Dictionary<Sfx, AudioClip> _clips = new Dictionary<Sfx, AudioClip>();
+        AudioClip _menuTheme, _gameTheme;
 
         float _mix = 1f;
         const float CrossfadeSeconds = 1.8f;
@@ -39,7 +41,11 @@ namespace MummyEscape.Services
 
             settings.Changed += ApplyVolumes;
             var files = Resources.LoadAll<AudioClip>("Music");
-            CrossfadeTo(musicOverride != null ? musicOverride : files.Length > 0 ? files[0] : Synth.AmbientLoop());
+            _menuTheme = Resources.Load<AudioClip>("Music/menu");
+            if (_menuTheme == null) _menuTheme = musicOverride != null ? musicOverride : files.Length > 0 ? files[0] : Synth.AmbientLoop();
+            _gameTheme = Resources.Load<AudioClip>("Music/game");
+            if (_gameTheme == null) _gameTheme = _menuTheme;
+            CrossfadeTo(_menuTheme);
             ApplyVolumes();
         }
 
@@ -79,6 +85,9 @@ namespace MummyEscape.Services
             ApplyVolumes();
             if (_mix >= 1f) _musicOut.Stop();
         }
+
+        /// <summary>The game theme in a tomb (and its results), the menu theme elsewhere; a crossfade when it changes.</summary>
+        public void PlayTheme(bool inGame) => CrossfadeTo(inGame ? _gameTheme : _menuTheme);
 
         void CrossfadeTo(AudioClip clip)
         {

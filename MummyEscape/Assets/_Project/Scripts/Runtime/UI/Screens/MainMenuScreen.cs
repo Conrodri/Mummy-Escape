@@ -13,7 +13,7 @@ namespace MummyEscape.UI.Screens
         PassBanner _pass;
         Image _mummy, _mate, _chatDot;
         Text _mateName, _mateState, _myName, _myState, _inviteLabel, _badgeText;
-        Image _myShadow, _mateShadow, _badge;
+        Image _myShadow, _mateShadow, _badge, _plusGlyph;
         Button _chat, _plus;
         RectTransform _invite;
         int _invites, _teamsRequest;
@@ -101,7 +101,13 @@ namespace MummyEscape.UI.Screens
             _mateState = StageLabel(24, UIKit.Dim);
             _invite = UIKit.Rect("Invite", _stage); // noloc
             Center(_invite);
-            _plus = UIKit.IconButton(_invite, UISprites.Plus, () => App.RequireOnline(() => Router.Open<InviteSheet>()), PlusSize);
+            _plus = UIKit.IconButton(_invite, UISprites.Plus, () =>
+            {
+                // Shown before the 2v2 opens (with the duels) so the player knows it is coming.
+                if (!Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted)) NavBar.ExplainLock(Router, Feature.Duel, "2v2");
+                else App.RequireOnline(() => Router.Open<InviteSheet>());
+            }, PlusSize);
+            _plusGlyph = _plus.transform.Find("Icon").GetComponent<Image>();
             Center((RectTransform)_plus.transform);
             // A round "+" like a lobby's empty spot, not a square tool button.
             _plus.image.sprite = UISprites.Circle;
@@ -404,10 +410,11 @@ namespace MummyEscape.UI.Screens
             _myState.enabled = shown && g != null;
             Put(_myState.rectTransform, 0, head, size * 0.9f, 32);
             if (g != null) _myState.text = State(g.IsReady(App.Online.PlayerId));
-            // The slot opens with the duels and the group.
-            bool slot = shown && Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted);
+            // The slot is always there; it opens with the duels and the group, locked until then.
+            bool slot = shown;
+            bool locked = !Unlocks.IsUnlocked(Feature.Duel, App.Save.IsCompleted);
             string mate = g?.Members.Find(m => m != App.Online.PlayerId);
-            bool duo = slot && mate != null;
+            bool duo = slot && !locked && mate != null;
             _mate.enabled = _mateName.enabled = _mateState.enabled = _mateShadow.enabled = duo;
             _invite.gameObject.SetActive(slot && !duo);
             if (duo)
@@ -423,8 +430,11 @@ namespace MummyEscape.UI.Screens
             }
             else if (slot)
             {
-                _inviteLabel.text = Loc.T(_shownPending != null ? "Invitation envoyée…" : "Inviter");
-                _badge.gameObject.SetActive(_invites > 0);
+                _plusGlyph.sprite = locked ? UIKit.Art.Lock : UISprites.Plus;
+                _plusGlyph.color = locked ? UIKit.Dim : UIKit.Sand;
+                _inviteLabel.color = locked ? UIKit.Dim : UIKit.Sand;
+                _inviteLabel.text = Loc.T(locked ? "Verrouillé" : _shownPending != null ? "Invitation envoyée…" : "Inviter");
+                _badge.gameObject.SetActive(!locked && _invites > 0);
                 _badgeText.text = Loc.P(_invites, "{0} invitation", "{0} invitations");
             }
         }

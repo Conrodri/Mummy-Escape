@@ -203,6 +203,7 @@ namespace MummyEscape.UI
         {
             var tab = Current != null ? Current.Tab : NavTab.None;
             _nav.Show(tab);
+            App.GameApp.I?.Audio.PlayTheme(tab == NavTab.None); // no bar: a tomb, a versus or its results
             if (Current != null) Current.Root.offsetMin = new Vector2(0, tab == NavTab.None ? 0 : NavBar.Height);
             if (_modals.Count == 0) _nav.transform.SetAsLastSibling();
         }
