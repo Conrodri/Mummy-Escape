@@ -166,13 +166,13 @@ namespace MummyEscape.App
         int _syncedStars = -1;
 
         /// <summary>The server opens the duels at 35 solo stars: it is told the count whenever it grows.</summary>
-        public Task SyncSoloStars()
+        public async Task SyncSoloStars()
         {
             var pvp = Pvp;
             int stars = Save.TotalStars;
-            if (pvp == null || stars == _syncedStars) return Task.CompletedTask;
-            _syncedStars = stars;
-            return pvp.SyncSoloStarsAsync(stars);
+            if (pvp == null || stars == _syncedStars) return;
+            // Remembered only once saved: a failed write is retried on the next call (opening the duels, a search).
+            if (await pvp.SyncSoloStarsAsync(stars)) _syncedStars = stars;
         }
 
         void OnDestroy() => Loc.Changed -= OnLanguageChanged;

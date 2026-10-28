@@ -337,7 +337,7 @@ namespace MummyEscape.Online
 
         public Task<WheelSpinResponse> SpinSealWheelAsync(int count = 1) => Run(() => _server.SpinSealWheelAsync(Me, count));
 
-        public Task SyncSoloStarsAsync(int stars) => Task.CompletedTask; // read live from the save
+        public Task<bool> SyncSoloStarsAsync(int stars) => Task.FromResult(true); // read live from the save
 
         public Task<DuelHistoryResponse> GetHistoryAsync() => Run(() => _server.GetHistoryAsync(Me));
 

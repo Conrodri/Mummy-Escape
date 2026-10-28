@@ -66,10 +66,10 @@ namespace MummyEscape.Online
             ? Call("SpinSealWheel", null, e => new WheelSpinResponse { Error = e })
             : Call("SpinSealWheelMany", new Dictionary<string, object> { { "count", count } }, e => new WheelSpinResponse { Error = e });
 
-        public async Task SyncSoloStarsAsync(int stars)
+        public async Task<bool> SyncSoloStarsAsync(int stars)
         {
-            try { await CloudSaveService.Instance.Data.Player.SaveAsync(new Dictionary<string, object> { { SoloStarsKey, stars } }); }
-            catch (Exception e) { Debug.LogWarning("[Pvp] solo stars not synced: " + e.Message); }
+            try { await CloudSaveService.Instance.Data.Player.SaveAsync(new Dictionary<string, object> { { SoloStarsKey, stars } }); return true; }
+            catch (Exception e) { Debug.LogWarning("[Pvp] solo stars not synced: " + e.Message); return false; }
         }
 
         public Task<DuelHistoryResponse> GetHistoryAsync() => Call<DuelHistoryResponse>("GetDuelHistory", null, _ => null);
