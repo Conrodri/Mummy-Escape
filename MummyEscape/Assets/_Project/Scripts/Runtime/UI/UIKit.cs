@@ -282,6 +282,16 @@ namespace MummyEscape.UI
                         row.childControlWidth = row.childControlHeight = true;
                         row.childForceExpandWidth = row.childForceExpandHeight = true;
                         line = row.transform;
+                        if (i > 0)
+                        {
+                            // A thin gold rule in the gap over every line but the first, outside the row's layout.
+                            var rule = Image(line, Art.White, new Color(Gold.r, Gold.g, Gold.b, 0.4f), false, "Rule"); // noloc
+                            rule.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                            rule.rectTransform.anchorMin = new Vector2(0.02f, 1f);
+                            rule.rectTransform.anchorMax = new Vector2(0.98f, 1f);
+                            rule.rectTransform.sizeDelta = new Vector2(0, 2);
+                            rule.rectTransform.anchoredPosition = new Vector2(0, 3); // the middle of the 6 px spacing
+                        }
                     }
                     int index = i;
                     _buttons[i] = Button(line, labels[i], () => { Select(index); onSelect?.Invoke(index); }, 30, ButtonStyle.Ghost);
