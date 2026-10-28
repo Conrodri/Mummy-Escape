@@ -28,7 +28,10 @@ namespace MummyEscape.Online
         {
             try
             {
-                var result = await CloudCodeService.Instance.CallModuleEndpointAsync<T>(Module, function, args ?? new Dictionary<string, object>());
+                // Read here, not by the SDK's typed call, which fails on any unknown field: a newer server adding one to a
+                // response would cut every older phone off the duels ("Could not find member 'quests'", 0.1.8).
+                var json = await CloudCodeService.Instance.CallModuleEndpointAsync(Module, function, args ?? new Dictionary<string, object>());
+                var result = json == null ? default : Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json);
                 // Every response carries its error code in an "Error" field.
                 if (result != null) PvpServiceFactory.Inspect(typeof(T).GetField("Error")?.GetValue(result) as string);
                 return result;
