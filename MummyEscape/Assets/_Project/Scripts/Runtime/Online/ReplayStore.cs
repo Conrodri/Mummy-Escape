@@ -28,7 +28,7 @@ namespace MummyEscape.Online
         static List<DuelRecord> _duels;
         static List<DuelRecord> _saved;
 
-        static string FilePath => Path.Combine(Application.persistentDataPath, "duel_replays.json"); // noloc
+        static string FilePath => Path.Combine(Application.persistentDataPath, Services.TestProfile.File("duel_replays.json")); // noloc
 
         /// <summary>From the most recent to the oldest.</summary>
         public static IReadOnlyList<DuelRecord> Duels

@@ -44,7 +44,7 @@ namespace MummyEscape.Online
         static List<RelayRecord> _recent;
         static List<RelayRecord> _saved;
 
-        static string FilePath => Path.Combine(Application.persistentDataPath, "relay_replays.json"); // noloc
+        static string FilePath => Path.Combine(Application.persistentDataPath, Services.TestProfile.File("relay_replays.json")); // noloc
 
         /// <summary>From the most recent to the oldest.</summary>
         public static IReadOnlyList<RelayRecord> Recent
