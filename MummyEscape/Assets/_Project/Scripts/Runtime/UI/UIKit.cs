@@ -459,7 +459,7 @@ namespace MummyEscape.UI
         /// <summary>Pill with an icon and a short value (wallet, rewards). Returns the value text.</summary>
         public static Text Chip(Transform parent, Sprite icon, string value, Color? tint = null, float height = 72)
         {
-            var plate = Pixelated(Image(parent, UISprites.PixelPlate, tint.HasValue ? Color.Lerp(new Color(0.1f, 0.07f, 0.05f), tint.Value, 0.25f) : new Color(0.1f, 0.07f, 0.05f, 0.85f), false, "Chip"), UISprites.PixelPlate); // noloc
+            var plate = Pixelated(Image(parent, UISprites.PixelChip, tint.HasValue ? Color.Lerp(new Color(0.1f, 0.07f, 0.05f), tint.Value, 0.25f) : new Color(0.1f, 0.07f, 0.05f, 0.85f), false, "Chip"), UISprites.PixelChip); // noloc
             var h = plate.gameObject.AddComponent<HorizontalLayoutGroup>();
             h.padding = new RectOffset(icon != null ? 14 : 28, 28, 8, 8);
             h.spacing = 12;

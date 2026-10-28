@@ -26,7 +26,8 @@ namespace MummyEscape.Pvp
         public string[] Legendaries;
         /// <summary>
         /// Prix d'achat direct d'un de ces légendaires, sans hasard (0 : seulement sur la roue). Calé sur ce que coûte un
-        /// légendaire en moyenne à la roue : 200 tours à environ 23,5 net (la roue rend ~26,5 sur 50).
+        /// légendaire en moyenne à la roue : 200 tours à environ 35 net (la roue rend ~14,75 sur 50), soit ~7000 ; le prix
+        /// direct reste en dessous.
         /// </summary>
         public int DirectPrice;
     }
@@ -116,18 +117,19 @@ namespace MummyEscape.Pvp
             return sum;
         }
 
+        // Rendu moyen ~14,75 par tour : un tiers d'un lancer ×10 (147,5 sur 450).
         static WheelSegment[] Segments(int jackpot, int big, int good, int refund, int half, int small) => new[]
         {
             new WheelSegment { Kind = PrizeKind.Legendary, Amount = jackpot, Weight = LegendaryWeight },
             new WheelSegment { Kind = PrizeKind.Currency, Amount = small, Weight = 3_000 },
-            new WheelSegment { Kind = PrizeKind.Currency, Amount = good, Weight = 600 },
-            new WheelSegment { Kind = PrizeKind.Nothing, Weight = 2_200 },
-            new WheelSegment { Kind = PrizeKind.Currency, Amount = big, Weight = 150 },
-            new WheelSegment { Kind = PrizeKind.Currency, Amount = half, Weight = 2_500 },
-            new WheelSegment { Kind = PrizeKind.Currency, Amount = refund, Weight = 1_500 },
+            new WheelSegment { Kind = PrizeKind.Currency, Amount = good, Weight = 300 },
+            new WheelSegment { Kind = PrizeKind.Nothing, Weight = 4_470 },
+            new WheelSegment { Kind = PrizeKind.Currency, Amount = big, Weight = 80 },
+            new WheelSegment { Kind = PrizeKind.Currency, Amount = half, Weight = 1_500 },
+            new WheelSegment { Kind = PrizeKind.Currency, Amount = refund, Weight = 600 },
         };
 
-        /// <summary>Roue des scarabées : 50 scarabées le tour, environ la moitié rendue en moyenne.</summary>
+        /// <summary>Roue des scarabées : 50 scarabées le tour, environ un tiers rendu en moyenne.</summary>
         public static readonly WheelDef Scarabs = new WheelDef
         {
             Id = "scarabs", Price = 50,

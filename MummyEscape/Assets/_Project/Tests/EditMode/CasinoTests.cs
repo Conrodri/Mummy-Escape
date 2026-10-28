@@ -80,8 +80,9 @@ namespace MummyEscape.Tests
                 double back = 0;
                 foreach (var s in wheel.Segments)
                     if (s.Kind == PrizeKind.Currency) back += s.Amount * (double)s.Weight / Casino.WeightTotal;
-                Assert.That(back, Is.LessThan(wheel.Price), wheel.Id);
-                Assert.That(back, Is.GreaterThan(wheel.Price * 0.3), wheel.Id);
+                // A ×10 throw gives back about a third of its price.
+                double ten = back * Casino.MultiSpins / Casino.PriceOf(wheel, Casino.MultiSpins);
+                Assert.That(ten, Is.InRange(0.30, 0.36), wheel.Id);
             }
         }
 

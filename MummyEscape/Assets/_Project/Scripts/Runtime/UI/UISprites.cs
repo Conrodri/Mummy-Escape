@@ -28,6 +28,8 @@ namespace MummyEscape.UI
         public static Sprite PixelButton { get; private set; }
         /// <summary>Flat pixel-art plate (tintable): outline and a one-texel bevel, for rows, tracks and chips.</summary>
         public static Sprite PixelPlate { get; private set; }
+        /// <summary><see cref="PixelPlate"/> with a flat fill: the wallet chips.</summary>
+        public static Sprite PixelChip { get; private set; }
         /// <summary>Pixel-art panel in its own colours: ink outline, bevelled gold frame, dark fill and gold rivets in the corners.</summary>
         public static Sprite PixelFrame { get; private set; }
         /// <summary>Just the outline of <see cref="PixelPlate"/> (tintable): the coloured rim of a pixel plate.</summary>
@@ -64,6 +66,12 @@ namespace MummyEscape.UI
 
             PixelButton = Pixels(16, 16, PixelButtonTexel, new Vector4(6, 6, 6, 6));
             PixelPlate = Pixels(12, 12, PixelPlateTexel, new Vector4(4, 4, 4, 4));
+            // The plate without its bevel: on a light tint (the gold chip) the bevel rows read as stray lines.
+            PixelChip = Pixels(12, 12, (x, y) =>
+            {
+                var c = PixelPlateTexel(x, y);
+                return c == Color.white || c == Grey(0.75f) ? Grey(0.9f) : c;
+            }, new Vector4(4, 4, 4, 4));
             PixelFrame = Pixels(24, 24, PixelFrameTexel, new Vector4(9, 9, 9, 9));
             PixelOutline = Pixels(12, 12, (x, y) =>
             {
