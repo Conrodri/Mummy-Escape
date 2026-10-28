@@ -17,7 +17,6 @@ namespace MummyEscape.UI.Screens
 
         public override bool IsModal => true;
         Button _language;
-        Button _restore;
         readonly List<RectTransform> _cards = new List<RectTransform>();
         readonly List<string> _titles = new List<string>();
         UIKit.Segmented _tabs;
@@ -63,8 +62,6 @@ namespace MummyEscape.UI.Screens
 
             var account = Card(body, "Compte");
             UIKit.Size(UIKit.Button(account, "Mon compte", () => Router.Open<AccountScreen>()), UIKit.ButtonHeight);
-            _restore = UIKit.Button(account, "Restaurer mes achats", RestorePurchases, UIKit.TextSize, ButtonStyle.Secondary);
-            UIKit.Size(_restore, UIKit.ButtonHeight);
             UIKit.Size(UIKit.Button(account, "Confidentialité et données", () => Router.Open<PrivacyScreen>(), UIKit.TextSize, ButtonStyle.Secondary), UIKit.ButtonHeight);
             _language = UIKit.Button(account, "Langue", () => Router.Open<LanguagePickerScreen>(), UIKit.TextSize, ButtonStyle.Secondary);
             UIKit.Size(_language, UIKit.ButtonHeight);
@@ -104,18 +101,6 @@ namespace MummyEscape.UI.Screens
             _tabs.Select(index);
             for (int i = 0; i < _cards.Count; i++) _cards[i].gameObject.SetActive(i == index);
             _scroll.verticalNormalizedPosition = 1f;
-        }
-
-        /// <summary>Asks the store for the purchases paid but not credited, and the server for the wallet of truth.</summary>
-        async void RestorePurchases()
-        {
-            if (!GoldWallet.Available(App)) { UIKit.SetLabel(_restore, GoldWallet.ErrorText("OFFLINE")); return; } // noloc
-            _restore.interactable = false;
-            UIKit.SetLabel(_restore, "Vérification…");
-            await GoldWallet.RefreshAsync(App);
-            if (this == null) return;
-            _restore.interactable = true;
-            UIKit.SetLabel(_restore, "Achats à jour");
         }
 
         public void RefreshLanguage()
