@@ -48,6 +48,8 @@ namespace MummyEscape.Monetization
         public const int PassPrice = 40;
         public const int TierBundlePrice = 10;
         public const int TierBundleSize = 10;
+        /// <summary>A change of name after the first one (free).</summary>
+        public const int RenamePrice = 20;
 
         public static readonly IReadOnlyList<GoldPack> Packs = new[]
         {

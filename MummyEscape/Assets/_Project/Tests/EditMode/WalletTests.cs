@@ -90,6 +90,22 @@ namespace MummyEscape.Tests
         }
 
         [Test]
+        public async Task Rename_FirstIsFree_ThenCostsGold()
+        {
+            var (server, store) = NewServer();
+            var r = await server.PayRenameAsync("alice");
+            Assert.IsNull(r.Error, "the first change is free");
+            Assert.AreEqual(1, r.Wallet.Renames);
+
+            Assert.AreEqual("GOLD", (await server.PayRenameAsync("alice")).Error);
+            await Give(store, "alice", GoldShop.RenamePrice + 3);
+            r = await server.PayRenameAsync("alice");
+            Assert.IsNull(r.Error);
+            Assert.AreEqual(3, r.Wallet.Gold);
+            Assert.AreEqual(2, r.Wallet.Renames);
+        }
+
+        [Test]
         public async Task Spend_KeepsTheLastFiftyRequests()
         {
             var (server, store) = NewServer();

@@ -149,6 +149,8 @@ namespace MummyEscape.Online
         /// <summary>Credits a Play Store purchase once the server has checked it with Google (the Play Billing purchase token).</summary>
         Task<WalletResponse> VerifyPurchaseAsync(string productId, string purchaseToken);
         Task<WalletResponse> BuyPassAsync();
+        /// <summary>Pays a change of name (the first is free).</summary>
+        Task<WalletResponse> PayRenameAsync();
         /// <summary>
         /// The phone delivers these two itself: <paramref name="requestId"/> is never debited twice, and the wallet lists it
         /// (Wallet.Requests) so a lost answer is delivered later.

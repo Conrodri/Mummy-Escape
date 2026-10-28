@@ -1,3 +1,4 @@
+using MummyEscape.Monetization;
 using MummyEscape.Services;
 using MummyEscape.Visual;
 using UnityEngine;
@@ -29,8 +30,14 @@ namespace MummyEscape.UI.Screens
         InputField _name;
         Text _country, _error;
         Image _mummy;
-        Button _go;
+        Button _go, _cancel;
         bool _busy;
+        /// <summary>Opened from the account screen: a change of name, which can be left (<see cref="ForRename"/>).</summary>
+        bool _rename;
+        System.Action _renamed;
+
+        /// <summary>The first change is free, the next ones cost <see cref="Pvp.GoldShop.RenamePrice"/>.</summary>
+        int RenamePrice => App.Save.Data.Renames == 0 ? 0 : Pvp.GoldShop.RenamePrice;
 
         protected override void Build()
         {
@@ -71,19 +78,37 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(_error, 50);
             _go = UIKit.Button(body, "C'est parti !", Confirm, 42, ButtonStyle.Primary);
             UIKit.Size(_go, 116);
+            _cancel = UIKit.Button(body, "Annuler", () => Router.Close(this), 34, ButtonStyle.Ghost);
+            UIKit.Size(_cancel, 90);
+        }
+
+        /// <summary>A change of name from the account screen: it can be cancelled, and says what it costs.</summary>
+        public void ForRename(System.Action renamed)
+        {
+            _rename = true;
+            _renamed = renamed;
+            _cancel.gameObject.SetActive(true);
+            int price = RenamePrice;
+            UIKit.SetLabel(_go, price == 0 ? "Changer (gratuit la première fois)" : Loc.F("Changer · {0} dorés", price));
         }
 
         public override void OnShow()
         {
             _busy = false;
+            _rename = false;
+            _cancel.gameObject.SetActive(false);
+            UIKit.SetLabel(_go, "C'est parti !");
             _error.text = "";
             _name.text = StripTag(App.Online.PlayerName);
             MummyAnimator.Show(_mummy, App.Art, App.Save.Loadout);
             RefreshCountry();
         }
 
-        // A choice is required: Back does nothing.
-        public void OnBack() { }
+        // The first choice is required: Back does nothing there.
+        public void OnBack()
+        {
+            if (_rename && !_busy) Router.Close(this);
+        }
 
         void RefreshCountry()
         {
@@ -96,10 +121,27 @@ namespace MummyEscape.UI.Screens
             if (_busy) return;
             string name = (_name.text ?? "").Trim();
             if (name.Length < NameMin) { _error.text = Loc.F("{0} caractères minimum.", NameMin); return; }
+            bool changed = name != StripTag(App.Online.PlayerName);
+            int price = _rename && changed ? RenamePrice : 0;
+            if (price > 0 && !TreasureScreen.EnoughGold(App, Router, price, () => Router.Open<TreasureScreen>())) return;
             _busy = true;
             _go.interactable = false;
             // Keeping the suggested name keeps the friend code (a new name gets a new #1234).
-            if (name != StripTag(App.Online.PlayerName)) await App.Online.SetPlayerNameAsync(name);
+            if (changed)
+            {
+                try { await App.Online.SetPlayerNameAsync(name); }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning("[Profile] rename: " + e.Message);
+                    if (this == null) return;
+                    _busy = false;
+                    _go.interactable = true;
+                    _error.text = Loc.T("Ce nom n'a pas pu être enregistré : essaies-en un autre.");
+                    return;
+                }
+                // shortcut: paid after the rename, so a failed rename never costs gold; a lost answer here makes it free.
+                if (_rename) await GoldWallet.RunAsync(App, p => p.PayRenameAsync());
+            }
             if (this == null) return;
             App.Save.Data.ProfileDone = true;
             App.Save.Save();
@@ -107,6 +149,7 @@ namespace MummyEscape.UI.Screens
             _go.interactable = true;
             Router.Close(this);
             Router.Current?.OnShow();
+            if (_rename) _renamed?.Invoke();
         }
 
         internal static string StripTag(string name)

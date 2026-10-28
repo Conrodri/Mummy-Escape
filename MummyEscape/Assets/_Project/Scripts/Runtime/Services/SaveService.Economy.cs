@@ -25,6 +25,7 @@ namespace MummyEscape.Services
         {
             if (wallet == null) return;
             Data.GoldScarabs = wallet.Gold;
+            Data.Renames = wallet.Renames;
             Data.PassesOwned = new List<string>(wallet.Passes ?? new List<string>());
             var skins = wallet.Skins ?? new List<string>();
             Data.OwnedSkins.RemoveAll(s => GoldShop.IsPaid(s) && !skins.Contains(s));

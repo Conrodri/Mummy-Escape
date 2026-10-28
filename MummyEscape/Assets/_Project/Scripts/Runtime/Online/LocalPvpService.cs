@@ -451,6 +451,7 @@ namespace MummyEscape.Online
         public Task<WalletResponse> GetWalletAsync() => Run(() => _server.GetWalletAsync(Me));
         public Task<WalletResponse> VerifyPurchaseAsync(string productId, string purchaseToken) => Run(() => _server.VerifyPurchaseAsync(Me, productId, purchaseToken));
         public Task<WalletResponse> BuyPassAsync() => Run(() => _server.BuyPassAsync(Me));
+        public Task<WalletResponse> PayRenameAsync() => Run(() => _server.PayRenameAsync(Me));
         public Task<WalletResponse> BuyTiersAsync(string requestId) => Run(() => _server.BuyTiersAsync(Me, requestId));
         public Task<WalletResponse> BuyScarabsAsync(string offerId, string requestId) => Run(() => _server.BuyScarabsAsync(Me, offerId, requestId));
         public Task<WalletResponse> BuyGoldItemAsync(string skinId) => Run(() => _server.BuyGoldItemAsync(Me, skinId));

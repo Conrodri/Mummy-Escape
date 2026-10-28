@@ -198,6 +198,7 @@ namespace MummyEscape.Online
             Call("VerifyPurchase", Args("productId", productId, "purchaseToken", purchaseToken), e => new WalletResponse { Error = e });
 
         public Task<WalletResponse> BuyPassAsync() => Call("BuyPass", null, e => new WalletResponse { Error = e });
+        public Task<WalletResponse> PayRenameAsync() => Call("PayRename", null, e => new WalletResponse { Error = e });
         public Task<WalletResponse> BuyTiersAsync(string requestId) => Call("BuyTiers", Args("requestId", requestId), e => new WalletResponse { Error = e });
         public Task<WalletResponse> BuyScarabsAsync(string offerId, string requestId) =>
             Call("BuyScarabs", Args("offerId", offerId, "requestId", requestId), e => new WalletResponse { Error = e });

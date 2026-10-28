@@ -47,6 +47,8 @@ namespace MummyEscape.Services
         // ---- Real-money economy (see Monetization): golden scarabs, solo energy, season pass.
         /// <summary>Golden scarabs: the copy of the wallet the PvP server keeps (bought in the store, earned on the pass).</summary>
         public int GoldScarabs;
+        /// <summary>Changes of name paid for: the wallet's copy (the next one is free while it is 0).</summary>
+        public int Renames;
         /// <summary>Solo energy (from act 2), kept by the device; the online energy is kept by the PvP server.</summary>
         public MummyEscape.Pvp.EnergyMeter SoloEnergy = new MummyEscape.Pvp.EnergyMeter();
         /// <summary>Season of the pass progress below; another season starts it over.</summary>

@@ -50,6 +50,8 @@ namespace MummyEscape.Pvp
         public List<string> Owned = new List<string>();
         /// <summary>Turns of the scarab wheel since its last legendary (the <see cref="Casino.PityAfter"/> guarantee).</summary>
         public int WheelSpins;
+        /// <summary>Name changes paid for (the first is free, then <see cref="GoldShop.RenamePrice"/>); the first choice is not one.</summary>
+        public int Renames;
     }
 
     /// <summary>The phone's scarab economy, carried over once to the server (<see cref="PvpServer.OpenScarabsAsync"/>).</summary>
@@ -280,6 +282,10 @@ namespace MummyEscape.Pvp
                 return null;
             }, requestId);
         }
+
+        /// <summary>A change of name: the first is free, the next ones cost <see cref="GoldShop.RenamePrice"/>.</summary>
+        public Task<WalletResponse> PayRenameAsync(string me) =>
+            SpendAsync(me, w => w.Renames == 0 ? 0 : GoldShop.RenamePrice, w => { w.Renames++; return null; });
 
         /// <summary>Le portefeuille passe à la saison en cours : XP et paliers récupérés repartent de zéro.</summary>
         static void OpenSeason(Wallet w, PassSeason season)

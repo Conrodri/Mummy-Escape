@@ -300,6 +300,9 @@ namespace MummyEscape.Pvp.Server
         [CloudCodeFunction("BuyPass")]
         public Task<WalletResponse> BuyPass(IExecutionContext ctx) => Server(ctx).BuyPassAsync(ctx.PlayerId);
 
+        [CloudCodeFunction("PayRename")]
+        public Task<WalletResponse> PayRename(IExecutionContext ctx) => Server(ctx).PayRenameAsync(ctx.PlayerId);
+
         [CloudCodeFunction("BuyTiers")]
         public Task<WalletResponse> BuyTiers(IExecutionContext ctx, string requestId = null) => Server(ctx).BuyTiersAsync(ctx.PlayerId, requestId);
 
