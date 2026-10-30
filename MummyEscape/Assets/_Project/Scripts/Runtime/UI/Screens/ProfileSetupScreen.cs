@@ -36,8 +36,8 @@ namespace MummyEscape.UI.Screens
         bool _rename;
         System.Action _renamed;
 
-        /// <summary>The first change is free, the next ones cost <see cref="Pvp.GoldShop.RenamePrice"/>.</summary>
-        int RenamePrice => App.Save.Data.Renames == 0 ? 0 : Pvp.GoldShop.RenamePrice;
+        /// <summary>The first change is free, the next ones cost <see cref="Monetization.GoldShop.RenamePrice"/>.</summary>
+        int RenamePrice => App.Save.Data.Renames == 0 ? 0 : Monetization.GoldShop.RenamePrice;
 
         protected override void Build()
         {

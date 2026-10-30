@@ -417,7 +417,7 @@ namespace MummyEscape.UI.Screens
                 UIKit.SectionTitle(card, "Connecté");
                 PrivacyUI.Paragraph(card, Loc.T("Compte Google Play Jeux") + "\n" + Loc.F("Pseudonyme public : {0}", online.PlayerName) + "\n\n" +
                     Loc.T("Ta progression est sauvegardée en ligne : sur un autre téléphone Android, connecte-toi avec Google Play Jeux pour la retrouver."));
-                PrivacyUI.Wide(card, App.Save.Data.Renames == 0 ? "Changer de nom (gratuit)" : Loc.F("Changer de nom · {0} dorés", Pvp.GoldShop.RenamePrice),
+                PrivacyUI.Wide(card, App.Save.Data.Renames == 0 ? "Changer de nom (gratuit)" : Loc.F("Changer de nom · {0} dorés", Monetization.GoldShop.RenamePrice),
                     () => Router.Open<ProfileSetupScreen>().ForRename(Rebuild));
                 PrivacyUI.Wide(card, "Se déconnecter", async () => { await App.SignOut(); Rebuild(); });
                 PrivacyUI.Wide(card, "Supprimer mon compte", () => { Router.Close(this); Router.Open<PrivacyScreen>(); }, 34);
