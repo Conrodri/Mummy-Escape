@@ -68,4 +68,4 @@ BON À SAVOIR
 | Captures téléphone, fiche anglaise | `phone-en/*.png` (8 captures, jeu en anglais) | 1080 × 1920 (9:16) |
 | Captures tablette 7" et 10" | les mêmes que le téléphone (`phone/` en français, `phone-en/` en anglais) : la console exige du 9:16 ou 16:9 pour les tablettes aussi, le jeu y tourne en portrait | 1080 × 1920 (9:16) |
 
-Les captures sont générées dans l'éditeur (`unity command mummy_capture`). Refaites le 14 octobre 2026 (profil de test « store », Game view 1080 × 1920).
+Les captures sont générées dans l'éditeur (`unity command mummy_capture`). Refaites le 14 octobre 2026, accueil (`01-home`) refait le 30 octobre 2026 (profil de test « store », Game view 1080 × 1920).
