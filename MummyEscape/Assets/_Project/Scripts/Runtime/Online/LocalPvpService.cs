@@ -48,7 +48,8 @@ namespace MummyEscape.Online
             "Akhenaton", "Tiyi", "Séthi", "Ahmès", "Ouadjet", "Nekhbet", "Montou", "Taouret", "Bès", "Rénénoutet", // noloc
         };
 
-        readonly Func<int> _soloStars;
+        /// <summary>The save has act 1 escaped: the demo server, which never saw those runs, opens the duels too.</summary>
+        readonly Func<bool> _duelsOpen;
         readonly MemoryPvpStore _store = new MemoryPvpStore();
         readonly PvpServer _server;
         readonly SemaphoreSlim _gate = new SemaphoreSlim(1, 1);
@@ -57,9 +58,9 @@ namespace MummyEscape.Online
 
         public bool IsDemo => true;
 
-        public LocalPvpService(Func<int> soloStars)
+        public LocalPvpService(Func<bool> duelsOpen)
         {
-            _soloStars = soloStars;
+            _duelsOpen = duelsOpen;
             _server = new PvpServer(_store) { AllowTestPurchases = true };
             _store.MakeGhost = (player, elo) =>
             {
@@ -311,7 +312,7 @@ namespace MummyEscape.Online
             await _gate.WaitAsync();
             try
             {
-                _store.SoloStars[Me] = _soloStars();
+                if (_duelsOpen()) _store.OpenDuels(Me);
                 var result = await Task.Run(call);
                 Persist(); // back on the main thread (PlayerPrefs)
                 return result;
@@ -336,8 +337,6 @@ namespace MummyEscape.Online
         public Task<ServiceStatus> GetStatusAsync() => Run(() => _server.GetStatusAsync());
 
         public Task<WheelSpinResponse> SpinSealWheelAsync(int count = 1) => Run(() => _server.SpinSealWheelAsync(Me, count));
-
-        public Task<bool> SyncSoloStarsAsync(int stars) => Task.FromResult(true); // read live from the save
 
         public Task<DuelHistoryResponse> GetHistoryAsync() => Run(() => _server.GetHistoryAsync(Me));
 

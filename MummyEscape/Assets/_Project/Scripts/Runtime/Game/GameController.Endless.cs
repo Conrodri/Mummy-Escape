@@ -80,9 +80,8 @@ namespace MummyEscape.Game
             var mode = EndlessMode.Value;
             int tomb = EndlessTomb;
             var progress = _app.Save.ApplyEndless(mode, result);
+            // The board follows the tombs the server replays (sent with the next batch, or when the board is opened).
             QueueSoloRun(result, mode, tomb - 1, result.Won ? Monetization.BattlePass.EndlessXp : 0, result.Won ? Monetization.BattlePass.EndlessScarabs : 0);
-            // Faster than the game's animations allow: a modified game, kept off the leaderboard.
-            if (result.Won && result.Pace != (int)PaceVerdict.Impossible) _ = _app.SubmitEndless(mode);
             _app.UI.Open<EndlessResultScreen>().Show(mode, tomb, result, progress);
         }
     }

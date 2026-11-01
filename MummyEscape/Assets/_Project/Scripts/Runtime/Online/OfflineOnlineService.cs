@@ -12,7 +12,6 @@ namespace MummyEscape.Online
     /// </summary>
     public sealed class OfflineOnlineService : IOnlineService
     {
-        readonly Dictionary<string, LevelResult> _best = new Dictionary<string, LevelResult>();
         readonly List<FriendInfo> _friends = new List<FriendInfo>();
         readonly List<FriendRequest> _requests = new List<FriendRequest>();
         readonly Dictionary<string, ProgressSnapshot> _progress = new Dictionary<string, ProgressSnapshot>();
@@ -43,24 +42,11 @@ namespace MummyEscape.Online
             return Task.FromResult(PlayerName);
         }
 
-        public Task<bool> SubmitScoreAsync(LevelResult result)
-        {
-            if (!result.Won) return Task.FromResult(false);
-            string key = result.Level.Key;
-            if (!_best.TryGetValue(key, out var prev) || result.LeaderboardScore < prev.LeaderboardScore) _best[key] = result;
-            return Task.FromResult(false); // never reached a server
-        }
-
         public Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit)
         {
             var all = new List<(long score, LeaderboardRow row)>();
             var local = LocalRecord?.Invoke(level);
-            if (_best.TryGetValue(level.Key, out var r))
-                all.Add((r.LeaderboardScore, new LeaderboardRow
-                {
-                    PlayerId = PlayerId, PlayerName = PlayerName, OverPar = r.OverPar, TimeMs = r.TimeMs, IsMe = true, Country = Country,
-                }));
-            else if (local != null && local.HasBest)
+            if (local != null && local.HasBest)
                 all.Add((LevelResult.EncodeScore(local.BestOverPar, local.BestTimeMs), new LeaderboardRow
                 {
                     PlayerId = PlayerId, PlayerName = PlayerName, OverPar = local.BestOverPar, TimeMs = local.BestTimeMs, IsMe = true, Country = Country,
@@ -79,26 +65,8 @@ namespace MummyEscape.Online
             return Task.FromResult(page);
         }
 
-        readonly Dictionary<string, long> _boards = new Dictionary<string, long>();
-
-        public Task<bool> SubmitBoardAsync(string board, long score)
-        {
-            if (!_boards.TryGetValue(board, out long prev) || score < prev) _boards[board] = score;
-            return Task.FromResult(false); // never reached a server
-        }
-
-        /// <summary>Only the player's own score (sent this session): the screen shows the saved one otherwise.</summary>
-        public Task<LeaderboardPage> GetBoardLeaderboardAsync(string board, LeaderboardScope scope, int limit)
-        {
-            var page = new LeaderboardPage();
-            if (_boards.TryGetValue(board, out long score))
-            {
-                var (overPar, timeMs) = LevelResult.DecodeScore(score);
-                page.Me = new LeaderboardRow { Rank = 1, PlayerId = PlayerId, PlayerName = PlayerName, OverPar = overPar, TimeMs = timeMs, IsMe = true, Country = Country };
-                if (limit > 0) page.Rows.Add(page.Me);
-            }
-            return Task.FromResult(page);
-        }
+        /// <summary>No board offline: the screen shows the saved score.</summary>
+        public Task<LeaderboardPage> GetBoardLeaderboardAsync(string board, LeaderboardScope scope, int limit) => Task.FromResult(new LeaderboardPage());
 
         public Task<IReadOnlyList<FriendInfo>> GetFriendsAsync() => Task.FromResult<IReadOnlyList<FriendInfo>>(new List<FriendInfo>(_friends));
         public Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync() => Task.FromResult<IReadOnlyList<FriendRequest>>(new List<FriendRequest>(_requests));
@@ -143,7 +111,6 @@ namespace MummyEscape.Online
 
         public Task<string> DeleteAccountAsync()
         {
-            _best.Clear();
             return Task.FromResult<string>(null);
         }
 

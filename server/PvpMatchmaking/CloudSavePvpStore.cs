@@ -18,7 +18,6 @@ namespace MummyEscape.Pvp.Server
     public sealed class CloudSavePvpStore : IPvpStore
     {
         public const string LeaderboardId = "pvp_elo";               // à créer dans le Dashboard (voir DEPLOY.md)
-        public const string SoloStarsKey = "solo_total_stars";        // écrit par le jeu à chaque nouvelle étoile
         public const string PlayerDataKey = "pvp";
         public const string PendingDuelKey = "pvp_pending";
         public const string QueueCustomId = "pvp_queue";
@@ -102,12 +101,6 @@ namespace MummyEscape.Pvp.Server
         public Task SetPendingAsync(string playerId, PendingDuel pending) =>
             SetProtectedAsync(playerId, PendingDuelKey, pending ?? new PendingDuel(), null);
 
-        public async Task<int> GetSoloStarsAsync(string playerId)
-        {
-            var res = await _api.CloudSaveData.GetItemsAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, playerId, new List<string> { SoloStarsKey });
-            var item = res.Data.Results.FirstOrDefault(i => i.Key == SoloStarsKey);
-            return item?.Value != null && int.TryParse(item.Value.ToString(), out int stars) ? stars : 0;
-        }
 
         public async Task<List<DuelRecord>> UpdateHistoryAsync(string playerId, Action<List<DuelRecord>> mutate)
         {
@@ -209,6 +202,23 @@ namespace MummyEscape.Pvp.Server
         }
 
         // ------------------------------------------------------------------ leaderboard
+
+        /// <summary>
+        /// Un classement solo (niveaux, échelles sans fin, tour), « keepBest » croissant : seul le serveur y écrit (règle Access
+        /// Control, voir DEPLOY.md). Les métadonnées sont celles que le jeu lit : c = pays.
+        /// </summary>
+        public async Task SubmitScoreAsync(string board, string playerId, long score, string country)
+        {
+            try
+            {
+                await _api.Leaderboards.AddLeaderboardPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid, board, playerId,
+                    new AddLeaderboardScore(score, new Dictionary<string, object> { { "c", country ?? "" }, { "s", 0 } }));
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Classement {board} non mis à jour pour {player} : {msg}", board, playerId, e.Message);
+            }
+        }
 
         public async Task SubmitEloAsync(string playerId, int elo)
         {

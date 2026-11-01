@@ -49,7 +49,7 @@ for (int i = 0; i < players; i++)
     int activity = 1 + (int)(Math.Pow(rng.NextDouble(), 1.6) * 12);
     var bot = new HumanBot("p" + i, names[i % names.Length] + i, skill, activity, rng);
     bots.Add(bot);
-    store.SoloStars[bot.Id] = 40 + rng.Next(60);
+    store.OpenDuels(bot.Id);
 }
 var byId = bots.ToDictionary(b => b.Id);
 

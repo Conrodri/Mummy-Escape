@@ -10,7 +10,8 @@ namespace MummyEscape.Pvp
     {
         public readonly Dictionary<string, PlayerPvpData> Players = new Dictionary<string, PlayerPvpData>();
         public readonly Dictionary<string, PendingDuel> Pending = new Dictionary<string, PendingDuel>();
-        public readonly Dictionary<string, int> SoloStars = new Dictionary<string, int>();
+        /// <summary>Classements solo écrits par le serveur : classement, puis le meilleur score de chaque joueur.</summary>
+        public readonly Dictionary<string, Dictionary<string, long>> Scores = new Dictionary<string, Dictionary<string, long>>();
         /// <summary>Fantômes en attente, toutes tranches confondues.</summary>
         public readonly List<GhostRun> Queue = new List<GhostRun>();
         /// <summary>Classement du mois : le score de chaque joueur, tel qu'envoyé (un tricheur peut y écrire).</summary>
@@ -26,8 +27,21 @@ namespace MummyEscape.Pvp
         /// <summary>Appelé quand rien n'attend dans la file : un adversaire simulé (mode hors ligne), ou null.</summary>
         public Func<string, int, GhostRun> MakeGhost;
 
-        public Task<int> GetSoloStarsAsync(string playerId) =>
-            Task.FromResult(SoloStars.TryGetValue(playerId, out int s) ? s : 0);
+        public Task SubmitScoreAsync(string board, string playerId, long score, string country)
+        {
+            if (!Scores.TryGetValue(board, out var rows)) Scores[board] = rows = new Dictionary<string, long>();
+            if (!rows.TryGetValue(playerId, out long kept) || score < kept) rows[playerId] = score;
+            return Task.CompletedTask;
+        }
+
+        /// <summary>Tests et bots : le joueur a fini l'acte 1 aux yeux du serveur, les duels lui sont ouverts.</summary>
+        public void OpenDuels(string playerId)
+        {
+            if (!Players.TryGetValue(playerId, out var d)) Players[playerId] = d = new PlayerPvpData();
+            d.Wallet ??= new Wallet();
+            string key = Core.Unlocks.EndOfAct(1).Key + "=1";
+            if (!d.Wallet.Stars.Exists(e => e.StartsWith(Core.Unlocks.EndOfAct(1).Key + "="))) d.Wallet.Stars.Add(key);
+        }
 
         public Task DeleteSharedAsync(string collection, string key)
         {
@@ -43,6 +57,7 @@ namespace MummyEscape.Pvp
             Dossiers.Remove(playerId);
             Board.Remove(playerId);
             LastBoard.Remove(playerId);
+            foreach (var rows in Scores.Values) rows.Remove(playerId);
             BoardCache.Clear();
             return Task.CompletedTask;
         }

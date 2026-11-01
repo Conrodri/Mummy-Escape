@@ -2,6 +2,7 @@
 // C# pur, sans dépendance Unity ni NuGet : le module serveur lie ces fichiers tels quels (server/PvpMatchmaking).
 using System;
 using System.Collections.Generic;
+using MummyEscape.Core;
 
 namespace MummyEscape.Pvp
 {
@@ -164,6 +165,13 @@ namespace MummyEscape.Pvp
         public List<CoopStar> CoopStars = new List<CoopStar>();
         /// <summary>Guildes où le joueur a postulé (pour l'affichage ; la guilde garde la vraie liste).</summary>
         public List<string> GuildApplications = new List<string>();
+
+        /// <summary>Temps des tombeaux sans fin rejoués ici, additionnés par échelle (départage de leur classement).</summary>
+        public List<int> EndlessTimeMs = new List<int>();
+        /// <summary>Course de la tour en cours, telle que le serveur l'a rejouée étage par étage (null : aucune).</summary>
+        public TowerRun Tower;
+        /// <summary>Meilleure course de la tour rejouée ici : c'est elle qui va au classement.</summary>
+        public TowerRecord TowerBest = new TowerRecord();
     }
 
     /// <summary>Profil renvoyé au client.</summary>

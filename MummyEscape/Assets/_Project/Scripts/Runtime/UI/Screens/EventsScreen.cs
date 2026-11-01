@@ -82,7 +82,14 @@ namespace MummyEscape.UI.Screens
             var prize = UIKit.Label(info, Loc.F("Récompense : « {0} » et le thème d'accueil Halloween", Loc.T(reward.Name)), 22, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(prize, 15);
             UIKit.Size(prize, 56);
-            if (open)
+            bool unlocked = Unlocks.IsUnlocked(Feature.Events, save.IsCompleted);
+            if (open && !unlocked)
+            {
+                var locked = UIKit.Label(info, Loc.F("Évade-toi du tombeau {0} pour débloquer", LevelNames.Of(Unlocks.Gate(Feature.Events).Value)), 24, UIKit.Dim, TextAnchor.MiddleLeft, FontStyle.Bold);
+                UIKit.FitText(locked, 16);
+                UIKit.Size(locked, 60);
+            }
+            else if (open)
             {
                 var play = UIKit.Button(info, save.HalloweenDone ? Loc.T("Rejouer") : Loc.F("Jouer · tombeau {0}", save.HalloweenNext), Play, 30, ButtonStyle.Primary);
                 UIKit.FitText(play.GetComponentInChildren<Text>(), 18);

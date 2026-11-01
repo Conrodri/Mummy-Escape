@@ -94,18 +94,6 @@ namespace MummyEscape.Online
             return PlayerName;
         }
 
-        public async Task<bool> SubmitScoreAsync(LevelResult result)
-        {
-            if (!IsAvailable || !result.Won) return false;
-            try
-            {
-                await LeaderboardsService.Instance.AddPlayerScoreAsync(OnlineServiceFactory.LeaderboardId(result.Level), result.LeaderboardScore,
-                    new AddPlayerScoreOptions { Metadata = new ScoreMeta { c = Country ?? "", s = result.Pace == 1 ? 1 : 0 } });
-                return true;
-            }
-            catch (Exception e) { Debug.LogWarning("[Online] score not submitted: " + e.Message); return false; }
-        }
-
         /// <summary>Score metadata stored with each entry (kept tiny: it is returned for every row).</summary>
         [Serializable]
         /// <summary>c: country; s: 1 when the time is nearly the tomb's perfect minimum on a big maze (suspicious, see TombPace).</summary>
@@ -115,18 +103,6 @@ namespace MummyEscape.Online
         // walk the best scores page by page until the top N of the country is found.
         const int CountryPageSize = 1000;
         const int CountryMaxPages = 5;
-
-        public async Task<bool> SubmitBoardAsync(string board, long score)
-        {
-            if (!IsAvailable) return false;
-            try
-            {
-                await LeaderboardsService.Instance.AddPlayerScoreAsync(board, score,
-                    new AddPlayerScoreOptions { Metadata = new ScoreMeta { c = Country ?? "" } });
-                return true;
-            }
-            catch (Exception e) { Debug.LogWarning($"[Online] {board} score not submitted: " + e.Message); return false; }
-        }
 
         public Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit) =>
             GetBoardAsync(OnlineServiceFactory.LeaderboardId(level), scope, limit);

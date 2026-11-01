@@ -69,9 +69,12 @@ namespace MummyEscape.Game
         void FinishTower(LevelResult result)
         {
             int floor = TowerFloor;
+            var climb = _app.Save.ActiveTower;
+            var tower = climb != null ? (climb.Seed, floor, climb.Curses) : ((int, int, TowerCurses)?)null;
             var outcome = _app.Save.ApplyTower(result);
-            // Faster than the game's animations allow: a modified game, kept off the leaderboard.
-            if (outcome.Record && result.Pace != (int)PaceVerdict.Impossible) _ = _app.SubmitTower();
+            // The server follows the climb floor by floor and writes the board itself: a new record goes at once.
+            if (result.Won && tower.HasValue) QueueSoloRun(result, null, 0, 0, 0, outcome.Record, tower);
+            else if (outcome.Record) _ = _app.SendSoloRuns(true);
             _app.UI.Open<EndlessResultScreen>().ShowTower(floor, result, outcome, _app.Save.Data.Tower);
         }
     }

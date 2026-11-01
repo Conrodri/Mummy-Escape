@@ -42,7 +42,7 @@ namespace MummyEscape.Tests
             public World()
             {
                 Server = new PvpServer(Store, () => Now, () => _seed++);
-                foreach (var p in new[] { "alice", "bob", "carol" }) Store.SoloStars[p] = 50;
+                foreach (var p in new[] { "alice", "bob", "carol" }) Store.OpenDuels(p);
             }
 
             /// <summary>The server clock when a run of <paramref name="timeMs"/> ends, for a duel created at <paramref name="created"/>.</summary>
@@ -88,7 +88,7 @@ namespace MummyEscape.Tests
         public void Server_OnlyTwoPlayersOfTheSameLeague_TheFasterWins_BothAreUpdated()
         {
             var w = new World();
-            w.Store.Players["carol"] = new PlayerPvpData { Elo = PvpConfig.DiamantMin + 10 };
+            w.Store.Players["carol"].Elo = PvpConfig.DiamantMin + 10;
             Assert.AreEqual("DIVISION", w.Server.StartLiveDuelAsync("alice", DifficultyTable.GeneratorVersion, "lobbyX", Me("alice"), Me("carol")).Result.Error);
             Assert.AreEqual("OUTDATED", w.Server.StartLiveDuelAsync("alice", DifficultyTable.GeneratorVersion - 1, "lobbyA", Me("alice"), Me("bob")).Result.Error);
             Assert.AreEqual("UNKNOWN", w.Server.StartLiveDuelAsync("carol", DifficultyTable.GeneratorVersion, "lobbyA", Me("alice"), Me("bob")).Result.Error,
@@ -142,7 +142,7 @@ namespace MummyEscape.Tests
         public void Server_BotDuel_OfTheLeague_IsJudgedAtOnce()
         {
             var w = new World();
-            w.Store.Players["alice"] = new PlayerPvpData { Elo = PvpConfig.PlatineMin + 30 };
+            w.Store.Players["alice"].Elo = PvpConfig.PlatineMin + 30;
             var duel = w.Server.StartLiveBotDuelAsync("alice", DifficultyTable.GeneratorVersion, "lobbyC", Me("alice")).Result.Match;
             Assert.IsNotNull(duel);
             Assert.IsTrue(duel.VsBot);

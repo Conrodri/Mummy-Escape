@@ -40,14 +40,17 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
    - mise à jour : garder le dernier score (l'Elo peut baisser) ;
    - remise à zéro chaque mois, le 1er à 00:00 UTC, **avec archivage** (les versions archivées servent au classement
      « Mois dernier » et au calcul du Top 100).
-4. **Access Control** : interdire aux joueurs d'écrire dans `pvp_elo` uniquement (pas dans tous les leaderboards : les
-   classements solo sont écrits par le jeu). Règle `Deny`, principal `Player`, action `Write`, ressource
-   `urn:ugs:leaderboards:/v1/projects/*/leaderboards/pvp_elo/scores/players/*`.
-   Même sans cette règle, un score falsifié ne tient pas : le jeu lit le classement par `GetPvpBoard`, qui compare chaque
-   entrée à l'Elo protégé du joueur, réécrit les scores faux et met à 0 les entrées sans duel.
+4. **Access Control** : interdire aux joueurs d'écrire dans **tous** les leaderboards. Règle `Deny`, principal `Player`,
+   action `Write`, ressource `urn:ugs:leaderboards:/v1/projects/*/leaderboards/*/scores/players/*`. Seul ce module y écrit :
+   - `pvp_elo` : l'Elo, après chaque duel jugé. Même sans la règle, un score falsifié ne tient pas : le jeu lit ce
+     classement par `GetPvpBoard`, qui compare chaque entrée à l'Elo protégé du joueur ;
+   - les classements solo (niveaux `v13s2_level_…`, `endless_f/n/x`, `tower_v13`) : `SubmitSoloRuns` rejoue chaque course
+     envoyée (règles, animations) et écrit son score. Un niveau ne compte que si le serveur a vu le précédent réussi ; une
+     échelle sans fin avance de 10 tombeaux au plus au-delà du dernier vu ; la tour est suivie étage par étage.
+   Sans la règle, une version modifiée du jeu pourrait encore écrire un faux score solo : elle est indispensable.
 5. **Cloud Save** : rien à créer.
    - `pvp` et `pvp_pending` : données joueur **protégées** (le joueur les lit, seul le serveur les écrit).
-   - `solo_total_stars` : écrit par le jeu, lu par le serveur pour ouvrir les duels à 35 étoiles.
+   - les duels s'ouvrent quand le serveur a vu le niveau Facile 1-10 réussi (étoiles du porte-monnaie, `pvp`).
    - `pvp_queue` : données « custom » **privées** (illisibles par les joueurs), une clé par version du générateur et
      tranche de 100 Elo (`v8_b10`…).
    - `pvp_board` : données « custom » **privées**, le classement vérifié de chaque mois (`board_2026-10`), gardé 5 minutes.

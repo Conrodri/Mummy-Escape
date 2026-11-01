@@ -33,7 +33,7 @@ namespace MummyEscape.Pvp
         {
             if (generatorVersion != DifficultyTable.GeneratorVersion || draftVersion != PvpDraft.Version) return "OUTDATED";
             if (string.IsNullOrEmpty(matchKey)) return "UNKNOWN";
-            if (await _store.GetSoloStarsAsync(me) < PvpConfig.RequiredSoloStars) return "LOCKED";
+            if (!await DuelsOpenAsync(me)) return "LOCKED";
             return null;
         }
 

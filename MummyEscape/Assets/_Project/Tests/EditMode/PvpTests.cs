@@ -401,8 +401,8 @@ namespace MummyEscape.Tests
         static (PvpServer server, MemoryPvpStore store) NewServer()
         {
             var store = new MemoryPvpStore();
-            store.SoloStars["alice"] = 40;
-            store.SoloStars["bob"] = 60;
+            store.OpenDuels("alice");
+            store.OpenDuels("bob");
             int seed = 3003;
             _now = Today;
             return (new PvpServer(store, () => _now, () => seed++), store);
@@ -418,11 +418,12 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void Server_LocksPvpBelowAct3_AndRefusesOldClients()
+        public void Server_LocksPvpUntilAct1IsEscaped_AndRefusesOldClients()
         {
             var (server, store) = NewServer();
-            store.SoloStars["carol"] = PvpConfig.RequiredSoloStars - 1;
-            Assert.AreEqual("LOCKED", Find(server, "carol").Error);
+            Assert.AreEqual("LOCKED", Find(server, "carol").Error, "the server never saw F1-10 escaped");
+            server.SubmitSoloRunsAsync("carol", new List<SoloRunReport> { WalletTests.SolvedRun("c10", Unlocks.EndOfAct(1), 0) }).Wait();
+            Assert.AreNotEqual("LOCKED", Find(server, "carol").Error, "a replayed escape of F1-10 opens them");
             Assert.AreEqual("OUTDATED", server.FindDuelAsync("alice", DifficultyTable.GeneratorVersion - 1).Result.Error);
         }
 
@@ -649,7 +650,7 @@ namespace MummyEscape.Tests
         /// <summary>Alice runs first on a tomb, then <paramref name="rival"/> races her ghost.</summary>
         static (DuelRecord alice, DuelRecord rival) PlayDuel(PvpServer server, MemoryPvpStore store, string rival)
         {
-            store.SoloStars[rival] = 50;
+            store.OpenDuels(rival);
             // Alice plays every duel: her combat energy (3 points) comes back in the meantime.
             _now = _now.AddMilliseconds(EnergyConfig.RegenMs * EnergyConfig.PvpMax);
             var first = Find(server, "alice");

@@ -30,7 +30,7 @@ namespace MummyEscape.Tests
         static (PvpServer, MemoryPvpStore) NewServer(params string[] need)
         {
             var store = new MemoryPvpStore();
-            store.SoloStars["alice"] = 40;
+            store.OpenDuels("alice");
             int seed = 3003;
             _now = DayWith(need);
             return (new PvpServer(store, () => _now, () => seed++), store);

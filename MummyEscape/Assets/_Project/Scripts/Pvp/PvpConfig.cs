@@ -52,9 +52,6 @@ namespace MummyEscape.Pvp
         public const int ReportersToFlag = 3;           // joueurs différents qui signalent : dossier « à vérifier »
         public const int MaxReportsPerDossier = 20;     // signalements détaillés gardés par dossier
 
-        // --- Accès ---
-        public const int RequiredSoloStars = 35;        // acte 3 atteint en solo
-
         // --- Récompenses quotidiennes (sceaux de Maât) ---
         public const int WinSeals = 20;                 // chaque victoire en duel
         public const int FirstLossSeals = 10;           // 1re défaite du jour, puis 1 de moins par défaite (jusqu’à 0)

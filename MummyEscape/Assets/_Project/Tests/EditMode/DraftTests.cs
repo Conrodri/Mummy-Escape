@@ -157,7 +157,7 @@ namespace MummyEscape.Tests
             public World()
             {
                 Server = new PvpServer(Store, () => Now, () => _seed++);
-                foreach (var p in new[] { "alice", "bob" }) Store.SoloStars[p] = 50;
+                foreach (var p in new[] { "alice", "bob" }) Store.OpenDuels(p);
             }
         }
 

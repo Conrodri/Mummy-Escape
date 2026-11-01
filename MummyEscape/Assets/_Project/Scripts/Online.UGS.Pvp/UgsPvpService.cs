@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using MummyEscape.Core;
 using MummyEscape.Pvp;
 using Unity.Services.CloudCode;
-using Unity.Services.CloudSave;
 using UnityEngine;
 
 namespace MummyEscape.Online
@@ -17,7 +16,6 @@ namespace MummyEscape.Online
     public sealed class UgsPvpService : IPvpService
     {
         const string Module = "PvpMatchmaking";
-        const string SoloStarsKey = "solo_total_stars";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Register() => PvpServiceFactory.CreateOnline = _ => new UgsPvpService();
@@ -68,12 +66,6 @@ namespace MummyEscape.Online
         public Task<WheelSpinResponse> SpinSealWheelAsync(int count = 1) => count == 1
             ? Call("SpinSealWheel", null, e => new WheelSpinResponse { Error = e })
             : Call("SpinSealWheelMany", new Dictionary<string, object> { { "count", count } }, e => new WheelSpinResponse { Error = e });
-
-        public async Task<bool> SyncSoloStarsAsync(int stars)
-        {
-            try { await CloudSaveService.Instance.Data.Player.SaveAsync(new Dictionary<string, object> { { SoloStarsKey, stars } }); return true; }
-            catch (Exception e) { Debug.LogWarning("[Pvp] solo stars not synced: " + e.Message); return false; }
-        }
 
         public Task<DuelHistoryResponse> GetHistoryAsync() => Call<DuelHistoryResponse>("GetDuelHistory", null, _ => null);
 

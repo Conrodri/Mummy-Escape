@@ -10,10 +10,12 @@ namespace MummyEscape.Core
         Guild = 2,
         Chat = 4,
         Casino = 8,
+        /// <summary>The seasonal events (Halloween): not in <see cref="Unlocks.All"/>, no unlock fanfare.</summary>
+        Events = 16,
     }
 
     /// <summary>
-    /// When each feature opens: the duels (and the group) once act 1 is escaped, the casino once act 2 is. The guild and
+    /// When each feature opens: the duels (and the group) and the events once act 1 is escaped, the casino once act 2 is. The guild and
     /// the chat are open to everyone from the start. The endless mode and the tower keep their own gate (the whole
     /// campaign, see <see cref="Endless"/>).
     /// </summary>
@@ -24,7 +26,7 @@ namespace MummyEscape.Core
 
         /// <summary>The tomb to escape first (null: open from the start).</summary>
         public static LevelId? Gate(Feature feature) =>
-            feature == Feature.Duel ? EndOfAct(1) : feature == Feature.Casino ? EndOfAct(2) : (LevelId?)null;
+            feature == Feature.Duel || feature == Feature.Events ? EndOfAct(1) : feature == Feature.Casino ? EndOfAct(2) : (LevelId?)null;
 
         public static LevelId EndOfAct(int act) => new LevelId(Difficulty.Easy, act, DifficultyTable.GetAct(act).Levels);
 

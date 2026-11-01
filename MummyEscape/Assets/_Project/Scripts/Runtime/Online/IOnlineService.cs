@@ -112,12 +112,9 @@ namespace MummyEscape.Online
         Task InitializeAsync();
         Task<string> SetPlayerNameAsync(string name);
 
-        /// <summary>Sends a won run to its level's board (the board keeps the best). True once the server has it.</summary>
-        Task<bool> SubmitScoreAsync(LevelResult result);
+        // The solo boards are written by the PvP server only, from the runs it replays (PvpServer.SubmitSoloRunsAsync).
         /// <summary>Top <paramref name="limit"/> of a level. Country scope uses <see cref="Country"/>.</summary>
         Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit);
-        /// <summary>Sends a score to a mode board (<see cref="Endless.BoardId"/>, <see cref="Tower.BoardId"/>; the board keeps the best). True once the server has it.</summary>
-        Task<bool> SubmitBoardAsync(string board, long score);
         /// <summary>Top of a mode board: rows hold the score as levels do (<see cref="Endless.ReachedOf"/> reads a tomb back).</summary>
         Task<LeaderboardPage> GetBoardLeaderboardAsync(string board, LeaderboardScope scope, int limit);
 
@@ -147,8 +144,8 @@ namespace MummyEscape.Online
         public static bool GuestAllowed => UnityEngine.Application.isEditor || UnityEngine.Debug.isDebugBuild;
 
         /// <summary>Leaderboard id for a level. Includes the generator version so different layouts never mix.</summary>
-        public static string LeaderboardId(LevelId id) => LeaderboardId(id, DifficultyTable.GeneratorVersion);
-        public static string LeaderboardId(LevelId id, int generatorVersion) => $"v{generatorVersion}s{LevelResult.ScoreFormat}_{id.Key}";
+        public static string LeaderboardId(LevelId id) => LevelResult.BoardId(id);
+        public static string LeaderboardId(LevelId id, int generatorVersion) => LevelResult.BoardId(id, generatorVersion);
     }
 
     /// <summary>

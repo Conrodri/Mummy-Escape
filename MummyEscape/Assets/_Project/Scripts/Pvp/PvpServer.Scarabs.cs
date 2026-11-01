@@ -97,21 +97,23 @@ namespace MummyEscape.Pvp
 
         /// <summary>
         /// The scarabs a replayed run pays, noted in the wallet: a campaign escape its new stars (on the moves: the expert time is not measured here),
-        /// an endless escape <see cref="BattlePass.EndlessScarabs"/> for a tomb not paid yet. Nothing before they are held here.
+        /// an endless escape <see cref="BattlePass.EndlessScarabs"/> for a new tomb (<see cref="EndlessCounts"/>). Nothing before they are held here.
         /// </summary>
         static int ScarabsOf(Wallet w, SoloRunReport run, LevelResult result)
         {
-            if (!w.ScarabsOpen || result == null || !result.Won) return 0;
+            if (result == null || !result.Won) return 0;
+            // The escape is noted even before the scarabs are held here (the phone pays them then): the server's view of the
+            // progression (boards, duels) does not wait for it, and the carry-over keeps the best of both.
             if (run.EndlessMode >= 0)
             {
-                if (run.EndlessMode < w.EndlessPaid.Count && run.Depth < w.EndlessPaid[run.EndlessMode]) return 0;
+                if (!EndlessCounts(run.EndlessMode < w.EndlessPaid.Count ? w.EndlessPaid[run.EndlessMode] : 0, run.Depth)) return 0;
                 Paid(w, run.EndlessMode, run.Depth + 1);
-                return BattlePass.EndlessScarabs;
+                return w.ScarabsOpen ? BattlePass.EndlessScarabs : 0;
             }
             string key = result.Level.Key;
             int coins = Progression.CoinsFor(result, StarsAt(w, key));
             SetStars(w, key, result.Stars);
-            return coins;
+            return w.ScarabsOpen ? coins : 0;
         }
 
         // ------------------------------------------------------------------ spends

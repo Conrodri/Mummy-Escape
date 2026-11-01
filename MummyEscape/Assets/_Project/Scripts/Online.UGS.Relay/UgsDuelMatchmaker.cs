@@ -315,7 +315,7 @@ namespace MummyEscape.Online
             switch (error)
             {
                 case "OUTDATED": return Loc.T("Mets le jeu à jour pour affronter les autres joueurs."); // noloc
-                case "LOCKED": return Loc.F("Gagne {0} étoiles en solo pour débloquer les duels.", PvpConfig.RequiredSoloStars); // noloc
+                case "LOCKED": return Loc.F("Évade-toi du tombeau {0} pour débloquer les duels.", MummyEscape.UI.LevelNames.Of(MummyEscape.Core.Unlocks.EndOfAct(1))); // noloc
                 default: return Loc.T("Le match n'a pas pu démarrer.");
             }
         }

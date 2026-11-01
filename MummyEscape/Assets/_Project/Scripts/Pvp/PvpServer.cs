@@ -11,8 +11,11 @@ namespace MummyEscape.Pvp
     /// <summary>Ce que le serveur PvP lit et écrit. Chaque implémentation gère ses conflits d'écriture.</summary>
     public interface IPvpStore
     {
-        /// <summary>Total d'étoiles solo du joueur (ouvre le PvP).</summary>
-        Task<int> GetSoloStarsAsync(string playerId);
+        /// <summary>
+        /// Score d'un classement solo (niveau, échelle sans fin, tour), écrit par le serveur seul après avoir rejoué la course :
+        /// le classement garde le meilleur (le plus bas). <paramref name="country"/> étiquette la ligne (null : aucun).
+        /// </summary>
+        Task SubmitScoreAsync(string board, string playerId, long score, string country);
         /// <summary>Lit les données PvP (neuves si absentes), applique <paramref name="mutate"/> et les réécrit.</summary>
         Task<PlayerPvpData> UpdatePlayerAsync(string playerId, Action<PlayerPvpData> mutate);
         Task<PendingDuel> GetPendingAsync(string playerId);
@@ -75,6 +78,17 @@ namespace MummyEscape.Pvp
 
         long NowMs => new DateTimeOffset(DateTime.SpecifyKind(_utcNow(), DateTimeKind.Utc)).ToUnixTimeMilliseconds();
 
+        /// <summary>
+        /// Les duels s'ouvrent quand le serveur a vu le dernier niveau de l'acte 1 réussi (<see cref="Unlocks"/>) : une course
+        /// rejouée ici, ou la progression reprise une fois du téléphone (<see cref="OpenScarabsAsync"/>).
+        /// </summary>
+        async Task<bool> DuelsOpenAsync(string me)
+        {
+            var players = await _store.ReadPlayersAsync(new[] { me });
+            var w = players.TryGetValue(me, out var d) ? d?.Wallet : null;
+            return w != null && Unlocks.IsUnlocked(Feature.Duel, id => StarsAt(w, id.Key) > 0);
+        }
+
         Task<PlayerPvpData> Update(string playerId, Action<PlayerPvpData> mutate = null) =>
             _store.UpdatePlayerAsync(playerId, d =>
             {
@@ -112,7 +126,7 @@ namespace MummyEscape.Pvp
         public async Task<FindDuelResponse> FindDuelAsync(string me, int generatorVersion, bool allowBots = false)
         {
             if (generatorVersion != DifficultyTable.GeneratorVersion) return new FindDuelResponse { Error = "OUTDATED" };
-            if (await _store.GetSoloStarsAsync(me) < PvpConfig.RequiredSoloStars) return new FindDuelResponse { Error = "LOCKED" };
+            if (!await DuelsOpenAsync(me)) return new FindDuelResponse { Error = "LOCKED" };
 
             var pending = await _store.GetPendingAsync(me);
             if (pending != null)

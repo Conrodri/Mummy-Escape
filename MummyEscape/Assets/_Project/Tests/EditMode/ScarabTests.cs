@@ -57,9 +57,11 @@ namespace MummyEscape.Tests
             var level = Progression.First(Difficulty.Easy);
             var r = await server.SubmitSoloRunsAsync("alice", Runs(WalletTests.SolvedRun("a", level, 0)));
             Assert.AreEqual(0, r.Wallet.Scarabs, "before the carry-over, the phone counts them");
+            Assert.AreEqual(3, PvpServer.TotalStars(r.Wallet), "but the escape is noted: the phone paid those stars");
 
             await Open(server, "alice", 0);
-            r = await server.SubmitSoloRunsAsync("alice", Runs(WalletTests.SolvedRun("b", level, 0), WalletTests.SolvedRun("b", level, 0)));
+            var next = new LevelId(Difficulty.Easy, 1, 2);
+            r = await server.SubmitSoloRunsAsync("alice", Runs(WalletTests.SolvedRun("b", next, 0), WalletTests.SolvedRun("b", next, 0)));
             Assert.AreEqual(3 * 10 + 2, r.Wallet.Scarabs, "three new stars and the escape, once");
             r = await server.SubmitSoloRunsAsync("alice", Runs(WalletTests.SolvedRun("c", level, 1)));
             Assert.AreEqual(3 * 10 + 2 + 2, r.Wallet.Scarabs, "no new star: the escape only");

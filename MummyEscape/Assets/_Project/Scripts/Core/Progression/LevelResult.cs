@@ -64,6 +64,10 @@ namespace MummyEscape.Core
 
         /// <summary>Bump when the score encoding changes: it is part of the leaderboard ids.</summary>
         public const int ScoreFormat = 2;
+
+        /// <summary>The level's leaderboard, one per generator version (its mazes change with it) and score format.</summary>
+        public static string BoardId(LevelId id, int generatorVersion) => $"v{generatorVersion}s{ScoreFormat}_{id.Key}";
+        public static string BoardId(LevelId id) => BoardId(id, DifficultyTable.GeneratorVersion);
         /// <summary>Time slots per move over par in the encoded score (time capped just under 27.8 hours).</summary>
         const long TimeSlots = 100_000_000;
 

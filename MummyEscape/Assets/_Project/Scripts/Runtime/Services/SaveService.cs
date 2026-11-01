@@ -41,8 +41,6 @@ namespace MummyEscape.Services
         public int IntrosDone;
         /// <summary>Features (Core.Feature bitmask) already celebrated on the home screen.</summary>
         public int SeenUnlocks;
-        /// <summary>Best scores the leaderboards confirmed ("level_f1_1:score"): any other record is sent again when online.</summary>
-        public List<string> SubmittedScores = new List<string>();
 
         // ---- Real-money economy (see Monetization): golden scarabs, solo energy, season pass.
         /// <summary>Golden scarabs: the copy of the wallet the PvP server keeps (bought in the store, earned on the pass).</summary>
@@ -135,10 +133,8 @@ namespace MummyEscape.Services
             if (Data.Version < SaveData.CurrentVersion)
             {
                 // v3: the campaign became three modes of 5 levels per act; v4: generator v13, 10 levels per act. The old
-                // tombs are gone, progress starts over (scarabs, skins and the intros are kept), and the scores the old
-                // leaderboards confirmed say nothing of the new ones.
+                // tombs are gone, progress starts over (scarabs, skins and the intros are kept).
                 Data.Records.Clear();
-                Data.SubmittedScores.Clear();
                 Data.Version = SaveData.CurrentVersion;
                 Save();
             }
@@ -175,7 +171,6 @@ namespace MummyEscape.Services
             d.Records.RemoveAll(r => r == null || !LevelId.TryParseKey(r.Key, out _));
             d.OwnedSkins ??= new List<string>();
             d.OwnedSkins.RemoveAll(string.IsNullOrEmpty);
-            d.SubmittedScores ??= new List<string>();
             d.PassesOwned ??= new List<string>();
             d.PassesOwned.RemoveAll(string.IsNullOrEmpty);
             d.PassFreeClaimed ??= new List<int>();

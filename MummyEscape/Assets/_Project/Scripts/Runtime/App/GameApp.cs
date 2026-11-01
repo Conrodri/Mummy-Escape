@@ -154,7 +154,7 @@ namespace MummyEscape.App
                 if (_pvpOnline != Online)
                 {
                     _pvpOnline = Online;
-                    _pvp = PvpServiceFactory.For(Online, () => Save.TotalStars);
+                    _pvp = PvpServiceFactory.For(Online, () => Unlocks.IsUnlocked(Feature.Duel, Save.IsCompleted));
                     Session.Profile = null;
                     Session.SetGroup(null); // the group belonged to the previous service
                 }
@@ -163,16 +163,14 @@ namespace MummyEscape.App
             }
         }
 
-        int _syncedStars = -1;
-
-        /// <summary>The server opens the duels at 35 solo stars: it is told the count whenever it grows.</summary>
-        public async Task SyncSoloStars()
+        /// <summary>
+        /// The server knows the progression from the runs it replays (and the phone's, carried over once): the runs still
+        /// queued go now, before a call that depends on it (the duels open once it saw act 1 escaped).
+        /// </summary>
+        public async Task SyncProgress()
         {
-            var pvp = Pvp;
-            int stars = Save.TotalStars;
-            if (pvp == null || stars == _syncedStars) return;
-            // Remembered only once saved: a failed write is retried on the next call (opening the duels, a search).
-            if (await pvp.SyncSoloStarsAsync(stars)) _syncedStars = stars;
+            await Monetization.ScarabWallet.OpenAsync(this);
+            await SendSoloRuns(true);
         }
 
         void OnDestroy() => Loc.Changed -= OnLanguageChanged;
@@ -228,63 +226,6 @@ namespace MummyEscape.App
             Analytics.Apply(Privacy.AnalyticsAllowed && service.IsAvailable);
             await AfterAccountChange();
             if (askGoogle) AskGoogleSignIn(); // after the menus show the new state
-            await SubmitRecords();
-        }
-
-        /// <summary>Sends a won run to the leaderboards and remembers that the server has this score.</summary>
-        public async Task SubmitScore(LevelResult result)
-        {
-            if (!await Online.SubmitScoreAsync(result)) return;
-            string sent = result.Level.Key + ":" + result.LeaderboardScore;
-            if (!Save.Data.SubmittedScores.Contains(sent)) { Save.Data.SubmittedScores.Add(sent); Save.Save(); }
-        }
-
-        /// <summary>
-        /// The best record of each level that never reached its board (played offline, or while the boards failed) goes up
-        /// now; the board keeps the best, so sending again is harmless.
-        /// </summary>
-        async Task SubmitRecords()
-        {
-            if (!Online.IsAvailable || Online.IsDemo) return;
-            foreach (var rec in Save.Data.Records.ToArray())
-            {
-                if (!rec.HasBest || !LevelId.TryParseKey(rec.Key, out var id)) continue;
-                // Par 0: the moves are the gap to the optimal route, which is all the score keeps of them.
-                var best = new LevelResult { Level = id, Won = true, Moves = rec.BestOverPar, Par = 0, TimeMs = rec.BestTimeMs, HpLeft = rec.BestHpLeft };
-                if (Save.Data.SubmittedScores.Contains(rec.Key + ":" + best.LeaderboardScore)) continue;
-                await SubmitScore(best);
-                if (!Online.IsAvailable) return;
-            }
-            foreach (var mode in DifficultyExt.All)
-            {
-                await SubmitEndless(mode);
-                if (!Online.IsAvailable) return;
-            }
-            await SubmitTower();
-        }
-
-        /// <summary>Sends the furthest tomb of an endless ladder (and its time) to that ladder's board.</summary>
-        public Task SubmitEndless(Difficulty mode)
-        {
-            var p = Save.EndlessOf(mode);
-            return p.Cleared > 0 ? SubmitBoard(Endless.BoardId(mode), p.Score) : Task.CompletedTask;
-        }
-
-        /// <summary>Sends the best tower run (points, then time) to the tower's board.</summary>
-        public Task SubmitTower()
-        {
-            var best = Save.Data.TowerBest;
-            return best.BestFloors > 0 ? SubmitBoard(Tower.BoardId, best.Score) : Task.CompletedTask;
-        }
-
-        async Task SubmitBoard(string board, long score)
-        {
-            // One entry per board: it keeps the best, only the last score sent matters.
-            string key = board + ":";
-            if (Save.Data.SubmittedScores.Contains(key + score) || !await Online.SubmitBoardAsync(board, score)) return;
-            Save.Data.SubmittedScores.RemoveAll(s => s.StartsWith(key));
-            Save.Data.SubmittedScores.Add(key + score);
-            Save.Save();
         }
 
         /// <summary>Stops every online exchange; the session stays on the device so turning it back on resumes it.</summary>
@@ -305,8 +246,6 @@ namespace MummyEscape.App
             _ = Quests.RefreshAsync();
             _cloudLoaded = false;
             if (Online.Account == AccountState.Account) await LoadCloudSave();
-            _syncedStars = -1;
-            await SyncSoloStars();
             await PublishProgress();
             _ = MummyEscape.Online.ChatState.RegisterNameAsync(this);
             _ = Session.LoadStatus();

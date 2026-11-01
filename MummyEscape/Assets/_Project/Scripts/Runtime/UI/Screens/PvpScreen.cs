@@ -135,7 +135,7 @@ namespace MummyEscape.UI.Screens
             }
             int request = ++_request;
             if (App.Session.Profile == null) _info.text = Loc.T("Chargement…");
-            await App.SyncSoloStars();
+            await App.SyncProgress();
             var profile = await App.Session.RefreshProfile();
             if (request != _request || this == null) return;
             if (profile == null)
@@ -157,7 +157,7 @@ namespace MummyEscape.UI.Screens
         void Show(PvpProfileResponse profile)
         {
             var d = profile?.Data;
-            bool locked = App.Save.TotalStars < PvpConfig.RequiredSoloStars;
+            bool locked = !Core.Unlocks.IsUnlocked(Core.Feature.Duel, App.Save.IsCompleted);
             bool available = App.Pvp != null && d != null;
             int elo = d?.Elo ?? PvpConfig.StartingElo;
             var league = Leagues.FromElo(elo);
@@ -185,7 +185,7 @@ namespace MummyEscape.UI.Screens
             else _season.text = "";
 
             _find.gameObject.SetActive(App.Pvp != null);
-            UIKit.SetLabel(_find, _duelSearch != null ? "Annuler la recherche" : _busy ? "Recherche d'un adversaire…" : locked ? Loc.F("{0} étoiles en solo pour débloquer ({1}/{0})", PvpConfig.RequiredSoloStars, App.Save.TotalStars) : "Chercher un adversaire");
+            UIKit.SetLabel(_find, _duelSearch != null ? "Annuler la recherche" : _busy ? "Recherche d'un adversaire…" : locked ? Loc.F("Évade-toi du tombeau {0} pour débloquer", LevelNames.Of(Core.Unlocks.EndOfAct(1))) : "Chercher un adversaire");
             // Maintenance: the team can pause the duels from the server (GameApp.Status) without a new build.
             bool paused = App.Session.Status?.PvpOff == true;
             if (paused) UIKit.SetLabel(_find, "Duels en pause (maintenance)");
@@ -351,7 +351,7 @@ namespace MummyEscape.UI.Screens
             var search = _duelSearch = new CancellationTokenSource();
             _info.text = Loc.T("Recherche d'un adversaire…");
             Show(App.Session.Profile);
-            await App.SyncSoloStars();
+            await App.SyncProgress();
             var start = await FindLiveAsync(App, matchmaker, text => { if (this != null && _duelSearch == search) _info.text = text; }, search.Token);
             if (this == null || search.IsCancellationRequested)
             {
@@ -449,7 +449,7 @@ namespace MummyEscape.UI.Screens
         {
             switch (code)
             {
-                case "LOCKED": return Loc.F("Gagne {0} étoiles en solo pour débloquer les duels.", PvpConfig.RequiredSoloStars); // noloc
+                case "LOCKED": return Loc.F("Évade-toi du tombeau {0} pour débloquer les duels.", LevelNames.Of(Core.Unlocks.EndOfAct(1))); // noloc
                 case "OUTDATED": return Loc.T("Mets le jeu à jour pour affronter les autres joueurs."); // noloc
                 case "SEALS": return Loc.T("Pas assez de sceaux."); // noloc
                 case "LEAGUE": return Loc.T("Atteins d'abord la ligue demandée."); // noloc

@@ -906,17 +906,24 @@ namespace MummyEscape.Game
         /// <summary>The solo run's timed actions, for the server's replay (it grants the pass XP); null in a duel or a 2v2.</summary>
         RunRecorder _soloRun;
 
-        /// <summary>Hands the finished run to the save, which sends it to the server with the next batch.</summary>
-        void QueueSoloRun(LevelResult result, Difficulty? endless, int depth, int xp, int scarabs)
+        /// <summary>
+        /// Hands the finished run to the save, which sends it to the server with the next batch (<paramref name="now"/>: at once,
+        /// a new record for the board). The server replays it for the pass, the scarabs, the quests and the leaderboards.
+        /// </summary>
+        void QueueSoloRun(LevelResult result, Difficulty? endless, int depth, int xp, int scarabs, bool now = false,
+            (int seed, int floor, TowerCurses curses)? tower = null)
         {
             Analytics.Track("tomb_end", ("level", endless.HasValue ? "endless" : result.Level.Key), ("won", result.Won), ("stars", result.Stars), ("moves", result.Moves), ("depth", depth)); // noloc
-            if (_soloRun == null || xp <= 0) return; // an endless death earns nothing: no call for it
-            var run = new SoloRunReport { Id = Guid.NewGuid().ToString("N"), Inputs = _soloRun.Inputs, Depth = depth }; // noloc
-            if (endless.HasValue) run.EndlessMode = (int)endless.Value;
+            // An endless death earns nothing: no call for it. A tower floor earns only its place on the board.
+            if (_soloRun == null || xp <= 0 && tower == null) return;
+            var run = new SoloRunReport { Id = Guid.NewGuid().ToString("N"), Inputs = _soloRun.Inputs, Depth = depth, Country = _app.Online?.Country }; // noloc
+            if (tower.HasValue) { run.TowerSeed = tower.Value.seed; run.TowerFloor = tower.Value.floor; run.TowerCurses = tower.Value.curses; }
+            else if (endless.HasValue) run.EndlessMode = (int)endless.Value;
             else { run.Level = result.Level.Key; run.Variant = Session.Level.Variant; }
             _soloRun = null;
             _app.Save.QueueRun(run, xp, scarabs);
-            _ = _app.SendSoloRuns(false);
+            _ = _app.SendSoloRuns(now);
+            if (tower.HasValue) return; // the tower counts for no quest
             // The server counts the escapes it replays (intro levels are not sent): the same here, before the result shows.
             if (result.Won) _app.Quests.Record(endless.HasValue ? QuestKind.EndlessWin : QuestKind.CampaignWin);
             if (!endless.HasValue) _app.Quests.Record(QuestKind.CampaignPlay);
@@ -992,15 +999,9 @@ namespace MummyEscape.Game
                 yield break;
             }
             var outcome = _app.Save.Apply(result);
-            QueueSoloRun(result, null, 0, Monetization.BattlePass.SoloXp(result.Won, result.Stars), outcome.CoinsEarned);
-            // Faster than the game's animations allow: a modified game, kept off the leaderboard.
-            if (result.Pace != (int)PaceVerdict.Impossible) _ = _app.SubmitScore(result);
-            else Debug.LogWarning($"[Game] {result.Level} run of {result.TimeMs} ms under the perfect {result.PerfectMs} ms: not submitted");
-            if (result.Won)
-            {
-                _ = _app.PublishProgress();
-                _ = _app.SyncSoloStars();
-            }
+            // A new best goes to the server at once: it replays the run and writes the board (the game cannot).
+            QueueSoloRun(result, null, 0, Monetization.BattlePass.SoloXp(result.Won, result.Stars), outcome.CoinsEarned, outcome.NewBest);
+            if (result.Won) _ = _app.PublishProgress();
             _app.UI.Open<RecapScreen>().Show(result, outcome);
         }
 

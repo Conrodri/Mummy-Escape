@@ -33,6 +33,7 @@ namespace MummyEscape.Game
         /// <summary>Starts a Halloween tomb (the energy point is spent by the caller, see PlayGate.Solo).</summary>
         public async Task StartHalloween(int tomb)
         {
+            if (!Unlocks.IsUnlocked(Feature.Events, _app.Save.IsCompleted)) { Debug.LogError("[Game] The events open after act 1"); return; }
             int token = ++_loadToken;
             ResetForLoad();
             DetachDuelLink();

@@ -19,12 +19,14 @@ namespace MummyEscape.Tests
             Assert.AreEqual(0, Unlocks.Mask(nothing));
             Assert.IsFalse(Unlocks.IsUnlocked(Feature.Duel, nothing));
             Assert.IsFalse(Unlocks.IsUnlocked(Feature.Casino, nothing));
+            Assert.IsFalse(Unlocks.IsUnlocked(Feature.Events, nothing));
             Assert.IsTrue(Unlocks.IsUnlocked(Feature.Guild, nothing));
             Assert.IsTrue(Unlocks.IsUnlocked(Feature.Chat, nothing));
             Assert.IsNull(Unlocks.Gate(Feature.Chat));
 
             var act1 = Done(Unlocks.EndOfAct(1));
             Assert.IsTrue(Unlocks.IsUnlocked(Feature.Duel, act1));
+            Assert.IsTrue(Unlocks.IsUnlocked(Feature.Events, act1));
             Assert.IsFalse(Unlocks.IsUnlocked(Feature.Casino, act1));
             Assert.AreEqual((int)Feature.Duel, Unlocks.Mask(act1));
 

@@ -202,6 +202,8 @@ namespace MummyEscape.UI.Screens
             }
 
             int request = ++_requestId;
+            await App.SendSoloRuns(true); // the server writes the boards from the runs it replays: the queued ones first
+            if (request != _requestId || this == null) return;
             var page = tower ? await App.Online.GetBoardLeaderboardAsync(Tower.BoardId, scope, Top)
                      : endless.HasValue ? await App.Online.GetBoardLeaderboardAsync(Endless.BoardId(endless.Value), scope, Top)
                      : await App.Online.GetLeaderboardAsync(id, scope, Top);
