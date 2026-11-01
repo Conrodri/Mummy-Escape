@@ -168,6 +168,10 @@ namespace MummyEscape.Pvp
 
         /// <summary>Temps des tombeaux sans fin rejoués ici, additionnés par échelle (départage de leur classement).</summary>
         public List<int> EndlessTimeMs = new List<int>();
+        /// <summary>Tombeaux sans fin franchis par échelle (<see cref="Core.Difficulty"/>), vus ici : les points du classement (<see cref="Ladders.EndlessPoints"/>).</summary>
+        public List<int> EndlessCleared = new List<int>();
+        /// <summary>Pays choisi par le joueur (<see cref="Ladders.IsCountryCode"/>, "" : aucun), posé par SetCountry seul : il étiquette et filtre ses lignes de classement.</summary>
+        public string Country = "";
         /// <summary>Course de la tour en cours, telle que le serveur l'a rejouée étage par étage (null : aucune).</summary>
         public TowerRun Tower;
         /// <summary>Meilleure course de la tour rejouée ici : c'est elle qui va au classement.</summary>
@@ -278,6 +282,8 @@ namespace MummyEscape.Pvp
         /// <summary>Bilan du joueur sur le mois de ce classement.</summary>
         public int Wins, Losses, Draws;
         public bool IsMe;
+        /// <summary>Le pays du joueur (ses données protégées), "" : aucun.</summary>
+        public string Country = "";
     }
 
     /// <summary>Classement d'un mois, vérifié par le serveur.</summary>
@@ -298,8 +304,11 @@ namespace MummyEscape.Pvp
     {
         public string PlayerId;
         public string PlayerName;
-        public int Score;
+        /// <summary>Elo, ou score encodé d'un classement solo (<see cref="Ladders"/>).</summary>
+        public long Score;
         public int Rank;          // 1 = premier
+        /// <summary>Le pays des métadonnées de l'entrée ("" : aucun).</summary>
+        public string Country = "";
     }
 
     /// <summary>

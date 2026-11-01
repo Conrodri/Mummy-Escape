@@ -5,7 +5,7 @@ Le serveur des duels. Toute la logique (Elo, ligues, saisons, récompenses, bout
 générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne contient que le branchement sur Unity Cloud :
 
 - `PvpModule.cs` : les points d'entrée (duels, 2v2, guildes, tchat, énergie, porte-monnaie, données personnelles) :
-  `FindDuel`, `SubmitRun`, `GetPvpProfile`, `ClaimSeasonRewards`, `BuyWithSeals`, `SpinSealWheel`, `GetPvpBoard`,
+  `FindDuel`, `SubmitRun`, `GetLadder`, `SetCountry`, `GetPvpProfile`, `ClaimSeasonRewards`, `BuyWithSeals`, `SpinSealWheel`, `GetPvpBoard`,
   `GetDuelHistory`, `ReportCheat`, `StartLiveDuel`, `GetLiveDuel`, `StartLiveBotDuel`, `SubmitLiveDuel`, `GetLiveDuelResult`,
   `GetTeams`, `InviteDuo`, `RespondDuo`, `SearchMate`, `CancelMateSearch`, `LeaveDuo`, `FindDuoMatch`, `GetDuoBoard`, `StartBattleRun`, `GetBattle`,
   `GetGuild`, `CreateGuild`, `SearchGuilds`, `GetGuildBoard`, `JoinGuild`, `LeaveGuild`, `SetGuildRole`, `KickGuildMember`,
@@ -42,25 +42,42 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
    `Assets/_Project/CloudCode/PvpMatchmaking.ccmr`, qui pointe vers `server/PvpMatchmaking.sln`), puis « Deploy Selected ».
    Unity publie le projet pour Linux (profil `Properties/PublishProfiles/FolderProfile.pubxml`) et l'envoie. Il faut le
    SDK .NET 8 ou plus récent sur la machine. Le module doit garder le nom `PvpMatchmaking` : le jeu appelle ce nom.
-3. **Leaderboard `pvp_elo`** (Dashboard › Leaderboards) :
-   - tri du plus haut au plus bas ;
-   - mise à jour : garder le dernier score (l'Elo peut baisser) ;
-   - remise à zéro chaque mois, le 1er à 00:00 UTC, **avec archivage** (les versions archivées servent au classement
-     « Mois dernier » et au calcul du Top 100).
-4. **Access Control** : interdire aux joueurs d'écrire dans **tous** les leaderboards. Règle `Deny`, principal `Player`,
-   action `Write`, ressource `urn:ugs:leaderboards:/v1/projects/*/leaderboards/*/scores/players/*`. Seul ce module y écrit :
-   - `pvp_elo` : l'Elo, après chaque duel jugé. Même sans la règle, un score falsifié ne tient pas : le jeu lit ce
-     classement par `GetPvpBoard`, qui compare chaque entrée à l'Elo protégé du joueur ;
-   - les classements solo (niveaux `v13s2_level_…`, `endless_f/n/x`, `tower_v13`) : `SubmitSoloRuns` rejoue chaque course
-     envoyée (règles, animations) et écrit son score. Un niveau ne compte que si le serveur a vu le précédent réussi ; une
-     échelle sans fin avance de 10 tombeaux au plus au-delà du dernier vu ; la tour est suivie étage par étage.
+3. **Leaderboards** (Dashboard › Leaderboards) : trois, rien d'autre. Le jeu ne les lit plus lui-même : il appelle
+   `GetLadder(ladder, scope, seasonsAgo)` (`Pvp/PvpServer.Ladders.cs`), qui sert les quatre classements (duel, 2v2, tour,
+   sans fin) pour le monde, le pays du joueur ou ses amis. Le pays est gardé par le serveur (`SetCountry`, code ISO à deux
+   lettres, `""` pour aucun ; `COUNTRY` s'il est invalide) et écrit en métadonnée `c` de chaque entrée.
+   - `pvp_elo` (inchangé) : tri du plus haut au plus bas ; mise à jour « garder le dernier score » (l'Elo peut baisser) ;
+     remise à zéro chaque mois, le 1er à 00:00 UTC, **avec archivage** (les versions archivées servent au « Mois dernier »
+     et au Top 100).
+   - `ladder_tower` : tri **du plus bas au plus haut** (score encodé : le plus d'étages, puis le moins de temps) ; mise à
+     jour **« garder le dernier score »** (le serveur envoie toujours le meilleur du joueur, et le réécrit quand il change de
+     pays) ; pas de remise à zéro. Indépendant de la version du générateur.
+   - `ladder_endless` : tri **du plus bas au plus haut** (score encodé : le plus de points, puis le moins de temps total ;
+     points = tombeaux franchis × 1 en Facile, × 2 en Normal, × 3 en Extrême) ; **« garder le dernier score »** ; pas de
+     remise à zéro.
+   Avec « garder le meilleur » au lieu du dernier, un changement de pays ne suivrait pas : à éviter.
+   Les anciens classements peuvent être **supprimés** : les niveaux (`v13s2_…`, `v14s2_…`), `endless_e`, `endless_n`,
+   `endless_x` et `tower_v…`. Plus rien ne les écrit ; les jeux 0.1.14 qui les lisent encore voient des listes figées.
+   Les pages pays filtrent les 1000 premiers de chaque classement (cache de 5 minutes, Cloud Save `pvp_ladders`) : au-delà
+   de quelques milliers de joueurs par classement, passer à un classement par pays.
+4. **Access Control** : interdire aux joueurs d'écrire dans **tous** les leaderboards (règle à garder). Règle `Deny`,
+   principal `Player`, action `Write`, ressource `urn:ugs:leaderboards:/v1/projects/*/leaderboards/*/scores/players/*`.
+   Seul ce module y écrit :
+   - `pvp_elo` : l'Elo, après chaque duel jugé. Même sans la règle, un score falsifié ne tient pas : `GetLadder` (et
+     l'ancien `GetPvpBoard`) compare chaque entrée à l'Elo protégé du joueur ;
+   - `ladder_tower`, `ladder_endless` : `SubmitSoloRuns` rejoue chaque course envoyée (règles, animations) et écrit le
+     meilleur du joueur. Une échelle sans fin avance de 10 tombeaux au plus au-delà du dernier vu ; la tour est suivie étage
+     par étage. Les niveaux de la campagne n'ont plus de classement.
    Sans la règle, une version modifiée du jeu pourrait encore écrire un faux score solo : elle est indispensable.
+   Le 2v2 n'a pas de leaderboard : il vient de l'index des duos (`pvp_team_index`), avec les pays des deux membres.
 5. **Cloud Save** : rien à créer.
    - `pvp` et `pvp_pending` : données joueur **protégées** (le joueur les lit, seul le serveur les écrit).
    - les duels s'ouvrent quand le serveur a vu le niveau Facile 1-10 réussi (étoiles du porte-monnaie, `pvp`).
    - `pvp_queue` : données « custom » **privées** (illisibles par les joueurs), une clé par version du générateur et
      tranche de 100 Elo (`v8_b10`…).
    - `pvp_board` : données « custom » **privées**, le classement vérifié de chaque mois (`board_2026-10`), gardé 5 minutes.
+   - `pvp_ladders` : données « custom » **privées**, les 1000 premiers de chaque classement (`Tower`, `Endless`,
+     `Duel_2026-11`) et le duel vérifié de chaque pays (`Duel_2026-11_FR`), gardés 5 minutes.
    - `pvp_history` : donnée joueur **protégée**, les 10 derniers duels du joueur avec les deux courses de chacun (les replays).
      Le premier sur un tombeau y a un duel « en attente », complété quand quelqu'un affronte son fantôme.
    - `pvp_reports` : données « custom » **privées**, un dossier de triche par joueur signalé (clé = son identifiant).

@@ -15,16 +15,16 @@ namespace MummyEscape.Pvp
 
         static string LiveId(string matchKey) => "live_" + new string((matchKey ?? "").Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_').Take(60).ToArray());
 
-        static string CleanName(string name)
-        {
-            name = (name ?? "").Trim();
-            return name.Length <= LiveDuelConfig.MaxNameLength ? name : name.Substring(0, LiveDuelConfig.MaxNameLength);
-        }
+        /// <summary>
+        /// Every name a phone sends goes through here (<see cref="ChatFilter.Name"/>: no rich-text tags, controls, links or
+        /// swearing, 24 characters): it shows in the rivals' screens, replays and ladders. Null stays null (callers fall back).
+        /// </summary>
+        public static string CleanName(string name) => name == null ? null : ChatFilter.Name(name);
 
         async Task<LiveDuelist> DuelistAsync(LiveDuelist claimed, int elo) => new LiveDuelist
         {
             PlayerId = claimed.PlayerId,
-            Name = CleanName(claimed.Name),
+            Name = ChatFilter.Name(claimed.Name),
             Elo = elo,
             Look = await VerifiedLookAsync(claimed.Look, claimed.PlayerId),
         };
@@ -284,7 +284,7 @@ namespace MummyEscape.Pvp
             });
             done.EloAfter = data.Elo;
             done.SealsGained = gained;
-            await _store.SubmitEloAsync(side.PlayerId, data.Elo);
+            await _store.SubmitEloAsync(side.PlayerId, data.Elo, data.Country);
             if (result == DuelResult.Win) await AddGuildPointsAsync(data.GuildId, side.PlayerId, TeamConfig.PointsPerDuelWin);
             // Les deux courses dans l'historique : de quoi revoir le duel (et le signaler).
             var otherRun = other.Run ?? new RunSubmission { MatchId = duel.Id, Outcome = RunOutcome.Abandoned };

@@ -21,6 +21,8 @@ namespace MummyEscape.Pvp
         public string MateId, MateName;
         /// <summary>ISO 3166 alpha-2 code ("FR") the player chose, "" when unknown.</summary>
         public string Country = "";
+        /// <summary>2v2: the mate's country (a duo shows on the country page of either member).</summary>
+        public string MateCountry = "";
         /// <summary>Duel and 2v2: Elo. Tower: floors climbed. Endless: weighted points (<see cref="Ladders.EndlessPoints"/>).</summary>
         public int Value;
         /// <summary>Tower and endless: the time that breaks ties (lower ranks higher).</summary>
@@ -28,6 +30,8 @@ namespace MummyEscape.Pvp
         /// <summary>Duel (this page's month) and 2v2: the record.</summary>
         public int Wins, Losses, Draws;
         public bool IsMe;
+
+        public LadderRow Copy() => (LadderRow)MemberwiseClone();
     }
 
     /// <summary>A ladder as the server serves it: the top rows of the scope and the viewer's own row.</summary>
@@ -53,6 +57,13 @@ namespace MummyEscape.Pvp
         /// <summary>Rows a page shows at most.</summary>
         public const int Size = 100;
 
+        /// <summary>The UGS leaderboards behind the ladders (to create in the dashboard, see DEPLOY.md); the 2v2 is the duo index.</summary>
+        public const string DuelBoard = "pvp_elo", TowerBoard = "ladder_tower", EndlessBoard = "ladder_endless";
+
+        /// <summary>Top entries of a board read at once and kept a few minutes for every page: the country pages filter them.</summary>
+        public const int PoolSize = 1000;
+        public const int CacheMinutes = 5;
+
         /// <summary>Endless: what one tomb escaped is worth on each ladder (<see cref="Core.Difficulty"/> order: Easy, Normal, Extreme).</summary>
         public static readonly int[] EndlessWeights = { 1, 2, 3 };
 
@@ -63,6 +74,17 @@ namespace MummyEscape.Pvp
             for (int m = 0; m < EndlessWeights.Length && tombsByMode != null && m < tombsByMode.Count; m++)
                 points += Math.Max(0, tombsByMode[m]) * EndlessWeights[m];
             return points;
+        }
+
+        const int MaxPoints = 99999;
+
+        /// <summary>Endless board score, lower is better (ascending like the tower's): the most points first, then the least time.</summary>
+        public static long EncodeEndless(int points, int timeMs) => Core.LevelResult.EncodeScore(MaxPoints - Math.Min(Math.Max(points, 0), MaxPoints), timeMs);
+
+        public static (int points, int timeMs) DecodeEndless(long score)
+        {
+            var (gap, timeMs) = Core.LevelResult.DecodeScore(score);
+            return (MaxPoints - gap, timeMs);
         }
 
         /// <summary>A country code the ladders accept: two capital letters A-Z (empty: none).</summary>

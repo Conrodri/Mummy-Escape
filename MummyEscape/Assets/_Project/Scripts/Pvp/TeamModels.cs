@@ -218,6 +218,8 @@ namespace MummyEscape.Pvp
         public string Id;
         public string Name;
         public List<string> Members = new List<string>();
+        /// <summary>Les noms et pays des membres, dans l'ordre de <see cref="Members"/> (les pays relus à chaque écriture du résumé).</summary>
+        public List<string> Names = new List<string>(), Countries = new List<string>();
         public int Elo;
         public int Wins, Losses, Draws;
         /// <summary>Campagne 2v2 : tombeaux passés, leurs meilleures étoiles et la somme de leurs meilleurs temps.</summary>

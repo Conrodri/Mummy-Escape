@@ -1,6 +1,6 @@
 // Stockage du PvP sur Unity Cloud : données joueur protégées (le client les lit, seul le serveur les écrit), file de
 // fantômes en « private custom items » (illisibles par les joueurs : une clé par version du générateur et tranche de
-// 100 Elo), classement pvp_elo.
+// 100 Elo), classements pvp_elo, ladder_tower et ladder_endless (Ladders).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +17,7 @@ namespace MummyEscape.Pvp.Server
 {
     public sealed class CloudSavePvpStore : IPvpStore
     {
-        public const string LeaderboardId = "pvp_elo";               // à créer dans le Dashboard (voir DEPLOY.md)
+        public const string LeaderboardId = Ladders.DuelBoard;       // à créer dans le Dashboard (voir DEPLOY.md)
         public const string PlayerDataKey = "pvp";
         public const string PendingDuelKey = "pvp_pending";
         public const string QueueCustomId = "pvp_queue";
@@ -203,16 +203,34 @@ namespace MummyEscape.Pvp.Server
 
         // ------------------------------------------------------------------ leaderboard
 
+        static Dictionary<string, object> Meta(string country) => new Dictionary<string, object> { { "c", country ?? "" } };
+
+        /// <summary>Le pays des métadonnées d'une entrée (objet ou texte JSON selon le service), "" sinon.</summary>
+        static string CountryIn(object metadata)
+        {
+            try
+            {
+                var token = metadata == null ? null : metadata is string s ? JToken.Parse(s) : metadata as JToken ?? JToken.FromObject(metadata);
+                if (token is JValue v && v.Type == JTokenType.String) token = JToken.Parse((string)v.Value);
+                string c = (string)(token as JObject)?["c"];
+                return Ladders.IsCountryCode(c) ? c : "";
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
         /// <summary>
-        /// Un classement solo (niveaux, échelles sans fin, tour), « keepBest » croissant : seul le serveur y écrit (règle Access
-        /// Control, voir DEPLOY.md). Les métadonnées sont celles que le jeu lit : c = pays.
+        /// Un classement solo (<see cref="Ladders.TowerBoard"/>, <see cref="Ladders.EndlessBoard"/>), croissant, « garder le dernier » :
+        /// seul le serveur y écrit (règle Access Control, voir DEPLOY.md), toujours le meilleur du joueur. Métadonnée c = pays.
         /// </summary>
         public async Task SubmitScoreAsync(string board, string playerId, long score, string country)
         {
             try
             {
                 await _api.Leaderboards.AddLeaderboardPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid, board, playerId,
-                    new AddLeaderboardScore(score, new Dictionary<string, object> { { "c", country ?? "" }, { "s", 0 } }));
+                    new AddLeaderboardScore(score, Meta(country)));
             }
             catch (Exception e)
             {
@@ -220,12 +238,12 @@ namespace MummyEscape.Pvp.Server
             }
         }
 
-        public async Task SubmitEloAsync(string playerId, int elo)
+        public async Task SubmitEloAsync(string playerId, int elo, string country)
         {
             try
             {
-                await _api.Leaderboards.AddLeaderboardPlayerScoreAsync(_ctx, _ctx.ServiceToken, Guid.Parse(_ctx.ProjectId),
-                    LeaderboardId, playerId, new AddLeaderboardScore(elo));
+                await _api.Leaderboards.AddLeaderboardPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid,
+                    LeaderboardId, playerId, new AddLeaderboardScore(elo, Meta(country)));
             }
             catch (Exception e)
             {
@@ -235,58 +253,60 @@ namespace MummyEscape.Pvp.Server
 
         Guid ProjectGuid => Guid.Parse(_ctx.ProjectId);
 
-        static BoardEntry Entry(string playerId, string playerName, double score, int rank) => new BoardEntry
+        static BoardEntry Entry(string playerId, string playerName, double score, int rank, object metadata) => new BoardEntry
         {
             PlayerId = playerId,
             PlayerName = playerName,
-            Score = (int)Math.Round(score),
+            Score = (long)Math.Round(score),
             Rank = rank + 1, // le service compte à partir de 0
+            Country = CountryIn(metadata),
         };
 
-        string _lastVersionId;
+        readonly Dictionary<string, string> _lastVersionIds = new Dictionary<string, string>();
 
-        /// <summary>La version archivée la plus récente du classement (le mois dernier), null s'il n'y en a pas encore.</summary>
-        async Task<string> LastVersionIdAsync()
+        /// <summary>La version archivée la plus récente d'un classement (le mois dernier du duel), null s'il n'y en a pas encore.</summary>
+        async Task<string> LastVersionIdAsync(string board)
         {
-            if (_lastVersionId != null) return _lastVersionId;
-            var versions = await _api.Leaderboards.GetLeaderboardVersionsAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, 1);
-            return _lastVersionId = versions.Data.Results?.OrderByDescending(v => v.End).FirstOrDefault()?.Id;
+            if (_lastVersionIds.TryGetValue(board, out var id)) return id;
+            var versions = await _api.Leaderboards.GetLeaderboardVersionsAsync(_ctx, _ctx.ServiceToken, ProjectGuid, board, 1);
+            return _lastVersionIds[board] = versions.Data.Results?.OrderByDescending(v => v.End).FirstOrDefault()?.Id;
         }
 
-        public async Task<List<BoardEntry>> ReadBoardAsync(int seasonsAgo, int limit)
+        /// <summary>Jusqu'à 1000 entrées d'un coup (la limite du service), métadonnées comprises.</summary>
+        public async Task<List<BoardEntry>> ReadBoardAsync(string board, int seasonsAgo, int limit)
         {
             try
             {
                 if (seasonsAgo == 0)
                 {
-                    var res = await _api.Leaderboards.GetLeaderboardScoresAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, null, 0, limit);
-                    return res.Data.Results.Select(e => Entry(e.PlayerId, e.PlayerName, e.Score, e.Rank)).ToList();
+                    var res = await _api.Leaderboards.GetLeaderboardScoresAsync(_ctx, _ctx.ServiceToken, ProjectGuid, board, true, 0, limit);
+                    return res.Data.Results.Select(e => Entry(e.PlayerId, e.PlayerName, e.Score, e.Rank, e.Metadata)).ToList();
                 }
-                string version = await LastVersionIdAsync();
+                string version = await LastVersionIdAsync(board);
                 if (version == null) return new List<BoardEntry>();
-                var past = await _api.Leaderboards.GetLeaderboardVersionScoresAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, version, null, 0, limit);
-                return past.Data.Results.Select(e => Entry(e.PlayerId, e.PlayerName, e.Score, e.Rank)).ToList();
+                var past = await _api.Leaderboards.GetLeaderboardVersionScoresAsync(_ctx, _ctx.ServiceToken, ProjectGuid, board, version, true, 0, limit);
+                return past.Data.Results.Select(e => Entry(e.PlayerId, e.PlayerName, e.Score, e.Rank, e.Metadata)).ToList();
             }
             catch (Exception e)
             {
-                _logger.LogError("Classement illisible ({ago}) : {msg}", seasonsAgo, e.Message);
+                _logger.LogError("Classement {board} illisible ({ago}) : {msg}", board, seasonsAgo, e.Message);
                 return new List<BoardEntry>();
             }
         }
 
-        public async Task<BoardEntry> ReadBoardEntryAsync(string playerId, int seasonsAgo)
+        public async Task<BoardEntry> ReadBoardEntryAsync(string board, string playerId, int seasonsAgo)
         {
             try
             {
                 if (seasonsAgo == 0)
                 {
-                    var res = await _api.Leaderboards.GetLeaderboardPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, playerId);
-                    return Entry(res.Data.PlayerId, res.Data.PlayerName, res.Data.Score, res.Data.Rank);
+                    var res = await _api.Leaderboards.GetLeaderboardPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid, board, playerId, true);
+                    return Entry(res.Data.PlayerId, res.Data.PlayerName, res.Data.Score, res.Data.Rank, res.Data.Metadata);
                 }
-                string version = await LastVersionIdAsync();
+                string version = await LastVersionIdAsync(board);
                 if (version == null) return null;
-                var past = await _api.Leaderboards.GetLeaderboardVersionPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid, LeaderboardId, version, playerId);
-                return Entry(past.Data.PlayerId, past.Data.PlayerName, past.Data.Score, past.Data.Rank);
+                var past = await _api.Leaderboards.GetLeaderboardVersionPlayerScoreAsync(_ctx, _ctx.ServiceToken, ProjectGuid, board, version, playerId, true);
+                return Entry(past.Data.PlayerId, past.Data.PlayerName, past.Data.Score, past.Data.Rank, past.Data.Metadata);
             }
             catch
             {

@@ -12,8 +12,9 @@ namespace MummyEscape.Pvp
     public interface IPvpStore
     {
         /// <summary>
-        /// Score d'un classement solo (niveau, échelle sans fin, tour), écrit par le serveur seul après avoir rejoué la course :
-        /// le classement garde le meilleur (le plus bas). <paramref name="country"/> étiquette la ligne (null : aucun).
+        /// Score d'un classement solo (<see cref="Ladders.TowerBoard"/>, <see cref="Ladders.EndlessBoard"/>), écrit par le serveur
+        /// seul depuis les courses qu'il a rejouées : le classement garde le dernier envoyé (le serveur envoie toujours le
+        /// meilleur du joueur), plus bas = mieux. <paramref name="country"/> étiquette la ligne (métadonnée "c", "" : aucun).
         /// </summary>
         Task SubmitScoreAsync(string board, string playerId, long score, string country);
         /// <summary>Lit les données PvP (neuves si absentes), applique <paramref name="mutate"/> et les réécrit.</summary>
@@ -24,12 +25,13 @@ namespace MummyEscape.Pvp
         /// <summary>Retire de la file et renvoie le fantôme le plus proche en Elo (<see cref="GhostPicker"/>), ou null.</summary>
         Task<GhostRun> ClaimGhostAsync(string playerId, int elo, int generatorVersion, IDictionary<string, int> opponentsToday, long nowMs);
         Task EnqueueGhostAsync(GhostRun ghost, long nowMs);
-        Task SubmitEloAsync(string playerId, int elo);
-        /// <summary>Haut du classement, tel que le service le renvoie : <paramref name="seasonsAgo"/> 0 = ce mois, 1 = le mois
-        /// dernier (version archivée). Vide si ce mois n'a pas de classement.</summary>
-        Task<List<BoardEntry>> ReadBoardAsync(int seasonsAgo, int limit);
-        /// <summary>L'entrée du joueur dans ce classement, null s'il n'y figure pas.</summary>
-        Task<BoardEntry> ReadBoardEntryAsync(string playerId, int seasonsAgo);
+        /// <summary>L'Elo dans <see cref="Ladders.DuelBoard"/>, avec le pays du joueur en métadonnée.</summary>
+        Task SubmitEloAsync(string playerId, int elo, string country);
+        /// <summary>Haut d'un classement (<see cref="Ladders"/>), dans son ordre, pays des métadonnées compris : <paramref name="seasonsAgo"/>
+        /// 0 = l'actuel, 1 = la version archivée précédente (le mois dernier du duel). Vide s'il n'y en a pas.</summary>
+        Task<List<BoardEntry>> ReadBoardAsync(string board, int seasonsAgo, int limit);
+        /// <summary>L'entrée du joueur dans ce classement, avec son rang, null s'il n'y figure pas.</summary>
+        Task<BoardEntry> ReadBoardEntryAsync(string board, string playerId, int seasonsAgo);
         /// <summary>Données PvP de plusieurs joueurs, telles qu'enregistrées (sans les modifier) ; les absents sont omis.</summary>
         Task<Dictionary<string, PlayerPvpData>> ReadPlayersAsync(IReadOnlyCollection<string> playerIds);
         /// <summary>Classement vérifié d'une saison gardé en cache, null si absent.</summary>
@@ -178,6 +180,7 @@ namespace MummyEscape.Pvp
         /// </summary>
         public async Task<SubmitRunResponse> SubmitRunAsync(string me, RunSubmission run, string playerName)
         {
+            playerName = CleanName(playerName);
             var pending = await _store.GetPendingAsync(me);
             if (pending == null || run == null || pending.MatchId != run.MatchId) return new SubmitRunResponse { Error = "NO_PENDING_DUEL" };
 
@@ -274,8 +277,8 @@ namespace MummyEscape.Pvp
                 CountDuel(d, DuelResolver.Invert(resultForMe));
                 d.Ranked = true;
             });
-            await _store.SubmitEloAsync(me, mine.Elo);
-            if (!bot) await _store.SubmitEloAsync(ghost.PlayerId, theirs.Elo);
+            await _store.SubmitEloAsync(me, mine.Elo, mine.Country);
+            if (!bot) await _store.SubmitEloAsync(ghost.PlayerId, theirs.Elo, theirs.Country);
             // Every duel win also counts for the winner's guild.
             if (resultForMe == DuelResult.Win) await AddGuildPointsAsync(mine.GuildId, me, TeamConfig.PointsPerDuelWin);
             else if (resultForMe == DuelResult.Loss && !bot) await AddGuildPointsAsync(theirs.GuildId, ghost.PlayerId, TeamConfig.PointsPerDuelWin);
@@ -495,7 +498,7 @@ namespace MummyEscape.Pvp
 
             // La ligne du joueur est relue à chaque fois : le cache peut avoir quelques minutes de retard sur son Elo.
             var rows = board.Rows.Where(r => r.PlayerId != me)
-                            .Select(r => new PvpBoardRow { PlayerId = r.PlayerId, PlayerName = r.PlayerName, Elo = r.Elo, Wins = r.Wins, Losses = r.Losses, Draws = r.Draws })
+                            .Select(r => new PvpBoardRow { PlayerId = r.PlayerId, PlayerName = r.PlayerName, Elo = r.Elo, Wins = r.Wins, Losses = r.Losses, Draws = r.Draws, Country = r.Country })
                             .ToList();
             if (mine != null && mine.Rank <= rows.Count + 1) rows.Insert(mine.Rank - 1, mine);
             for (int i = 0; i < rows.Count; i++) rows[i].Rank = i + 1;
@@ -542,15 +545,16 @@ namespace MummyEscape.Pvp
             var cached = await _store.GetCachedBoardAsync(season);
             if (cached != null && NowMs - cached.BuiltAtUnixMs < PvpConfig.BoardCacheMinutes * 60_000L) return cached;
 
-            var entries = await _store.ReadBoardAsync(seasonsAgo, PvpConfig.Top100Size + PvpConfig.BoardMargin);
+            var entries = await _store.ReadBoardAsync(Ladders.DuelBoard, seasonsAgo, PvpConfig.Top100Size + PvpConfig.BoardMargin);
             var players = await _store.ReadPlayersAsync(entries.ConvertAll(e => e.PlayerId));
             var rows = new List<PvpBoardRow>();
             foreach (var e in entries)
             {
                 players.TryGetValue(e.PlayerId, out var d);
                 int? elo = TrueElo(d, season);
-                if (seasonsAgo == 0 && (elo ?? 0) != e.Score) await _store.SubmitEloAsync(e.PlayerId, elo ?? 0);
-                if (elo != null) rows.Add(WithRecord(new PvpBoardRow { PlayerId = e.PlayerId, PlayerName = e.PlayerName, Elo = elo.Value }, d, season));
+                if (seasonsAgo == 0 && (elo ?? 0) != e.Score) await _store.SubmitEloAsync(e.PlayerId, elo ?? 0, d?.Country);
+                if (elo != null)
+                    rows.Add(WithRecord(new PvpBoardRow { PlayerId = e.PlayerId, PlayerName = CleanName(e.PlayerName), Elo = elo.Value, Country = d.Country ?? "" }, d, season));
             }
             rows = rows.OrderByDescending(r => r.Elo).Take(PvpConfig.Top100Size).ToList(); // tri stable : ex aequo dans l'ordre du service
             for (int i = 0; i < rows.Count; i++) rows[i].Rank = i + 1;
@@ -575,11 +579,11 @@ namespace MummyEscape.Pvp
         /// <summary>La ligne vérifiée du joueur dans le classement d'un mois, null s'il n'y figure pas.</summary>
         async Task<PvpBoardRow> MyRowAsync(string me, int seasonsAgo, PvpBoardPage board)
         {
-            var entry = await _store.ReadBoardEntryAsync(me, seasonsAgo);
+            var entry = await _store.ReadBoardEntryAsync(Ladders.DuelBoard, me, seasonsAgo);
             if (entry == null) return null;
             (await _store.ReadPlayersAsync(new[] { me })).TryGetValue(me, out var d);
             int? elo = TrueElo(d, board.Season);
-            if (seasonsAgo == 0 && (elo ?? 0) != entry.Score) await _store.SubmitEloAsync(me, elo ?? 0);
+            if (seasonsAgo == 0 && (elo ?? 0) != entry.Score) await _store.SubmitEloAsync(me, elo ?? 0, d?.Country);
             if (elo == null) return null;
 
             // Placé parmi les lignes vérifiées ; plus bas qu'elles toutes, le rang du service (jamais avant elles).
@@ -591,7 +595,7 @@ namespace MummyEscape.Pvp
                     if (r.Elo > elo.Value) ahead++;
                 }
             int rank = ahead < others || others < PvpConfig.Top100Size ? ahead + 1 : Math.Max(entry.Rank, others + 1);
-            return WithRecord(new PvpBoardRow { Rank = rank, PlayerId = me, PlayerName = entry.PlayerName, Elo = elo.Value, IsMe = true }, d, board.Season);
+            return WithRecord(new PvpBoardRow { Rank = rank, PlayerId = me, PlayerName = CleanName(entry.PlayerName), Elo = elo.Value, IsMe = true, Country = d.Country ?? "" }, d, board.Season);
         }
     }
 }

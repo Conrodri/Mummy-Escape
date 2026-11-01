@@ -65,6 +65,7 @@ namespace MummyEscape.Pvp
         /// <summary>Invite un ami à former un duo.</summary>
         public async Task<TeamActionResponse> InviteDuoAsync(string me, string myName, string friendId)
         {
+            myName = CleanName(myName);
             if (string.IsNullOrEmpty(friendId) || friendId == me) return new TeamActionResponse { Error = "SELF" };
             var mine = await Update(me);
             if (mine.Duos.Count >= TeamConfig.MaxDuosPerPlayer) return new TeamActionResponse { Error = "LIMIT" };
@@ -95,6 +96,7 @@ namespace MummyEscape.Pvp
         /// <summary>Accepte (le duo est créé) ou refuse une invitation.</summary>
         public async Task<TeamActionResponse> RespondDuoAsync(string me, string myName, string inviteId, bool accept)
         {
+            myName = CleanName(myName);
             DuoInvite invite = null;
             var mine = await Update(me, d =>
             {
@@ -158,13 +160,19 @@ namespace MummyEscape.Pvp
             return new TeamActionResponse { Ok = true };
         }
 
-        Task IndexDuoAsync(Duo duo) =>
-            PutIndexAsync(DuoIndexKey, duo.Id, new DuoSummary
+        /// <summary>The duo in the index (search, 2v2 ladder), with its members' names and countries read now.</summary>
+        async Task IndexDuoAsync(Duo duo)
+        {
+            var data = await _store.ReadPlayersAsync(duo.Members.Where(IsHuman).ToList());
+            await PutIndexAsync(DuoIndexKey, duo.Id, new DuoSummary
             {
                 Id = duo.Id, Name = duo.Name, Members = duo.Members, Elo = duo.Elo,
+                Names = duo.Names.ToList(),
+                Countries = duo.Members.Select(id => data.TryGetValue(id, out var d) ? d?.Country ?? "" : "").ToList(),
                 Wins = duo.Wins, Losses = duo.Losses, Draws = duo.Draws,
                 CoopCleared = duo.Coop?.Count ?? 0, CoopStars = duo.Coop?.Sum(r => r.Stars) ?? 0, CoopTimeMs = duo.Coop?.Sum(r => r.TimeMs) ?? 0,
             }, s => s.Id);
+        }
 
         /// <summary>
         /// Lance un combat 2v2 pour ce duo. <paramref name="meFirst"/> : le joueur court les manches 1 et 3, son partenaire la
@@ -505,6 +513,7 @@ namespace MummyEscape.Pvp
 
         public async Task<GuildResponse> CreateGuildAsync(string me, string myName, string name, string tag)
         {
+            myName = CleanName(myName);
             string error = TeamLogic.CheckGuildName(name, tag);
             if (error != null) return new GuildResponse { Error = error };
             name = name.Trim();
@@ -545,6 +554,7 @@ namespace MummyEscape.Pvp
         /// </summary>
         public async Task<GuildResponse> JoinGuildAsync(string me, string myName, string guildId)
         {
+            myName = CleanName(myName);
             var d = await Update(me);
             if (d.GuildId != null) return new GuildResponse { Error = "IN_GUILD" };
             var probe = await Shared<Guild>(GuildsCollection, guildId);
@@ -669,6 +679,7 @@ namespace MummyEscape.Pvp
         /// </summary>
         public async Task<TeamActionResponse> InviteToGuildAsync(string me, string myName, string playerId)
         {
+            myName = CleanName(myName);
             if (string.IsNullOrEmpty(playerId) || playerId == me) return new TeamActionResponse { Error = "SELF" };
             var d = await Update(me);
             if (d.GuildId == null) return new TeamActionResponse { Error = "NO_GUILD" };
@@ -704,6 +715,7 @@ namespace MummyEscape.Pvp
         /// <summary>Accepte (le joueur entre, même dans une guilde fermée ou sur demande) ou refuse une invitation.</summary>
         public async Task<GuildResponse> RespondGuildInviteAsync(string me, string myName, string guildId, bool accept)
         {
+            myName = CleanName(myName);
             GuildInvite invite = null;
             var d = await Update(me, x =>
             {
