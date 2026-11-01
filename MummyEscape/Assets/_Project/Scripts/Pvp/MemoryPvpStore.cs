@@ -10,8 +10,10 @@ namespace MummyEscape.Pvp
     {
         public readonly Dictionary<string, PlayerPvpData> Players = new Dictionary<string, PlayerPvpData>();
         public readonly Dictionary<string, PendingDuel> Pending = new Dictionary<string, PendingDuel>();
-        /// <summary>Classements solo écrits par le serveur : classement, puis le meilleur score de chaque joueur.</summary>
+        /// <summary>Classements solo écrits par le serveur : classement, puis le dernier score envoyé pour chaque joueur.</summary>
         public readonly Dictionary<string, Dictionary<string, long>> Scores = new Dictionary<string, Dictionary<string, long>>();
+        /// <summary>Le pays en métadonnée de chaque entrée (Elo du mois compris) : classement + "/" + joueur.</summary>
+        public readonly Dictionary<string, string> Countries = new Dictionary<string, string>();
         /// <summary>Fantômes en attente, toutes tranches confondues.</summary>
         public readonly List<GhostRun> Queue = new List<GhostRun>();
         /// <summary>Classement du mois : le score de chaque joueur, tel qu'envoyé (un tricheur peut y écrire).</summary>
@@ -30,7 +32,8 @@ namespace MummyEscape.Pvp
         public Task SubmitScoreAsync(string board, string playerId, long score, string country)
         {
             if (!Scores.TryGetValue(board, out var rows)) Scores[board] = rows = new Dictionary<string, long>();
-            if (!rows.TryGetValue(playerId, out long kept) || score < kept) rows[playerId] = score;
+            rows[playerId] = score;
+            Countries[board + "/" + playerId] = country ?? "";
             return Task.CompletedTask;
         }
 
@@ -58,6 +61,7 @@ namespace MummyEscape.Pvp
             Board.Remove(playerId);
             LastBoard.Remove(playerId);
             foreach (var rows in Scores.Values) rows.Remove(playerId);
+            foreach (var key in Countries.Keys.Where(k => k.EndsWith("/" + playerId, StringComparison.Ordinal)).ToList()) Countries.Remove(key);
             BoardCache.Clear();
             return Task.CompletedTask;
         }
@@ -94,24 +98,35 @@ namespace MummyEscape.Pvp
             return Task.CompletedTask;
         }
 
-        public Task SubmitEloAsync(string playerId, int elo)
+        public Task SubmitEloAsync(string playerId, int elo, string country)
         {
             Board[playerId] = elo;
+            Countries[Ladders.DuelBoard + "/" + playerId] = country ?? "";
             return Task.CompletedTask;
         }
 
-        /// <summary>Par score décroissant, comme le service.</summary>
-        List<BoardEntry> Ranked(int seasonsAgo) =>
-            (seasonsAgo == 0 ? Board : LastBoard)
-                .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
-                .Select((kv, i) => new BoardEntry { PlayerId = kv.Key, PlayerName = kv.Key, Score = kv.Value, Rank = i + 1 })
-                .ToList();
+        /// <summary>Comme le service : l'Elo par score décroissant (le mois archivé sans métadonnées), les autres par score croissant.</summary>
+        List<BoardEntry> Ranked(string board, int seasonsAgo)
+        {
+            IEnumerable<KeyValuePair<string, long>> rows;
+            if (board == Ladders.DuelBoard)
+                rows = (seasonsAgo == 0 ? Board : LastBoard).Select(kv => new KeyValuePair<string, long>(kv.Key, kv.Value))
+                                                            .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal);
+            else if (seasonsAgo == 0 && Scores.TryGetValue(board, out var scores))
+                rows = scores.OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal);
+            else rows = Enumerable.Empty<KeyValuePair<string, long>>();
+            return rows.Select((kv, i) => new BoardEntry
+            {
+                PlayerId = kv.Key, PlayerName = kv.Key, Score = kv.Value, Rank = i + 1,
+                Country = seasonsAgo == 0 && Countries.TryGetValue(board + "/" + kv.Key, out var c) ? c : "",
+            }).ToList();
+        }
 
-        public Task<List<BoardEntry>> ReadBoardAsync(int seasonsAgo, int limit) =>
-            Task.FromResult(Ranked(seasonsAgo).Take(limit).ToList());
+        public Task<List<BoardEntry>> ReadBoardAsync(string board, int seasonsAgo, int limit) =>
+            Task.FromResult(Ranked(board, seasonsAgo).Take(limit).ToList());
 
-        public Task<BoardEntry> ReadBoardEntryAsync(string playerId, int seasonsAgo) =>
-            Task.FromResult(Ranked(seasonsAgo).Find(e => e.PlayerId == playerId));
+        public Task<BoardEntry> ReadBoardEntryAsync(string board, string playerId, int seasonsAgo) =>
+            Task.FromResult(Ranked(board, seasonsAgo).Find(e => e.PlayerId == playerId));
 
         public Task<Dictionary<string, PlayerPvpData>> ReadPlayersAsync(IReadOnlyCollection<string> playerIds)
         {

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MummyEscape.Core;
 using MummyEscape.Pvp;
@@ -6,7 +7,7 @@ using NUnit.Framework;
 
 namespace MummyEscape.Tests
 {
-    /// <summary>The solo leaderboards, written by the server only from the runs it replays (the game cannot write them).</summary>
+    /// <summary>The tower and endless ladders, written by the server only from the runs it replays (the game cannot write them).</summary>
     public class BoardTests
     {
         static (PvpServer server, MemoryPvpStore store) NewServer()
@@ -50,52 +51,43 @@ namespace MummyEscape.Tests
             store.Scores.TryGetValue(board, out var rows) && rows.TryGetValue(player, out long s) ? s : (long?)null;
 
         [Test]
-        public async Task ALevel_GoesToItsBoard_OnceTheServerSawItOpen()
+        public async Task ACampaignLevel_WritesNoBoard_ButItsEscapeStillCounts()
         {
             var (server, store) = NewServer();
-            var first = Progression.First(Difficulty.Easy);
-            var run = WalletTests.SolvedRun("a", first, 0);
-            run.Country = "FR";
-            await server.SubmitSoloRunsAsync("alice", Runs(run));
-            var (overPar, timeMs) = LevelResult.DecodeScore(Score(store, LevelResult.BoardId(first), "alice").Value);
-            Assert.AreEqual(0, overPar, "the optimal route, as replayed");
-            Assert.AreEqual(RunActions.MsOf(run.Inputs[run.Inputs.Count - 1].Tick), timeMs, "the time the inputs show");
-
-            var third = new LevelId(Difficulty.Easy, 1, 3);
-            var r = await server.SubmitSoloRunsAsync("alice", Runs(WalletTests.SolvedRun("c", third, 0)));
-            Assert.IsNull(Score(store, LevelResult.BoardId(third), "alice"), "F1-2 never escaped here: a save edited past it");
+            var r = await server.SubmitSoloRunsAsync("alice", Runs(WalletTests.SolvedRun("a", Progression.First(Difficulty.Easy), 0)));
+            Assert.IsEmpty(store.Scores, "only the four ladders: no board per level any more");
             Assert.Greater(r.Wallet.PassXp, 0, "the escape is real: its XP still counts");
         }
 
         [Test]
-        public async Task TheEndlessBoard_FollowsTheTombsReplayed_NotTooFarAhead()
+        public async Task TheEndlessLadder_WeighsTheTombsOfEachMode_NotTooFarAhead()
         {
             var (server, store) = NewServer();
             string text = EndlessTests.StoredText();
             server.EndlessArchive = () => text;
-            var lines = TombArchive.Lines(text, Difficulty.Normal);
-            SoloRunReport At(string id, int depth)
+            SoloRunReport At(string id, Difficulty mode, int depth)
             {
-                var run = SafeRun(id, TombArchive.Load(lines[depth]));
-                run.EndlessMode = (int)Difficulty.Normal;
+                var run = SafeRun(id, TombArchive.Load(TombArchive.Lines(text, mode)[depth]));
+                run.EndlessMode = (int)mode;
                 run.Depth = depth;
                 return run;
             }
-            string board = Endless.BoardId(Difficulty.Normal);
-            int Reached(string player) => Endless.DecodeScore(Score(store, board, player).Value).reached;
+            (int points, int timeMs) Points(string player) => Ladders.DecodeEndless(Score(store, Ladders.EndlessBoard, player).Value);
+            await server.SetCountryAsync("alice", "FR");
             await server.OpenScarabsAsync("alice", new ScarabSeed { EndlessCleared = new List<int> { 0, 2, 0 } });
-            await server.SubmitSoloRunsAsync("alice", Runs(At("t2", 2)));
-            Assert.AreEqual(4, Reached("alice"), "tomb 3 escaped: before tomb 4");
+            await server.SubmitSoloRunsAsync("alice", Runs(At("n2", Difficulty.Normal, 2)));
+            Assert.AreEqual(3 * 2, Points("alice").points, "tomb 3 of Normal escaped: 3 tombs, 2 points each");
+            Assert.AreEqual("FR", store.Countries[Ladders.EndlessBoard + "/alice"], "labelled with the country held here");
 
             int far = 3 + PvpServer.EndlessGapMax + 1;
-            await server.SubmitSoloRunsAsync("alice", Runs(At("far", far)));
-            Assert.AreEqual(4, Reached("alice"), "too far past the last tomb seen");
-            await server.SubmitSoloRunsAsync("alice", Runs(At("t3", 3)));
-            Assert.AreEqual(5, Reached("alice"));
-
-            await server.OpenScarabsAsync("bob", new ScarabSeed { EndlessCleared = new List<int> { 0, far, 0 } });
-            await server.SubmitSoloRunsAsync("bob", Runs(At("bob-far", far)));
-            Assert.AreEqual(far + 2, Reached("bob"), "the same escape counts where the ladder stands");
+            await server.SubmitSoloRunsAsync("alice", Runs(At("far", Difficulty.Normal, far)));
+            Assert.AreEqual(6, Points("alice").points, "too far past the last tomb seen");
+            await server.SubmitSoloRunsAsync("alice", Runs(At("e0", Difficulty.Easy, 0)));
+            var (points, timeMs) = Points("alice");
+            Assert.AreEqual(6 + 1, points, "one Easy tomb: 1 point");
+            Assert.AreEqual(store.Players["alice"].EndlessTimeMs.Sum(), timeMs, "the tie-break: every tomb's time added up");
+            Assert.AreEqual(new List<int> { 1, 3 }, store.Players["alice"].EndlessCleared);
+            Assert.AreEqual(7, Ladders.EndlessPoints(new[] { 1, 0, 2 }), "Easy x1, Normal x2, Extreme x3");
         }
 
         [Test]
@@ -110,7 +102,8 @@ namespace MummyEscape.Tests
                 run.TowerCurses = curses;
                 return run;
             }
-            int Floors() => Tower.DecodeScore(Score(store, Tower.BoardId, "alice").Value).floors;
+            Assert.AreEqual("ladder_tower", Ladders.TowerBoard, "one board for every generator: no version in its id");
+            int Floors() => Tower.DecodeScore(Score(store, Ladders.TowerBoard, "alice").Value).floors;
 
             await server.SubmitSoloRunsAsync("alice", Runs(Floor("a1", 7, 1), Floor("a2", 7, 2)));
             Assert.AreEqual(2, Floors());

@@ -53,6 +53,18 @@ namespace MummyEscape.Pvp.Server
         public Task<SubmitRunResponse> SubmitRun(IExecutionContext ctx, RunSubmission run, string playerName) =>
             Server(ctx).SubmitRunAsync(ctx.PlayerId, run, playerName);
 
+        /// <summary>
+        /// Un des quatre classements (<see cref="Ladder"/> : 0 duel, 1 2v2, 2 tour, 3 sans fin), pour le monde, le pays du
+        /// joueur ou ses amis (<see cref="LadderScope"/> : 0, 1, 2) ; <paramref name="seasonsAgo"/> 1 = le mois dernier (duel).
+        /// </summary>
+        [CloudCodeFunction("GetLadder")]
+        public Task<LadderPage> GetLadder(IExecutionContext ctx, int ladder, int scope, int seasonsAgo) =>
+            Server(ctx).GetLadderAsync(ctx.PlayerId, (Ladder)ladder, (LadderScope)scope, seasonsAgo);
+
+        /// <summary>Le pays du joueur (code ISO à deux lettres, "" pour aucun) : il étiquette et filtre ses lignes de classement.</summary>
+        [CloudCodeFunction("SetCountry")]
+        public Task<ReportResponse> SetCountry(IExecutionContext ctx, string country) => Server(ctx).SetCountryAsync(ctx.PlayerId, country);
+
         [CloudCodeFunction("GetPvpProfile")]
         public Task<PvpProfileResponse> GetPvpProfile(IExecutionContext ctx) => Server(ctx).GetProfileAsync(ctx.PlayerId);
 

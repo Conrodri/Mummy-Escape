@@ -25,8 +25,6 @@ namespace MummyEscape.Pvp
         public int TowerFloor;
         public int TowerSeed;
         public TowerCurses TowerCurses;
-        /// <summary>The player's country (ISO code), shown with the leaderboard rows the server writes; null: none.</summary>
-        public string Country;
         public List<RunInput> Inputs = new List<RunInput>();
     }
 
@@ -39,8 +37,9 @@ namespace MummyEscape.Pvp
         /// <summary>
         /// Replays the runs and adds their XP to the pass held here (and their scarabs, see <see cref="ScarabsOf"/>): a campaign escape 40 + 10 per star (stars on the moves
         /// alone: the expert time would need a solver per run), a death 10, an endless tomb 70, a tower floor nothing. A run
-        /// that the rules refuse, or played faster than the game's animations allow, gives nothing. The leaderboards are
-        /// written here only, from these replays (<see cref="BoardsOf"/>, <see cref="TowerFloorPlayed"/>): the game cannot.
+        /// that the rules refuse, or played faster than the game's animations allow, gives nothing. The tower and endless
+        /// ladders are written here only, from these replays (<see cref="EndlessEscaped"/>, <see cref="TowerFloorPlayed"/>),
+        /// with the country held here (<see cref="SetCountryAsync"/>): the game cannot.
         /// </summary>
         public async Task<WalletResponse> SubmitSoloRunsAsync(string me, List<SoloRunReport> runs)
         {
@@ -53,50 +52,46 @@ namespace MummyEscape.Pvp
                 var result = Replay(run, out int xp);
                 replays.Add((run, xp, result));
             }
-            var boards = new Dictionary<string, long>();
-            string country = null;
+            bool tower = false, endless = false;
             var data = await Update(me, d =>
             {
-                boards.Clear(); // a write conflict runs this again on the fresh copy
+                tower = endless = false; // a write conflict runs this again on the fresh copy
                 var w = WalletOf(d);
-                // A run counts once: its XP, its scarabs (see ScarabsOf), its escape for the quests and the boards.
+                // A run counts once: its XP, its scarabs (see ScarabsOf), its escape for the quests and the ladders.
                 foreach (var (run, xp, result) in replays)
                     if (AddXp(w, season, "run:" + run.Id, xp)) // noloc
                     {
-                        country = CountryOf(run) ?? country;
-                        if (run.TowerFloor > 0) { TowerFloorPlayed(d, run, result, boards); continue; }
-                        BoardsOf(d, run, result, boards);
+                        if (run.TowerFloor > 0) { tower |= TowerFloorPlayed(d, run, result); continue; }
+                        if (run.EndlessMode >= 0) endless |= EndlessEscaped(d, run, result);
                         w.Scarabs += ScarabsOf(w, run, result);
                         if (result?.Won == true) CountQuest(d, run.EndlessMode >= 0 ? QuestKind.EndlessWin : QuestKind.CampaignWin);
                         if (result != null && run.EndlessMode < 0) CountQuest(d, QuestKind.CampaignPlay);
                     }
             });
-            foreach (var pair in boards) await _store.SubmitScoreAsync(pair.Key, me, pair.Value, country);
+            // The player's best, as kept here: the ladders keep the latest score sent (see IPvpStore.SubmitScoreAsync).
+            if (tower) await _store.SubmitScoreAsync(Ladders.TowerBoard, me, data.TowerBest.Score, data.Country);
+            if (endless) await _store.SubmitScoreAsync(Ladders.EndlessBoard, me, EndlessScore(data), data.Country);
             return new WalletResponse { Wallet = WalletOf(data) };
         }
 
         /// <summary>
-        /// The board score a replayed escape earns (the boards keep the best): a campaign level once the server has seen the
-        /// level before it escaped (<see cref="Progression"/>), an endless ladder's tomb reached with the times added up.
-        /// Called before <see cref="ScarabsOf"/>, which notes this escape.
+        /// An endless tomb escaped, replayed here: it counts on its ladder (tombs cleared, the times added up) when it is close
+        /// enough to the last one seen (<see cref="EndlessCounts"/>). Called before <see cref="ScarabsOf"/>, which notes this
+        /// escape. True when the endless ladder moved.
         /// </summary>
-        static void BoardsOf(PlayerPvpData d, SoloRunReport run, LevelResult result, Dictionary<string, long> boards)
+        static bool EndlessEscaped(PlayerPvpData d, SoloRunReport run, LevelResult result)
         {
-            if (result == null || !result.Won) return;
+            if (result == null || !result.Won) return false;
             var w = WalletOf(d);
-            if (run.EndlessMode >= 0)
-            {
-                int paid = run.EndlessMode < w.EndlessPaid.Count ? w.EndlessPaid[run.EndlessMode] : 0;
-                if (!EndlessCounts(paid, run.Depth)) return;
-                while (d.EndlessTimeMs.Count <= run.EndlessMode) d.EndlessTimeMs.Add(0);
-                int time = (int)Math.Min(int.MaxValue, (long)d.EndlessTimeMs[run.EndlessMode] + result.TimeMs);
-                d.EndlessTimeMs[run.EndlessMode] = time;
-                // Escaping tomb Depth (0-based) leaves the player before tomb Depth + 2 (1-based), as EndlessProgress.Reached.
-                Best(boards, Endless.BoardId((Difficulty)run.EndlessMode), Endless.EncodeScore(run.Depth + 2, time));
-                return;
-            }
-            if (!Progression.IsUnlocked(result.Level, id => StarsAt(w, id.Key) > 0)) return; // a level the server never saw opened
-            Best(boards, LevelResult.BoardId(result.Level), result.LeaderboardScore);
+            int mode = run.EndlessMode;
+            int paid = mode < w.EndlessPaid.Count ? w.EndlessPaid[mode] : 0;
+            if (!EndlessCounts(paid, run.Depth)) return false;
+            while (d.EndlessTimeMs.Count <= mode) d.EndlessTimeMs.Add(0);
+            while (d.EndlessCleared.Count <= mode) d.EndlessCleared.Add(0);
+            d.EndlessTimeMs[mode] = (int)Math.Min(int.MaxValue, (long)d.EndlessTimeMs[mode] + result.TimeMs);
+            // Escaping tomb Depth (0-based) clears Depth + 1 tombs; runs of two phones can arrive out of order.
+            d.EndlessCleared[mode] = Math.Max(d.EndlessCleared[mode], run.Depth + 1);
+            return true;
         }
 
         /// <summary>
@@ -108,36 +103,22 @@ namespace MummyEscape.Pvp
         /// <summary>A new tomb of the ladder, close enough to the last one escaped here (<paramref name="paid"/> tombs).</summary>
         static bool EndlessCounts(int paid, int depth) => depth >= paid && depth <= paid + EndlessGapMax;
 
-        static void Best(Dictionary<string, long> boards, string board, long score)
-        {
-            if (!boards.TryGetValue(board, out long kept) || score < kept) boards[board] = score;
-        }
-
         /// <summary>
         /// A tower floor replayed here, against the run the server follows: floor 1 starts a run (no handicap yet), any other
         /// floor must be the next one of the same run, with the same handicaps or the one that was due. An escape with
-        /// 2 stars climbs on (stars on the moves alone), anything else ends the run. A better run goes to the board.
+        /// 2 stars climbs on (stars on the moves alone), anything else ends the run. True when the run beat the record (the ladder moved).
         /// </summary>
-        static void TowerFloorPlayed(PlayerPvpData d, SoloRunReport run, LevelResult result, Dictionary<string, long> boards)
+        static bool TowerFloorPlayed(PlayerPvpData d, SoloRunReport run, LevelResult result)
         {
             if (run.TowerFloor == 1) d.Tower = run.TowerCurses.Count == 0 ? new TowerRun { Seed = run.TowerSeed } : null;
             var t = d.Tower;
-            if (t == null || t.Seed != run.TowerSeed || t.Floor != run.TowerFloor) return; // not where the run stands: ignored
+            if (t == null || t.Seed != run.TowerSeed || t.Floor != run.TowerFloor) return false; // not where the run stands: ignored
             foreach (var c in Tower.Curses)
                 if (!run.TowerCurses.Equals(t.Curses) && run.TowerCurses.Equals(t.Curses.With(c))) t.Take(c); // refused when not due
-            if (!run.TowerCurses.Equals(t.Curses) || t.CurseDue || result == null || !Tower.Continues(result)) { d.Tower = null; return; }
+            if (!run.TowerCurses.Equals(t.Curses) || t.CurseDue || result == null || !Tower.Continues(result)) { d.Tower = null; return false; }
             t.Escaped(result.TimeMs);
             d.TowerBest ??= new TowerRecord();
-            if (d.TowerBest.Offer(t)) Best(boards, Tower.BoardId, d.TowerBest.Score);
-        }
-
-        /// <summary>The country sent with the runs, if it looks like one (2 or 3 capitals): it only labels the board rows.</summary>
-        static string CountryOf(SoloRunReport run)
-        {
-            string c = run.Country;
-            if (c == null || c.Length < 2 || c.Length > 3) return null;
-            foreach (char ch in c) if (ch < 'A' || ch > 'Z') return null;
-            return c;
+            return d.TowerBest.Offer(t);
         }
 
         /// <summary>

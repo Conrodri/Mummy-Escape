@@ -46,6 +46,8 @@ namespace MummyEscape.Pvp
         {
             name = name?.Trim();
             if (string.IsNullOrEmpty(name) || name.Length > 40 || NameKey(name).Length == 0) return new ReportResponse { Error = "NAME" };
+            // Refused rather than cleaned (ChatFilter.Name would mask it): the directory must hold the code the friend types.
+            foreach (char c in name) if (char.IsControl(c) || c == '<' || c == '>') return new ReportResponse { Error = "NAME" };
             string old = null;
             await Update(me, d =>
             {

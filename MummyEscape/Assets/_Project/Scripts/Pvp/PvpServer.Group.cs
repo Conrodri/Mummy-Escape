@@ -48,6 +48,7 @@ namespace MummyEscape.Pvp
         /// </summary>
         public async Task<DuoResponse> SearchMateAsync(string me, string myName, string mode)
         {
+            myName = CleanName(myName);
             if (!GroupLaunch.IsValid(mode)) return new DuoResponse { Error = "MODE" };
             var mine = await Update(me);
             if (mine.Duos.Count > 0)
