@@ -142,6 +142,7 @@ namespace MummyEscape.UI.Screens
             if (pvp == null)
             {
                 _info.text = Loc.T("Classement disponible en ligne uniquement.");
+                HideRows();
                 return;
             }
             if (board == Board.Duo) App.Quests.Visit(Quests.VisitDuoBoard);
@@ -183,6 +184,7 @@ namespace MummyEscape.UI.Screens
             if (page == null || page.Error == PvpServiceFactory.NetworkError)
             {
                 _info.text = Loc.T("Connexion impossible. Vérifie ton accès à Internet.");
+                HideRows();
                 return;
             }
             if (page.Error == "NO_COUNTRY") // noloc
@@ -202,6 +204,11 @@ namespace MummyEscape.UI.Screens
         {
             _info.text = Loc.T("Choisis ton pays pour voir son classement.");
             _pickCountry.gameObject.SetActive(true);
+            HideRows();
+        }
+
+        void HideRows()
+        {
             foreach (var row in _rows) row.Root.SetActive(false);
         }
 
