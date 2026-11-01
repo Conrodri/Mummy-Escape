@@ -11,7 +11,7 @@ namespace MummyEscape.Online
     /// <summary>
     /// Duels through the "PvpMatchmaking" Cloud Code module (server/PvpMatchmaking): the server picks the rival, replays
     /// the run and keeps the Elo, the seals and the rewards in protected Cloud Save data the game can only read.
-    /// The monthly ranking ("pvp_elo" leaderboard) is read through the module too, which checks every score.
+    /// The four ladders (duel, 2v2, tower, endless) are written and served by the module too.
     /// </summary>
     public sealed class UgsPvpService : IPvpService
     {
@@ -112,15 +112,9 @@ namespace MummyEscape.Online
         public Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst) =>
             Call("FindDuoMatch", Args("duoId", duoId, "meFirst", meFirst, "generatorVersion", Gen), e => new TeamActionResponse { Error = e });
 
-        public async Task<DuoBoardResponse> GetDuoBoardAsync(int limit) =>
-            await Call<DuoBoardResponse>("GetDuoBoard", Args("limit", limit), _ => null) ?? new DuoBoardResponse();
-
         public Task<CoopClearResponse> SubmitCoopAsync(string duoId, int tomb, List<CoopRunInput> inputs, int timeMs) =>
             Call("SubmitCoop", Args("duoId", duoId, "tomb", tomb, "inputs", inputs ?? new List<CoopRunInput>(), "timeMs", timeMs),
                  e => new CoopClearResponse { Error = e });
-
-        public async Task<DuoBoardResponse> GetCoopBoardAsync(int limit) =>
-            await Call<DuoBoardResponse>("GetCoopBoard", Args("limit", limit), _ => null) ?? new DuoBoardResponse();
 
         public Task<FindDuelResponse> StartBattleRunAsync(string battleId) =>
             Call("StartBattleRun", Args("battleId", battleId, "generatorVersion", Gen), e => new FindDuelResponse { Error = e });
@@ -270,12 +264,11 @@ namespace MummyEscape.Online
         public Task<GuildResponse> StartWarAsync(int size, List<string> order) =>
             Call("StartWar", Args("size", size, "order", order, "generatorVersion", Gen), e => new GuildResponse { Error = e });
 
-        public async Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit)
-        {
-            // Read through the server, which checks every score against the players' protected Elo.
-            var page = await Call<PvpBoardPage>("GetPvpBoard",
-                new Dictionary<string, object> { { "seasonsAgo", seasonsAgo }, { "limit", limit } }, _ => null);
-            return page ?? new PvpBoardPage();
-        }
+        public async Task<LadderPage> GetLadderAsync(Ladder ladder, LadderScope scope, int seasonsAgo) =>
+            await Call("GetLadder", Args("ladder", (int)ladder, "scope", (int)scope, "seasonsAgo", seasonsAgo), e => new LadderPage { Error = e })
+            ?? new LadderPage { Error = PvpServiceFactory.NetworkError };
+
+        public Task<ReportResponse> SetCountryAsync(string country) =>
+            Call("SetCountry", Args("country", country ?? ""), e => new ReportResponse { Error = e });
     }
 }

@@ -916,7 +916,7 @@ namespace MummyEscape.Game
             Analytics.Track("tomb_end", ("level", endless.HasValue ? "endless" : result.Level.Key), ("won", result.Won), ("stars", result.Stars), ("moves", result.Moves), ("depth", depth)); // noloc
             // An endless death earns nothing: no call for it. A tower floor earns only its place on the board.
             if (_soloRun == null || xp <= 0 && tower == null) return;
-            var run = new SoloRunReport { Id = Guid.NewGuid().ToString("N"), Inputs = _soloRun.Inputs, Depth = depth, Country = _app.Online?.Country }; // noloc
+            var run = new SoloRunReport { Id = Guid.NewGuid().ToString("N"), Inputs = _soloRun.Inputs, Depth = depth }; // noloc
             if (tower.HasValue) { run.TowerSeed = tower.Value.seed; run.TowerFloor = tower.Value.floor; run.TowerCurses = tower.Value.curses; }
             else if (endless.HasValue) run.EndlessMode = (int)endless.Value;
             else { run.Level = result.Level.Key; run.Variant = Session.Level.Variant; }

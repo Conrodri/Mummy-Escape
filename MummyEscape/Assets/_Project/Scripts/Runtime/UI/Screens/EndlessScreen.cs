@@ -23,7 +23,7 @@ namespace MummyEscape.UI.Screens
             UIKit.HelpIcon(Header("Sans fin"), "Sans fin", () => string.Join("\n",
                 Loc.T("Chaque tombeau franchi ouvre le suivant, plus dur."),
                 Loc.T("Une chute : le même tombeau, nouvel essai."),
-                Loc.T("Classement : les tombeaux, puis le temps."),
+                Loc.T("Classement : 1 point par tombeau en Facile, 2 en Normal, 3 en Extrême, puis le temps."),
                 Loc.T("1 point d'énergie par tombeau.")));
             var body = Body(180, 40, 40);
             UIKit.Column(body, 16);
@@ -123,12 +123,6 @@ namespace MummyEscape.UI.Screens
                 _ = App.Game.StartEndless(mode);
             });
 
-        void Ranking() => App.RequireOnline(() =>
-        {
-            var mode = Difficulty.Easy;
-            foreach (var m in DifficultyExt.All) if (App.Save.IsEndlessUnlocked(m)) mode = m;
-            Router.Get<LeaderboardScreen>().FocusEndless(mode); // before it opens: it loads the board it shows
-            Router.Open<LeaderboardScreen>();
-        });
+        void Ranking() => App.RequireOnline(() => LeaderboardScreen.Open(Router, LeaderboardScreen.Board.Endless));
     }
 }

@@ -52,7 +52,6 @@ namespace MummyEscape.UI.Screens
 
             var actions = ModalKit.Actions(panel);
             _retry = UIKit.IconAction(actions, UISprites.Retry, "Rejouer", Retry, 96);
-            UIKit.IconAction(actions, UISprites.Podium, "Classement", Leaderboard, 96);
             UIKit.IconAction(actions, UISprites.Share, "Partager", Share, 96);
             UIKit.IconAction(actions, UISprites.Home, "Menu", Menu, 96);
         }
@@ -188,15 +187,6 @@ namespace MummyEscape.UI.Screens
                 App.Game.Restart();
             });
         }
-
-        void Leaderboard() => App.RequireOnline(() =>
-        {
-            var lb = Router.Get<LeaderboardScreen>();
-            lb.Focus(_result.Level);
-            App.Game.Abandon();
-            Router.Reset<MainMenuScreen>();
-            Router.Open<LeaderboardScreen>();
-        });
 
         void Menu()
         {

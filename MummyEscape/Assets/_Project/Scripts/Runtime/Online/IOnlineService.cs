@@ -5,32 +5,6 @@ using MummyEscape.Core;
 
 namespace MummyEscape.Online
 {
-    public enum LeaderboardScope { Global, Country, Friends }
-
-    public sealed class LeaderboardRow
-    {
-        public int Rank;          // 1-based
-        public string PlayerId;
-        public string PlayerName;
-        /// <summary>Moves above the optimal route of the maze that player drew (0 = perfect run).</summary>
-        public int OverPar;
-        /// <summary>Play time of that run in milliseconds (tie breaker; 0 = unknown).</summary>
-        public int TimeMs;
-        public bool IsMe;
-        /// <summary>ISO 3166 alpha-2 code ("FR"), empty when unknown.</summary>
-        public string Country = "";
-        /// <summary>A time within a hair of the tomb's perfect minimum on a big maze: not proof of cheating, but flagged.</summary>
-        public bool Suspicious;
-    }
-
-    public sealed class LeaderboardPage
-    {
-        /// <summary>Best first, at most the requested limit.</summary>
-        public List<LeaderboardRow> Rows = new List<LeaderboardRow>();
-        /// <summary>The local player's entry in this scope (Rank 0 = ranked but outside the fetched range), null if no score.</summary>
-        public LeaderboardRow Me;
-    }
-
     public sealed class FriendInfo
     {
         public string PlayerId;
@@ -63,7 +37,7 @@ namespace MummyEscape.Online
     public enum AccountState { Offline, Guest, Account }
 
     /// <summary>
-    /// Everything social: identity, per-level leaderboards, friends, progression sharing.
+    /// Everything social: identity, friends, progression sharing (the ladders are the PvP server's, see IPvpService).
     /// The game must stay fully playable when <see cref="IsAvailable"/> is false.
     /// </summary>
     public interface IOnlineService
@@ -106,17 +80,9 @@ namespace MummyEscape.Online
         string Status { get; }
         /// <summary>True when the data shown is generated demo content (offline, editor and development builds only).</summary>
         bool IsDemo { get; }
-        /// <summary>Player country (ISO alpha-2), attached to submitted scores for the per-country ranking.</summary>
-        string Country { get; set; }
 
         Task InitializeAsync();
         Task<string> SetPlayerNameAsync(string name);
-
-        // The solo boards are written by the PvP server only, from the runs it replays (PvpServer.SubmitSoloRunsAsync).
-        /// <summary>Top <paramref name="limit"/> of a level. Country scope uses <see cref="Country"/>.</summary>
-        Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit);
-        /// <summary>Top of a mode board: rows hold the score as levels do (<see cref="Endless.ReachedOf"/> reads a tomb back).</summary>
-        Task<LeaderboardPage> GetBoardLeaderboardAsync(string board, LeaderboardScope scope, int limit);
 
         Task<IReadOnlyList<FriendInfo>> GetFriendsAsync();
         Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync();
@@ -142,10 +108,6 @@ namespace MummyEscape.Online
         /// play online as an anonymous guest, with the test profiles, so the developer can test the online features.
         /// </summary>
         public static bool GuestAllowed => UnityEngine.Application.isEditor || UnityEngine.Debug.isDebugBuild;
-
-        /// <summary>Leaderboard id for a level. Includes the generator version so different layouts never mix.</summary>
-        public static string LeaderboardId(LevelId id) => LevelResult.BoardId(id);
-        public static string LeaderboardId(LevelId id, int generatorVersion) => LevelResult.BoardId(id, generatorVersion);
     }
 
     /// <summary>

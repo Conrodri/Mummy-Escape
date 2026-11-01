@@ -35,7 +35,7 @@ namespace MummyEscape.UI.Legal
             "# Données traitées en ligne (seulement si tu actives le mode en ligne et te connectes avec Google Play Jeux)",
             "• Un identifiant de joueur aléatoire, créé par le service d'authentification, et un jeton de session gardé sur ton téléphone.\n" +
             "• Ton pseudonyme, public (attribué au hasard, modifiable). N'utilise pas ton vrai nom.\n" +
-            "• Tes meilleurs scores par niveau (coups au-dessus du chemin idéal et temps), publics dans les classements, avec ton pays seulement si tu l'as choisi.\n" +
+            "• Tes résultats dans les classements (tour de défi : étages et temps ; mode sans fin : points et temps ; Elo de duel et de 2v2), publics, avec ton pays seulement si tu l'as choisi.\n" +
             "• Tes amis, tes demandes d'ami et ton statut « en ligne », visibles de tes amis.\n" +
             "• Ta progression (niveau atteint, étoiles, meilleurs scores), visible de tes amis : c'est le principe de la liste d'amis.\n" +
             "• Si tu utilises le tchat : tes messages, leur date et les replays que tu y partages, visibles des membres du canal (global, ta guilde, ou l'ami à qui tu écris). " +

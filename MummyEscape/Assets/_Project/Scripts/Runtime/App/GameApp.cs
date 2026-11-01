@@ -196,7 +196,7 @@ namespace MummyEscape.App
         public bool Connecting { get; private set; }
 
         OfflineOnlineService Offline(string reason) =>
-            new OfflineOnlineService(reason) { Country = Save.Country, LocalRecord = Save.GetRecord };
+            new OfflineOnlineService(reason);
 
         /// <summary>
         /// Connects the online features (after consent, at startup or when the player turns them on); at startup,
@@ -206,7 +206,6 @@ namespace MummyEscape.App
         {
             Connecting = true;
             var service = OnlineServiceFactory.Create();
-            service.Country = Save.Country;
             try { await service.InitializeAsync(); }
             finally { Connecting = false; }
             if (!service.IsAvailable && !(service is OfflineOnlineService))
@@ -221,7 +220,6 @@ namespace MummyEscape.App
                 _guest = service;
                 service = Offline(IOnlineService.NotSignedIn);
             }
-            if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
             Online = service;
             Analytics.Apply(Privacy.AnalyticsAllowed && service.IsAvailable);
             await AfterAccountChange();
@@ -248,6 +246,7 @@ namespace MummyEscape.App
             if (Online.Account == AccountState.Account) await LoadCloudSave();
             await PublishProgress();
             _ = MummyEscape.Online.ChatState.RegisterNameAsync(this);
+            if (!string.IsNullOrEmpty(Save.Country)) _ = SendCountry();
             _ = Session.LoadStatus();
             _ = Session.LoadGroup();
             RefreshMenus();
@@ -398,7 +397,6 @@ namespace MummyEscape.App
                 // Online mode off or unreachable at launch: this phone's session is resumed first, so that a guest of an
                 // earlier version keeps its player (and the scarabs the server holds for it).
                 var resumed = OnlineServiceFactory.Create();
-                resumed.Country = Save.Country;
                 await resumed.InitializeAsync();
                 if (resumed.Account == AccountState.Account) return await Connected(resumed);
                 if (resumed.Account == AccountState.Guest) _guest = resumed;
@@ -431,10 +429,8 @@ namespace MummyEscape.App
         {
             var service = Online;
             if (service is OfflineOnlineService && !service.IsDemo) service = OnlineServiceFactory.Create();
-            service.Country = Save.Country;
             string error = await service.SignInWithGoogleAsync();
             if (error != null) return error;
-            if (service is OfflineOnlineService offline) offline.LocalRecord = Save.GetRecord;
             Online = service;
             await AfterAccountChange();
             return null;
@@ -528,8 +524,11 @@ namespace MummyEscape.App
         public void SetCountry(string code)
         {
             Save.SetCountry(code);
-            Online.Country = Save.Country;
+            _ = SendCountry();
         }
+
+        /// <summary>The ladders label and filter their rows by the country the server holds: told on every change and once per session.</summary>
+        public Task SendCountry() => Pvp?.SetCountryAsync(Save.Country) ?? Task.CompletedTask;
 
         public ProgressSnapshot BuildProgressSnapshot()
         {

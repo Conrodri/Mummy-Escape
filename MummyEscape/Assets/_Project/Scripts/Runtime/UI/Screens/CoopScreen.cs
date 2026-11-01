@@ -127,7 +127,6 @@ namespace MummyEscape.UI.Screens
                 return;
             }
             DuoTombs(_duo);
-            UIKit.Size(UIKit.Button(_list, "Classement campagne 2v2", () => Router.Open<TeamLeaderboardScreen>().ShowCoop(), 30), 88);
         }
 
         /// <summary>The duo's tombs, act by act: its best clear, the player's stars, and "Play" on the open ones (the leader's phone).</summary>

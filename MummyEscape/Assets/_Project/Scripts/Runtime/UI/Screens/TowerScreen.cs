@@ -167,10 +167,6 @@ namespace MummyEscape.UI.Screens
             _ = App.Game.StartTower();
         }
 
-        void Ranking() => App.RequireOnline(() =>
-        {
-            Router.Get<LeaderboardScreen>().FocusTower(); // before it opens: it loads the board it shows
-            Router.Open<LeaderboardScreen>();
-        });
+        void Ranking() => App.RequireOnline(() => LeaderboardScreen.Open(Router, LeaderboardScreen.Board.Tower));
     }
 }

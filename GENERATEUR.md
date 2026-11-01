@@ -1,6 +1,6 @@
 # Versions du générateur de tombeaux
 
-`DifficultyTable.GeneratorVersion` (`MummyEscape/Assets/_Project/Scripts/Core/Generation/DifficultyTable.cs`) entre dans la graine de chaque labyrinthe, dans les ids des leaderboards (`v{version}s2_1-1`) et dans les duels. Le serveur répond `OUTDATED` à un jeu dont la version diffère. Deux versions différentes ne doivent donc jamais produire les mêmes ids pour des cartes différentes.
+`DifficultyTable.GeneratorVersion` (`MummyEscape/Assets/_Project/Scripts/Core/Generation/DifficultyTable.cs`) entre dans la graine de chaque labyrinthe, dans les duels et dans la tour. Le serveur répond `OUTDATED` à un jeu dont la version diffère. Deux versions différentes ne doivent donc jamais produire les mêmes ids pour des cartes différentes.
 
 ## Changer de version
 
@@ -10,13 +10,13 @@ Toute modification de `LevelGenerator`, `DifficultyTable`, `LevelSpec`, `Rules`,
 2. lancer `dotnet test tools/CoreTests`. `GeneratorVersionTests` échoue et donne la nouvelle empreinte : l'ajouter à `Recorded` (`Tests/EditMode/GeneratorVersionTests.cs`) ;
 3. relancer LevelLab (aucun niveau ne doit échouer) ;
 4. décrire la version ci-dessous et poser le tag sur le commit : `git tag -a generator-vN <commit> -m "Générateur vN : …"` ;
-5. ré-exporter et déployer les leaderboards (*Mummy Rush › Online › Export leaderboard configs*), puis redéployer le module Cloud Code (il compile le même générateur).
+5. redéployer le module Cloud Code (il compile le même générateur). Il n'y a plus de classement par niveau, donc rien à exporter.
 
 Le test d'empreinte porte sur la variante 0 de chaque niveau et sur quelques arènes de duel et de relais 2v2. Si le test échoue alors que la version n'a pas été touchée, une modification a changé les cartes sans le dire.
 
 ## Tombeaux stockés (mode sans fin)
 
-Les tombeaux du mode sans fin ne sont pas régénérés : ils sont écrits une fois dans `MummyEscape/Assets/_Project/Resources/Tombs/endless.txt` (`TombArchive`, une ligne par tombeau, ajout seulement) par `dotnet run -c Release --project tools/LevelLab -- --endless [n]`. Changer de version ne les touche pas, et leurs classements (`endless_f/n/x`) ne portent pas la version. En revanche une modification de `Rules` ou du `Solver` s'applique à eux : `EndlessTests.StoredTombs_AllLoadAndAreSolvable` vérifie que chacun a toujours une sortie. Ne jamais renuméroter `TileType`, `TrapKind` ni `TeleporterKind` (les valeurs sont stockées) : seulement ajouter à la fin.
+Les tombeaux du mode sans fin ne sont pas régénérés : ils sont écrits une fois dans `MummyEscape/Assets/_Project/Resources/Tombs/endless.txt` (`TombArchive`, une ligne par tombeau, ajout seulement) par `dotnet run -c Release --project tools/LevelLab -- --endless [n]`. Changer de version ne les touche pas, et le classement sans fin ne porte pas la version. En revanche une modification de `Rules` ou du `Solver` s'applique à eux : `EndlessTests.StoredTombs_AllLoadAndAreSolvable` vérifie que chacun a toujours une sortie. Ne jamais renuméroter `TileType`, `TrapKind` ni `TeleporterKind` (les valeurs sont stockées) : seulement ajouter à la fin.
 
 L'acte Halloween suit la même règle : ses 10 tombeaux sont écrits une fois dans `Resources/Tombs/halloween.txt` par `-- --halloween` (l'outil refuse de réécrire un fichier existant), `HalloweenTests.StoredTombs_TenLoadAndAreSolvable_EasyThenNormal` les vérifie.
 

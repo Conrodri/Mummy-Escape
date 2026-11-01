@@ -363,25 +363,8 @@ namespace MummyEscape.Online
 
         public Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst) => Run(() => _server.FindDuoMatchAsync(Me, duoId, meFirst, Gen));
 
-        public Task<DuoBoardResponse> GetDuoBoardAsync(int limit) => Run(async () =>
-        {
-            var board = await _server.GetDuoBoardAsync(limit);
-            // A demo ranking around the player's duos.
-            var rng = new System.Random(0xd00);
-            for (int i = 0; i < 20; i++)
-            {
-                string a = DemoNames[rng.Next(DemoNames.Length)], b = DemoNames[rng.Next(DemoNames.Length)];
-                int w = rng.Next(4, 40), l = rng.Next(4, 40);
-                board.Rows.Add(new DuoSummary { Id = "demo_duo_" + i, Name = a + " & " + b, Elo = 1000 + (w - l) * 12 + rng.Next(-60, 61), Wins = w, Losses = l }); // noloc
-            }
-            board.Rows = board.Rows.OrderByDescending(r => r.Elo).Take(limit).ToList();
-            return board;
-        });
-
         public Task<CoopClearResponse> SubmitCoopAsync(string duoId, int tomb, List<CoopRunInput> inputs, int timeMs) =>
             Run(() => _server.SubmitCoopAsync(Me, duoId, tomb, inputs, timeMs));
-
-        public Task<DuoBoardResponse> GetCoopBoardAsync(int limit) => Run(() => _server.GetCoopBoardAsync(limit));
 
         public Task<FindDuelResponse> StartBattleRunAsync(string battleId) => Run(() => _server.StartBattleRunAsync(Me, battleId, Gen));
 
@@ -563,40 +546,29 @@ namespace MummyEscape.Online
             return r;
         });
 
-        public async Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit)
+        public async Task<LadderPage> GetLadderAsync(Ladder ladder, LadderScope scope, int seasonsAgo)
         {
-            var profile = await GetProfileAsync(); // rolls the season first
-            if (seasonsAgo == 0)
-            {
-                // This month: the server's checked ranking, as online.
-                var board = await Run(() => _server.GetBoardAsync(Me, 0, limit));
-                foreach (var row in board.Rows) row.PlayerName = NameOf(row.PlayerId);
-                if (board.Me != null) board.Me.PlayerName = NameOf(Me);
-                return board;
-            }
-
-            // Past months: a frozen demo ranking, with the player at their final Elo if they played that month.
-            var page = new PvpBoardPage { Season = Seasons.SeasonOf(DateTime.UtcNow.AddMonths(-seasonsAgo)) };
-            var entries = new List<PvpBoardRow>();
-            var rng = new System.Random(SeasonSeed(page.Season));
-            for (int i = 0; i < DemoNames.Length; i++)
-            {
-                int elo = 700 + rng.Next(0, 1000);
-                var (wins, draws, losses) = DemoRecord(rng, 15 + rng.Next(70), elo);
-                entries.Add(new PvpBoardRow { PlayerId = "old_" + i, Elo = elo, Wins = wins, Draws = draws, Losses = losses, PlayerName = DemoNames[(i * 7 + 3) % DemoNames.Length] + "#" + (1000 + rng.Next(9000)) });
-            }
-            var last = profile.Data?.LastSeason;
-            if (seasonsAgo == 1 && last != null && last.Duels > 0)
-                entries.Add(new PvpBoardRow { PlayerId = Me, Elo = last.FinalElo, Wins = last.Wins, Losses = last.Losses, Draws = last.Draws, IsMe = true, PlayerName = NameOf(Me) });
-            entries.Sort((a, b) => b.Elo.CompareTo(a.Elo));
-            for (int i = 0; i < entries.Count; i++)
-            {
-                entries[i].Rank = i + 1;
-                if (entries[i].IsMe) page.Me = entries[i];
-                if (i < limit) page.Rows.Add(entries[i]);
-            }
+            if (ladder == Ladder.Duel) await GetProfileAsync(); // rolls the season first
+            var page = await Run(() => _server.GetLadderAsync(Me, ladder, scope, seasonsAgo));
+            foreach (var row in page.Rows) Rename(row);
+            if (page.Me != null) Rename(page.Me);
             return page;
         }
+
+        /// <summary>The simulated players' names live on the device, not in the server's rows.</summary>
+        void Rename(LadderRow row)
+        {
+            row.PlayerName = NameOr(row.PlayerId, row.PlayerName);
+            if (row.MateId != null) row.MateName = NameOr(row.MateId, row.MateName);
+        }
+
+        string NameOr(string id, string written)
+        {
+            string name = NameOf(id);
+            return name == id && !string.IsNullOrEmpty(written) ? written : name;
+        }
+
+        public Task<ReportResponse> SetCountryAsync(string country) => Run(() => _server.SetCountryAsync(Me, country));
 
         /// <summary>A record that fits the Elo: the better rivals win more often.</summary>
         static (int wins, int draws, int losses) DemoRecord(System.Random rng, int duels, int elo)

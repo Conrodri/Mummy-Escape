@@ -155,7 +155,7 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(UIKit.Label(_list, _search == null ? "" : Loc.T("Aucune guilde trouvée."), 26, UIKit.Dim), 50);
             foreach (var g in guilds) GuildRow(g);
 
-            var board = UIKit.Button(_list, "Classement des guildes", () => Router.Open<TeamLeaderboardScreen>().Show(true), 30);
+            var board = UIKit.Button(_list, "Classement des guildes", () => LeaderboardScreen.Open(Router, LeaderboardScreen.Board.Guilds), 30);
             UIKit.Size(board, 88);
         }
 
@@ -361,7 +361,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(how, 64);
             foreach (var (need, reward) in TeamConfig.GuildSkinTiers) SkinTier(g, need, reward);
 
-            var board = UIKit.Button(_list, "Classement des guildes", () => Router.Open<TeamLeaderboardScreen>().Show(true), 30);
+            var board = UIKit.Button(_list, "Classement des guildes", () => LeaderboardScreen.Open(Router, LeaderboardScreen.Board.Guilds), 30);
             UIKit.Size(board, 88);
             var leave = UIKit.Button(_list, "Quitter la guilde", Leave, 28, ButtonStyle.Danger);
             UIKit.Size(leave, 84);

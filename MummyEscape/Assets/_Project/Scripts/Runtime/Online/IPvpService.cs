@@ -32,8 +32,10 @@ namespace MummyEscape.Online
         /// <summary>One turn of the casino's seal wheel (paid and drawn by the server).</summary>
         /// <summary>Un tour de la roue des sceaux, ou <see cref="Casino.MultiSpins"/> (payés <see cref="Casino.MultiSpinsPaid"/>).</summary>
         Task<WheelSpinResponse> SpinSealWheelAsync(int count = 1);
-        /// <summary>Top of the monthly Elo ranking, checked by the server: <paramref name="seasonsAgo"/> 0 = this month, 1 = last month.</summary>
-        Task<PvpBoardPage> GetBoardAsync(int seasonsAgo, int limit);
+        /// <summary>A ladder (<see cref="Ladders.Size"/> rows and the player's own); <paramref name="seasonsAgo"/>: Duel only, 0 = this month, 1 = last month.</summary>
+        Task<LadderPage> GetLadderAsync(Ladder ladder, LadderScope scope, int seasonsAgo);
+        /// <summary>The country the player chose (ISO alpha-2, "" for none): it labels and filters the ladders' rows.</summary>
+        Task<ReportResponse> SetCountryAsync(string country);
         /// <summary>The player's last duels (<see cref="PvpConfig.HistorySize"/>), both runs of each: the replays. Null on failure.</summary>
         Task<DuelHistoryResponse> GetHistoryAsync();
         /// <summary>Reports the rival of a duel of the history for cheating: the server files the whole duel for review.</summary>
@@ -57,11 +59,8 @@ namespace MummyEscape.Online
         Task<TeamActionResponse> CancelMateSearchAsync();
         /// <summary>Starts a 2v2 battle; <paramref name="meFirst"/>: the player runs rounds 1 and 3, the partner round 2.</summary>
         Task<TeamActionResponse> FindDuoMatchAsync(string duoId, bool meFirst);
-        Task<DuoBoardResponse> GetDuoBoardAsync(int limit);
         /// <summary>2v2 campaign: a clear of the duo (the actions in the host's order), replayed by the server.</summary>
         Task<CoopClearResponse> SubmitCoopAsync(string duoId, int tomb, List<CoopRunInput> inputs, int timeMs);
-        /// <summary>2v2 campaign ranking: the same duos, by stars then total time.</summary>
-        Task<DuoBoardResponse> GetCoopBoardAsync(int limit);
         /// <summary>Starts the player's round in a team battle (2v2 or guild war); the run goes back through SubmitRun.</summary>
         Task<FindDuelResponse> StartBattleRunAsync(string battleId);
         /// <summary>A battle as this player may see it (undecided rival runs hidden), null on failure.</summary>

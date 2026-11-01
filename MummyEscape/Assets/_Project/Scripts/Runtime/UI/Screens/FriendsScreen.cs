@@ -385,20 +385,13 @@ namespace MummyEscape.UI.Screens
                 bool theyHave = theirs != null && theirs.HasBest, iHave = me != null && me.HasBest;
                 if (!theyHave && !iHave) continue;
                 bool iWin = iHave && (!theyHave || LevelResult.CompareRuns(me.BestOverPar, me.BestTimeMs, theirs.BestOverPar, theirs.BestTimeMs) < 0);
-                var level = id;
-                Row(LevelNames.Of(id), Format(theirs), Format(me), iWin, () =>
-                {
-                    Router.Close(this);
-                    var lb = Router.Get<LeaderboardScreen>();
-                    lb.Focus(level, LeaderboardScope.Friends);
-                    Router.Open<LeaderboardScreen>();
-                });
+                Row(LevelNames.Of(id), Format(theirs), Format(me), iWin);
             }
         }
 
-        void Row(string level, string theirs, string mine, bool iWin, System.Action onClick)
+        void Row(string level, string theirs, string mine, bool iWin)
         {
-            UIKit.ListItem(_list, 96, onClick, out var h);
+            UIKit.ListItem(_list, 96, null, out var h);
             h.spacing = 12;
             UIKit.Size(UIKit.Label(h.transform, level, 36, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold), -1, 200, 0);
             UIKit.Size(UIKit.Label(h.transform, theirs, 34, iWin ? UIKit.Dim : UIKit.Sand), -1, -1, 1);

@@ -198,8 +198,7 @@ namespace MummyEscape.UI.Screens
                                               + "  ·  " + Loc.F("Campagne 2v2 : {0}/{1} tombeaux", CoopLogic.Cleared(_duo), Core.CoopCampaign.Count), 24, UIKit.Dim);
                 UIKit.FitText(stats, 14);
                 UIKit.Size(stats, 40);
-                UIKit.Size(UIKit.Button(_list, "Classement 2v2", () => Router.Open<TeamLeaderboardScreen>().Show(false), 28), 80);
-                UIKit.Size(UIKit.Button(_list, "Classement campagne 2v2", () => Router.Open<TeamLeaderboardScreen>().ShowCoop(), 28), 80);
+                UIKit.Size(UIKit.Button(_list, "Classement 2v2", () => LeaderboardScreen.Open(Router, LeaderboardScreen.Board.Duo), 28), 80);
             }
         }
 

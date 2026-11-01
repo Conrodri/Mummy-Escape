@@ -124,7 +124,7 @@ namespace MummyEscape.UI.Screens
                 UIKit.Size(UIKit.Label(_list, "Forme un groupe avec un ami (Accueil › Groupe) pour jouer en 2v2.", 26, UIKit.Dim), 60);
             foreach (var duo in _teams.Duos) DuoCard(duo);
 
-            var board = UIKit.Button(_list, "Classement 2v2", () => Router.Open<TeamLeaderboardScreen>().Show(false), 30);
+            var board = UIKit.Button(_list, "Classement 2v2", () => LeaderboardScreen.Open(Router, LeaderboardScreen.Board.Duo), 30);
             UIKit.Size(board, 88);
         }
 

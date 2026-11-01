@@ -6,18 +6,14 @@ using UnityEngine;
 namespace MummyEscape.Online
 {
     /// <summary>
-    /// Fallback when no backend is configured. Rankings only contain the local best, except in the Editor and
-    /// development builds where clearly labelled demo players, friends and requests fill the social screens so
-    /// their layout can be tested without Unity Gaming Services.
+    /// Fallback when no backend is configured. In the Editor and development builds clearly labelled demo friends and
+    /// requests fill the social screens so their layout can be tested without Unity Gaming Services.
     /// </summary>
     public sealed class OfflineOnlineService : IOnlineService
     {
         readonly List<FriendInfo> _friends = new List<FriendInfo>();
         readonly List<FriendRequest> _requests = new List<FriendRequest>();
         readonly Dictionary<string, ProgressSnapshot> _progress = new Dictionary<string, ProgressSnapshot>();
-
-        /// <summary>Local save lookup so records made before this session still appear in the rankings.</summary>
-        public System.Func<LevelId, LevelRecord> LocalRecord;
 
         public OfflineOnlineService(string status = null)
         {
@@ -32,7 +28,6 @@ namespace MummyEscape.Online
         string _playerName; // null = default name, in the current language
         public string PlayerName { get => _playerName ?? Loc.T("Momie"); private set => _playerName = value; }
         public string Status { get; } = "Hors ligne — configure Unity Gaming Services pour les classements et les amis.";
-        public string Country { get; set; } = "";
 
         public Task InitializeAsync() => Task.CompletedTask;
 
@@ -41,32 +36,6 @@ namespace MummyEscape.Online
             PlayerName = string.IsNullOrWhiteSpace(name) ? PlayerName : name.Trim().Replace(' ', '_');
             return Task.FromResult(PlayerName);
         }
-
-        public Task<LeaderboardPage> GetLeaderboardAsync(LevelId level, LeaderboardScope scope, int limit)
-        {
-            var all = new List<(long score, LeaderboardRow row)>();
-            var local = LocalRecord?.Invoke(level);
-            if (local != null && local.HasBest)
-                all.Add((LevelResult.EncodeScore(local.BestOverPar, local.BestTimeMs), new LeaderboardRow
-                {
-                    PlayerId = PlayerId, PlayerName = PlayerName, OverPar = local.BestOverPar, TimeMs = local.BestTimeMs, IsMe = true, Country = Country,
-                }));
-            if (IsDemo) AddDemoScores(level, scope, all);
-
-            all.Sort((a, b) => a.score.CompareTo(b.score));
-            var page = new LeaderboardPage();
-            for (int i = 0; i < all.Count; i++)
-            {
-                var row = all[i].row;
-                row.Rank = i + 1;
-                if (row.IsMe) page.Me = row;
-                if (i < limit) page.Rows.Add(row);
-            }
-            return Task.FromResult(page);
-        }
-
-        /// <summary>No board offline: the screen shows the saved score.</summary>
-        public Task<LeaderboardPage> GetBoardLeaderboardAsync(string board, LeaderboardScope scope, int limit) => Task.FromResult(new LeaderboardPage());
 
         public Task<IReadOnlyList<FriendInfo>> GetFriendsAsync() => Task.FromResult<IReadOnlyList<FriendInfo>>(new List<FriendInfo>(_friends));
         public Task<IReadOnlyList<FriendRequest>> GetFriendRequestsAsync() => Task.FromResult<IReadOnlyList<FriendRequest>>(new List<FriendRequest>(_requests));
@@ -128,35 +97,6 @@ namespace MummyEscape.Online
             Task.FromResult(_progress.TryGetValue(playerId, out var p) ? p : null);
 
         // ------------------------------------------------------------------ demo content (Editor / dev builds)
-
-        static readonly string[] DemoNames =
-        {
-            "Nefertari", "Ahmose", "Imhotep", "Tiye", "Khaemwaset", "Merit", "Senenmut", "Hatshepsout", "Kha", "Iset", // noloc: names
-            "Ramses", "Bastet", "Thoutmosis", "Neith", "Amenhotep", "Meritamon", "Sobek", "Henutsen", "Djoser", "Nebet", // noloc
-        };
-        static readonly string[] DemoCountries = { "FR", "FR", "BE", "CH", "CA", "US", "DE", "ES", "IT", "MA", "EG", "BR", "JP", "GB" };
-
-        void AddDemoScores(LevelId level, LeaderboardScope scope, List<(long, LeaderboardRow)> all)
-        {
-            var spec = DifficultyTable.Spec(level);
-            var rng = new Pcg32(Pcg32.Hash(77, (ulong)level.GetHashCode()));
-            int count = scope == LeaderboardScope.Friends ? _friends.Count : 160;
-            for (int i = 0; i < count; i++)
-            {
-                string country = DemoCountries[rng.Range(0, DemoCountries.Length)];
-                if (scope == LeaderboardScope.Country && country != Country) continue;
-                // Many players get close to the optimal route, a long tail wanders much more.
-                int overPar = (int)(Mathf.Pow(rng.Range(0, 1000) / 1000f, 1.3f) * spec.MinMoves * 1.2f);
-                // About 0.9-2.4 s per move (the route is played from memory), detours included.
-                int timeMs = (spec.MinMoves + 4 + overPar) * (900 + rng.Range(0, 1500)) + rng.Range(0, 1000);
-                string name = scope == LeaderboardScope.Friends ? _friends[i].Name : $"{DemoNames[i % DemoNames.Length]}#{1000 + rng.Range(0, 9000)}";
-                long score = LevelResult.EncodeScore(overPar, timeMs);
-                all.Add((score, new LeaderboardRow
-                {
-                    PlayerId = "demo" + i, PlayerName = name, OverPar = overPar, TimeMs = timeMs, Country = country,
-                }));
-            }
-        }
 
         void SeedDemoFriends()
         {

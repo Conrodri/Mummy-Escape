@@ -27,7 +27,7 @@ namespace MummyEscape.UI.Legal
             "# Data processed online (only if you turn on online mode and sign in with Google Play Games)",
             "• A random player ID, created by the authentication service, and a session token kept on your phone.\n" +
             "• Your public nickname (randomly assigned, editable). Do not use your real name.\n" +
-            "• Your best scores per level (moves above the ideal path and time), public in the leaderboards, with your country only if you chose one.\n" +
+            "• Your results in the rankings (challenge tower: floors and time; endless mode: points and time; duel and 2v2 Elo), public, with your country only if you chose one.\n" +
             "• Your friends, your friend requests and your \"online\" status, visible to your friends.\n" +
             "• Your progress (furthest level, stars, best scores), visible to your friends: that is what the friends list is for.\n" +
             "• If you use the chat: your messages, their date and the replays you share there, visible to the members of the channel (global, your guild, or the friend you write to). " +
