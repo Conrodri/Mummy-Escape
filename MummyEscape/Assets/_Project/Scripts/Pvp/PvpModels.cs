@@ -187,7 +187,7 @@ namespace MummyEscape.Pvp
     /// <summary>Réponse de ClaimSeasonRewards.</summary>
     /// <summary>
     /// État du service, écrit par l'équipe (<see cref="PvpServer.SetStatusAsync"/>) et lu par chaque jeu à sa connexion : un
-    /// message de maintenance à afficher une fois, et les duels mis en pause, sans nouvelle version.
+    /// message de maintenance à afficher une fois, les duels mis en pause, sans nouvelle version, et la version minimale du jeu.
     /// </summary>
     [Serializable]
     public class ServiceStatus
@@ -198,6 +198,9 @@ namespace MummyEscape.Pvp
         public string MessageEn;
         /// <summary>Les duels et matchs ne se lancent plus.</summary>
         public bool PvpOff;
+        /// <summary>Plus ancienne version du jeu acceptée (« 0.1.15 ») : un jeu plus ancien demande la mise à jour, écran bloqué
+        /// (<see cref="ClientVersion"/>). Le serveur envoie la plus récente de celle posée ici et de la sienne.</summary>
+        public string MinVersion;
         public long UpdatedAtUnixMs;
         public string Error;   // "FORBIDDEN"
     }

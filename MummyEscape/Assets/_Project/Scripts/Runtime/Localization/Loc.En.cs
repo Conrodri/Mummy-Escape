@@ -1003,6 +1003,8 @@ namespace MummyEscape
             ["Mise à jour"] = "Update",
             ["Mettre à jour"] = "Update",
             ["Une nouvelle version de Mummy Rush est sortie. Mets le jeu à jour pour continuer à jouer en ligne ; le solo reste ouvert."] = "A new version of Mummy Rush is out. Update the game to keep playing online; solo stays open.",
+            ["Nouvelle version !"] = "New version!",
+            ["Une nouvelle version de Mummy Rush est disponible. Mets le jeu à jour pour continuer à jouer."] = "A new version of Mummy Rush is available. Update the game to keep playing.",
             ["Les scarabées dorés sont gardés en ligne : connecte-toi pour les utiliser."] = "Golden scarabs are kept online: connect to use them.",
             ["Paiement en attente : tes scarabées dorés arriveront dès qu'il sera validé."] = "Payment pending: your golden scarabs will arrive as soon as it clears.",
             ["Cet achat a déjà été crédité."] = "This purchase was already credited.",

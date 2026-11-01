@@ -302,6 +302,8 @@ namespace MummyEscape.App
 
         void Update()
         {
+            // Too old for the server: the update screen stays on top whatever opens or closes under it.
+            if (_mustUpdate && UI != null && (_updateScreen == null || !_updateScreen.isActiveAndEnabled)) _updateScreen = UI.Open<UpdateScreen>();
             if (Online == null || Online.Account != AccountState.Account) return;
             if (!_cloudLoaded) { if (_nextCloudLoad > 0f && Time.unscaledTime >= _nextCloudLoad) _ = LoadCloudSave(); return; } // retry a failed read
             if (_cloudDirty && Time.unscaledTime >= _nextCloudPush) _ = PushCloudSave();
@@ -339,6 +341,7 @@ namespace MummyEscape.App
         {
             if (paused) _ = SendSoloRuns(true);
             else if (Quests != null) _ = Quests.RefreshAsync(); // back from the background: maybe a new day, or runs the server replayed since
+            if (!paused && Session != null) _ = Session.LoadStatus(); // a new version may have come out meanwhile
             if (paused) Notifications.Plan(this);
             if (paused && _cloudDirty && Online != null && Online.Account == AccountState.Account) _ = PushCloudSave();
         }
@@ -437,7 +440,11 @@ namespace MummyEscape.App
             return null;
         }
 
-        bool _updateAsked;
+        bool _updateAsked, _mustUpdate;
+        UpdateScreen _updateScreen;
+
+        /// <summary>The server no longer accepts this version (<see cref="ServiceStatus.MinVersion"/>): the game stops on the update screen.</summary>
+        public void RequireUpdate() => _mustUpdate = true;
 
         /// <summary>The server refuses this version (its levels differ from the server's): once a session, the way to the update.</summary>
         void AskForUpdate()
@@ -446,7 +453,7 @@ namespace MummyEscape.App
             _updateAsked = true;
             UI.Open<OfferDialog>().Configure("Mise à jour",
                 Loc.T("Une nouvelle version de Mummy Rush est sortie. Mets le jeu à jour pour continuer à jouer en ligne ; le solo reste ouvert."),
-                ("Mettre à jour", ButtonStyle.Primary, () => Application.OpenURL("market://details?id=" + Application.identifier)), // noloc
+                ("Mettre à jour", ButtonStyle.Primary, UpdateScreen.OpenStore),
                 ("Plus tard", ButtonStyle.Ghost, null));
         }
 

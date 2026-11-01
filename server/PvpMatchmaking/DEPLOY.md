@@ -19,6 +19,13 @@ générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne 
 
 Un jeu trop ancien reçoit l'erreur `OUTDATED` : il affiche alors « Mettre à jour » avec un lien vers le Play Store.
 
+**Forcer la mise à jour** : `GetStatus` renvoie `MinVersion`, la plus ancienne version du jeu acceptée
+(`Pvp/ClientVersion.cs`, `ClientVersion.Minimum`). Un jeu plus ancien (0.1.15 et suivants) bloque tout l'écran sur « Nouvelle
+version ! » avec un bouton vers sa page du Play Store, au lancement et à chaque retour au premier plan (jamais dans l'éditeur).
+Après la sortie d'une version sur le store : monter `ClientVersion.Minimum` puis redéployer le module (ou poser
+`MinVersion` par `SetStatus` depuis un compte de l'équipe, sans redéployer). Ne jamais le monter avant que la version soit
+téléchargeable : les joueurs resteraient bloqués. Le build refuse une version du jeu sous ce minimum.
+
 ## Compiler
 
 ```

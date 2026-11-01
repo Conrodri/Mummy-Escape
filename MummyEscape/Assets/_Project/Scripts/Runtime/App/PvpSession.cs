@@ -4,6 +4,7 @@ using MummyEscape.Online;
 using MummyEscape.Pvp;
 using MummyEscape.UI;
 using MummyEscape.UI.Screens;
+using UnityEngine;
 
 namespace MummyEscape.App
 {
@@ -69,6 +70,12 @@ namespace MummyEscape.App
             var status = await pvp.GetStatusAsync();
             if (status == null || status.Error != null) return;
             Status = status;
+            if (ClientVersion.IsOutdated(Application.version, status.MinVersion))
+            {
+                // The editor plays whatever version is set: told, not blocked.
+                if (Application.isEditor) Debug.LogWarning($"[Status] Version {Application.version} is under the server's minimum {status.MinVersion}: phones would have to update");
+                else _app.RequireUpdate();
+            }
             _app.RefreshMenus();
             string text = Loc.Current == Loc.Lang.En && !string.IsNullOrEmpty(status.MessageEn) ? status.MessageEn : status.Message;
             if (string.IsNullOrEmpty(text) || _statusShown == text || _app.UI == null) return;

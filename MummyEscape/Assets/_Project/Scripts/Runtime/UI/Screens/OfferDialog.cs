@@ -134,6 +134,44 @@ namespace MummyEscape.UI.Screens
         public override void OnHide() => _done?.TrySetResult(_watched);
     }
 
+    /// <summary>
+    /// This version of the game is too old for the server (<see cref="Pvp.ClientVersion"/>): the whole screen asks for the
+    /// update and opens the store page. It cannot be closed (Back does nothing); <see cref="App.GameApp"/> puts it back on
+    /// top if another screen closes it.
+    /// </summary>
+    public sealed class UpdateScreen : UIScreen, IBackHandler
+    {
+        public override bool IsModal => true;
+
+        protected override void Build()
+        {
+            UIKit.Stretch(UIKit.Image(Root, UIKit.Art.White, new Color(0.02f, 0.02f, 0.04f, 0.96f), true, "Shade").rectTransform, -600, -600, -600, -600); // noloc
+            var panel = UIKit.Card(Root, 44, 22);
+            panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(960, 0);
+            UIKit.FitInParent(panel);
+            panel.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            ModalKit.Header(panel, "Nouvelle version !", 60);
+            var text = UIKit.Label(panel, "Une nouvelle version de Mummy Rush est disponible. Mets le jeu à jour pour continuer à jouer.", 34, UIKit.Sand);
+            text.lineSpacing = 1.1f;
+            var b = UIKit.Button(panel, "Mettre à jour", OpenStore, UIKit.TextSize, ButtonStyle.Primary);
+            UIKit.Size(b, UIKit.ButtonHeight);
+        }
+
+        public void OnBack() { } // no way around it: the update only
+
+        /// <summary>The game's page in the Play Store app (the web page where there is none, e.g. the editor).</summary>
+        public static void OpenStore()
+        {
+            string id = Application.identifier;
+#if UNITY_ANDROID && !UNITY_EDITOR
+            Application.OpenURL("market://details?id=" + id); // noloc
+#else
+            Application.OpenURL("https://play.google.com/store/apps/details?id=" + id); // noloc
+#endif
+        }
+    }
+
     /// <summary>Stand-in ad network for the editor and development builds.</summary>
     public sealed class SimulatedAds : IAdProvider
     {

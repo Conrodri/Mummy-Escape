@@ -47,19 +47,17 @@ namespace MummyEscape.EditorTools
         }
 
         /// <summary>
-        /// Store version code derived from the version name: 1.2.3 → 10203 (×100 + build). Bump
+        /// Store version code derived from the version name: 1.2.3 → 1020301 (<see cref="Pvp.ClientVersion.Code"/>). Bump
         /// PlayerSettings.bundleVersion (Project Settings › Player › Version) before each upload: the Play Console
         /// refuses a code it has already seen.
         /// </summary>
-        public static int VersionCode()
-        {
-            var parts = PlayerSettings.bundleVersion.Split('.');
-            int Part(int i) => i < parts.Length && int.TryParse(parts[i], out int v) ? Math.Max(0, Math.Min(99, v)) : 0;
-            return ((Part(0) * 100 + Part(1)) * 100 + Part(2)) * 100 + 1;
-        }
+        public static int VersionCode() => Pvp.ClientVersion.Code(PlayerSettings.bundleVersion);
 
         static void Android(bool development, bool bundle)
         {
+            // A game under the server's minimum would stop on its own update screen: never ship one.
+            if (Pvp.ClientVersion.IsOutdated(PlayerSettings.bundleVersion, Pvp.ClientVersion.Minimum))
+                Fail($"Version {PlayerSettings.bundleVersion} sous le minimum {Pvp.ClientVersion.Minimum} (Pvp/ClientVersion.cs) : monte la version (Project Settings › Player › Version) avant le build.");
             var target = NamedBuildTarget.Android;
             PlayerSettings.SetApplicationIdentifier(target, "com.mummyrush.game");
             PlayerSettings.SetScriptingBackend(target, ScriptingImplementation.IL2CPP);

@@ -8,9 +8,13 @@ namespace MummyEscape.Pvp
         const string SystemCollection = "system";
         const string StatusKey = "status";
 
-        /// <summary>L'état courant (vide tant que l'équipe n'a rien posé).</summary>
-        public async Task<ServiceStatus> GetStatusAsync() =>
-            await Shared<ServiceStatus>(SystemCollection, StatusKey) ?? new ServiceStatus();
+        /// <summary>L'état courant (vide tant que l'équipe n'a rien posé), avec la version minimale du jeu.</summary>
+        public async Task<ServiceStatus> GetStatusAsync()
+        {
+            var status = await Shared<ServiceStatus>(SystemCollection, StatusKey) ?? new ServiceStatus();
+            status.MinVersion = ClientVersion.Higher(status.MinVersion, ClientVersion.Minimum);
+            return status;
+        }
 
         /// <summary>Pose l'état (équipe seulement) : un message vide et PvpOff à faux remettent tout en marche.</summary>
         public async Task<ServiceStatus> SetStatusAsync(string me, ServiceStatus status)
