@@ -69,6 +69,8 @@ namespace MummyEscape.Game
 
         public async Task StartLevel(LevelId id)
         {
+            // Every screen checks it already; this keeps any new path from opening an act before the last level of the one before.
+            if (!_app.Save.IsUnlocked(id)) { Debug.LogError($"[Game] Level {id} is locked"); return; }
             if (_app.Save.NeedsIntro(id)) { StartIntro(id.Act); return; } // Easy F{a}-1 opens on its act's intro
             int token = ++_loadToken;
             ResetForLoad();
@@ -894,6 +896,9 @@ namespace MummyEscape.Game
         {
             _busy = true;
             yield return _player.Hurt();
+            // The same ending as after a step: a 2v2 or relay run is not a solo result.
+            if (Relay != null) { yield return RelayStepDone(); yield break; }
+            if (InCoop) { yield return CoopStepDone(); yield break; }
             if (Session != null && Session.Status != SessionStatus.Playing) yield return Finish();
             _busy = false;
         }

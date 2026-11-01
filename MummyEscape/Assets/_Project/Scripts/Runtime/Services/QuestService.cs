@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MummyEscape.App;
+using MummyEscape.Monetization;
 using MummyEscape.Online;
 using MummyEscape.Pvp;
 using UnityEngine;
@@ -44,6 +45,8 @@ namespace MummyEscape.Services
         public async Task RefreshAsync()
         {
             if (!Available) return;
+            // The runs still queued first: else the server's copy, without them, would take back the progress shown.
+            await _app.SendSoloRuns(true);
             QuestResponse r;
             try { r = await _app.Pvp.GetQuestsAsync(); }
             catch (Exception e)
@@ -75,6 +78,12 @@ namespace MummyEscape.Services
         {
             var pvp = _app.Pvp;
             if (!Available) return "OFFLINE"; // noloc
+            await _app.SendSoloRuns(true); // the runs that finished the quest, counted there before it pays
+            if (Quests.Get(id)?.Reward == QuestRewardKind.Scarabs)
+            {
+                string closed = await ScarabWallet.OpenAsync(_app); // paid there only once the scarabs are held there
+                if (closed != null) return closed;
+            }
             QuestResponse r;
             try { r = await pvp.ClaimQuestAsync(id); }
             catch (Exception e)
@@ -114,7 +123,7 @@ namespace MummyEscape.Services
         {
             if (r == null) return;
             if (r.Wallet != null) _app.Save.ApplyWallet(r.Wallet);
-            if (r.Error == null) _app.Session.UpdateWallet(r.Seals, null);
+            if (r.Quests != null) _app.Session.UpdateWallet(r.Seals, null); // every answer with a book carries the seals
             if (r.Quests != null) _book = r.Quests;
             Changed?.Invoke();
         }
