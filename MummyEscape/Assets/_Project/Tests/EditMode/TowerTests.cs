@@ -59,7 +59,8 @@ namespace MummyEscape.Tests
         {
             Assert.IsFalse(Tower.Continues(new LevelResult { Won = false }));
             Assert.IsTrue(Tower.Continues(new LevelResult { Won = true, Moves = 20, Par = 20 }));
-            Assert.IsFalse(Tower.Continues(new LevelResult { Won = true, Moves = 40, Par = 20 }), "1 star");
+            Assert.IsTrue(Tower.Continues(new LevelResult { Won = true, Moves = 80, Par = 20 }), "2 stars");
+            Assert.IsFalse(Tower.Continues(new LevelResult { Won = true, Moves = 81, Par = 20 }), "1 star");
         }
 
         [Test]

@@ -287,28 +287,33 @@ namespace MummyEscape.Tests
         }
 
         [Test]
-        public void Stars_LostAt130And160PercentOfMovesOrTime()
+        public void Stars_ThreeAtHalfTheEfficiencyTwoAtAQuarter()
         {
             LevelResult Run(int moves, int timeMs = 0, int targetMs = 0, bool won = true) =>
                 new LevelResult { Won = won, Moves = moves, Par = 20, TimeMs = timeMs, TargetMs = targetMs, MaxHp = 2, HpLeft = 2 };
             Assert.AreEqual(3, Run(20).Stars, "ideal path");
-            Assert.AreEqual(3, Run(25).Stars, "125% of the ideal path");
-            Assert.AreEqual(2, Run(26).Stars, "130% of the ideal path");
-            Assert.AreEqual(2, Run(31).Stars);
-            Assert.AreEqual(1, Run(32).Stars, "160% of the ideal path");
-            Assert.AreEqual(1, Run(400).Stars, "escaping always earns a star");
+            Assert.AreEqual(3, Run(40).Stars, "twice the ideal path: 50% efficient");
+            Assert.AreEqual(2, Run(41).Stars, "just over twice the ideal path");
+            Assert.AreEqual(2, Run(80).Stars, "4 times the ideal path: 25% efficient");
+            Assert.AreEqual(1, Run(81).Stars, "just over 4 times the ideal path");
+            Assert.AreEqual(1, Run(4000).Stars, "escaping always earns a star");
             Assert.AreEqual(0, Run(20, won: false).Stars);
 
-            Assert.AreEqual(3, Run(20, 12_999, 10_000).Stars, "just under 130% of the expert's time");
-            Assert.AreEqual(2, Run(20, 13_000, 10_000).Stars, "130% of the expert's time");
-            Assert.AreEqual(1, Run(20, 16_000, 10_000).Stars, "160% of the expert's time");
-            Assert.AreEqual(1, Run(32, 5_000, 10_000).Stars, "the worse of moves and time decides");
-            Assert.AreEqual(3, Run(20, 90_000).Stars, "no expert time: the moves alone");
+            Assert.AreEqual(3, Run(20, 20_000, 10_000).Stars, "twice the expert's time");
+            Assert.AreEqual(2, Run(20, 20_001, 10_000).Stars, "just over twice the expert's time");
+            Assert.AreEqual(2, Run(20, 40_000, 10_000).Stars, "4 times the expert's time");
+            Assert.AreEqual(1, Run(20, 40_001, 10_000).Stars, "just over 4 times the expert's time");
+            Assert.AreEqual(1, Run(81, 5_000, 10_000).Stars, "the worse of moves and time decides");
+            Assert.AreEqual(3, Run(20, 900_000).Stars, "no expert time: the moves alone");
 
-            Assert.AreEqual(25, Run(20).MaxMovesFor(3));
-            Assert.AreEqual(31, Run(20).MaxMovesFor(2));
-            Assert.AreEqual(12_999, Run(20, 1, 10_000).MaxTimeFor(3));
+            Assert.AreEqual(40, Run(20).MaxMovesFor(3));
+            Assert.AreEqual(80, Run(20).MaxMovesFor(2));
+            Assert.AreEqual(int.MaxValue, Run(20).MaxMovesFor(1));
+            Assert.AreEqual(20_000, Run(20, 1, 10_000).MaxTimeFor(3));
+            Assert.AreEqual(40_000, Run(20, 1, 10_000).MaxTimeFor(2));
             Assert.AreEqual(0, Run(20).MaxTimeFor(3));
+            for (int m = 20; m <= 90; m++)
+                Assert.AreEqual(Run(m).Stars >= 3, m <= Run(m).MaxMovesFor(3), "MaxMovesFor agrees with Stars at " + m);
         }
 
         [Test]

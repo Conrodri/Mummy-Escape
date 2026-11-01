@@ -1460,8 +1460,8 @@ namespace MummyEscape
             ["Tour de défi"] = "Challenge tower",
             ["Tour · {0}"] = "Tower · {0}",
             ["Enchaîne des tombeaux tirés au hasard, un peu plus durs à chaque étage."] = "Chain tombs drawn at random, a little harder on every floor.",
-            ["Pour monter d'un étage, sors du tombeau avec au moins 2 étoiles : moins de {0} % du chemin idéal en coups, et moins de {0} % du temps de la momie experte."] =
-                "To climb a floor, get out of the tomb with at least 2 stars: under {0}% of the ideal path in moves, and under {0}% of the expert mummy's time.",
+            ["Pour monter d'un étage, sors du tombeau avec au moins 2 étoiles : au plus {0} % du chemin idéal en coups, et au plus {0} % du temps de la momie experte."] =
+                "To climb a floor, get out of the tomb with at least 2 stars: at most {0}% of the ideal path in moves, and at most {0}% of the expert mummy's time.",
             ["La course est perdue dès qu'un piège a raison de toi, ou dès que tu sors avec une seule étoile. Ton score : le nombre d'étages franchis."] =
                 "The run is lost as soon as a trap gets you, or as soon as you get out with a single star. Your score: the floors cleared.",
             ["Course perdue : la momie a été emmurée. Un seul échec met fin à la course."] = "Run lost: the mummy was walled in. A single failure ends the run.",

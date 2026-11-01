@@ -31,34 +31,36 @@ namespace MummyEscape.Core
         public int OverPar => Math.Max(0, Moves - Par);
 
         /// <summary>
-        /// A star is lost at 130% of the ideal path or of the expert mummy's time, both at 160%: the moves and the time
-        /// each count, the worse of the two decides.
+        /// Stars measure efficiency, the ideal path and the expert mummy's time against the run's: 3 stars at 50% or better
+        /// (up to twice the moves and the time), 2 at 25% or better (up to 4×), 1 for escaping at all. The moves and the
+        /// time each count, the worse of the two decides. A star is lost above these % of the reference.
         /// </summary>
-        public const int TwoStarsPercent = 130, OneStarPercent = 160;
+        public const int TwoStarsPercent = 200, OneStarPercent = 400;
 
-        /// <summary>3 stars under 1.3× the ideal path and the expert's time, 2 under 1.6×, 1 star for escaping at all.</summary>
+        /// <summary>3 stars up to 2× the ideal path and the expert's time, 2 up to 4×, 1 star for escaping at all.</summary>
         public int Stars
         {
             get
             {
                 if (!Won) return 0;
-                int percent = Math.Max(Percent(Moves, Par), Percent(TimeMs, TargetMs));
-                return percent >= OneStarPercent ? 1 : percent >= TwoStarsPercent ? 2 : 3;
+                if (Over(Moves, Par, OneStarPercent) || Over(TimeMs, TargetMs, OneStarPercent)) return 1;
+                if (Over(Moves, Par, TwoStarsPercent) || Over(TimeMs, TargetMs, TwoStarsPercent)) return 2;
+                return 3;
             }
         }
 
-        /// <summary>Value in % of its reference, 0 when the reference is unknown (an expert time not measured).</summary>
-        static int Percent(int value, int reference) => reference > 0 ? (int)Math.Min(int.MaxValue, (long)value * 100 / reference) : 0;
+        /// <summary>Above <paramref name="percent"/>% of its reference (never when the reference is unknown: an expert time not measured).</summary>
+        static bool Over(int value, int reference, int percent) => reference > 0 && (long)value * 100 > (long)reference * percent;
 
         /// <summary>Most moves that still earn this many stars in this maze (never below the ideal path).</summary>
-        public int MaxMovesFor(int stars) => stars >= 3 ? Below(Par, TwoStarsPercent) : stars == 2 ? Below(Par, OneStarPercent) : int.MaxValue;
+        public int MaxMovesFor(int stars) => stars >= 3 ? AtMost(Par, TwoStarsPercent) : stars == 2 ? AtMost(Par, OneStarPercent) : int.MaxValue;
 
         /// <summary>Longest time that still earns this many stars (0: no expert time to compare with).</summary>
         public int MaxTimeFor(int stars) =>
-            TargetMs <= 0 ? 0 : stars >= 3 ? Below(TargetMs, TwoStarsPercent) : stars == 2 ? Below(TargetMs, OneStarPercent) : int.MaxValue;
+            TargetMs <= 0 ? 0 : stars >= 3 ? AtMost(TargetMs, TwoStarsPercent) : stars == 2 ? AtMost(TargetMs, OneStarPercent) : int.MaxValue;
 
-        /// <summary>The largest value under <paramref name="percent"/>% of the reference, never below the reference itself.</summary>
-        static int Below(int reference, int percent) => Math.Max(reference, (int)(((long)reference * percent - 1) / 100));
+        /// <summary>The largest value within <paramref name="percent"/>% of the reference, never below the reference itself.</summary>
+        static int AtMost(int reference, int percent) => (int)Math.Min(int.MaxValue, Math.Max(reference, (long)reference * percent / 100));
 
         /// <summary>Bump when the score encoding changes: it is part of the leaderboard ids.</summary>
         public const int ScoreFormat = 2;

@@ -263,8 +263,9 @@ namespace MummyEscape.Tests
         {
             var tomb = CoopCampaign.Get(1);
             Assert.AreEqual(3, tomb.Result(true, tomb.Par, tomb.TargetMs).Stars);
-            Assert.AreEqual(1, tomb.Result(true, tomb.Par * 2, tomb.TargetMs).Stars);
-            Assert.AreEqual(2, tomb.Result(true, tomb.Par, tomb.TargetMs * 14 / 10).Stars);
+            Assert.AreEqual(3, tomb.Result(true, tomb.Par * 2, tomb.TargetMs).Stars);
+            Assert.AreEqual(1, tomb.Result(true, tomb.Par * 4 + 1, tomb.TargetMs).Stars);
+            Assert.AreEqual(2, tomb.Result(true, tomb.Par, tomb.TargetMs * 3).Stars);
             Assert.AreEqual(0, tomb.Result(false, tomb.Par, tomb.TargetMs).Stars);
         }
     }
