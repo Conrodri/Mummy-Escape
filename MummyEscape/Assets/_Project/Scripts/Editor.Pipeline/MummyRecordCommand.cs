@@ -21,6 +21,7 @@ namespace MummyEscape.EditorTools
             [CliArg("seconds", "Game seconds to record")] float seconds = 10f,
             [CliArg("fps", "Frames per second")] int fps = 30,
             [CliArg("autoplay", "Also play the optimal route, each step as soon as the last one is shown")] bool autoplay = false,
+            [CliArg("intro", "Play the studio intro again from its start, for the clip")] bool intro = false,
             [CliArg("stop", "Stop the recording in progress")] bool stop = false)
         {
             if (!Application.isPlaying || GameApp.I == null) return "Enter Play mode first.";
@@ -32,6 +33,7 @@ namespace MummyEscape.EditorTools
             if (string.IsNullOrEmpty(dir)) return "Pass --dir.";
             if (Directory.Exists(dir)) foreach (var f in Directory.GetFiles(dir, "*.jpg")) File.Delete(f);
             Directory.CreateDirectory(dir);
+            if (intro) MummyEscape.UI.StudioIntro.Play(GameApp.I.Audio);
             rec.StartCoroutine(rec.Run(dir, Mathf.RoundToInt(seconds * fps), fps));
             if (autoplay) rec.StartCoroutine(rec.Autoplay());
             return $"Recording {seconds}s at {fps} fps, {Screen.width}x{Screen.height}, to {dir}";
@@ -41,8 +43,8 @@ namespace MummyEscape.EditorTools
         {
             public int Frames;
 
-            Canvas _canvas;
-            RenderMode _mode;
+            // Every overlay canvas (the game's, the studio intro's) is drawn by the camera for the clip, then put back.
+            readonly System.Collections.Generic.Dictionary<Canvas, RenderMode> _canvases = new System.Collections.Generic.Dictionary<Canvas, RenderMode>();
             RenderTexture _rt;
 
             /// <summary>
@@ -52,11 +54,10 @@ namespace MummyEscape.EditorTools
             public IEnumerator Run(string dir, int frames, int fps)
             {
                 var cam = GameApp.I.Camera.Cam;
-                _canvas = GameApp.I.UI.GetComponentInChildren<Canvas>();
-                _mode = _canvas.renderMode;
+                var main = GameApp.I.UI.GetComponentInChildren<Canvas>();
                 // The editor's Screen.safeArea can keep an older Game view size (UI pushed off the frame): full screen
                 // for the clip; UIRouter applies the real one again when it changes.
-                if (_canvas.transform.Find("SafeArea") is RectTransform safe)
+                if (main.transform.Find("SafeArea") is RectTransform safe)
                 {
                     safe.anchorMin = Vector2.zero;
                     safe.anchorMax = Vector2.one;
@@ -65,12 +66,23 @@ namespace MummyEscape.EditorTools
                 var tex = new Texture2D(_rt.width, _rt.height, TextureFormat.RGB24, false);
                 Time.captureFramerate = fps;
                 Frames = 0;
+                float last = Time.realtimeSinceStartup;
                 while (Frames < frames)
                 {
+                    // Never faster than real time: what runs on the unscaled clock (the studio intro, capped at 1/30 s a
+                    // frame) then also moves one frame's worth per frame.
+                    int wait = Mathf.CeilToInt((last + 1f / fps - Time.realtimeSinceStartup) * 1000f);
+                    if (wait > 0) System.Threading.Thread.Sleep(wait);
                     yield return null;
-                    _canvas.renderMode = RenderMode.ScreenSpaceCamera;
-                    _canvas.worldCamera = cam;
-                    _canvas.planeDistance = 1f;
+                    last = Time.realtimeSinceStartup;
+                    foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+                    {
+                        if (!canvas.isRootCanvas || canvas.renderMode != RenderMode.ScreenSpaceOverlay) continue;
+                        _canvases[canvas] = canvas.renderMode;
+                        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                        canvas.worldCamera = cam;
+                        canvas.planeDistance = 1f; // in front of the world; their sorting orders keep them in order
+                    }
                     var prev = cam.targetTexture;
                     cam.targetTexture = _rt;
                     cam.Render();
@@ -89,7 +101,8 @@ namespace MummyEscape.EditorTools
             public void Restore()
             {
                 Time.captureFramerate = 0;
-                if (_canvas != null) _canvas.renderMode = _mode;
+                foreach (var pair in _canvases) if (pair.Key != null) pair.Key.renderMode = pair.Value;
+                _canvases.Clear();
                 if (_rt != null) { _rt.Release(); Destroy(_rt); _rt = null; }
             }
 
