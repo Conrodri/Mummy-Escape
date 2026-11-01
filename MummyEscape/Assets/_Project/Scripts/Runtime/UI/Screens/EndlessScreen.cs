@@ -5,9 +5,9 @@ using UnityEngine.UI;
 namespace MummyEscape.UI.Screens
 {
     /// <summary>
-    /// The endless ladders (<see cref="Endless"/>): what the mode is (three rules, each with its icon) and the energy,
-    /// then one card per difficulty: the tomb the player stands at, the tombs cleared on a bar, the time added up, and
-    /// its play button. A ladder opens with its mode's campaign; locked ones stay in sight with what opens them.
+    /// The endless ladders (<see cref="Endless"/>): the energy, then one card per difficulty: the tomb the player stands
+    /// at, the tombs cleared on a bar, the time added up, and its play button. The rules sit behind the header's "?".
+    /// A ladder opens with its mode's campaign; locked ones stay in sight with what opens them.
     /// </summary>
     public sealed class EndlessScreen : UIScreen
     {
@@ -20,7 +20,11 @@ namespace MummyEscape.UI.Screens
         protected override void Build()
         {
             UIKit.Backdrop(Root);
-            Header("Sans fin");
+            UIKit.HelpIcon(Header("Sans fin"), "Sans fin", () => string.Join("\n",
+                Loc.T("Chaque tombeau franchi ouvre le suivant, plus dur."),
+                Loc.T("Une chute : le même tombeau, nouvel essai."),
+                Loc.T("Classement : les tombeaux, puis le temps."),
+                Loc.T("1 point d'énergie par tombeau.")));
             var body = Body(180, 40, 40);
             UIKit.Column(body, 16);
             EnergyBadge.Create(body, Monetization.PlayMode.Endless); // above the list: always in sight
@@ -33,49 +37,10 @@ namespace MummyEscape.UI.Screens
         {
             App.Lighting.SetMood(false);
             UIKit.ClearChildren(_content);
-            Rules();
             int index = 0;
             foreach (var m in DifficultyExt.All) Ladder(m, index++);
             var ranking = UIKit.Button(_content, "Classement", Ranking, 32, ButtonStyle.Secondary);
             UIKit.Size(ranking, UIKit.ButtonHeight);
-        }
-
-        /// <summary>The mode in three lines, under its sign, and the energy left.</summary>
-        void Rules()
-        {
-            var card = UIKit.Plate(_content, Color.white, 30, new Color(1f, 0.85f, 0.4f, 0.45f), false, "Rules"); // noloc
-            UIFx.Gradient(card, new Color32(66, 50, 32, 255), new Color32(30, 22, 14, 255));
-            UIKit.Size(card, 290);
-            var row = card.gameObject.AddComponent<HorizontalLayoutGroup>();
-            row.padding = new RectOffset(28, 28, 22, 22);
-            row.spacing = 26;
-            row.childAlignment = TextAnchor.MiddleLeft;
-            row.childControlWidth = row.childControlHeight = true;
-            row.childForceExpandWidth = row.childForceExpandHeight = false;
-
-            var sign = UIKit.Rect("Sign", card.transform); // noloc
-            UIKit.Size(sign, 180, 180);
-            UIFx.Halo(sign, new Color(1f, 0.8f, 0.35f, 0.35f), 260);
-            var icon = UIKit.Image(sign, UISprites.Infinity, UIKit.Gold, false, "Icon"); // noloc
-            UIKit.Stretch(icon.rectTransform, 14, 14, 14, 14);
-
-            var lines = UIKit.Rect("Lines", card.transform); // noloc
-            UIKit.Size(lines, -1, 0, 1);
-            UIKit.Column(lines, 10, 0, TextAnchor.MiddleLeft);
-            Line(lines, UISprites.Steps, Loc.T("Chaque tombeau franchi ouvre le suivant, plus dur."));
-            Line(lines, UISprites.Retry, Loc.T("Une chute : le même tombeau, nouvel essai."));
-            Line(lines, UISprites.Podium, Loc.T("Classement : les tombeaux, puis le temps."));
-        }
-
-        static void Line(Transform parent, Sprite sprite, string text)
-        {
-            var row = UIKit.Row(parent, 56, 14);
-            row.childAlignment = TextAnchor.MiddleLeft;
-            var icon = UIKit.Image(row.transform, sprite, UIKit.Sand, false, "Icon"); // noloc
-            UIKit.Size(icon, 40, 40, 0);
-            var label = UIKit.Label(row.transform, text, 26, UIKit.Sand, TextAnchor.MiddleLeft);
-            UIKit.FitText(label, 16);
-            UIKit.Size(label, -1, -1, 1);
         }
 
         /// <summary>One difficulty's ladder: the tomb reached in a badge, the progress, and its button.</summary>
@@ -128,12 +93,11 @@ namespace MummyEscape.UI.Screens
             {
                 var bar = UIFx.Bar(info, 22, accent);
                 bar.fillAmount = count > 0 ? progress.Cleared / (float)count : 0f;
-                var cleared = UIKit.Label(info, Loc.F("{0} / {1} tombeaux franchis", progress.Cleared, count), 24, UIKit.Sand, TextAnchor.MiddleLeft);
-                UIKit.FitText(cleared, 16);
-                UIKit.Size(cleared, 34);
-                var time = UIKit.Label(info, progress.Cleared > 0 ? Loc.F("Temps cumulé : {0}", LevelResult.FormatTime(progress.TimeMs)) : Loc.T("Aucun tombeau franchi"), 22, UIKit.Dim, TextAnchor.MiddleLeft);
-                UIKit.FitText(time, 15);
-                UIKit.Size(time, 30);
+                // Figures, not sentences: the tombs cleared, and the time added up once there is one.
+                var stats = UIKit.Row(info, 50, 12);
+                stats.childAlignment = TextAnchor.MiddleLeft;
+                UIKit.Chip(stats.transform, UISprites.Flag, progress.Cleared + " / " + count, UIKit.Sand, 50); // noloc
+                if (progress.Cleared > 0) UIKit.Chip(stats.transform, UISprites.Clock, LevelResult.FormatTime(progress.TimeMs), UIKit.Sand, 50);
             }
             else
             {

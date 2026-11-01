@@ -492,6 +492,16 @@ namespace MummyEscape.UI
             return b;
         }
 
+        /// <summary>A round "?" at the right of a screen's header (the title Header() returns) that
+        /// opens the rules in a dialog. <paramref name="rules"/> is read on each tap, already translated.</summary>
+        public static Button HelpIcon(Text header, string title, Func<string> rules)
+        {
+            var b = Button(header.transform.parent, "?", () => // noloc
+                App.GameApp.I.UI.Open<Screens.OfferDialog>().Configure(title, rules(), ("OK", ButtonStyle.Primary, null)), 54); // noloc
+            Place((RectTransform)b.transform, 1, 0.5f, 92, 92, -36, 0);
+            return b;
+        }
+
         /// <summary>Smallest text drawn, in reference pixels (1080 wide): about 2.3 mm on a 6-inch phone.</summary>
         public const int MinTextSize = 16;
 

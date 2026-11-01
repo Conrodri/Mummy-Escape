@@ -68,8 +68,7 @@ namespace MummyEscape.UI.Screens
                 chips.Add((UISprites.Crown, Loc.F("+{0} XP", BattlePass.EndlessXp), UIKit.Turquoise));
             }
             ModalKit.LayOutChips(_chips, chips, Width);
-            Note(!result.Won ? Loc.T("Même tombeau, nouvel essai.")
-               : more ? "" : Loc.T("Tous les tombeaux franchis : d'autres arrivent bientôt."));
+            Note(result.Won && !more ? Loc.T("Tous les tombeaux franchis : d'autres arrivent bientôt.") : ""); // a fall: "Réessayer" says it
             Energy(PlayMode.Endless);
             _ranking.transform.parent.parent.gameObject.SetActive(true);
             _main.gameObject.SetActive(more);
@@ -94,7 +93,7 @@ namespace MummyEscape.UI.Screens
                 chips.Add((UISprites.Palette, Loc.T("Thème d'accueil Halloween"), UIKit.Gold));
             }
             ModalKit.LayOutChips(_chips, chips, Width);
-            Note(result.Won ? "" : Loc.T("Même tombeau, nouvel essai."));
+            Note("");
             Energy(PlayMode.Solo);
             _ranking.transform.parent.parent.gameObject.SetActive(false);
             // The event may close while a tomb is played: that run counts, no new one starts.
@@ -109,7 +108,7 @@ namespace MummyEscape.UI.Screens
             _towerClimbs = outcome.Continues;
             _halloweenNext = 0;
             Title(outcome.Continues ? Loc.F("Étage {0} franchi !", floor)
-                : result.Won ? Loc.T("Moins de 2 étoiles : la course s'arrête")
+                : result.Won ? Loc.T("Course terminée")
                 : Loc.T("La momie est tombée…"), outcome.Continues);
             _subtitle.text = Loc.T("Tour de défi");
             Tiles((UISprites.Tower, floor.ToString(), Loc.T("Étage")),
@@ -120,7 +119,7 @@ namespace MummyEscape.UI.Screens
             if (outcome.RewardSkin != null) chips.Add((UISprites.Check, Loc.T(Visual.TowerSkins.Resolve(outcome.RewardSkin).Name), UIKit.Turquoise));
             else if (outcome.Record) chips.Add((UISprites.Podium, Loc.T("Nouveau record !"), UIKit.Turquoise));
             ModalKit.LayOutChips(_chips, chips, Width);
-            Note(outcome.Continues ? run.CurseDue ? Loc.T("Choisis un malus pour continuer.") : "" : WhyLost(result));
+            Note(outcome.Continues ? "" : WhyLost(result)); // a handicap due: the button says it
             Energy(outcome.Continues ? (PlayMode?)null : PlayMode.Endless);
             _ranking.transform.parent.parent.gameObject.SetActive(true);
             _main.gameObject.SetActive(true);
@@ -144,17 +143,17 @@ namespace MummyEscape.UI.Screens
             }
         }
 
-        /// <summary>Why the tower run is over, in plain words: the fatal trap, or the star missing and the figure that cost it.</summary>
+        /// <summary>Why the tower run is over, in a few words: walled in (a trap death needs none: the title says it),
+        /// or the 2 stars missed and the figure that cost them against its limit.</summary>
         string WhyLost(LevelResult result)
         {
             if (!result.Won)
-                return Loc.T(App.Game.Session?.Defeat == DefeatCause.Trapped ? "Course perdue : la momie a été emmurée. Un seul échec met fin à la course."
-                                                                              : "Course perdue : les pièges ont eu raison de la momie. Un seul échec met fin à la course.");
-            var lines = new List<string> { Loc.T("Course perdue : il faut 2 étoiles pour monter, tu en as 1.") };
+                return App.Game.Session?.Defeat == DefeatCause.Trapped ? Loc.T("La momie a été emmurée.") : "";
+            var lines = new List<string> { Loc.F("Il faut {0} étoiles pour monter.", Tower.MinStars) };
             if (result.Moves > result.MaxMovesFor(2))
-                lines.Add(Loc.F("{0} coups pour un chemin idéal de {1} : il en fallait {2} au plus.", result.Moves, result.Par, result.MaxMovesFor(2)));
+                lines.Add(Loc.F("Coups : {0} / {1} max", result.Moves, result.MaxMovesFor(2)));
             if (result.TargetMs > 0 && result.TimeMs > result.MaxTimeFor(2))
-                lines.Add(Loc.F("{0} contre {1} pour la momie experte : il fallait {2} au plus.", LevelResult.FormatTime(result.TimeMs), LevelResult.FormatTime(result.TargetMs), LevelResult.FormatTime(result.MaxTimeFor(2))));
+                lines.Add(Loc.F("Temps : {0} / {1} max", LevelResult.FormatTime(result.TimeMs), LevelResult.FormatTime(result.MaxTimeFor(2))));
             return string.Join("\n", lines);
         }
 
