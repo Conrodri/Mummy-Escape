@@ -296,7 +296,7 @@ namespace MummyEscape.Pvp
             {
                 var final = Leagues.FromElo(s.FinalElo);
                 for (var l = League.Bronze; l <= final; l++)
-                    list.Add("pvp_" + s.Season + "_rank_" + l.ToString().ToLowerInvariant());
+                    list.Add(RankId(s.Season, l));
             }
             foreach (int step in ParticipationSteps)
                 if (s.CountedDuels >= step)
@@ -306,7 +306,13 @@ namespace MummyEscape.Pvp
 
         /// <summary>Récompense des 100 premiers du classement final (rang lu dans l'archive du mois, 1 = premier).</summary>
         public static string Top100(string season, int finalRank, bool rankEligible) =>
-            rankEligible && finalRank >= 1 && finalRank <= PvpConfig.Top100Size ? "pvp_" + season + "_rank_top100" : null;
+            rankEligible && finalRank >= 1 && finalRank <= PvpConfig.Top100Size ? Top100Id(season) : null;
+
+        /// <summary>Le skin d'une ligue finale de la saison (« pvp_2026-10_rank_or »).</summary>
+        public static string RankId(string season, League league) => "pvp_" + season + "_rank_" + league.ToString().ToLowerInvariant();
+
+        /// <summary>Le skin des 100 premiers de la saison.</summary>
+        public static string Top100Id(string season) => "pvp_" + season + "_rank_top100";
     }
 
     /// <summary>Un article de la boutique PvP : payé en sceaux de Maât, réservé à ceux qui ont atteint sa ligue.</summary>

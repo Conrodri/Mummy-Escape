@@ -502,6 +502,40 @@ namespace MummyEscape.UI
             return b;
         }
 
+        /// <summary>
+        /// A reward to win, as a tile in a row: the skin's picture, a caption (and an optional second line), a tick once
+        /// owned; a tap calls <paramref name="onTap"/> (a zoom on the skin).
+        /// </summary>
+        public static Image RewardTile(Transform row, SkinDef skin, string caption, string sub, bool owned, Action onTap, int index)
+        {
+            var tile = Plate(row, SurfaceHi, 22, owned ? Success : Rim, false, "Reward"); // noloc
+            Size(tile, -1, 0, 1);
+            Column(tile.transform, 4, 12);
+            tile.raycastTarget = true;
+            var btn = tile.gameObject.AddComponent<Button>();
+            btn.targetGraphic = tile;
+            btn.onClick.AddListener(() => { App.GameApp.I.Audio.Play(Services.Sfx.Click, 0f); onTap(); });
+            tile.gameObject.AddComponent<PressScale>();
+            Size(ItemPreview.Create(tile.transform, skin), 150);
+            var label = Label(tile.transform, caption, 28, owned ? Turquoise : Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
+            FitText(label, 18);
+            Size(label, 40);
+            if (sub != null)
+            {
+                var second = Label(tile.transform, sub, 24, Dim, TextAnchor.MiddleCenter);
+                FitText(second, 16);
+                Size(second, 32);
+            }
+            if (owned)
+            {
+                var check = Image(tile.transform, UISprites.Check, Success, false, "Owned"); // noloc
+                check.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                Place(check.rectTransform, 1f, 1f, 40, 40, -24, -24);
+            }
+            UIFx.PopIn(tile, index * 0.05f);
+            return tile;
+        }
+
         /// <summary>Smallest text drawn, in reference pixels (1080 wide): about 2.3 mm on a 6-inch phone.</summary>
         public const int MinTextSize = 16;
 

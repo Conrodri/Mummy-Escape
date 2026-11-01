@@ -45,6 +45,16 @@ Les assemblies (asmdef) imposent les couches :
 - **Confidentialité** : ni analytics ni traceurs. Changer les données collectées implique de revoir la politique (`Runtime/UI/Legal/LegalTexts*.cs`, `PrivacyService.PolicyVersion`) et `Plugins/iOS/PrivacyInfo.xcprivacy`.
 - **Version** : `PlayerSettings.bundleVersion` ; le code de version Android en dérive (`1.2.3` → `1020301`, `BuildScript.VersionCode`). La clé de signature est dans `~/.mummyescape/`, hors du dépôt.
 
+## Façon de travailler : agents
+
+- **Déléguer au maximum** : découper chaque tâche en parties indépendantes et lancer le plus d'agents possible en parallèle (un seul message, plusieurs appels `Agent`). Pour du code, `isolation: "worktree"`, puis fusionner et vérifier soi-même (compilation, tests, captures).
+- **Mode caveman ultra** : demander à chaque agent un compte rendu en style caveman ultra (réponse d'abord, aucun remplissage, tous les faits techniques gardés). Les réponses à l'utilisateur restent en français normal.
+- **Le bon agent pour le bon travail** :
+  - design, UX/UI, architecture, règles de jeu, revue : Opus, jamais Haiku ;
+  - implémentation courante d'un plan clair : Sonnet ;
+  - Haiku seulement pour du mécanique (recherche de fichiers, inventaire, renommages simples) ;
+  - agents spécialisés quand ils existent : `Explore` (recherches larges), `Plan`, `csharp-reviewer`, `security-reviewer`, `silent-failure-hunter`, `pr-test-analyzer`, `marketing-agent`.
+
 ## Captures depuis l'éditeur
 
 En Play, le player loop est gelé quand Unity n'a pas le focus : exécuter `UnityEngine.Application.runInBackground = true;` via `unity command eval`, puis `ScreenCapture.CaptureScreenshot(@"<chemin absolu>.png")`. Ne jamais appeler `.Result` / `.Wait()` sur une tâche de service du jeu dans un `eval` : la tâche reprend sur le thread principal que l'eval bloque, et l'éditeur se fige.

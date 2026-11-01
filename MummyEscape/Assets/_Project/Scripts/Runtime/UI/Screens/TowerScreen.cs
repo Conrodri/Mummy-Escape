@@ -46,7 +46,13 @@ namespace MummyEscape.UI.Screens
 
             UIKit.SectionTitle(_content, "Récompenses exclusives");
             var rewards = UIKit.Row(_content, 230, 14);
-            for (int i = 0; i < Tower.RewardFloors.Length; i++) RewardTile(rewards.transform, Tower.RewardFloors[i], TowerSkins.Resolve(Tower.RewardSkins[i]), i);
+            for (int i = 0; i < Tower.RewardFloors.Length; i++)
+            {
+                int floor = Tower.RewardFloors[i];
+                var skin = TowerSkins.Resolve(Tower.RewardSkins[i]);
+                bool owned = save.Data.OwnedSkins.Contains(skin.Id);
+                UIKit.RewardTile(rewards.transform, skin, Loc.F("Étage {0}", floor), null, owned, () => Zoom(skin, floor, owned), i);
+            }
 
             var run = save.ActiveTower;
             var play = UIKit.Card(_content);
@@ -90,31 +96,6 @@ namespace MummyEscape.UI.Screens
             var label = UIKit.Label(parent, "", size, color);
             label.text = text;
             label.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        }
-
-        /// <summary>A reward floor: the skin's picture, its floor, a tick once owned; a tap zooms on the skin.</summary>
-        void RewardTile(Transform row, int floor, SkinDef skin, int index)
-        {
-            bool owned = App.Save.Data.OwnedSkins.Contains(skin.Id);
-            var tile = UIKit.Plate(row, UIKit.SurfaceHi, 22, owned ? UIKit.Success : UIKit.Rim, false, "Reward"); // noloc
-            UIKit.Size(tile, -1, 0, 1);
-            UIKit.Column(tile.transform, 4, 12);
-            tile.raycastTarget = true;
-            var btn = tile.gameObject.AddComponent<Button>();
-            btn.targetGraphic = tile;
-            btn.onClick.AddListener(() => { App.Audio.Play(Services.Sfx.Click, 0f); Zoom(skin, floor, owned); });
-            tile.gameObject.AddComponent<PressScale>();
-            UIKit.Size(ItemPreview.Create(tile.transform, skin), 150);
-            var caption = UIKit.Label(tile.transform, Loc.F("Étage {0}", floor), 28, owned ? UIKit.Turquoise : UIKit.Sand, TextAnchor.MiddleCenter, FontStyle.Bold);
-            UIKit.FitText(caption, 18);
-            UIKit.Size(caption, 40);
-            if (owned)
-            {
-                var check = UIKit.Image(tile.transform, UISprites.Check, UIKit.Success, false, "Owned"); // noloc
-                check.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-                UIKit.Place(check.rectTransform, 1f, 1f, 40, 40, -24, -24);
-            }
-            UIFx.PopIn(tile, index * 0.05f);
         }
 
         void Zoom(SkinDef skin, int floor, bool owned)

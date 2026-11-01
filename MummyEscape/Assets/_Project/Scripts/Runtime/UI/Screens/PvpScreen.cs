@@ -24,7 +24,7 @@ namespace MummyEscape.UI.Screens
         Text _league, _elo, _record, _season, _info;
         Text _seals;
         Button _find, _claim;
-        RectTransform _history, _saved;
+        RectTransform _history, _saved, _rewards;
         Text _historyHint, _savedTitle, _savedHint;
         Button _cancelReplace;
         DuelRecord _replacing;
@@ -73,6 +73,10 @@ namespace MummyEscape.UI.Screens
             var wallet = UIKit.Row(info, 56, 12);
             wallet.childAlignment = TextAnchor.MiddleLeft;
             _seals = UIKit.Chip(wallet.transform, UISprites.Seal, "0", UIKit.Turquoise, 56);
+
+            // The season's skins: the one the current rank earns, and the next rank's.
+            _rewards = UIKit.Rect("Rewards", list); // noloc
+            UIKit.Column(_rewards, 10, 0);
 
             _season = UIKit.Label(list, "", 26, UIKit.Dim);
             UIKit.FitText(_season, 18);
@@ -183,6 +187,7 @@ namespace MummyEscape.UI.Screens
                     + (d.DailyChestGranted ? "" : "  ·  " + Loc.T("coffre du jour à gagner"));
             }
             else _season.text = "";
+            FillRewards(d, league, top);
 
             _find.gameObject.SetActive(App.Pvp != null);
             UIKit.SetLabel(_find, _duelSearch != null ? "Annuler la recherche" : _busy ? "Recherche d'un adversaire…" : locked ? Loc.F("Évade-toi du tombeau {0} pour débloquer", LevelNames.Of(Core.Unlocks.EndOfAct(1))) : "Chercher un adversaire");
@@ -195,6 +200,53 @@ namespace MummyEscape.UI.Screens
             _claim.gameObject.SetActive(claimable);
             if (claimable) UIKit.SetLabel(_claim, Loc.F("Récompenses de {0}", PvpSkins.MonthName(d.LastSeason.Season)));
             _claim.interactable = !_busy;
+        }
+
+        /// <summary>
+        /// The season skin of the player's rank (won at the end of the month) and the one of the next rank, with the Elo
+        /// it starts at: tiles to zoom, as the tower's rewards.
+        /// </summary>
+        void FillRewards(PlayerPvpData d, League league, bool top)
+        {
+            UIKit.ClearChildren(_rewards);
+            if (d == null || string.IsNullOrEmpty(d.Season)) return;
+            UIKit.SectionTitle(_rewards, "Récompenses de saison");
+            var row = UIKit.Row(_rewards, 270, 14);
+            string month = PvpSkins.MonthName(d.Season);
+            string Name(League l) => Loc.F("Ligue {0}", Loc.T(PvpSkins.LeagueName(l)));
+            string Win(League l) => Loc.F("Finis {0} en ligue {1} pour le gagner.", month, Loc.T(PvpSkins.LeagueName(l)));
+            if (top)
+                RewardTile(row.transform, d, SeasonRewards.Top100Id(d.Season), Loc.T("Top 100"), Loc.T("Ton rang"),
+                           Loc.F("Finis {0} dans les {1} premiers du classement mondial pour le gagner.", month, PvpConfig.Top100Size), UIKit.Turquoise, 0);
+            else
+            {
+                RewardTile(row.transform, d, SeasonRewards.RankId(d.Season, league), Name(league), Loc.T("Ton rang"), Win(league), PvpSkins.LeagueColor(league), 0);
+                if (league < League.Diamant)
+                {
+                    var next = league + 1;
+                    RewardTile(row.transform, d, SeasonRewards.RankId(d.Season, next), Name(next), Loc.F("Elo {0}", Leagues.Range(next).Min),
+                               Win(next), PvpSkins.LeagueColor(next), 1);
+                }
+                else
+                    RewardTile(row.transform, d, SeasonRewards.Top100Id(d.Season), Loc.T("Top 100"), Loc.F("{0} premiers", PvpConfig.Top100Size),
+                               Loc.F("Finis {0} dans les {1} premiers du classement mondial pour le gagner.", month, PvpConfig.Top100Size), UIKit.Turquoise, 1);
+            }
+        }
+
+        void RewardTile(Transform row, PlayerPvpData d, string id, string caption, string sub, string win, Color color, int index)
+        {
+            var skin = PvpSkins.Resolve(id);
+            if (skin == null) return;
+            bool owned = App.Save.Data.OwnedSkins.Contains(id) || d.UnlockedRewards.Contains(id);
+            string detail = win + "\n" + Loc.F("Au moins {0} duels dans le mois, dont {1} la dernière semaine.",
+                                               SeasonRewards.MinDuelsForRankReward, SeasonRewards.MinDuelsLastWeekForRankReward);
+            UIKit.RewardTile(row, skin, caption, sub, owned, () =>
+            {
+                bool worn = App.Save.IsWorn(id);
+                Router.Open<ItemZoomScreen>().Show(skin, caption, color, detail,
+                    worn ? Loc.T("Équipé") : owned ? Loc.T("Équiper") : Loc.T("À gagner"),
+                    owned && !worn ? () => App.Save.SelectSkin(id) : (Action)null);
+            }, index);
         }
 
         /// <summary>
