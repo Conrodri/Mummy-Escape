@@ -105,7 +105,7 @@ namespace MummyEscape.Pvp
             var other = selfLeads ? mate : self;
             var duo = await CreateDuoAsync(new DuoInvite { FromId = lead.PlayerId, FromName = lead.Name }, other.PlayerId, other.Name, self.DuoId, mode);
             await CancelMateSearchAsync(me);
-            return new DuoResponse { Duo = duo };
+            return new DuoResponse { Duo = duo, Error = duo == null ? "LIMIT" : null }; // a duo slot taken meanwhile (CreateDuoAsync)
         }
 
         /// <summary>Le joueur arrête de chercher un coéquipier.</summary>
