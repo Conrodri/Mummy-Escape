@@ -45,6 +45,23 @@ namespace MummyEscape.Online
         Task<DuelStart> FindAsync(DuelSearch search, Action<string> status, CancellationToken cancel);
     }
 
+    /// <summary>
+    /// The searches running now (duel, 2v2): the app going to the background (or closing) stops them, so they leave their
+    /// lobbies and nobody waits for a sleeping phone. The matchmakers link their token to <see cref="Token"/>.
+    /// </summary>
+    public static class MatchSearches
+    {
+        static CancellationTokenSource _all = new CancellationTokenSource();
+        public static CancellationToken Token => _all.Token;
+
+        public static void CancelAll()
+        {
+            var old = _all;
+            _all = new CancellationTokenSource();
+            old.Cancel();
+        }
+    }
+
     public static class DuelMatchmakerFactory
     {
         /// <summary>Set by the UGS module when Lobby and Relay are installed.</summary>

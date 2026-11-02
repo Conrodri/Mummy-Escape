@@ -73,6 +73,8 @@ namespace MummyEscape.Online
     {
         Task<LiveDuelResponse> StartLiveDuelAsync(string matchKey, LiveDuelist a, LiveDuelist b);
         Task<LiveDuelResponse> StartLiveBotDuelAsync(string matchKey, LiveDuelist mine);
+        /// <summary>A live duel search starts: the server notes the time (a bot comes only after a minute of it).</summary>
+        Task<TeamActionResponse> StartLiveSearchAsync();
         /// <summary>The duel the lobby's host created (for the guest), and the map draft as it goes (the server closes it when due).</summary>
         Task<LiveDuelResponse> GetLiveDuelAsync(string matchId);
         /// <summary>The player bans a map of the draft (0-2; -1: no choice in time, a random ban).</summary>

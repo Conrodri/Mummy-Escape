@@ -363,7 +363,8 @@ namespace MummyEscape.Pvp.Server
         /// <summary>
         /// Combats, duos, guildes, index et files : un « private custom item » par objet (illisible par les joueurs), réécrit
         /// sous verrou d'écriture. <paramref name="mutate"/> peut être rappelé si un autre écrivain passe avant ; s'il renvoie
-        /// null, rien n'est écrit.
+        /// null, rien n'est écrit. Un objet que <paramref name="mutate"/> rend inchangé n'est pas réécrit (les tirages et les
+        /// files relus chaque seconde ne coûtent qu'une lecture).
         /// </summary>
         public async Task<T> UpdateSharedAsync<T>(string collection, string key, Func<T, T> mutate) where T : class
         {
@@ -374,9 +375,12 @@ namespace MummyEscape.Pvp.Server
                 var item = res.Data.Results.FirstOrDefault(i => i.Key == key);
                 var value = FromItem<T>(item?.Value);
                 if (mutate == null) return value;
+                var before = value == null ? null : ToToken(value); // mutate may change the object in place
                 value = mutate(value);
                 if (value == null) return null;
-                var body = item?.WriteLock == null ? new SetItemBody(key, ToToken(value)) : new SetItemBody(key, ToToken(value), item.WriteLock);
+                var after = ToToken(value);
+                if (before != null && JToken.DeepEquals(before, after)) return value;
+                var body = item?.WriteLock == null ? new SetItemBody(key, after) : new SetItemBody(key, after, item.WriteLock);
                 try
                 {
                     await _api.CloudSaveData.SetPrivateCustomItemAsync(_ctx, _ctx.ServiceToken, _ctx.ProjectId, collection, body);

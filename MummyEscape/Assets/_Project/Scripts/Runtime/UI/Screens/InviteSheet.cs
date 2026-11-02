@@ -162,16 +162,33 @@ namespace MummyEscape.UI.Screens
             if (App.Session.Group != null) { _info.text = Loc.T("Tu es déjà dans un groupe."); return; }
             _searchMode = mode;
             _searchSince = Time.unscaledTime;
+            _searchStartedUnixMs = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _nextSearch = 0;
             ShowSearch();
         }
+
+        long _searchStartedUnixMs;
 
         void StopSearch()
         {
             if (_searchMode == null) return;
             _searchMode = null;
             ShowSearch();
-            _ = App.Pvp?.CancelMateSearchAsync();
+            _ = CancelOnServerAsync(App.Pvp, _searchStartedUnixMs);
+        }
+
+        /// <summary>
+        /// Out of the queue, then out of a group the server formed meanwhile (the other phone matched this one just before the
+        /// cancel): no group the player did not see. The search only runs without a group, so any group this new is that one.
+        /// </summary>
+        static async System.Threading.Tasks.Task CancelOnServerAsync(IPvpService pvp, long searchStartedUnixMs)
+        {
+            if (pvp == null) return;
+            await pvp.CancelMateSearchAsync();
+            var teams = await pvp.GetTeamsAsync();
+            const long ClockSlackMs = 10_000;
+            foreach (var duo in teams?.Duos ?? new System.Collections.Generic.List<Duo>())
+                if (duo != null && duo.CreatedAtUnixMs >= searchStartedUnixMs - ClockSlackMs) await pvp.LeaveDuoAsync(duo.Id);
         }
 
         /// <summary>Asks the server again; once a teammate is found, the group opens (its leader launches the mode).</summary>
@@ -183,7 +200,12 @@ namespace MummyEscape.UI.Screens
             var r = await App.Pvp.SearchMateAsync(mode, App.Online.PlayerName);
             if (this == null) return;
             _polling = false;
-            if (_searchMode != mode) return; // cancelled meanwhile
+            if (_searchMode != mode)
+            {
+                // Cancelled meanwhile: a group this late answer formed is left too (StopSearch may have looked before it existed).
+                if (r?.Duo != null) _ = App.Pvp.LeaveDuoAsync(r.Duo.Id);
+                return;
+            }
             if (r == null || r.Error != null) { StopSearch(); _info.text = TeamView.ErrorText(r?.Error); return; }
             if (r.Duo == null) return;
             _searchMode = null;

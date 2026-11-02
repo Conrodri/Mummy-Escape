@@ -155,10 +155,28 @@ namespace MummyEscape.Pvp
         /// <summary>Objets partagés (combats, duos, guildes…), par collection puis clé.</summary>
         public readonly Dictionary<string, object> Shared = new Dictionary<string, object>();
 
+        /// <summary>
+        /// Tests : la prochaine écriture partagée qu'il accepte perd une course, comme sous Cloud Save. Appelé avec la clé
+        /// ("collection/clé") et l'objet stocké, il rend une copie (ou null : pas celle-ci, il reste armé) et peut écrire avant
+        /// (l'autre instance) ; la mise à jour s'applique d'abord à la copie, perdue, puis reprend sur l'objet stocké.
+        /// </summary>
+        public Func<string, object, object> LoseRaceOnce;
+
         public Task<T> UpdateSharedAsync<T>(string collection, string key, Func<T, T> mutate) where T : class
         {
             string k = collection + "/" + key;
             Shared.TryGetValue(k, out var current);
+            if (mutate != null && LoseRaceOnce != null && current is T)
+            {
+                var race = LoseRaceOnce;
+                LoseRaceOnce = null; // the rival's own writes win at once
+                if (race(k, current) is T stale)
+                {
+                    mutate(stale); // this attempt's write is refused
+                    Shared.TryGetValue(k, out current);
+                }
+                else LoseRaceOnce = race;
+            }
             var value = current as T;
             if (mutate == null) return Task.FromResult(value);
             value = mutate(value);

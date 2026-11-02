@@ -20,6 +20,15 @@ namespace MummyEscape.Pvp
         /// <summary>Après l'aperçu, chacun attend l'autre au plus ce temps avant de partir.</summary>
         public const int ReadyWaitMs = 6_000;
         public const int MaxNameLength = 24;
+        /// <summary>
+        /// Version du protocole entre téléphones et avec le serveur (clé du salon <c>p1</c>, paramètre <c>protocol</c>). 0 : un
+        /// jeu 0.1.14 ou plus ancien, qui ne l'envoie pas.
+        /// </summary>
+        public const int Protocol = 1;
+        /// <summary>Un camp qui ne s'est pas montré (aucun appel au serveur pour ce duel) ce temps après la création : duel annulé.</summary>
+        public const int ConfirmWindowMs = 45_000;
+        /// <summary>Un duel contre un bot demande une recherche d'au moins <see cref="PvpConfig.BotFallbackMs"/> moins cette marge.</summary>
+        public const int BotSearchSlackMs = 5_000;
     }
 
     [Serializable]
@@ -30,6 +39,8 @@ namespace MummyEscape.Pvp
         public int Elo;
         public PlayerLook Look;
         public bool Bot;
+        /// <summary>Le joueur s'est montré : il a lui-même appelé le serveur pour ce duel (création, lecture, vote, course).</summary>
+        public bool Confirmed;
         /// <summary>La course vérifiée par le serveur, null tant qu'elle n'est pas arrivée.</summary>
         public RunSubmission Run;
         public int EloAfter;
@@ -52,6 +63,11 @@ namespace MummyEscape.Pvp
         public long CreatedAtUnixMs;
         public long FirstSubmitUnixMs;
         public bool Settled;
+        /// <summary>
+        /// Annulé au jugement : un des deux ne s'est jamais montré (salon truqué, connexion jamais établie). Ni Elo, ni sceaux,
+        /// ni quêtes, ni points de guilde ; l'énergie est rendue aux deux.
+        /// </summary>
+        public bool Void;
         /// <summary>Du point de vue de A.</summary>
         public DuelResult Result;
 
@@ -64,7 +80,9 @@ namespace MummyEscape.Pvp
     public class LiveDuelResponse
     {
         public LiveDuel Match;
-        public string Error;   // "OUTDATED", "LOCKED", "DIVISION", "UNKNOWN"
+        public string Error;   // "OUTDATED", "LOCKED", "DIVISION", "ENERGY", "SEARCH", "UNKNOWN"
+        /// <summary>Le joueur à cause de qui le duel n'a pas été créé (LOCKED, DIVISION, ENERGY) : l'autre peut chercher à nouveau.</summary>
+        public string Refused;
     }
 
     public static class LiveDuelJudge

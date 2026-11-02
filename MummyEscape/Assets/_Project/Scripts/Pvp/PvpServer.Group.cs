@@ -46,10 +46,12 @@ namespace MummyEscape.Pvp
         /// tant qu'il cherche. Deux chercheurs du même mode forment un groupe, celui qui cherche depuis le plus longtemps en
         /// chef. Réponse : le groupe une fois formé (aussi par l'autre téléphone), sinon ni groupe ni erreur.
         /// </summary>
-        public async Task<DuoResponse> SearchMateAsync(string me, string myName, string mode)
+        public async Task<DuoResponse> SearchMateAsync(string me, string myName, string mode, int generatorVersion = 0)
         {
             myName = CleanName(myName);
             if (!GroupLaunch.IsValid(mode)) return new DuoResponse { Error = "MODE" };
+            // Only phones with the same tombs pair up (0: a 0.1.14 phone, which does not say; its match start checks it).
+            if (generatorVersion != 0 && generatorVersion != Core.DifficultyTable.GeneratorVersion) return new DuoResponse { Error = "OUTDATED" };
             var mine = await Update(me);
             if (mine.Duos.Count > 0)
             {
@@ -58,6 +60,7 @@ namespace MummyEscape.Pvp
             }
             long now = NowMs;
             MateSearch self = null, mate = null;
+            bool dropped = false;
             await Shared<List<MateSearch>>(QueueCollection, MateQueueKey, queue =>
             {
                 queue ??= new List<MateSearch>();
@@ -68,7 +71,17 @@ namespace MummyEscape.Pvp
                 self.Name = myName ?? "";
                 self.SeenAtUnixMs = now;
                 mate = null;
-                if (self.DuoId != null) return queue; // matched by the other phone, which is forming the group
+                dropped = false;
+                if (self.DuoId != null)
+                {
+                    // Matched (by the other phone, or by this one in a call that failed): form the group again from the
+                    // same duo id, whoever polls first (the creation is idempotent). The mate gone without a duo for us:
+                    // search again.
+                    string duoId = self.DuoId;
+                    mate = queue.Find(s => s != self && s.DuoId == duoId);
+                    if (mate == null) { self.DuoId = null; dropped = true; }
+                    return queue;
+                }
                 mate = queue.Where(s => s != self && s.DuoId == null && s.Mode == mode).OrderBy(s => s.SinceUnixMs).FirstOrDefault();
                 if (mate == null && BotName != null && now - self.SinceUnixMs >= DemoMateMs)
                 {
@@ -79,7 +92,14 @@ namespace MummyEscape.Pvp
                 if (mate != null) self.DuoId = mate.DuoId = NewId();
                 return queue;
             });
-            if (mate == null) return new DuoResponse();
+            if (mate == null)
+            {
+                // The mate may have formed the group just before leaving the queue.
+                if (!dropped || !(await _store.ReadPlayersAsync(new[] { me })).TryGetValue(me, out var again) || again?.Duos == null || again.Duos.Count == 0)
+                    return new DuoResponse();
+                await CancelMateSearchAsync(me);
+                return new DuoResponse { Duo = await Shared<Duo>(DuosCollection, again.Duos[0]) };
+            }
             bool selfLeads = self.SinceUnixMs <= mate.SinceUnixMs;
             var lead = selfLeads ? self : mate;
             var other = selfLeads ? mate : self;

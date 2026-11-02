@@ -321,7 +321,7 @@ namespace MummyEscape.UI.Screens
             UIKit.ListItem(parent, 132, onClick, out var h);
             var badge = UIKit.Image(h.transform, UISprites.Circle, ResultColor(d), false, "Result"); // noloc
             UIKit.Size(badge, 84, 84, 0);
-            var letter = UIKit.Title(badge.transform, !d.Resolved ? "…" : d.Result == DuelResult.Win ? Loc.T("V") : d.Result == DuelResult.Draw ? Loc.T("N") : Loc.T("D"), 44, UIKit.Ink); // noloc
+            var letter = UIKit.Title(badge.transform, !d.Resolved ? "…" : d.Void ? "–" : d.Result == DuelResult.Win ? Loc.T("V") : d.Result == DuelResult.Draw ? Loc.T("N") : Loc.T("D"), 44, UIKit.Ink); // noloc
             UIKit.Stretch(letter.rectTransform);
 
             var col = UIKit.Rect("Text", h.transform); // noloc
@@ -334,7 +334,7 @@ namespace MummyEscape.UI.Screens
             UIKit.Size(name, 44);
             int delta = d.EloAfter - d.EloBefore;
             string when = System.DateTimeOffset.FromUnixTimeMilliseconds(d.PlayedAtUnixMs).ToLocalTime().ToString("dd/MM HH:mm"); // noloc
-            string elo = d.Resolved ? "  ·  Elo " + (delta > 0 ? "+" : "") + delta : ""; // noloc
+            string elo = d.Void ? "  ·  " + Loc.T("Match annulé") : d.Resolved ? "  ·  Elo " + (delta > 0 ? "+" : "") + delta : ""; // noloc
             var sub = UIKit.Label(col, when + elo + (d.Reported ? "  ·  " + Loc.T("signalé") : ""), 24, UIKit.Dim, TextAnchor.MiddleLeft);
             UIKit.FitText(sub, 16);
             UIKit.Size(sub, 34);
@@ -342,7 +342,7 @@ namespace MummyEscape.UI.Screens
         }
 
         static Color ResultColor(DuelRecord d) =>
-            !d.Resolved ? UIKit.Dim : d.Result == DuelResult.Win ? UIKit.Gold : d.Result == DuelResult.Draw ? UIKit.Sand : UIKit.Danger;
+            !d.Resolved || d.Void ? UIKit.Dim : d.Result == DuelResult.Win ? UIKit.Gold : d.Result == DuelResult.Draw ? UIKit.Sand : UIKit.Danger;
 
         void Watch(DuelRecord d)
         {

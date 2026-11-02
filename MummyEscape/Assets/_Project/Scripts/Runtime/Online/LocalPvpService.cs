@@ -464,6 +464,8 @@ namespace MummyEscape.Online
 
         public Task<LiveDuelResponse> GetLiveDuelAsync(string matchId) => Run(() => _server.GetLiveDuelAsync(Me, matchId));
 
+        public Task<TeamActionResponse> StartLiveSearchAsync() => Run(() => _server.StartLiveSearchAsync(Me));
+
         public Task<LiveDuelResponse> BanLiveDuelAsync(string matchId, int map) => Run(() => _server.BanLiveDuelAsync(Me, matchId, map));
 
         public Task<RelayMatchResponse> BanRelayAsync(string matchId, int map) => Run(() => _server.BanRelayAsync(Me, matchId, map));

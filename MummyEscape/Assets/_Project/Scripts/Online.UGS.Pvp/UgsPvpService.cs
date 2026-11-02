@@ -104,7 +104,7 @@ namespace MummyEscape.Online
             Call("LaunchGroup", Args("duoId", duoId, "mode", mode), e => new DuoResponse { Error = e });
 
         public Task<DuoResponse> SearchMateAsync(string mode, string playerName) =>
-            Call("SearchMate", Args("playerName", playerName ?? "", "mode", mode), e => new DuoResponse { Error = e });
+            Call("SearchMate", Args("playerName", playerName ?? "", "mode", mode, "generatorVersion", Gen), e => new DuoResponse { Error = e });
 
         public Task<TeamActionResponse> CancelMateSearchAsync() =>
             Call("CancelMateSearch", Args(), e => new TeamActionResponse { Error = e });
@@ -210,7 +210,11 @@ namespace MummyEscape.Online
             Call("StartLiveDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "a", a, "b", b, "draftVersion", PvpDraft.Version), e => new LiveDuelResponse { Error = e });
 
         public Task<LiveDuelResponse> StartLiveBotDuelAsync(string matchKey, LiveDuelist mine) =>
-            Call("StartLiveBotDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "mine", mine, "draftVersion", PvpDraft.Version), e => new LiveDuelResponse { Error = e });
+            Call("StartLiveBotDuel", Args("generatorVersion", Gen, "matchKey", matchKey, "mine", mine, "draftVersion", PvpDraft.Version, "protocol", LiveDuelConfig.Protocol),
+                 e => new LiveDuelResponse { Error = e });
+
+        public Task<TeamActionResponse> StartLiveSearchAsync() =>
+            Call("StartLiveSearch", Args(), e => new TeamActionResponse { Error = e });
 
         public Task<LiveDuelResponse> GetLiveDuelAsync(string matchId) =>
             Call("GetLiveDuel", Args("matchId", matchId), e => new LiveDuelResponse { Error = e });

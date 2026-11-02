@@ -133,8 +133,10 @@ namespace MummyEscape.Pvp.Server
         public Task<DuoResponse> LaunchGroup(IExecutionContext ctx, string duoId, string mode) => Server(ctx).LaunchGroupAsync(ctx.PlayerId, duoId, mode);
 
         /// <summary>Recherche d'un coéquipier (redemandée par le téléphone tant qu'il cherche) : le groupe une fois formé.</summary>
+        /// <remarks><c>generatorVersion</c> : absent chez un jeu 0.1.14 (0, accepté) ; un autre que celui du serveur reçoit « OUTDATED ».</remarks>
         [CloudCodeFunction("SearchMate")]
-        public Task<DuoResponse> SearchMate(IExecutionContext ctx, string playerName, string mode) => Server(ctx).SearchMateAsync(ctx.PlayerId, playerName, mode);
+        public Task<DuoResponse> SearchMate(IExecutionContext ctx, string playerName, string mode, int generatorVersion) =>
+            Server(ctx).SearchMateAsync(ctx.PlayerId, playerName, mode, generatorVersion);
 
         [CloudCodeFunction("CancelMateSearch")]
         public Task<TeamActionResponse> CancelMateSearch(IExecutionContext ctx) => Server(ctx).CancelMateSearchAsync(ctx.PlayerId);
@@ -377,9 +379,14 @@ namespace MummyEscape.Pvp.Server
         public Task<LiveDuelResponse> BanLiveDuel(IExecutionContext ctx, string matchId, int map) => Server(ctx).BanLiveDuelAsync(ctx.PlayerId, matchId, map);
 
         /// <summary>Personne de la ligue en une minute : un bot de la ligue, qui bannit aussi, puis court d'avance.</summary>
+        /// <remarks><c>protocol</c> : absent chez un jeu 0.1.14 (0, pas de contrôle) ; 1 et plus : une recherche (StartLiveSearch) d'une minute est exigée, sinon « SEARCH ».</remarks>
         [CloudCodeFunction("StartLiveBotDuel")]
-        public Task<LiveDuelResponse> StartLiveBotDuel(IExecutionContext ctx, int generatorVersion, string matchKey, LiveDuelist mine, int draftVersion) =>
-            Server(ctx).StartLiveBotDuelAsync(ctx.PlayerId, generatorVersion, matchKey, mine, draftVersion);
+        public Task<LiveDuelResponse> StartLiveBotDuel(IExecutionContext ctx, int generatorVersion, string matchKey, LiveDuelist mine, int draftVersion, int protocol) =>
+            Server(ctx).StartLiveBotDuelAsync(ctx.PlayerId, generatorVersion, matchKey, mine, draftVersion, protocol);
+
+        /// <summary>Le jeu commence à chercher un duel en direct : l'heure du serveur, d'où court la minute avant un bot.</summary>
+        [CloudCodeFunction("StartLiveSearch")]
+        public Task<TeamActionResponse> StartLiveSearch(IExecutionContext ctx) => Server(ctx).StartLiveSearchAsync(ctx.PlayerId);
 
         /// <summary>La course d'un joueur à la fin du duel : rejouée, puis le duel est jugé quand les deux sont là.</summary>
         [CloudCodeFunction("SubmitLiveDuel")]
