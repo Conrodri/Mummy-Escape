@@ -188,6 +188,7 @@ namespace MummyEscape.Tests
 
         static string MakeDuo(PvpServer server, string a, string b)
         {
+            server.SyncChatProfileAsync(b, new List<string> { a }, false).Wait(); // friends: b has a
             Assert.IsTrue(server.InviteDuoAsync(a, a, b).Result.Ok);
             var invite = server.GetTeamsAsync(b).Result.Invites.Single(i => i.FromId == a);
             Assert.IsTrue(server.RespondDuoAsync(b, b, invite.Id, true).Result.Ok);

@@ -841,6 +841,17 @@ namespace MummyEscape
             ["Tu n'es dans aucune guilde."] = "You're not in a guild.",
             ["Guilde complète ({0} membres)."] = "Guild full ({0} members).",
             ["Ce n'est pas encore ton tour."] = "It's not your turn yet.",
+            ["Tu n'es plus dans cette guilde : ta manche ne compte plus pour elle."] = "You are no longer in this guild: your round no longer counts for it.",
+            ["Cette manche est déjà courue."] = "This round has already been run.",
+            ["Ce joueur ne t'a pas (encore) dans ses amis."] = "This player hasn't added you as a friend (yet).",
+            ["Combat annulé : les tombeaux ont changé de version."] = "Battle cancelled: the tombs changed version.",
+            ["{0} manche à courir"] = "{0} round to run",
+            ["{0} manches à courir"] = "{0} rounds to run",
+            ["Remplacer un coureur"] = "Replace a runner",
+            ["a quitté la guilde"] = "left the guild",
+            ["Touche une manche pas encore courue pour la donner à un autre membre."] = "Tap a round not run yet to give it to another member.",
+            ["Manche {0} : choisis qui la court."] = "Round {0}: choose who runs it.",
+            ["{0} court la manche {1}."] = "{0} runs round {1}.",
             ["Introuvable : il a peut-être disparu."] = "Not found: it may be gone.",
 
             // ---------------------------------------------------------------- 2v2 live relay

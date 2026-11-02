@@ -33,6 +33,11 @@ namespace MummyEscape.UI.Screens
         // Members who are already friends, or were just asked (one tap from the members list).
         readonly HashSet<string> _friends = new HashSet<string>();
         readonly HashSet<string> _asked = new HashSet<string>();
+        // The war tab is refreshed while open: the rival guild's arrival, the rounds run.
+        const float PollSeconds = 25f;
+        float _nextPoll;
+        // The round of the current war an officer is giving to another member (-1: none).
+        int _replaceSlot = -1;
 
         protected override void Build()
         {
@@ -58,9 +63,18 @@ namespace MummyEscape.UI.Screens
             _busy = false;
             _info.text = "";
             _scroll.verticalNormalizedPosition = 1f;
+            _replaceSlot = -1;
+            _nextPoll = Time.unscaledTime + PollSeconds;
             Fill();
             Reload();
             LoadFriends();
+        }
+
+        void Update()
+        {
+            if (_tab != 1 || _busy || _guild?.Guild?.ActiveWar == null || App.Pvp == null || Time.unscaledTime < _nextPoll) return;
+            _nextPoll = Time.unscaledTime + PollSeconds;
+            Reload(true);
         }
 
         async void LoadFriends()
@@ -72,7 +86,8 @@ namespace MummyEscape.UI.Screens
             if (_tab == 2 && _guild?.Guild != null) Fill();
         }
 
-        async void Reload()
+        /// <param name="poll">A quiet refresh: the message line and the scroll position stay.</param>
+        async void Reload(bool poll = false)
         {
             if (App.Pvp == null)
             {
@@ -85,12 +100,13 @@ namespace MummyEscape.UI.Screens
             if (request != _request || this == null) return;
             if (guild == null || guild.Error != null)
             {
-                _info.text = TeamView.ErrorText(guild?.Error);
+                if (!poll) _info.text = TeamView.ErrorText(guild?.Error);
                 return;
             }
             Take(guild);
             if (guild.Guild == null && _search == null) _search = await App.Pvp.SearchGuildsAsync("", 30);
             if (request != _request || this == null) return;
+            if (poll) { Keep(Fill); return; }
             if (!_busy && guild.NewRewards.Count == 0)
                 _info.text = App.Pvp.IsDemo ? "<color=#E8C35A>" + Loc.T("Démo hors ligne : membres et guildes adverses simulés") + "</color>" : "";
             Fill();
@@ -370,11 +386,74 @@ namespace MummyEscape.UI.Screens
         void FillWars(Guild g, bool boss)
         {
             var active = _guild.Wars.FirstOrDefault(w => w.Id == g.ActiveWar);
-            if (active != null) TeamView.BattleCard(_list, active, _guild.Me, Router, RunRound);
+            if (active != null)
+            {
+                TeamView.BattleCard(_list, active, _guild.Me, Router, RunRound);
+                if (boss && !active.Finished) ReplaceRunners(g, active);
+            }
             else if (boss) WarLauncher(g);
             else UIKit.Size(UIKit.Label(_list, "Le chef et les officiers lancent les guerres et choisissent l'ordre de passage.", 26, UIKit.Dim), 70);
             foreach (var w in _guild.Wars)
                 if (w != active) TeamView.BattleCard(_list, w, _guild.Me, Router, null);
+        }
+
+        /// <summary>
+        /// The leader or an officer gives a round not run yet to a member who runs none: an absent runner, or one who left
+        /// the guild, no longer loses his round.
+        /// </summary>
+        void ReplaceRunners(Guild g, TeamBattle war)
+        {
+            var side = TeamView.MineIsA(war) ? war.A : war.B;
+            var open = Enumerable.Range(0, war.Slots).Where(k => side.Runs[k] == null && war.SlotResults[k] < 0).ToList();
+            var free = g.Members.Where(m => !side.Order.Contains(m.PlayerId)).OrderByDescending(m => m.Points).ToList();
+            if (!open.Contains(_replaceSlot)) _replaceSlot = -1;
+            if (open.Count == 0 || free.Count == 0) return;
+
+            UIKit.SectionTitle(_list, "Remplacer un coureur");
+            foreach (int k in open)
+            {
+                int slot = k;
+                bool gone = g.Member(side.Order[k]) == null;
+                UIKit.ListItem(_list, 84, () => { _replaceSlot = _replaceSlot == slot ? -1 : slot; Keep(Fill); }, out var h, _replaceSlot == slot);
+                var n = UIKit.Title(h.transform, "M" + (k + 1), 32, UIKit.Gold); // noloc
+                UIKit.Size(n, -1, 80, 0);
+                var name = UIKit.Label(h.transform, side.Names[k] + (gone ? "  ·  " + Loc.T("a quitté la guilde") : ""), 28,
+                                       gone ? UIKit.Danger : UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+                UIKit.FitText(name, 18);
+                UIKit.Size(name, -1, 0, 1);
+            }
+            var hint = UIKit.Label(_list, _replaceSlot < 0 ? Loc.T("Touche une manche pas encore courue pour la donner à un autre membre.")
+                                                           : Loc.F("Manche {0} : choisis qui la court.", _replaceSlot + 1), 22, UIKit.Dim);
+            UIKit.FitText(hint, 16);
+            UIKit.Size(hint, 44);
+            if (_replaceSlot < 0) return;
+            foreach (var m in free)
+            {
+                var member = m;
+                UIKit.ListItem(_list, 84, () => Replace(war, _replaceSlot, member), out var h);
+                var name = UIKit.Label(h.transform, m.Name, 28, UIKit.Sand, TextAnchor.MiddleLeft, FontStyle.Bold);
+                UIKit.FitText(name, 18);
+                UIKit.Size(name, -1, 0, 1);
+            }
+        }
+
+        async void Replace(TeamBattle war, int slot, GuildMember m)
+        {
+            if (_busy) return;
+            _busy = true;
+            var r = await App.Pvp.ReplaceWarRunnerAsync(war.Id, slot, m.PlayerId);
+            if (this == null) return;
+            _busy = false;
+            _replaceSlot = -1;
+            if (r?.Guild == null)
+            {
+                _info.text = TeamView.ErrorText(r?.Error);
+                Reload(true);
+                return;
+            }
+            _info.text = Loc.F("{0} court la manche {1}.", m.Name, slot + 1);
+            Take(r);
+            Keep(Fill);
         }
 
         void SkinTier(Guild g, int need, string reward)

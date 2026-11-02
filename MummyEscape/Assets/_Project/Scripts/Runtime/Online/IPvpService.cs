@@ -194,6 +194,8 @@ namespace MummyEscape.Online
         Task<GuildResponse> RespondGuildInviteAsync(string guildId, bool accept, string playerName);
         /// <summary>Leader or officer: a war of <paramref name="size"/> rounds with this running order.</summary>
         Task<GuildResponse> StartWarAsync(int size, List<string> order);
+        /// <summary>Leader or officer: gives a round of the current war not run yet to another member.</summary>
+        Task<GuildResponse> ReplaceWarRunnerAsync(string battleId, int slot, string playerId);
     }
 
     public static class PvpServiceFactory

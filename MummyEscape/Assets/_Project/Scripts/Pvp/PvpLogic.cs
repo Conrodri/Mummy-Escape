@@ -41,6 +41,16 @@ namespace MummyEscape.Pvp
             int delta = resultForA == DuelResult.Win ? Points(totalDuelsA) : resultForA == DuelResult.Loss ? -Loss(ratingA, totalDuelsA) : 0;
             return Math.Max(PvpConfig.MinElo, ratingA + delta);
         }
+
+        /// <summary>
+        /// Elo classique (guerres de guildes) : A gagne K × (score − score attendu), le score attendu venant de l'écart avec B.
+        /// Battre plus faible rapporte peu, battre plus fort beaucoup.
+        /// </summary>
+        public static int Classic(int ratingA, int ratingB, DuelResult resultForA, int k)
+        {
+            double expected = 1.0 / (1.0 + Math.Pow(10.0, (ratingB - ratingA) / 400.0));
+            return Math.Max(PvpConfig.MinElo, ratingA + (int)Math.Round(k * (Score(resultForA) - expected), MidpointRounding.AwayFromZero));
+        }
     }
     public static class Leagues
     {

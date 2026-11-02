@@ -218,6 +218,11 @@ namespace MummyEscape.Pvp.Server
         public Task<GuildResponse> StartWar(IExecutionContext ctx, int size, System.Collections.Generic.List<string> order, int generatorVersion) =>
             Server(ctx).StartWarAsync(ctx.PlayerId, size, order, generatorVersion);
 
+        /// <summary>Le chef ou un officier donne une manche pas encore courue de la guerre en cours à un autre membre.</summary>
+        [CloudCodeFunction("ReplaceWarRunner")]
+        public Task<GuildResponse> ReplaceWarRunner(IExecutionContext ctx, string battleId, int slot, string playerId) =>
+            Server(ctx).ReplaceWarRunnerAsync(ctx.PlayerId, battleId, slot, playerId);
+
         // ------------------------------------------------------------------ 2v2 relay (live)
 
         /// <summary>L'hôte du salon crée le match des deux duos qui se sont trouvés (même salon = même match).</summary>

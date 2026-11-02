@@ -76,7 +76,8 @@ namespace MummyEscape.Pvp
         public void Begin(Level level)
         {
             Level = level;
-            if (HasGhost) GhostReplay = new RunReplay(level, Ghost.Inputs);
+            // A team round gives the rival's time without his route: no ghost walking the tomb then, only the time to beat.
+            if (HasGhost && (IsLive || Ghost.Inputs?.Count > 0)) GhostReplay = new RunReplay(level, Ghost.Inputs);
         }
 
         RunRecorder _recorder;

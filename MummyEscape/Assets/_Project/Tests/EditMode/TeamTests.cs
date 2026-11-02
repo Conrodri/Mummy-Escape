@@ -13,7 +13,7 @@ namespace MummyEscape.Tests
         static readonly DateTime Today = new DateTime(2026, 10, 4, 12, 0, 0, DateTimeKind.Utc);
         static int Gen => DifficultyTable.GeneratorVersion;
 
-        static (PvpServer server, MemoryPvpStore store, Func<DateTime> clock, Action<TimeSpan> advance) NewServer()
+        internal static (PvpServer server, MemoryPvpStore store, Func<DateTime> clock, Action<TimeSpan> advance) NewServer()
         {
             var store = new MemoryPvpStore();
             var now = Today;
@@ -22,7 +22,7 @@ namespace MummyEscape.Tests
             return (server, store, () => now, t => now += t);
         }
 
-        static List<RunInput> Stamp(Level level, IEnumerable<PlayerAction> actions, int gapMs)
+        internal static List<RunInput> Stamp(Level level, IEnumerable<PlayerAction> actions, int gapMs)
         {
             var inputs = new List<RunInput>();
             var s = Rules.Initial(level);
@@ -38,7 +38,7 @@ namespace MummyEscape.Tests
         }
 
         /// <summary>Starts this player's round and runs it on the ideal route, one action every <paramref name="gapMs"/> ms.</summary>
-        static SubmitRunResponse RunRound(PvpServer server, string player, string battleId, int gapMs)
+        internal static SubmitRunResponse RunRound(PvpServer server, string player, string battleId, int gapMs)
         {
             var start = server.StartBattleRunAsync(player, battleId, Gen).Result;
             Assert.IsNull(start.Error, player + " can run");
@@ -56,6 +56,7 @@ namespace MummyEscape.Tests
 
         static string MakeDuo(PvpServer server, string a, string b)
         {
+            server.SyncChatProfileAsync(b, new List<string> { a }, false).Wait(); // friends: b has a
             Assert.IsTrue(server.InviteDuoAsync(a, a, b).Result.Ok);
             var invite = server.GetTeamsAsync(b).Result.Invites.Single(i => i.FromId == a);
             Assert.IsTrue(server.RespondDuoAsync(b, b, invite.Id, true).Result.Ok);

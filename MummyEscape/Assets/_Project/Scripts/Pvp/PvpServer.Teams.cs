@@ -67,6 +67,9 @@ namespace MummyEscape.Pvp
         {
             myName = CleanName(myName);
             if (string.IsNullOrEmpty(friendId) || friendId == me) return new TeamActionResponse { Error = "SELF" };
+            // Only a friend: someone who has the player in the friends he sent to the server (as for private messages).
+            if (IsHuman(me) && IsHuman(friendId) && !((await Inbox(friendId))?.Contacts?.Contains(me) ?? false))
+                return new TeamActionResponse { Error = "NOT_FRIEND" };
             var mine = await Update(me);
             if (mine.Duos.Count >= TeamConfig.MaxDuosPerPlayer) return new TeamActionResponse { Error = "LIMIT" };
             foreach (var id in mine.Duos)
@@ -78,8 +81,8 @@ namespace MummyEscape.Pvp
             if (IsBot?.Invoke(friendId) == true)
             {
                 // Offline rival: says yes at once.
-                await CreateDuoAsync(invite, friendId, BotName?.Invoke(friendId) ?? PvpBots.NameOf(friendId));
-                return new TeamActionResponse { Ok = true };
+                bool made = await CreateDuoAsync(invite, friendId, BotName?.Invoke(friendId) ?? PvpBots.NameOf(friendId)) != null;
+                return new TeamActionResponse { Ok = made, Error = made ? null : "LIMIT" };
             }
             string error = null;
             await Update(friendId, d =>
@@ -108,10 +111,14 @@ namespace MummyEscape.Pvp
             if (mine.Duos.Count >= TeamConfig.MaxDuosPerPlayer) return new TeamActionResponse { Error = "LIMIT" };
             var theirs = await Update(invite.FromId);
             if (theirs.Duos.Count >= TeamConfig.MaxDuosPerPlayer) return new TeamActionResponse { Error = "LIMIT" };
-            await CreateDuoAsync(invite, me, myName);
+            if (await CreateDuoAsync(invite, me, myName) == null) return new TeamActionResponse { Error = "LIMIT" };
             return new TeamActionResponse { Ok = true };
         }
 
+        /// <summary>
+        /// Le duo est créé si chacun de ses joueurs a encore une place (<see cref="TeamConfig.MaxDuosPerPlayer"/>), vérifiée
+        /// sous son propre verrou : deux invitations croisées acceptées en même temps ne font pas deux duos. Null sinon.
+        /// </summary>
         async Task<Duo> CreateDuoAsync(DuoInvite invite, string partnerId, string partnerName, string duoId = null, string mode = null)
         {
             // Un nouveau duo part du niveau 2v2 que ses joueurs ont déjà montré (pas de remise à 1000 en changeant de partenaire).
@@ -125,10 +132,24 @@ namespace MummyEscape.Pvp
                 Names = new List<string> { invite.FromName ?? "", partnerName ?? "" },
                 Elo = known.Count > 0 ? (int)Math.Round(known.Average()) : PvpConfig.StartingElo,
             };
-            await Shared<Duo>(DuosCollection, duo.Id, _ => duo);
+            var placed = new List<string>();
             foreach (var id in duo.Members)
-                if (IsBot?.Invoke(id) != true)
-                    await Update(id, d => { if (!d.Duos.Contains(duo.Id)) d.Duos.Add(duo.Id); });
+            {
+                if (IsBot?.Invoke(id) == true) continue;
+                bool full = false;
+                await Update(id, d =>
+                {
+                    full = !d.Duos.Contains(duo.Id) && d.Duos.Count >= TeamConfig.MaxDuosPerPlayer;
+                    if (!full && !d.Duos.Contains(duo.Id)) d.Duos.Add(duo.Id);
+                });
+                if (full)
+                {
+                    foreach (var p in placed) await Update(p, d => d.Duos.Remove(duo.Id));
+                    return null;
+                }
+                placed.Add(id);
+            }
+            await Shared<Duo>(DuosCollection, duo.Id, _ => duo);
             await IndexDuoAsync(duo);
             return duo;
         }
@@ -183,20 +204,52 @@ namespace MummyEscape.Pvp
             if (generatorVersion != DifficultyTable.GeneratorVersion) return new TeamActionResponse { Error = "OUTDATED" };
             var duo = await Shared<Duo>(DuosCollection, duoId);
             if (duo == null || !duo.Members.Contains(me)) return new TeamActionResponse { Error = "UNKNOWN" };
-            if (duo.ActiveBattle != null)
+            string seen = duo.ActiveBattle;
+            if (seen != null)
             {
-                var current = await RefreshBattleAsync(duo.ActiveBattle);
+                var current = await RefreshBattleAsync(seen);
                 if (current != null && !current.Finished) return new TeamActionResponse { Ok = true, Battle = TeamLogic.ViewFor(current, duo.Id) };
+                if (current == null && NowMs - duo.ActiveBattleAtUnixMs <= TeamConfig.ClaimStaleMs) return new TeamActionResponse { Error = "BUSY" };
             }
-            string spent = await SpendEnergyAsync(new[] { me });
-            if (spent != null) return new TeamActionResponse { Error = spent };
-            bool creatorFirst = (duo.Members[0] == me) == meFirst;
-            var order = TeamLogic.DuoOrder(duo, creatorFirst);
-            var side = TeamLogic.NewSide(duo.Id, duo.Name, duo.Elo, order, id => duo.Names[duo.Members.IndexOf(id)]);
-            var battle = await MatchAsync(BattleKind.Duo, TeamConfig.DuoSlots, "duo", side, duo.Members);
-            await Shared<Duo>(DuosCollection, duo.Id, x => { x.ActiveBattle = battle.Id; return x; });
+            // The battle is claimed under the duo's lock first: both partners tapping at once make one battle, not two.
+            string claim = NewId(), error = null;
+            long now = NowMs;
+            await Shared<Duo>(DuosCollection, duo.Id, x =>
+            {
+                error = null;
+                if (x == null) error = "UNKNOWN";
+                else if (x.ActiveBattle != null && x.ActiveBattle != seen) error = "BUSY";
+                else { x.ActiveBattle = claim; x.ActiveBattleAtUnixMs = now; }
+                return x;
+            });
+            if (error != null) return new TeamActionResponse { Error = error };
+            TeamBattle battle;
+            try
+            {
+                string spent = await SpendEnergyAsync(new[] { me });
+                if (spent != null)
+                {
+                    await ReleaseAsync(BattleKind.Duo, duo.Id, claim);
+                    return new TeamActionResponse { Error = spent };
+                }
+                bool creatorFirst = (duo.Members[0] == me) == meFirst;
+                var order = TeamLogic.DuoOrder(duo, creatorFirst);
+                var side = TeamLogic.NewSide(duo.Id, duo.Name, duo.Elo, order, id => duo.Names[duo.Members.IndexOf(id)]);
+                battle = await MatchAsync(BattleKind.Duo, TeamConfig.DuoSlots, DuoQueueKey, side, duo.Members, duo.Elo, claim, null);
+            }
+            catch
+            {
+                await ReleaseAsync(BattleKind.Duo, duo.Id, claim);
+                throw;
+            }
+            if (battle.Id != claim)
+                await Shared<Duo>(DuosCollection, duo.Id, x => { if (x != null && x.ActiveBattle == claim) x.ActiveBattle = battle.Id; return x; });
             return new TeamActionResponse { Ok = true, Battle = TeamLogic.ViewFor(battle, duo.Id) };
         }
+
+        /// <summary>Les files d'attente, une par version du générateur : un combat ne se joue que sur des tombeaux que tous ouvrent.</summary>
+        static string DuoQueueKey => "duo_g" + DifficultyTable.GeneratorVersion;
+        static string WarQueueKey(int size) => "war" + size + "_g" + DifficultyTable.GeneratorVersion;
 
         public async Task<DuoBoardResponse> GetDuoBoardAsync(int limit)
         {
@@ -211,34 +264,17 @@ namespace MummyEscape.Pvp
         // ------------------------------------------------------------------ matchmaking of battles
 
         /// <summary>
-        /// Rejoint le combat en file d'Elo le plus proche (sans joueur commun), ou en crée un nouveau qui attend. Hors ligne,
-        /// un camp simulé le rejoint aussitôt.
+        /// Rejoint le combat en file qui convient (<see cref="JoinQueuedAsync"/>), ou en crée un nouveau (identifiant
+        /// <paramref name="newId"/>) qui attend avec cette cote de matchmaking. Hors ligne, un camp simulé le rejoint aussitôt.
         /// </summary>
-        async Task<TeamBattle> MatchAsync(BattleKind kind, int slots, string queueKey, BattleSide side, IList<string> players)
+        async Task<TeamBattle> MatchAsync(BattleKind kind, int slots, string queueKey, BattleSide side, IList<string> players, int rating,
+                                          string newId, Func<string, bool> foeAllowed)
         {
             long now = NowMs;
-            QueuedBattle picked = null;
-            await Shared<List<QueuedBattle>>(QueueCollection, queueKey, queue =>
+            var battle = await JoinQueuedAsync(kind, slots, queueKey, side, players, rating, now, null, foeAllowed);
+            if (battle == null)
             {
-                queue ??= new List<QueuedBattle>();
-                queue.RemoveAll(q => now - q.CreatedAtUnixMs > TeamConfig.QueueHours * 3_600_000L);
-                picked = queue.Where(q => q.TeamId != side.TeamId && !q.Players.Intersect(players).Any())
-                              .OrderBy(q => Math.Abs(q.Elo - side.Elo)).FirstOrDefault();
-                if (picked != null) queue.Remove(picked);
-                return queue;
-            });
-
-            TeamBattle battle = null;
-            if (picked != null)
-                battle = await Shared<TeamBattle>(BattlesCollection, picked.BattleId, b =>
-                {
-                    if (b == null || b.B != null || b.Finished) return b;
-                    TeamLogic.Join(b, side, now);
-                    return b;
-                });
-            if (battle == null || battle.B != side)
-            {
-                battle = TeamLogic.NewBattle(NewId(), kind, slots, _newSeed, DifficultyTable.GeneratorVersion, now, side);
+                battle = TeamLogic.NewBattle(newId, kind, slots, _newSeed, DifficultyTable.GeneratorVersion, now, side);
                 var bot = BotSide?.Invoke(kind, slots, side.Elo);
                 if (bot != null) TeamLogic.Join(battle, bot, now);
                 await Shared<TeamBattle>(BattlesCollection, battle.Id, _ => battle);
@@ -246,11 +282,115 @@ namespace MummyEscape.Pvp
                     await Shared<List<QueuedBattle>>(QueueCollection, queueKey, queue =>
                     {
                         queue ??= new List<QueuedBattle>();
-                        queue.Add(new QueuedBattle { BattleId = battle.Id, TeamId = side.TeamId, Players = players.ToList(), Elo = side.Elo, CreatedAtUnixMs = now });
+                        queue.Add(new QueuedBattle { BattleId = battle.Id, TeamId = side.TeamId, Players = players.ToList(), Elo = rating, CreatedAtUnixMs = now });
                         return queue;
                     });
             }
             return await RunBotsAsync(battle.Id);
+        }
+
+        /// <summary>
+        /// Prend dans la file le combat qui attend et convient le mieux (cote la plus proche, sans joueur commun ; en guerre,
+        /// dans l'écart permis par l'attente la plus longue des deux et pas trop souvent contre la même guilde) et le rejoint.
+        /// Une guerre dont la guilde n'existe plus (ou n'a plus assez de membres) est annulée au passage. Null si rien ne convient.
+        /// </summary>
+        async Task<TeamBattle> JoinQueuedAsync(BattleKind kind, int slots, string queueKey, BattleSide side, IList<string> players, int rating,
+                                               long since, string skipBattleId, Func<string, bool> foeAllowed)
+        {
+            long now = NowMs;
+            for (int tries = 0; tries < 5; tries++)
+            {
+                QueuedBattle picked = null;
+                await Shared<List<QueuedBattle>>(QueueCollection, queueKey, queue =>
+                {
+                    queue ??= new List<QueuedBattle>();
+                    queue.RemoveAll(q => now - q.CreatedAtUnixMs > TeamConfig.QueueHours * 3_600_000L);
+                    picked = BestFit(queue, kind, side.TeamId, players, rating, since, now, skipBattleId, foeAllowed);
+                    if (picked != null) queue.Remove(picked);
+                    return queue;
+                });
+                if (picked == null) return null;
+                if (kind == BattleKind.GuildWar && !await WarStillWaitingAsync(picked, slots))
+                {
+                    await Shared<TeamBattle>(BattlesCollection, picked.BattleId, b => { if (b != null && b.B == null && !b.Finished) b.Finished = b.Void = true; return b; });
+                    await RefreshBattleAsync(picked.BattleId);
+                    continue;
+                }
+                var battle = await Shared<TeamBattle>(BattlesCollection, picked.BattleId, b =>
+                {
+                    if (b == null || b.B != null || b.Finished) return b;
+                    TeamLogic.Join(b, side, now);
+                    return b;
+                });
+                if (battle == null || battle.B != side) continue;
+                if (kind == BattleKind.GuildWar) await NoteFoesAsync(battle);
+                return battle;
+            }
+            return null;
+        }
+
+        static QueuedBattle BestFit(List<QueuedBattle> queue, BattleKind kind, string teamId, IList<string> players, int rating, long since, long now,
+                                    string skipBattleId, Func<string, bool> foeAllowed) =>
+            queue.Where(q => q.BattleId != skipBattleId && q.TeamId != teamId && !q.Players.Intersect(players).Any()
+                             && (kind == BattleKind.Duo || Math.Abs(q.Elo - rating) <= TeamLogic.WarGap(now - Math.Min(since, q.CreatedAtUnixMs)))
+                             && (foeAllowed == null || foeAllowed(q.TeamId)))
+                 .OrderBy(q => Math.Abs(q.Elo - rating)).ThenBy(q => q.CreatedAtUnixMs).FirstOrDefault();
+
+        /// <summary>La guerre en file attend toujours : sa guilde existe, a assez de membres et n'est pas passée à autre chose.</summary>
+        async Task<bool> WarStillWaitingAsync(QueuedBattle q, int slots)
+        {
+            var g = await Shared<Guild>(GuildsCollection, q.TeamId);
+            return g != null && g.Members.Count >= slots && g.ActiveWar == q.BattleId;
+        }
+
+        /// <summary>Guerres de la semaine contre une guilde : au plus <see cref="TeamConfig.MaxWarsPerWeekVsSameGuild"/>.</summary>
+        static Func<string, bool> FoeAllowed(Guild mine, long now) => id =>
+            (mine.Foes?.Count(f => f.GuildId == id && now - f.AtUnixMs < TeamConfig.WeekMs) ?? 0) < TeamConfig.MaxWarsPerWeekVsSameGuild;
+
+        async Task NoteFoesAsync(TeamBattle war)
+        {
+            long now = NowMs;
+            foreach (var (side, other) in new[] { (war.A, war.B), (war.B, war.A) })
+                await Shared<Guild>(GuildsCollection, side.TeamId, g =>
+                {
+                    if (g == null) return null;
+                    g.Foes ??= new List<WarFoe>();
+                    g.Foes.RemoveAll(f => now - f.AtUnixMs >= TeamConfig.WeekMs);
+                    g.Foes.Add(new WarFoe { GuildId = other.TeamId, AtUnixMs = now });
+                    return g;
+                });
+        }
+
+        /// <summary>
+        /// Une guerre qui attend : l'écart permis grandit avec l'attente, elle peut maintenant convenir à une autre guerre en
+        /// file. Elle quitte alors la file et rejoint celle-là (la sienne est annulée, sans issue) ; sinon rien ne change.
+        /// </summary>
+        async Task<TeamBattle> RematchWarAsync(Guild guild, TeamBattle war)
+        {
+            string key = WarQueueKey(war.Slots);
+            long now = NowMs;
+            var allowed = FoeAllowed(guild, now);
+            var queue = await Shared<List<QueuedBattle>>(QueueCollection, key);
+            var mine = queue?.Find(q => q.BattleId == war.Id);
+            // Read first: the queue is written only when another war fits.
+            if (mine == null || BestFit(queue, war.Kind, guild.Id, mine.Players, mine.Elo, mine.CreatedAtUnixMs, now, war.Id, allowed) == null) return war;
+            bool taken = false;
+            await Shared<List<QueuedBattle>>(QueueCollection, key, q => { taken = q != null && q.RemoveAll(x => x.BattleId == war.Id) > 0; return q; });
+            if (!taken) return await RefreshBattleAsync(war.Id); // someone just joined it
+            var joined = await JoinQueuedAsync(war.Kind, war.Slots, key, war.A, mine.Players, mine.Elo, mine.CreatedAtUnixMs, war.Id, allowed);
+            if (joined == null)
+            {
+                await Shared<List<QueuedBattle>>(QueueCollection, key, q =>
+                {
+                    q ??= new List<QueuedBattle>();
+                    if (!q.Exists(x => x.BattleId == mine.BattleId)) q.Add(mine);
+                    return q;
+                });
+                return war;
+            }
+            await Shared<Guild>(GuildsCollection, guild.Id, g => { if (g != null && g.ActiveWar == war.Id) g.ActiveWar = joined.Id; return g; });
+            await Shared<TeamBattle>(BattlesCollection, war.Id, b => { if (b != null && b.B == null) b.Finished = b.Applied = b.Void = true; return b; });
+            return joined;
         }
 
         /// <summary>Hors ligne : les coureurs simulés courent toutes leurs manches tout de suite.</summary>
@@ -290,6 +430,12 @@ namespace MummyEscape.Pvp
                 apply = false;
                 if (b == null) return null;
                 if (b.B == null && !b.Finished && now - b.CreatedAtUnixMs > TeamConfig.QueueHours * 3_600_000L) b.Finished = true; // nobody came
+                // Tombs of an older generator: nobody can run them any more (StartBattleRun refuses them), the battle ends void.
+                if (!b.Finished && b.GeneratorVersion != DifficultyTable.GeneratorVersion)
+                {
+                    b.Finished = b.Void = true;
+                    b.Result = DuelResult.Draw;
+                }
                 TeamLogic.CheckFinished(b, now);
                 if (b.Finished && !b.Applied)
                 {
@@ -305,17 +451,28 @@ namespace MummyEscape.Pvp
         /// <summary>L'issue d'un combat terminé : Elo des deux équipes, bilans, points de guilde, sceaux de guerre.</summary>
         async Task ApplyAsync(TeamBattle b)
         {
+            if (b.B == null || b.Void)
+            {
+                // No outcome (nobody came, or void): the teams are free again.
+                await ReleaseAsync(b.Kind, b.A.TeamId, b.Id);
+                if (b.B != null) await ReleaseAsync(b.Kind, b.B.TeamId, b.Id);
+                return;
+            }
             if (b.Kind == BattleKind.Duo) await ApplyDuoAsync(b);
             else await ApplyWarAsync(b);
         }
 
+        /// <summary>L'équipe n'est plus prise par ce combat (s'il est toujours le sien).</summary>
+        async Task ReleaseAsync(BattleKind kind, string teamId, string battleId)
+        {
+            if (kind == BattleKind.Duo)
+                await Shared<Duo>(DuosCollection, teamId, d => { if (d != null && d.ActiveBattle == battleId) d.ActiveBattle = null; return d; });
+            else
+                await Shared<Guild>(GuildsCollection, teamId, g => { if (g != null && g.ActiveWar == battleId) g.ActiveWar = null; return g; });
+        }
+
         async Task ApplyDuoAsync(TeamBattle b)
         {
-            if (b.B == null)
-            {
-                await Shared<Duo>(DuosCollection, b.A.TeamId, d => { if (d != null && d.ActiveBattle == b.Id) d.ActiveBattle = null; return d; });
-                return;
-            }
             var duoA = await Shared<Duo>(DuosCollection, b.A.TeamId);
             var duoB = await Shared<Duo>(DuosCollection, b.B.TeamId);
             int eloA = duoA?.Elo ?? b.A.Elo, eloB = duoB?.Elo ?? b.B.Elo;
@@ -351,16 +508,12 @@ namespace MummyEscape.Pvp
 
         async Task ApplyWarAsync(TeamBattle b)
         {
-            if (b.B == null)
-            {
-                await Shared<Guild>(GuildsCollection, b.A.TeamId, g => { if (g != null && g.ActiveWar == b.Id) g.ActiveWar = null; return g; });
-                return;
-            }
             var ga = await Shared<Guild>(GuildsCollection, b.A.TeamId);
             var gb = await Shared<Guild>(GuildsCollection, b.B.TeamId);
             int eloA = ga?.WarElo ?? b.A.Elo, eloB = gb?.WarElo ?? b.B.Elo;
-            int newA = Elo.NewRating(eloA, b.Result, 50);
-            int newB = Elo.NewRating(eloB, DuelResolver.Invert(b.Result), 50);
+            // Classic Elo: what a war is worth depends on the rival guild's level.
+            int newA = Elo.Classic(eloA, eloB, b.Result, TeamConfig.WarEloK);
+            int newB = Elo.Classic(eloB, eloA, DuelResolver.Invert(b.Result), TeamConfig.WarEloK);
             await Shared<TeamBattle>(BattlesCollection, b.Id, x => { x.EloDeltaA = newA - eloA; x.EloDeltaB = newB - eloB; return x; });
             await SettleWarAsync(b, true, newA);
             await SettleWarAsync(b, false, newB);
@@ -370,9 +523,11 @@ namespace MummyEscape.Pvp
         {
             var side = sideA ? b.A : b.B;
             var result = sideA ? b.Result : DuelResolver.Invert(b.Result);
+            // A war won against a guild that ran nothing earns no points and no seals (twin guilds trading wins).
+            bool walkover = TeamLogic.Walkover(sideA ? b.B : b.A);
             // Race wins, runner by runner: points for the runner and the guild.
             var raceWins = new Dictionary<string, int>();
-            for (int k = 0; k < b.Slots; k++)
+            for (int k = 0; k < b.Slots && !walkover; k++)
             {
                 int r = b.SlotResults[k];
                 bool won = sideA ? r == (int)DuelResult.Win : r == (int)DuelResult.Loss;
@@ -380,7 +535,7 @@ namespace MummyEscape.Pvp
                 raceWins.TryGetValue(side.Order[k], out int n);
                 raceWins[side.Order[k]] = n + 1;
             }
-            int bonus = result == DuelResult.Win ? TeamConfig.WarWinBonusPerSlot * b.Slots : 0;
+            int bonus = result == DuelResult.Win && !walkover ? TeamConfig.WarWinBonusPerSlot * b.Slots : 0;
             var guild = await Shared<Guild>(GuildsCollection, side.TeamId, g =>
             {
                 if (g == null) return null;
@@ -402,7 +557,7 @@ namespace MummyEscape.Pvp
                 return g;
             });
             if (guild != null) await IndexGuildAsync(guild);
-            if (result == DuelResult.Win)
+            if (result == DuelResult.Win && !walkover)
                 foreach (var id in side.Order.Distinct())
                     if (IsBot?.Invoke(id) != true)
                         await Update(id, d => d.Seals += TeamConfig.WarWinSealsPerRunner);
@@ -433,12 +588,17 @@ namespace MummyEscape.Pvp
             bool sideA = TeamLogic.SideOf(battle, me) == true;
             var mySide = sideA ? battle.A : battle.B;
             var other = sideA ? battle.B : battle.A;
+            // A runner who left the guild no longer runs for it (an officer gives his round to another member).
+            if (battle.Kind == BattleKind.GuildWar && (await Shared<Guild>(GuildsCollection, mySide.TeamId))?.Member(me) == null)
+                return new FindDuelResponse { Error = "NOT_MEMBER" };
             var theirRun = other.Runs[slot];
+            // The time to beat, not the route: the rival's actions stay hidden until the round is decided (a modded phone
+            // would replay them faster). The ghost is then not drawn on the tomb, only its time is shown.
             GhostRun ghost = theirRun == null ? null : new GhostRun
             {
                 GhostId = battleId + "_" + slot, PlayerId = theirRun.PlayerId, PlayerName = theirRun.PlayerName, Elo = other.Elo,
                 Seed = battle.Seeds[slot], GeneratorVersion = battle.GeneratorVersion, Outcome = theirRun.Outcome, TimeMs = theirRun.TimeMs,
-                Progress = theirRun.Progress, Inputs = theirRun.Inputs ?? new List<RunInput>(), CreatedAtUnixMs = theirRun.RunAtUnixMs, Look = theirRun.Look,
+                Progress = theirRun.Progress, Inputs = new List<RunInput>(), CreatedAtUnixMs = theirRun.RunAtUnixMs, Look = theirRun.Look,
             };
             var duel = new PendingDuel { MatchId = NewId(), Seed = battle.Seeds[slot], Ghost = ghost, CreatedAtUnixMs = NowMs, BattleId = battleId, Slot = slot };
             await _store.SetPendingAsync(me, duel);
@@ -471,7 +631,8 @@ namespace MummyEscape.Pvp
                 var sideA = TeamLogic.SideOf(b, me);
                 if (sideA == null) return b;
                 var side = sideA.Value ? b.A : b.B;
-                if (pending.Slot < 0 || pending.Slot >= b.Slots || side.Runs[pending.Slot] != null || b.SlotResults[pending.Slot] >= 0) return b;
+                if (pending.Slot < 0 || pending.Slot >= b.Slots || side.Order[pending.Slot] != me || side.Runs[pending.Slot] != null
+                    || b.SlotResults[pending.Slot] >= 0) return b; // replaced meanwhile, or already run
                 TeamLogic.Record(b, sideA.Value, pending.Slot, new SlotRun
                 {
                     PlayerId = me, PlayerName = playerName ?? side.Names[pending.Slot], Look = run.Look, Outcome = run.Outcome,
@@ -766,6 +927,7 @@ namespace MummyEscape.Pvp
             if (guild.ActiveWar != null)
             {
                 var war = await RefreshBattleAsync(guild.ActiveWar);
+                if (war != null && war.B == null && !war.Finished) war = await RematchWarAsync(guild, war);
                 if (war != null) response.Wars.Add(TeamLogic.ViewFor(war, guild.Id));
                 guild = await Shared<Guild>(GuildsCollection, guild.Id) ?? guild;
             }
@@ -832,7 +994,8 @@ namespace MummyEscape.Pvp
 
         /// <summary>
         /// Le chef ou un officier lance une guerre de <paramref name="size"/> manches avec cet ordre de passage (un membre
-        /// par manche), contre la guilde d'Elo de guerre le plus proche qui attend.
+        /// par manche), contre une guilde de niveau proche qui attend une guerre de même taille (cote de matchmaking : Elo de
+        /// guerre mêlé à l'Elo duel des coureurs alignés). Sinon la guerre attend la sienne.
         /// </summary>
         public async Task<GuildResponse> StartWarAsync(string me, int size, List<string> order, int generatorVersion)
         {
@@ -843,16 +1006,77 @@ namespace MummyEscape.Pvp
             var boss = guild?.Member(me);
             if (boss == null) return new GuildResponse { Error = "NO_GUILD" };
             if (boss.Role < GuildRole.Officer) return new GuildResponse { Error = "RIGHTS" };
-            if (guild.ActiveWar != null)
+            string seen = guild.ActiveWar;
+            if (seen != null)
             {
-                var current = await RefreshBattleAsync(guild.ActiveWar);
-                if (current != null && !current.Finished) return new GuildResponse { Error = "BUSY" };
+                var current = await RefreshBattleAsync(seen);
+                if (current != null ? !current.Finished : NowMs - guild.ActiveWarAtUnixMs <= TeamConfig.ClaimStaleMs)
+                    return new GuildResponse { Error = "BUSY" };
             }
             string error = TeamLogic.CheckWarOrder(guild, order, size);
             if (error != null) return new GuildResponse { Error = error };
-            var side = TeamLogic.NewSide(guild.Id, $"[{guild.Tag}] {guild.Name}", guild.WarElo, order, id => guild.Member(id)?.Name);
-            var war = await MatchAsync(BattleKind.GuildWar, size, "war" + size, side, guild.Members.Select(m => m.PlayerId).ToList());
-            await Shared<Guild>(GuildsCollection, guild.Id, g => { g.ActiveWar = war.Id; return g; });
+
+            // The war is claimed under the guild's lock first: two officers starting at once make one war, not two.
+            string claim = NewId();
+            long now = NowMs;
+            guild = await Shared<Guild>(GuildsCollection, guild.Id, g =>
+            {
+                error = null;
+                var b = g?.Member(me);
+                if (b == null || b.Role < GuildRole.Officer) error = "RIGHTS";
+                else if (g.ActiveWar != null && g.ActiveWar != seen) error = "BUSY";
+                else { g.ActiveWar = claim; g.ActiveWarAtUnixMs = now; }
+                return g;
+            });
+            if (error != null) return new GuildResponse { Error = error };
+            TeamBattle war;
+            try
+            {
+                var side = TeamLogic.NewSide(guild.Id, $"[{guild.Tag}] {guild.Name}", guild.WarElo, order, id => guild.Member(id)?.Name);
+                int rating = TeamLogic.WarRating(guild.WarElo, await LineupDuelEloAsync(order));
+                war = await MatchAsync(BattleKind.GuildWar, size, WarQueueKey(size), side, guild.Members.Select(m => m.PlayerId).ToList(), rating,
+                                       claim, FoeAllowed(guild, now));
+            }
+            catch
+            {
+                await ReleaseAsync(BattleKind.GuildWar, guild.Id, claim);
+                throw;
+            }
+            if (war.Id != claim)
+                await Shared<Guild>(GuildsCollection, guild.Id, g => { if (g != null && g.ActiveWar == claim) g.ActiveWar = war.Id; return g; });
+            return await GetGuildAsync(me);
+        }
+
+        /// <summary>L'Elo duel moyen de ces coureurs (un joueur sans fiche compte pour l'Elo de départ).</summary>
+        async Task<int> LineupDuelEloAsync(IList<string> order)
+        {
+            var data = await _store.ReadPlayersAsync(order.Where(IsHuman).ToList());
+            return (int)Math.Round(order.Average(id => data.TryGetValue(id, out var p) && p != null ? p.Elo : PvpConfig.StartingElo));
+        }
+
+        /// <summary>
+        /// Le chef ou un officier donne une manche pas encore courue de la guerre en cours à un autre membre (qui n'en court
+        /// aucune) : un absent, ou un coureur parti de la guilde, ne fait plus perdre sa manche.
+        /// </summary>
+        public async Task<GuildResponse> ReplaceWarRunnerAsync(string me, string battleId, int slot, string playerId)
+        {
+            var d = await Update(me);
+            if (d.GuildId == null) return new GuildResponse { Error = "NO_GUILD" };
+            var guild = await Shared<Guild>(GuildsCollection, d.GuildId);
+            var boss = guild?.Member(me);
+            if (boss == null) return new GuildResponse { Error = "NO_GUILD" };
+            if (boss.Role < GuildRole.Officer) return new GuildResponse { Error = "RIGHTS" };
+            var member = guild.Member(playerId);
+            if (member == null) return new GuildResponse { Error = "ORDER" };
+            if (string.IsNullOrEmpty(battleId) || guild.ActiveWar != battleId || await RefreshBattleAsync(battleId) == null)
+                return new GuildResponse { Error = "UNKNOWN" };
+            string error = null;
+            await Shared<TeamBattle>(BattlesCollection, battleId, b =>
+            {
+                error = b == null ? "UNKNOWN" : TeamLogic.Replace(b, guild.Id, slot, playerId, member.Name);
+                return b;
+            });
+            if (error != null) return new GuildResponse { Error = error };
             return await GetGuildAsync(me);
         }
 

@@ -264,6 +264,9 @@ namespace MummyEscape.Online
         public Task<GuildResponse> StartWarAsync(int size, List<string> order) =>
             Call("StartWar", Args("size", size, "order", order, "generatorVersion", Gen), e => new GuildResponse { Error = e });
 
+        public Task<GuildResponse> ReplaceWarRunnerAsync(string battleId, int slot, string playerId) =>
+            Call("ReplaceWarRunner", Args("battleId", battleId, "slot", slot, "playerId", playerId), e => new GuildResponse { Error = e });
+
         public async Task<LadderPage> GetLadderAsync(Ladder ladder, LadderScope scope, int seasonsAgo) =>
             await Call("GetLadder", Args("ladder", (int)ladder, "scope", (int)scope, "seasonsAgo", seasonsAgo), e => new LadderPage { Error = e })
             ?? new LadderPage { Error = PvpServiceFactory.NetworkError };

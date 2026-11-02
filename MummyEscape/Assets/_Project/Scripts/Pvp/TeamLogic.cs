@@ -74,8 +74,8 @@ namespace MummyEscape.Pvp
         }
 
         /// <summary>
-        /// La manche que ce joueur peut courir maintenant : la première manche de son camp pas encore courue, si c'est la
-        /// sienne (un camp court ses manches dans l'ordre). -1 sinon.
+        /// La manche que ce joueur peut courir maintenant, -1 sinon. Un duo court ses manches dans l'ordre (la première pas
+        /// encore courue, si c'est la sienne) ; en guerre, chacun court la sienne quand il veut (un absent ne bloque personne).
         /// </summary>
         public static int NextSlot(TeamBattle b, string playerId)
         {
@@ -86,9 +86,56 @@ namespace MummyEscape.Pvp
             for (int k = 0; k < b.Slots; k++)
             {
                 if (side.Runs[k] != null || b.SlotResults[k] >= 0) continue;
-                return side.Order[k] == playerId ? k : -1;
+                if (side.Order[k] == playerId) return k;
+                if (b.Kind == BattleKind.Duo) return -1;
             }
             return -1;
+        }
+
+        /// <summary>Manches que ce camp n'a pas encore courues.</summary>
+        public static int LeftToRun(TeamBattle b, bool sideA)
+        {
+            var side = sideA ? b.A : b.B;
+            int n = 0;
+            for (int k = 0; side != null && k < b.Slots; k++)
+                if (side.Runs[k] == null && b.SlotResults[k] < 0) n++;
+            return n;
+        }
+
+        /// <summary>
+        /// Le chef ou un officier remplace le coureur d'une manche pas encore courue par un autre membre (qui n'en court
+        /// aucune). Null si c'est fait, sinon un code d'erreur.
+        /// </summary>
+        public static string Replace(TeamBattle b, string teamId, int slot, string playerId, string name)
+        {
+            var sideA = b.Finished ? null : SideOfTeam(b, teamId);
+            if (sideA == null) return "UNKNOWN";
+            var side = sideA.Value ? b.A : b.B;
+            if (slot < 0 || slot >= b.Slots || string.IsNullOrEmpty(playerId) || side.Order.Contains(playerId)) return "ORDER";
+            if (side.Runs[slot] != null || b.SlotResults[slot] >= 0) return "RAN";
+            side.Order[slot] = playerId;
+            side.Names[slot] = name ?? "";
+            return null;
+        }
+
+        /// <summary>Cote de matchmaking d'une guerre : l'Elo de guerre mêlé à l'Elo duel moyen des coureurs alignés.</summary>
+        public static int WarRating(int warElo, int lineupDuelElo) =>
+            (int)Math.Round((warElo * TeamConfig.WarRatingWarEloPercent + lineupDuelElo * (100 - TeamConfig.WarRatingWarEloPercent)) / 100.0);
+
+        /// <summary>Écart de cote accepté entre deux guerres après <paramref name="waitMs"/> d'attente : il s'élargit par paliers.</summary>
+        public static int WarGap(long waitMs) =>
+            (int)Math.Min(TeamConfig.WarGapMax,
+                          TeamConfig.WarGapStart + TeamConfig.WarGapStep * (Math.Max(0, waitMs) / (TeamConfig.WarGapStepHours * 3_600_000L)));
+
+        /// <summary>
+        /// Une guerre gagnée par forfait : l'autre camp n'a couru aucune manche (absent ou abandon partout). Pas de points ni
+        /// de sceaux pour ça (guildes jumelles).
+        /// </summary>
+        public static bool Walkover(BattleSide loser)
+        {
+            foreach (var r in loser.Runs)
+                if (r != null && r.Outcome != RunOutcome.Abandoned) return false;
+            return true;
         }
 
         /// <summary>Le coureur que son camp attend (prochaine manche non courue), null si plus personne.</summary>
@@ -219,7 +266,7 @@ namespace MummyEscape.Pvp
         {
             Id = b.Id, Kind = b.Kind, Slots = b.Slots, Seeds = b.Seeds, GeneratorVersion = b.GeneratorVersion,
             CreatedAtUnixMs = b.CreatedAtUnixMs, StartedAtUnixMs = b.StartedAtUnixMs, DeadlineUnixMs = b.DeadlineUnixMs,
-            A = b.A, B = b.B, SlotResults = b.SlotResults, Finished = b.Finished, Result = b.Result, Applied = b.Applied,
+            A = b.A, B = b.B, SlotResults = b.SlotResults, Finished = b.Finished, Result = b.Result, Applied = b.Applied, Void = b.Void,
             EloDeltaA = b.EloDeltaA, EloDeltaB = b.EloDeltaB,
         };
     }

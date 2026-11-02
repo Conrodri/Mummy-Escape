@@ -9,7 +9,7 @@ générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne 
   `GetDuelHistory`, `ReportCheat`, `StartLiveDuel`, `GetLiveDuel`, `StartLiveBotDuel`, `SubmitLiveDuel`, `GetLiveDuelResult`,
   `GetTeams`, `InviteDuo`, `RespondDuo`, `SearchMate`, `CancelMateSearch`, `LeaveDuo`, `FindDuoMatch`, `GetDuoBoard`, `StartBattleRun`, `GetBattle`,
   `GetGuild`, `CreateGuild`, `SearchGuilds`, `GetGuildBoard`, `JoinGuild`, `LeaveGuild`, `SetGuildRole`, `KickGuildMember`,
-  `StartWar`, `StartRelayMatch`, `StartRelayBots`, `SubmitRelay`, `GetRelayResult`, `ReportRelayQuit`, `GetRelayHistory`,
+  `StartWar`, `ReplaceWarRunner`, `StartRelayMatch`, `StartRelayBots`, `SubmitRelay`, `GetRelayResult`, `ReportRelayQuit`, `GetRelayHistory`,
   `GetChat`, `SendChat`, `GetChatInbox`, `BlockChat`, `SyncChatProfile`, `ReportChat`, `ShareReplay`, `GetSharedReplay`,
   `RefillPvpEnergy`, `GetWallet`, `VerifyPurchase`, `BuyPass`, `BuyTiers`, `BuyScarabs`, `BuyGoldItem`, `ClaimPassRewards`,
   `OpenScarabs`, `BuyScarabPiece`, `BuyScarabSet`, `SpinScarabWheel`, `BuyWheelLegendary`,
@@ -92,7 +92,9 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
    - `pvp_live`, `pvp_relays`, `pvp_quit_reports` : données « custom » **privées**, les duels en direct, les matchs 2v2 et
      les abandons signalés.
    - `pvp_battles`, `pvp_duos`, `pvp_guilds`, `pvp_battle_queue` : données « custom » **privées**, combats 2v2 et guerres,
-     duos, guildes et files d'attente des combats.
+     duos, guildes et files d'attente des combats. Les files sont par version du générateur (`duo_g<N>`, `war3_g<N>`…) :
+     après un changement de `GeneratorVersion`, les combats en cours de l'ancienne version finissent annulés (sans Elo) et
+     les anciennes clés (`duo`, `war3`, `war5`, `war10`) ne sont plus lues (à effacer à la main si besoin).
    - `pvp_team_index` : données « custom » **privées**, l'index des duos et des guildes (recherche, classements), réparti
      sur 16 clés (`duos_0`…`duos_15`, `guilds_0`…`guilds_15`) ; les anciennes clés `duos` et `guilds` sont encore lues.
    - `pvp_orders` : données « custom » **privées**, le registre des achats Google Play (une clé par commande) : un achat

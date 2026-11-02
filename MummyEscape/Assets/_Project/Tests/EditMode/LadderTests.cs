@@ -236,6 +236,7 @@ namespace MummyEscape.Tests
             var w = new World();
             w.Player("amy", "FR");
             w.Player("bob", "BE");
+            await w.Server.SyncChatProfileAsync("bob", new List<string> { "amy" }, false);
             await w.Server.InviteDuoAsync("amy", "Amy", "bob");
             await w.Server.RespondDuoAsync("bob", "Bob", w.Store.Players["bob"].DuoInvites[0].Id, true);
             DuoSummary Summary() => w.Store.Shared.Values.OfType<List<DuoSummary>>().SelectMany(l => l).Single();
@@ -263,6 +264,7 @@ namespace MummyEscape.Tests
         public async Task NamesFromPhones_AreCleanedWhereTheServerReceivesThem()
         {
             var w = new World();
+            await w.Server.SyncChatProfileAsync("bob", new List<string> { "amy" }, false);
             await w.Server.InviteDuoAsync("amy", Injected, "bob");
             var invite = w.Store.Players["bob"].DuoInvites[0];
             Assert.IsFalse(invite.FromName.Contains("<"), invite.FromName);

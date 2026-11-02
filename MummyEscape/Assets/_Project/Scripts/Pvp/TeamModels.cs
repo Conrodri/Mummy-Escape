@@ -34,6 +34,19 @@ namespace MummyEscape.Pvp
         public const int MaxGuildInvites = 10;
         public const int MaxGuildApplications = 5;
 
+        // --- Matchmaking des guerres : des guildes de niveau proche ---
+        /// <summary>Cote de matchmaking d'une guerre : ce pourcentage de l'Elo de guerre, le reste de l'Elo duel moyen des coureurs alignés.</summary>
+        public const int WarRatingWarEloPercent = 50;
+        /// <summary>Écart de cote accepté : 150 au départ, +50 toutes les 6 h d'attente (de la plus ancienne des deux), 400 au plus.</summary>
+        public const int WarGapStart = 150, WarGapStep = 50, WarGapStepHours = 6, WarGapMax = 400;
+        /// <summary>Elo de guerre : Elo classique (score attendu selon l'écart), ce facteur K.</summary>
+        public const int WarEloK = 32;
+        /// <summary>Au plus ce nombre de guerres par semaine contre la même guilde (guildes jumelles qui s'échangent des victoires).</summary>
+        public const int MaxWarsPerWeekVsSameGuild = 2;
+        public const long WeekMs = 7 * 24 * 3_600_000L;
+        /// <summary>Une guerre (ou un combat de duo) réservée mais jamais créée (appel coupé) se libère après ce délai.</summary>
+        public const long ClaimStaleMs = 60_000;
+
         // --- Combats ---
         public const int BattleHours = 24;             // fenêtre pour courir ses manches, une fois l'adversaire trouvé
         public const int QueueHours = 48;              // un combat sans adversaire disparaît de la file après ce délai
@@ -86,8 +99,9 @@ namespace MummyEscape.Pvp
     }
 
     /// <summary>
-    /// Un combat d'équipe. Chaque manche a son propre tombeau ; le premier des deux coureurs d'une manche court seul (sa
-    /// course devient le fantôme), le second court contre ce fantôme. Les manches d'un camp se courent dans l'ordre.
+    /// Un combat d'équipe. Chaque manche a son propre tombeau ; le premier des deux coureurs d'une manche court seul, le
+    /// second connaît son temps (pas son trajet). Un duo court ses manches dans l'ordre ; en guerre, chacun court la sienne
+    /// quand il veut.
     /// </summary>
     [Serializable]
     public class TeamBattle
@@ -112,6 +126,8 @@ namespace MummyEscape.Pvp
         public DuelResult Result;
         /// <summary>Elo, points et récompenses appliqués (une seule fois).</summary>
         public bool Applied;
+        /// <summary>Combat annulé sans issue (tombeaux d'une ancienne version du générateur, guilde dissoute) : ni Elo ni récompense.</summary>
+        public bool Void;
         /// <summary>Variation d'Elo de chaque camp une fois appliquée.</summary>
         public int EloDeltaA, EloDeltaB;
         /// <summary>Dans une vue envoyée à un joueur (<see cref="TeamLogic.ViewFor"/>) : l'équipe de ce joueur.</summary>
@@ -125,6 +141,7 @@ namespace MummyEscape.Pvp
         public string BattleId;
         public string TeamId;
         public List<string> Players = new List<string>();
+        /// <summary>Cote de matchmaking : Elo 2v2 du duo, ou cote de guerre (<see cref="TeamLogic.WarRating"/>).</summary>
         public int Elo;
         public long CreatedAtUnixMs;
     }
@@ -144,6 +161,8 @@ namespace MummyEscape.Pvp
         public long CreatedAtUnixMs;
         /// <summary>Combat en cours (en file ou commencé), null sinon.</summary>
         public string ActiveBattle;
+        /// <summary>Instant où <see cref="ActiveBattle"/> a été réservé (sous le verrou du duo).</summary>
+        public long ActiveBattleAtUnixMs;
         /// <summary>Derniers combats terminés (les plus récents d'abord).</summary>
         public List<string> RecentBattles = new List<string>();
         /// <summary>Campagne 2v2 : le meilleur passage de chaque tombeau passé par le duo.</summary>
@@ -251,12 +270,23 @@ namespace MummyEscape.Pvp
         public int WarElo = TeamConfig.GuildStartingWarElo;
         public int WarWins, WarLosses, WarDraws;
         public string ActiveWar;
+        /// <summary>Instant où <see cref="ActiveWar"/> a été réservée (sous le verrou de la guilde).</summary>
+        public long ActiveWarAtUnixMs;
         public List<string> RecentWars = new List<string>();
+        /// <summary>Guildes affrontées ces 7 derniers jours, une ligne par guerre (voir <see cref="TeamConfig.MaxWarsPerWeekVsSameGuild"/>).</summary>
+        public List<WarFoe> Foes = new List<WarFoe>();
         public GuildJoinPolicy JoinPolicy;
         /// <summary>Joueurs qui ont postulé (guilde sur demande), en attente du chef ou d'un officier.</summary>
         public List<GuildApplicant> Applicants = new List<GuildApplicant>();
 
         public GuildMember Member(string playerId) => Members.Find(m => m.PlayerId == playerId);
+    }
+
+    [Serializable]
+    public class WarFoe
+    {
+        public string GuildId;
+        public long AtUnixMs;
     }
 
     /// <summary>Ligne de l'index des guildes (recherche et classement).</summary>
@@ -321,7 +351,7 @@ namespace MummyEscape.Pvp
         public List<GuildInvite> Invites = new List<GuildInvite>();
         /// <summary>Guildes où le joueur a postulé (joueur sans guilde).</summary>
         public List<string> Applied = new List<string>();
-        public string Error;   // "NAME", "TAG", "TAKEN", "IN_GUILD", "NO_GUILD", "FULL", "RIGHTS", "ORDER", "BUSY", "REQUESTED", "CLOSED", "UNKNOWN"
+        public string Error;   // "NAME", "TAG", "TAKEN", "IN_GUILD", "NO_GUILD", "FULL", "RIGHTS", "ORDER", "BUSY", "REQUESTED", "CLOSED", "RAN", "UNKNOWN"
     }
 
     [Serializable]
@@ -344,6 +374,6 @@ namespace MummyEscape.Pvp
         public TeamBattle Battle;
         /// <summary>Invitation en guilde : le joueur est entré tout de suite (il avait postulé).</summary>
         public bool Joined;
-        public string Error;   // "LIMIT", "SELF", "EXISTS", "UNKNOWN", "RIGHTS", "ORDER", "BUSY", "NO_GUILD", "MEMBER", "THEIR_GUILD", "FULL"
+        public string Error;   // "LIMIT", "SELF", "EXISTS", "UNKNOWN", "RIGHTS", "ORDER", "BUSY", "NO_GUILD", "MEMBER", "THEIR_GUILD", "FULL", "NOT_FRIEND"
     }
 }

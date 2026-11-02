@@ -10,6 +10,7 @@ namespace MummyEscape.Tests
         {
             var now = new System.DateTime(2026, 10, 12, 12, 0, 0, System.DateTimeKind.Utc);
             var server = new PvpServer(new MemoryPvpStore(), () => now);
+            server.SyncChatProfileAsync("b", new System.Collections.Generic.List<string> { "a" }, false).Wait(); // friends: b has a
             Assert.IsTrue(server.InviteDuoAsync("a", "Ana", "b").Result.Ok);
             var invite = server.GetTeamsAsync("b").Result.Invites[0];
             Assert.IsTrue(server.RespondDuoAsync("b", "Bob", invite.Id, true).Result.Ok);

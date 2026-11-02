@@ -546,6 +546,9 @@ namespace MummyEscape.Online
             return r;
         });
 
+        public Task<GuildResponse> ReplaceWarRunnerAsync(string battleId, int slot, string playerId) =>
+            Run(() => _server.ReplaceWarRunnerAsync(Me, battleId, slot, playerId));
+
         public async Task<LadderPage> GetLadderAsync(Ladder ladder, LadderScope scope, int seasonsAgo)
         {
             if (ladder == Ladder.Duel) await GetProfileAsync(); // rolls the season first

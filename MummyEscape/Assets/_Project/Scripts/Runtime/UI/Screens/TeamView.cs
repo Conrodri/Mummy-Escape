@@ -68,6 +68,7 @@ namespace MummyEscape.UI.Screens
         {
             if (b.B == null)
                 return b.Finished ? Loc.T("Personne n'est venu : combat annulé.") : Loc.T("En attente d'une équipe adverse…");
+            if (b.Void) return Loc.T("Combat annulé : les tombeaux ont changé de version.");
             if (b.Finished)
             {
                 var result = mineA ? b.Result : DuelResolver.Invert(b.Result);
@@ -82,6 +83,9 @@ namespace MummyEscape.UI.Screens
             string time = Loc.F("Fin dans {0} h {1:00}", minutes / 60, minutes % 60);
             string awaited = TeamLogic.Awaited(b, mineA);
             if (awaited == null) return time + "  ·  " + Loc.T("Ton équipe a tout couru");
+            // A war: each member runs his own round whenever he likes.
+            if (b.Kind == BattleKind.GuildWar)
+                return time + "  ·  " + Loc.P(TeamLogic.LeftToRun(b, mineA), "{0} manche à courir", "{0} manches à courir");
             var side = mineA ? b.A : b.B;
             return time + "  ·  " + Loc.F("Au tour de {0}", side.Names[side.Order.IndexOf(awaited)]);
         }
@@ -192,6 +196,9 @@ namespace MummyEscape.UI.Screens
                 case "MEMBER": return Loc.T("Ce joueur est déjà dans ta guilde."); // noloc
                 case "THEIR_GUILD": return Loc.T("Ce joueur est déjà dans une autre guilde."); // noloc
                 case "NOT_YOUR_TURN": return Loc.T("Ce n'est pas encore ton tour."); // noloc
+                case "NOT_MEMBER": return Loc.T("Tu n'es plus dans cette guilde : ta manche ne compte plus pour elle."); // noloc
+                case "RAN": return Loc.T("Cette manche est déjà courue."); // noloc
+                case "NOT_FRIEND": return Loc.T("Ce joueur ne t'a pas (encore) dans ses amis."); // noloc
                 case "UNKNOWN": return Loc.T("Introuvable : il a peut-être disparu."); // noloc
                 default: return PvpScreen.ErrorText(code);
             }
