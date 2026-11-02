@@ -102,6 +102,8 @@ namespace MummyEscape.Pvp
         public int Elo = PvpConfig.StartingElo;
         /// <summary>Début de la recherche de duel en cours (0 : aucune) : une minute sans adversaire de la division avant les bots.</summary>
         public long DuelSearchSinceUnixMs;
+        /// <summary>Début de la recherche de duel en direct (StartLiveSearch, heure du serveur), 0 : aucune. Un bot n'arrive qu'après une minute.</summary>
+        public long LiveSearchSinceUnixMs;
         public int TotalDuels;          // depuis la création du compte (placement)
         public int Wins;
         public int Losses;
@@ -257,6 +259,8 @@ namespace MummyEscape.Pvp
         public int Seals;
         /// <summary>Pour une manche d'un combat d'équipe : le combat, vu par ce joueur.</summary>
         public TeamBattle Battle;
+        /// <summary>Duel en direct annulé (l'adversaire ne s'est jamais montré) : ni victoire ni défaite, l'énergie est rendue.</summary>
+        public bool Void;
         public string Error;   // "INVALID_RUN", "NO_PENDING_DUEL"
     }
 
@@ -391,6 +395,8 @@ namespace MummyEscape.Pvp
         public bool Reported;
         /// <summary>Duel en direct : il s'arrête à la première sortie, mort ou abandon (la suite de l'autre course n'a pas eu lieu).</summary>
         public bool Live;
+        /// <summary>Duel en direct annulé : l'un des deux ne s'est jamais montré (rien de compté).</summary>
+        public bool Void;
     }
 
     /// <summary>Réponse de GetDuelHistory : les derniers duels du joueur, du plus récent au plus ancien.</summary>

@@ -29,7 +29,11 @@ namespace MummyEscape.Online
 
         public async Task<IRelayLink> FindAsync(RelaySearch search, Action<string> status, CancellationToken cancel)
         {
-            var run = new Run(search, status, cancel);
+            var background = MatchSearches.Token;
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancel, background);
+            var run = new Run(search, status, linked.Token);
+            // Sent to the background: out of the lobbies at once, nobody waits for a sleeping phone.
+            using var leaveNow = background.Register(() => _ = run.LeaveAsync());
             try
             {
                 return await run.FindAsync();
@@ -37,6 +41,7 @@ namespace MummyEscape.Online
             catch (OperationCanceledException)
             {
                 await run.LeaveAsync();
+                if (!cancel.IsCancellationRequested) status(Loc.T("Recherche interrompue."));
                 return null;
             }
             catch (Exception e)
@@ -64,6 +69,10 @@ namespace MummyEscape.Online
             const int SeekMs = 4000;
             /// <summary>A duo that came half (the teammate could not follow) is sent away after this.</summary>
             const int HalfDuoMs = 15_000;
+            /// <summary>The teammate gives up when the leader's lobby is not there, or the leader not in it, this long.</summary>
+            const int LeaderGoneMs = 15_000;
+            /// <summary>After this long open, the neighbour divisions too.</summary>
+            const int WidenMs = 30_000;
             const int ConnectMs = 20_000;
 
             static ILobbyService Lobbies => LobbyService.Instance;
@@ -77,7 +86,7 @@ namespace MummyEscape.Online
 
             Lobby _home;          // the duo's lobby
             string _away;         // the other duo's lobby, once the duo moves there
-            DateTime _openedAt, _lastBeat, _lastSeek, _moveAt;
+            DateTime _openedAt, _lastBeat, _lastSeek, _moveAt, _leaderSeenAt;
             readonly Dictionary<string, DateTime> _halfSince = new Dictionary<string, DateTime>();
 
             public Run(RelaySearch search, Action<string> status, CancellationToken cancel)
@@ -102,6 +111,11 @@ namespace MummyEscape.Online
                 _status(Loc.F("En attente de {0}…", _mateName));
                 if (_leader) await CreateHomeAsync();
                 else await JoinHomeAsync();
+                if (_home == null)
+                {
+                    _status(Loc.F("{0} a quitté la recherche.", _mateName));
+                    return null;
+                }
 
                 while (true)
                 {
@@ -115,6 +129,14 @@ namespace MummyEscape.Online
                         return null;
                     }
                     await HeartbeatAsync();
+                    // The teammate: a leader gone from the lobby for a while (his phone died) ends the search.
+                    if (_leader || lobby.Players.Any(p => p.Id == _mateId)) _leaderSeenAt = Now;
+                    else if ((Now - _leaderSeenAt).TotalMilliseconds > LeaderGoneMs)
+                    {
+                        _status(Loc.F("{0} a quitté la recherche.", _mateName));
+                        await LeaveAsync();
+                        return null;
+                    }
 
                     // The match is ready: connect.
                     if (Data(lobby, KeyJoin) is string join && join.Length > 0)
@@ -174,9 +196,12 @@ namespace MummyEscape.Online
 
             async Task JoinHomeAsync()
             {
+                var since = Now;
                 while (_home == null)
                 {
                     _cancel.ThrowIfCancellationRequested();
+                    // The leader never opened the duo's lobby: stop here rather than wait forever (the caller says so).
+                    if ((Now - since).TotalMilliseconds > LeaderGoneMs) return;
                     var found = await QueryAsync(new List<QueryFilter>
                     {
                         new QueryFilter(QueryFilter.FieldOptions.S1, _search.Duo.Id, QueryFilter.OpOptions.EQ),
@@ -190,6 +215,7 @@ namespace MummyEscape.Online
                     }
                     if (_home == null) await Task.Delay(PollMs, _cancel);
                 }
+                _leaderSeenAt = Now;
             }
 
             /// <summary>The host's turn: open the lobby, send the half duos away, start the match, or look for the other duo.</summary>
@@ -221,7 +247,8 @@ namespace MummyEscape.Online
                         [KeyState] = new DataObject(DataObject.VisibilityOptions.Public, StateOpen, DataObject.IndexOptions.S3),
                         [KeyDivision] = new DataObject(DataObject.VisibilityOptions.Public, division.ToString(), DataObject.IndexOptions.N1),
                     });
-                    _openedAt = Now;
+                    // Once per search: a duo's lobby opened again (after a failed move) keeps its time toward the bots.
+                    if (_openedAt == default) _openedAt = Now;
                     _status(Loc.T("Recherche d'un duo adverse…"));
                     return null;
                 }
@@ -241,13 +268,21 @@ namespace MummyEscape.Online
             /// <summary>Another open duo of the division with an older lobby: the duo moves there.</summary>
             async Task SeekAsync(Lobby lobby)
             {
-                var found = await QueryAsync(new List<QueryFilter>
+                var filters = new List<QueryFilter>
                 {
                     new QueryFilter(QueryFilter.FieldOptions.S2, DifficultyGen(), QueryFilter.OpOptions.EQ),
                     new QueryFilter(QueryFilter.FieldOptions.S3, StateOpen, QueryFilter.OpOptions.EQ),
-                    new QueryFilter(QueryFilter.FieldOptions.N1, Data(lobby, KeyDivision), QueryFilter.OpOptions.EQ),
                     new QueryFilter(QueryFilter.FieldOptions.AvailableSlots, "2", QueryFilter.OpOptions.EQ),
-                });
+                };
+                int division = ParseInt(Data(lobby, KeyDivision), _division);
+                if ((Now - _openedAt).TotalMilliseconds >= WidenMs)
+                {
+                    // After a while, the neighbour divisions too (the server accepts one apart).
+                    filters.Add(new QueryFilter(QueryFilter.FieldOptions.N1, (division - 1).ToString(), QueryFilter.OpOptions.GE));
+                    filters.Add(new QueryFilter(QueryFilter.FieldOptions.N1, (division + 1).ToString(), QueryFilter.OpOptions.LE));
+                }
+                else filters.Add(new QueryFilter(QueryFilter.FieldOptions.N1, division.ToString(), QueryFilter.OpOptions.EQ));
+                var found = await QueryAsync(filters);
                 var target = found.Where(l => l.Id != lobby.Id && Data(l, KeyDuo) != _search.Duo.Id && string.CompareOrdinal(l.Id, lobby.Id) < 0)
                                   .OrderBy(l => l.Created).FirstOrDefault();
                 if (target == null) return;
@@ -397,19 +432,15 @@ namespace MummyEscape.Online
                 return link;
             }
 
+            /// <summary>
+            /// Connects to the host first, then reads the match: reading it is what shows the duo up on the server, so a
+            /// connection that never comes leaves the match void instead of lost.
+            /// </summary>
             async Task<IRelayLink> ConnectAsync(Lobby lobby, string matchId, string code)
             {
                 _status(Loc.T("Connexion des joueurs…"));
-                RelayMatch match = null;
-                for (int attempt = 0; attempt < 4 && match == null; attempt++)
-                {
-                    var r = await _search.Pvp.GetRelayResultAsync(matchId);
-                    match = r?.Match;
-                    if (match == null) await Task.Delay(1000, _cancel);
-                }
-                if (match == null) { _status(Loc.T("Le match n'a pas pu démarrer.")); return null; }
                 var join = await RelayService.Instance.JoinAllocationAsync(code);
-                var link = UgsRelayLink.Client(join.ToRelayServerData("dtls"), match, Me, lobby.HostId); // noloc
+                var link = UgsRelayLink.Client(join.ToRelayServerData("dtls"), null, Me, lobby.HostId); // noloc
                 var until = Now.AddMilliseconds(ConnectMs);
                 while (!link.Ready && !link.Failed && Now < until)
                 {
@@ -417,12 +448,20 @@ namespace MummyEscape.Online
                     link.Pump();
                     await Task.Delay(30);
                 }
-                if (!link.Ready)
+                RelayMatch match = null;
+                for (int attempt = 0; link.Ready && attempt < 4 && match == null; attempt++)
+                {
+                    var r = await _search.Pvp.GetRelayResultAsync(matchId);
+                    match = r?.Match;
+                    if (match == null) await Task.Delay(1000, _cancel);
+                }
+                if (!link.Ready || match == null)
                 {
                     link.Dispose();
                     _status(Loc.T("Le match n'a pas pu démarrer."));
                     return null;
                 }
+                link.Match = match;
                 // The host deletes the lobby; leaving is only tidier.
                 try { await Lobbies.RemovePlayerAsync(lobby.Id, Me); } catch (LobbyServiceException) { }
                 _home = null;
@@ -516,7 +555,7 @@ namespace MummyEscape.Online
             static string PlayerData(Player p, string key) =>
                 p.Data != null && p.Data.TryGetValue(key, out var d) ? d.Value : null;
 
-            static int ParseInt(string s) => int.TryParse(s, out int v) ? v : PvpConfig.StartingElo;
+            static int ParseInt(string s, int fallback = PvpConfig.StartingElo) => int.TryParse(s, out int v) ? v : fallback;
 
             /// <summary>Only games with the same tombs and the same map draft meet.</summary>
             static string DifficultyGen() => "v" + Core.DifficultyTable.GeneratorVersion + "d" + PvpDraft.Version; // noloc

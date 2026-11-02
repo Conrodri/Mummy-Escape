@@ -25,16 +25,30 @@ namespace MummyEscape.Pvp
         /// <summary>
         /// Prend un point à chaque joueur humain du match ; "ENERGY" (et rien de pris) quand l'un d'eux n'en a plus.
         /// </summary>
-        async Task<string> SpendEnergyAsync(IEnumerable<string> players)
+        async Task<string> SpendEnergyAsync(IEnumerable<string> players) => (await SpendEnergyForAsync(players)).Error;
+
+        /// <summary>Comme <see cref="SpendEnergyAsync"/>, avec le joueur qui n'en a plus.</summary>
+        async Task<(string Error, string Who)> SpendEnergyForAsync(IEnumerable<string> players)
         {
             var payers = new List<string>();
             foreach (var id in players.Where(IsHuman).Distinct())
                 if (!await UnlimitedAsync(id)) payers.Add(id);
             foreach (var id in payers)
-                if (Energy.Left((await Update(id)).Energy, EnergyConfig.PvpMax, NowMs) <= 0) return "ENERGY";
+                if (Energy.Left((await Update(id)).Energy, EnergyConfig.PvpMax, NowMs) <= 0) return ("ENERGY", id);
             foreach (var id in payers)
                 await Update(id, d => Energy.Spend(d.Energy, EnergyConfig.PvpMax, NowMs));
-            return null;
+            return (null, null);
+        }
+
+        /// <summary>Un match annulé rend son point à chaque joueur humain (un joueur au pass n'a rien dépensé : rien à rendre).</summary>
+        async Task RefundEnergyAsync(IEnumerable<string> players)
+        {
+            foreach (var id in players.Where(IsHuman).Distinct())
+                await Update(id, d =>
+                {
+                    Energy.Regen(d.Energy, NowMs);
+                    if (d.Energy.Used > 0) d.Energy.Used--;
+                });
         }
 
         /// <summary>Après une pub : un point de plus (<see cref="EnergyConfig.AdRefillsPerDay"/> fois par jour).</summary>

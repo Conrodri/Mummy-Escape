@@ -338,12 +338,15 @@ namespace MummyEscape.App
 
         void OnApplicationPause(bool paused)
         {
+            if (paused) MatchSearches.CancelAll();
             if (paused) _ = SendSoloRuns(true);
             else if (Quests != null) _ = Quests.RefreshAsync(); // back from the background: maybe a new day, or runs the server replayed since
             if (!paused && Session != null) _ = Session.LoadStatus(); // a new version may have come out meanwhile
             if (paused) Notifications.Plan(this);
             if (paused && _cloudDirty && Online != null && Online.Account == AccountState.Account) _ = PushCloudSave();
         }
+
+        void OnApplicationQuit() => MatchSearches.CancelAll();
 
         bool _googleAsked;
         /// <summary>The anonymous session of an earlier version, kept signed out until Google Play Games is linked to it.</summary>

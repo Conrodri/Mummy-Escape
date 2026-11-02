@@ -6,7 +6,7 @@ générateur de tombeaux et les règles du jeu (`Scripts/Core/`). Ce dossier ne 
 
 - `PvpModule.cs` : les points d'entrée (duels, 2v2, guildes, tchat, énergie, porte-monnaie, données personnelles) :
   `FindDuel`, `SubmitRun`, `GetLadder`, `SetCountry`, `GetPvpProfile`, `ClaimSeasonRewards`, `BuyWithSeals`, `SpinSealWheel`, `GetPvpBoard`,
-  `GetDuelHistory`, `ReportCheat`, `StartLiveDuel`, `GetLiveDuel`, `StartLiveBotDuel`, `SubmitLiveDuel`, `GetLiveDuelResult`,
+  `GetDuelHistory`, `ReportCheat`, `StartLiveDuel`, `GetLiveDuel`, `StartLiveBotDuel`, `StartLiveSearch`, `SubmitLiveDuel`, `GetLiveDuelResult`,
   `GetTeams`, `InviteDuo`, `RespondDuo`, `SearchMate`, `CancelMateSearch`, `LeaveDuo`, `FindDuoMatch`, `GetDuoBoard`, `StartBattleRun`, `GetBattle`,
   `GetGuild`, `CreateGuild`, `SearchGuilds`, `GetGuildBoard`, `JoinGuild`, `LeaveGuild`, `SetGuildRole`, `KickGuildMember`,
   `StartWar`, `ReplaceWarRunner`, `StartRelayMatch`, `StartRelayBots`, `SubmitRelay`, `GetRelayResult`, `ReportRelayQuit`, `GetRelayHistory`,
@@ -157,6 +157,26 @@ duel ou combat 2v2 1 énergie de combat (3 au plus, gardée par le serveur, dép
 `StartLiveBotDuel`, `StartRelayMatch`, `StartRelayBots` et `FindDuoMatch`, qui renvoient `ENERGY` quand il n'y en a plus).
 Un point revient toutes les 2 minutes. Une pub rend 3 énergies solo (côté jeu) ou 3 de combat (`RefillPvpEnergy`), 5 fois par jour chacune.
 Le pass premium de la saison lève la limite. Réglages : `Pvp/Energy.cs` (`EnergyConfig`).
+Un duel en direct ou un match 2v2 **annulé** rend son point à chacun (voir ci-dessous).
+
+## Duel en direct et 2v2 : matchs annulés, bots
+
+- **Se montrer** : chaque joueur d'un duel (chaque duo d'un 2v2) doit appeler lui-même le serveur pour ce match
+  (`StartLiveDuel`/`StartRelayMatch` pour l'hôte ; `GetLiveDuel`, `BanLiveDuel`, `SubmitLiveDuel`, `GetLiveDuelResult`,
+  `BanRelay`, `SubmitRelay`, `GetRelayResult` pour les autres). Un camp qui ne s'est jamais montré : au jugement (45 s après la
+  création au plus tôt) le match est **annulé** (`Void` dans la réponse, l'historique et le match) : ni Elo, ni sceaux, ni
+  quêtes, ni points de guilde ; l'énergie est rendue. Un salon truqué (l'hôte qui « trouve » un joueur qui ne joue pas) ne
+  fait donc plus perdre personne. Un match déjà créé n'est rendu qu'à ses joueurs.
+- **Refus** : `StartLiveDuel` vérifie aussi que l'adversaire a ouvert les duels (`LOCKED`) ; `Refused` nomme le joueur à
+  cause de qui le duel n'est pas créé (`LOCKED`, `ENERGY`, `DIVISION`), l'autre cherche à nouveau. Deux ligues voisines
+  (duel) ou divisions voisines (2v2) se rencontrent (le jeu élargit sa recherche après 30 s), les cartes de la plus haute.
+- **Bots** : `StartLiveSearch` (nouvelle fonction, à appeler au début de chaque recherche) note l'heure du serveur ;
+  `StartLiveBotDuel` avec `protocol` ≥ 1 (jeu 0.1.15+) exige 55 s de recherche, sinon `SEARCH`, et chaque bot consomme la
+  recherche. Un jeu 0.1.14 n'envoie pas `protocol` (0) : pas de contrôle tant que `ClientVersion.Minimum` les accepte.
+  L'Elo gagné ou perdu contre un bot est divisé par deux (arrondi vers le haut, 1 au moins).
+- `SearchMate` reçoit `generatorVersion` (absent chez 0.1.14 : accepté) ; un autre que celui du serveur reçoit `OUTDATED`.
+- `UpdateSharedAsync` (`CloudSavePvpStore`) ne réécrit plus un objet inchangé : les tirages relus chaque seconde ne coûtent
+  qu'une lecture.
 
 ## Signalements de triche
 

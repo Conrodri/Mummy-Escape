@@ -23,6 +23,8 @@ namespace MummyEscape.Pvp
         public int Elo;
         public List<RelayRunner> Runners = new List<RelayRunner>();
         public bool Bot;
+        /// <summary>Un joueur du duo s'est montré : il a lui-même appelé le serveur pour ce match (création, vote, relais, résultat).</summary>
+        public bool Confirmed;
         /// <summary>Le coureur du labyrinthe 0 (désigné par le vote), null avant le vote.</summary>
         public string Starter;
         /// <summary>Actions du relais (envoyées par le duo à la fin ; écrites d'avance pour un duo de bots).</summary>
@@ -79,6 +81,8 @@ namespace MummyEscape.Pvp
         /// <summary>Premier relais reçu : l'autre camp a encore un moment pour envoyer le sien.</summary>
         public long FirstSubmitUnixMs;
         public bool Settled;
+        /// <summary>Annulé au jugement : un duo ne s'est jamais montré. Ni Elo ni points ; l'énergie est rendue.</summary>
+        public bool Void;
         /// <summary>Résultat pour le camp A.</summary>
         public DuelResult Result;
         public int EloDeltaA, EloDeltaB;
@@ -127,6 +131,8 @@ namespace MummyEscape.Pvp
         public int EloDelta;
         public int NewElo;
         public RelayMatch Match;
+        /// <summary>Match annulé : un duo ne s'est jamais montré.</summary>
+        public bool Void;
         public string Error;
     }
 
@@ -136,6 +142,8 @@ namespace MummyEscape.Pvp
         public const int SubmitWindowMs = 60_000;
         /// <summary>Un match jamais envoyé est oublié après ce délai.</summary>
         public const int MatchLifetimeMs = 30 * 60_000;
+        /// <summary>Un duo qui ne s'est pas montré (aucun de ses joueurs n'a appelé le serveur pour ce match) ce temps après la création : match annulé.</summary>
+        public const int ConfirmWindowMs = 45_000;
         /// <summary>Signalements « a quitté » par joueur et par jour.</summary>
         public const int MaxQuitReportsPerDay = 10;
     }

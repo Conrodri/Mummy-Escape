@@ -159,7 +159,7 @@ namespace MummyEscape.UI.Screens
                 SetButtons(true, false);
                 return;
             }
-            if (r.Resolved)
+            if (r.Resolved && !r.Void)
             {
                 // The server counted this duel for the quests: the same here before the verdict shows, then its copy.
                 App.Quests.Record(QuestKind.DuelPlay);
@@ -172,6 +172,12 @@ namespace MummyEscape.UI.Screens
                 UIKit.TintTitle(_title, UIKit.Turquoise);
                 _note.text = _match.IsLive ? Loc.T("Le verdict attend la course de ton adversaire : ton Elo bougera dans une minute.")
                            : Loc.T("Personne n'attendait sur ce tombeau : ta course devient le fantôme du prochain challenger. Ton Elo bougera à ce moment-là.");
+            }
+            else if (r.Void)
+            {
+                _title.text = Loc.T("MATCH ANNULÉ");
+                UIKit.TintTitle(_title, UIKit.Sand);
+                _note.text = Loc.T("Ton adversaire ne s'est jamais connecté : rien n'est compté et ton énergie t'est rendue.");
             }
             else
             {
@@ -247,7 +253,7 @@ namespace MummyEscape.UI.Screens
             {
                 MatchId = _run.MatchId, Seed = _match.Seed, GeneratorVersion = DifficultyTable.GeneratorVersion,
                 PlayedAtUnixMs = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                Resolved = r.Resolved, Result = r.Result, EloBefore = r.EloBefore, EloAfter = r.EloAfter, Live = _match.IsLive,
+                Resolved = r.Resolved, Void = r.Void, Result = r.Result, EloBefore = r.EloBefore, EloAfter = r.EloAfter, Live = _match.IsLive,
                 Me = new DuelRun
                 {
                     PlayerName = App.Online.PlayerName, Look = _run.Look, Elo = r.EloBefore, Outcome = _run.Outcome,
@@ -297,6 +303,9 @@ namespace MummyEscape.UI.Screens
             _again.interactable = false;
             _note.text = Loc.T("Recherche d'un adversaire…");
             var search = _search = new System.Threading.CancellationTokenSource();
+            // The duel just played may have changed the league: search in the new one.
+            await App.Session.RefreshProfile();
+            if (this == null || search.IsCancellationRequested) return;
             var matchmaker = DuelMatchmakerFactory.For(App.Pvp);
             var start = matchmaker == null ? null
                       : await PvpScreen.FindLiveAsync(App, matchmaker, text => { if (this != null && _search == search) _note.text = text; }, search.Token);

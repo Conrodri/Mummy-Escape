@@ -16,7 +16,8 @@ namespace MummyEscape.Online
     /// </summary>
     public sealed class UgsRelayLink : IRelayLink, IPeerLink
     {
-        public RelayMatch Match { get; }
+        /// <summary>Set by a client once connected (it reads the match only then: see UgsRelayMatchmaker.ConnectAsync).</summary>
+        public RelayMatch Match { get; internal set; }
         public string Me { get; }
         public event Action<RelayMessage> Received;
         public event Action<string> Left;

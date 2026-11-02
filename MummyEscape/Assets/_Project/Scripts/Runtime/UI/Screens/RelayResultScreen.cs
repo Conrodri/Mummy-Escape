@@ -110,7 +110,7 @@ namespace MummyEscape.UI.Screens
             }
             // The replay takes the server's copy: both relays as it replayed them, and its verdict.
             var record = _record;
-            if (record != null && r != null && r.Error == null && !r.Pending && r.Match?.A != null && r.Match.B != null)
+            if (record != null && r != null && r.Error == null && !r.Pending && !r.Void && r.Match?.A != null && r.Match.B != null)
             {
                 record.Match = r.Match;
                 record.Resolved = true;
@@ -130,6 +130,14 @@ namespace MummyEscape.UI.Screens
             if (r.Pending)
             {
                 if (_outcome.PartnerQuit == null) _note.text = Loc.T("Le duo adverse n'a pas encore envoyé son relais : ton Elo bougera dans une minute.");
+                return;
+            }
+            if (r.Void)
+            {
+                _title.text = Loc.T("MATCH ANNULÉ");
+                UIKit.TintTitle(_title, UIKit.Sand);
+                _elo.text = "";
+                _note.text = Loc.T("Le duo adverse ne s'est jamais connecté : rien n'est compté et ton énergie t'est rendue.");
                 return;
             }
             App.Quests.Record(QuestKind.DuoPlay); // the server counted the match: the same here before the verdict, then its copy

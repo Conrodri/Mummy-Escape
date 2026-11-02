@@ -393,11 +393,15 @@ namespace MummyEscape.Pvp
         /// <summary>
         /// Applique le résultat d'un duel résolu. Retourne les sceaux gagnés : <see cref="PvpConfig.WinSeals"/> par victoire,
         /// <see cref="PvpConfig.FirstLossSeals"/> pour la 1re défaite (ou nul) du jour, puis 1 de moins à chacune, jusqu’à 0.
+        /// <paramref name="halfStake"/> : contre un bot, la moitié de l'Elo gagné ou perdu (arrondie vers le haut, 1 au moins).
         /// </summary>
-        public static int ApplyResult(PlayerPvpData d, string opponentId, int opponentElo, DuelResult result)
+        public static int ApplyResult(PlayerPvpData d, string opponentId, int opponentElo, DuelResult result, bool halfStake = false)
         {
             int seals = 0;
+            int before = d.Elo;
             d.Elo = Elo.NewRating(d.Elo, result, d.TotalDuels);
+            int delta = d.Elo - before;
+            if (halfStake && delta != 0) d.Elo = Math.Max(PvpConfig.MinElo, before + Math.Sign(delta) * ((Math.Abs(delta) + 1) / 2));
             d.TotalDuels++;
             if (result == DuelResult.Win) { d.Wins++; d.SeasonWins++; }
             else if (result == DuelResult.Loss) { d.Losses++; d.SeasonLosses++; }
