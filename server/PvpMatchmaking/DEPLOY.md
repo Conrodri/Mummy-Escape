@@ -42,7 +42,8 @@ Les tests de la logique se lancent avec le reste : `dotnet test tools/CoreTests`
    `Assets/_Project/CloudCode/PvpMatchmaking.ccmr`, qui pointe vers `server/PvpMatchmaking.sln`), puis « Deploy Selected ».
    Unity publie le projet pour Linux (profil `Properties/PublishProfiles/FolderProfile.pubxml`) et l'envoie. Il faut le
    SDK .NET 8 ou plus récent sur la machine. Le module doit garder le nom `PvpMatchmaking` : le jeu appelle ce nom.
-3. **Leaderboards** (Dashboard › Leaderboards) : trois, rien d'autre. Le jeu ne les lit plus lui-même : il appelle
+3. **Leaderboards** : trois, rien d'autre. `ladder_tower` et `ladder_endless` sont décrits par
+   `Assets/_Project/Online/Leaderboards/*.lb` (Services › Deployment, « Deploy Selected ») ; `pvp_elo` se règle dans le Dashboard. Le jeu ne les lit plus lui-même : il appelle
    `GetLadder(ladder, scope, seasonsAgo)` (`Pvp/PvpServer.Ladders.cs`), qui sert les quatre classements (duel, 2v2, tour,
    sans fin) pour le monde, le pays du joueur ou ses amis. Le pays est gardé par le serveur (`SetCountry`, code ISO à deux
    lettres, `""` pour aucun ; `COUNTRY` s'il est invalide) et écrit en métadonnée `c` de chaque entrée.
