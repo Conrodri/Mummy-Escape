@@ -1,21 +1,34 @@
 # Mummy Rush
 
-Puzzle-labyrinthe mobile (Unity 6000.3 LTS, URP 2D). Une momie s'échappe d'un tombeau plongé dans le noir : la carte est montrée au début (4 à 10 s par étage selon ce qu’il y a à retenir), puis la momie ne voit plus que les cases voisines grâce à sa torche. Chaque swipe = 1 case, objectif = sortir en un minimum de coups. Chaque partie tire un nouveau labyrinthe.
+**Échappe-toi du tombeau… à l'aveugle.** Puzzle-labyrinthe mobile, gratuit sur [Google Play](https://play.google.com/store/apps/details?id=com.mummyrush.game) (Unity 6000.3 LTS, URP 2D). Une momie s'échappe d'un tombeau plongé dans le noir : la carte est montrée au début (4 à 10 s par étage selon ce qu’il y a à retenir), puis la momie ne voit plus que les cases voisines grâce à sa torche. Chaque swipe = 1 case, objectif = sortir en un minimum de coups. Chaque partie tire un nouveau labyrinthe.
+
+**Modes de jeu**
+- **Campagne solo** : 5 actes (l'Antichambre, les Galeries inondées, les Ruines effondrées, la Cité d'Anubis, le Sanctuaire embrasé), chacun avec sa mécanique, en Facile, Normal et Extrême : 150 niveaux, jouables hors ligne.
+- **Mode sans fin** et **Tour de défi** : les mêmes tombeaux pour tous, pour aller le plus loin possible.
+- **Duel 1v1 en direct** : on bannit un tombeau sur trois, on le mémorise, et le premier sorti gagne. Elo, ligues Bronze → Diamant puis Top 100, un skin de saison par ligue.
+- **2v2 en relais** avec un ami (chacun son labyrinthe, on libère son coéquipier sur une dalle), **campagne 2v2**, **guildes** et leurs guerres.
+- **Classements** Duel, 2v2, Tour et Sans fin, au choix monde, pays ou amis ; chaque course est rejouée par le serveur (anti-triche).
+- Skins de momie, pass de saison, boutique et événements (Halloween).
 
 ```
 Escape/
 ├── MummyEscape/            projet Unity
 │   └── Assets/_Project/
 │       ├── Scripts/Core/       règles, solveur, générateur (C# pur, sans UnityEngine)
+│       ├── Scripts/Pvp/        logique serveur : duels, 2v2, guildes, économie, classements (C# pur, aussi compilée par le module Cloud Code)
 │       ├── Scripts/Runtime/    jeu : vues, input, UI, services, online
-│       ├── Scripts/Online.UGS/ implémentation Unity Gaming Services (compilée si les paquets sont présents)
+│       ├── Scripts/Online.*/   Unity Gaming Services, Google Play Jeux (compilés si les paquets sont présents)
 │       ├── Scripts/Editor/     setup, aperçu des niveaux, build, textes légaux
-│       ├── Scripts/Editor.Pipeline/  commandes CLI/MCP (mummy_levels, mummy_level, mummy_setup, mummy_autoplay…)
-│       ├── Tests/EditMode/     tests de résolution / déterminisme / règles
+│       ├── Scripts/Editor.Pipeline/  commandes CLI/MCP (mummy_levels, mummy_level, mummy_autoplay, mummy_record…)
+│       ├── Tests/EditMode/     tests de résolution / déterminisme / règles / PvP
 │       └── Scenes/Main.unity
+├── server/PvpMatchmaking/  module Cloud Code (voir son DEPLOY.md)
 ├── tools/
 │   ├── CoreTests/          mêmes tests, via `dotnet test` (rapide, sans Unity)
-│   └── LevelLab/           inspection et statistiques du générateur en ligne de commande
+│   ├── LevelLab/           inspection et statistiques du générateur en ligne de commande
+│   └── PvpSim/             simulation de joueurs et de bots PvP
+├── store/google-play/      fiche du store, visuels, déclarations
+├── docs/                   politique de confidentialité et CGU (GitHub Pages, générés depuis l'éditeur)
 └── .mcp.json               serveur MCP Unity intégré pour Claude Code
 ```
 
@@ -142,7 +155,7 @@ Français et anglais, au choix dans **Paramètres › Langue** (par défaut : la
 ## Tests
 
 ```bash
-cd tools/CoreTests && dotnet test                       # ~1630 tests
+cd tools/CoreTests && dotnet test                       # ~6000 tests (Core + Pvp)
 dotnet test --filter "TestCategory!=Slow"               # sans le balayage de 60 variantes par niveau
 ```
 Dans Unity : Window › General › Test Runner › EditMode.
@@ -166,7 +179,7 @@ dotnet run -c Release -- --halloween                  # écrit les 10 tombeaux d
 
 **Mode sans fin** (solo) : une échelle par mode, ouverte en finissant la campagne de ce mode. Tous les joueurs montent les mêmes tombeaux dans le même ordre : ils sont **stockés** dans `Assets/_Project/Resources/Tombs/endless.txt` (format `Core/Model/TombArchive.cs`, une ligne par tombeau) et ne dépendent plus du générateur ni de `GeneratorVersion`. `--endless` tire les tombeaux suivants avec le générateur du moment (`Endless.Source` : un acte au hasard, un niveau un peu plus dur tous les 30 tombeaux) et les **ajoute** à la fin du fichier ; ne jamais modifier ni retirer une ligne (la position des joueurs pointe dessus). `EndlessTests.StoredTombs_AllLoadAndAreSolvable` vérifie que chaque tombeau stocké a toujours une sortie avec les `Rules` actuelles : une règle qui casse un ancien tombeau fait échouer ce test. Pas d'étoiles : seule l'évasion compte ; une mort fait rejouer le même tombeau. Énergie à part : 15 points, +1 toutes les 2 minutes, 1 point par tombeau, +5 par pub (mêmes limites quotidiennes). Un seul classement sans fin, tous modes réunis : 1 point par tombeau franchi en Facile, 2 en Normal, 3 en Extrême (`Ladders.EndlessPoints`), puis le temps.
 
-**Halloween** (`Core/Progression/Halloween.cs`) : un acte saisonnier hors campagne, ouvert du 24 octobre au 7 novembre inclus, heure de Paris, aux joueurs qui ont fini le niveau Facile 1-10 (`Feature.Events`) (règle UE d'heure d'été calculée depuis l'UTC, la même dans le jeu et sur le serveur), caché le reste de l'année (progression gardée). 10 tombeaux stockés (`Resources/Tombs/halloween.txt`), Facile puis Normal, dans le décor `TombTheme` Halloween (citrouilles, toiles d'araignée, lumière orange et violette) ; chaque tombeau coûte un point d'énergie solo comme la campagne, sans étoiles ni record ni classement. Finir les 10 donne le chapeau « Citrouille d'Halloween » et le thème d'accueil Halloween. Pendant l'événement : « Momie de minuit » en boutique (scarabées), « Chapeau de sorcière » au Trésor (scarabées dorés, refusé par le serveur hors fenêtre : erreur `EVENT`) et le légendaire « Feux de Samhain » ajouté à la case légendaire de la roue des scarabées (`Casino.ScarabsAt`, chances des cases inchangées).
+**Halloween** (`Core/Progression/Halloween.cs`) : un acte saisonnier hors campagne, ouvert du 24 octobre au 28 novembre inclus, heure de Paris, aux joueurs qui ont fini le niveau Facile 1-10 (`Feature.Events`) (règle UE d'heure d'été calculée depuis l'UTC, la même dans le jeu et sur le serveur), caché le reste de l'année (progression gardée). 10 tombeaux stockés (`Resources/Tombs/halloween.txt`), Facile puis Normal, dans le décor `TombTheme` Halloween (citrouilles, toiles d'araignée, lumière orange et violette) ; chaque tombeau coûte un point d'énergie solo comme la campagne, sans étoiles ni record ni classement. Finir les 10 donne le chapeau « Citrouille d'Halloween » et le thème d'accueil Halloween. Pendant l'événement : « Momie de minuit » en boutique (scarabées), « Chapeau de sorcière » au Trésor (scarabées dorés, refusé par le serveur hors fenêtre : erreur `EVENT`) et le légendaire « Feux de Samhain » ajouté à la case légendaire de la roue des scarabées (`Casino.ScarabsAt`, chances des cases inchangées).
 
 **Modifier la génération** : toute modification de `LevelGenerator` / `DifficultyTable` / `Rules` change les labyrinthes. Il faut alors
 1. incrémenter `DifficultyTable.GeneratorVersion` (les duels et la tour sont indexés par version → pas de cartes différentes sous un même id),
@@ -186,7 +199,16 @@ unity command mummy_setup            # (re)crée scène + réglages
 unity command mummy_capture          # capture de la vue Game
 unity command mummy_autoplay --steps 40 --until torch_out   # (en Play) saute l'aperçu et joue la solution optimale
                                      # --until : torch_out | torch_relit | button | teleport
+unity command mummy_record --dir <chemin absolu> --seconds 20 [--autoplay true]   # (en Play) images JPG à 30 i/s, temps du jeu calé sur les images
+unity command mummy_loc_check        # textes sans traduction
+unity command mummy_build_play       # AAB signé pour Google Play
 ```
+
+## Vidéos promotionnelles
+
+Des pubs verticales (1080×1920, 30 i/s, pour TikTok, Reels et Shorts) sont montées par script Python (Pillow + ffmpeg) à partir de séquences filmées avec `mummy_record`. Le jeu y tourne à sa vraie vitesse, chaque scène reste au moins 3 s à l'écran et les textes évitent les bords couverts par l'interface des réseaux. Les scripts, les musiques et les vidéos sont dans `exports/pub/`, qui n'est pas versionné :
+- `montage.py` : la pub générale (`MummyRush_pub_FR.mp4`, FR et EN) ;
+- `ads.py` : une pub de ~25 s par public : `duel` (1v1), `duo` (2v2), `aventure` (solo tranquille) et `compet` (ligues, classements, anti-triche). `python ads.py <dossier des séquences> <duel|duo|aventure|compet|all> <dossier de sortie>`. Le découpage et les textes de chaque pub sont en tête du script.
 
 ## En ligne (Unity Gaming Services)
 
@@ -194,9 +216,11 @@ Sans configuration, le jeu tourne **hors ligne** (sauvegarde locale, classement/
 1. Lier le projet : Edit › Project Settings › Services (organisation + projet UGS).
 2. Activer Authentication (Google Play Games, et anonyme pour les anciens invités et l'éditeur), Friends, Cloud Save et Cloud Code dans le dashboard, puis déployer le module `server/PvpMatchmaking`.
 
-**Classements** : quatre échelles seulement (`Pvp/Ladder.cs`), écrites et servies par le module Cloud Code : **Duel** (Elo du mois, ce mois-ci ou le mois dernier), **2v2** (Elo de duo), **Tour** (étages en une course, puis le temps) et **Sans fin** (points pondérés, puis le temps). Chacune se lit en Monde, dans le pays choisi par le joueur ou entre amis (`GetLadder(ladder, scope, seasonsAgo)`, erreur `NO_COUNTRY` si aucun pays n'est choisi) ; le pays est envoyé au serveur par `SetCountry` à chaque changement et une fois par session. Le classement des guildes reste à part (`GetGuildBoard`). Le jeu n'écrit aucun score : il envoie ses courses (actions horodatées) à `SubmitSoloRuns`, que le serveur rejoue. Un seul écran les montre (`LeaderboardScreen`, onglets Duel / 2v2 / Tour / Sans fin / Guildes). La progression des amis est publiée dans Cloud Save (clé publique `progress`).
+**Classements** : quatre échelles seulement (`Pvp/Ladder.cs`), écrites et servies par le module Cloud Code : **Duel** (Elo du mois, ce mois-ci ou le mois dernier), **2v2** (Elo de duo), **Tour** (étages en une course, puis le temps) et **Sans fin** (points pondérés, puis le temps). Chacune se lit en Monde, dans le pays choisi par le joueur ou entre amis (`GetLadder(ladder, scope, seasonsAgo)`, erreur `NO_COUNTRY` si aucun pays n'est choisi) ; le pays est envoyé au serveur par `SetCountry` à chaque changement et une fois par session. Le classement des guildes reste à part (`GetGuildBoard`). Le jeu n'écrit aucun score : il envoie ses courses (actions horodatées) à `SubmitSoloRuns`, que le serveur rejoue ; une règle Access Control interdit aux joueurs d'écrire dans les classements. Un seul écran les montre (`LeaderboardScreen`, onglets Duel / 2v2 / Tour / Sans fin / Guildes). La progression des amis est publiée dans Cloud Save (clé publique `progress`).
 
 **Tirage des cartes (duels en direct et 2v2)** : le serveur propose trois tombeaux propres au PvP (`PvpDraft`), tirés de la graine du match dans l'acte de la ligue (Bronze, Argent, Or : Normal actes 1, 2, 3 ; Platine, Diamant : Extrême actes 2, 3), un facile, un moyen, un dur. Chaque camp en bannit un en 10 s (en 2v2, au vote de ses deux joueurs ; deux votes différents : l'un des deux au hasard) ; pas de choix à temps ou bot : bannissement au hasard ; le tombeau restant est joué (même carte bannie des deux côtés : l'une des deux autres au hasard). Le hasard vient de `Pcg32` et de la graine du match. La graine d'une carte du tirage est négative et porte son contrat (mode, acte, niveau) : le serveur régénère le tombeau avec elle seule (`PvpArena.Generate`, `RelayArena.Generate`), les anciennes graines positives gardent leurs tombeaux. Le serveur garde le tirage (`MapDraft`, fonctions `BanLiveDuel` / `BanRelay`, lu par `GetLiveDuel` / `GetRelayResult`), le ferme quand tous ont voté ou 15 s après le premier vote. Un jeu sans tirage (`draftVersion` absent) reçoit `OUTDATED` et les salons sont séparés (`v13d1`). Les combats d'équipe (manches contre fantôme, cartes fixées à la création du combat) n'ont pas de tirage.
+
+**Recherche d'adversaires** : duels et 2v2 cherchent d'abord dans la ligue du joueur, puis s'ouvrent aux ligues voisines (±1) après 30 s ; un bot n'est proposé qu'après une vraie recherche (et la victoire contre un bot rapporte moitié moins d'Elo). Un match dont un camp ne s'est jamais présenté est annulé et l'énergie rendue. On n'invite en duo que ses amis. Les guerres de guildes opposent des guildes de niveau proche (cote de guerre, Elo classique), chaque manche est indépendante et un coureur absent peut être remplacé.
 
 ## Comptes et RGPD
 
@@ -212,12 +236,12 @@ Sans configuration, le jeu tourne **hors ligne** (sauvegarde locale, classement/
   - effacement des données du téléphone ;
   - retrait des choix à tout moment.
 - **Preuve du choix.** Le choix est horodaté avec la version de la politique (`PrivacyService.PolicyVersion`). Incrémenter cette version redemande l'accord à tous les joueurs.
-- **Ni publicité, ni analytics, ni traceur** (Unity Analytics désactivé). Ne pas en ajouter sans revoir la politique, le manifeste iOS et un éventuel bandeau de consentement.
+- **Aucun traceur ; publicité et statistiques seulement au choix du joueur.** Une publicité (Google AdMob, récompensée) ne s'affiche que si le joueur choisit d'en regarder une pour récupérer de l'énergie ; les publicités personnalisées passent par le formulaire de consentement de Google. Les statistiques d'usage (Unity Analytics) ne partent que si le joueur les active, jamais précochées, en mode en ligne seulement, et sont effacées avec les données en ligne. Tout nouvel envoi de données demande de revoir la politique (`PrivacyService.PolicyVersion`), le manifeste iOS et les déclarations des stores.
 
-**À faire avant publication :**
-1. Remplir `Runtime/UI/Legal/LegalTexts.cs` : éditeur (nom, adresse), e-mail de contact et médiateur de la consommation. Mettre à jour la date.
-2. Menu **Mummy Rush › Legal › Export privacy policy and terms to docs/**, puis publier `docs/` avec GitHub Pages (Settings › Pages › `main` / `docs`). Ces URLs publiques sont demandées par les stores.
-3. Dashboard UGS : activer **Google Play Games** dans Authentication. Mettre en place la purge des profils inactifs depuis 3 ans (promise dans la politique), par exemple avec un script Cloud Code planifié ou l'Admin API.
+**Reste à faire :**
+1. `Runtime/UI/Legal/LegalTexts.cs` : l'éditeur et le contact sont remplis, il manque le **médiateur de la consommation**. Puis mettre à jour la date.
+2. Menu **Mummy Rush › Legal › Export privacy policy and terms to docs/**, puis publier `docs/` (GitHub Pages, `main` / `docs`). Ces URLs publiques sont demandées par les stores.
+3. Mettre en place la purge des profils inactifs depuis 3 ans (promise dans la politique), par exemple avec un script Cloud Code planifié ou l'Admin API.
 4. **Google Play, section Sécurité des données :**
    - données collectées : identifiants utilisateur (ID), activité dans l'appli (contenu de jeu) et nom (pseudonyme) ;
    - finalité : fonctionnement de l'appli ; aucune donnée partagée avec des tiers ;
@@ -226,10 +250,9 @@ Sans configuration, le jeu tourne **hors ligne** (sauvegarde locale, classement/
 6. Public visé : déclarer la tranche d'âge dans les consoles (si les moins de 13 ans sont visés, Google Play impose la politique *Families* et Apple la catégorie Enfants, avec des contraintes supplémentaires).
 7. Ces textes et ce fonctionnement ne remplacent pas un avis juridique : à faire relire avant la sortie.
 
-## Avant publication
+## Publication
 
+- Bundle id : `com.mummyrush.game`, publié sur Google Play ; iOS pas encore publié (ajouter le lien App Store à `ShareService.GameUrl`).
 - Installer les modules de build : `unity install-modules --module android --module ios`.
-- `ShareService.GameUrl` pointe vers la fiche Google Play (`com.mummyrush.game`) ; ajouter le lien App Store pour iOS.
 - Le partage Android envoie du texte seulement (pas d'image) ; le bouton Quitter est masqué sur iOS (règle Apple).
-- Graphismes (pixel-art) et sons sont générés par code (`ArtLibrary`, `AudioService`) : placeholders cohérents à remplacer par de vrais assets.
-- Bundle id : `com.mummyrush.game`.
+- Graphismes : les sprites de `Resources/Art/Tiles` et `Resources/Art/Icons` remplacent le pixel-art que `ArtLibrary` dessine par code pour tout ce qui n'a pas encore son image.
